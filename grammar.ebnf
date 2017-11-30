@@ -1,0 +1,31 @@
+
+(*
+fn thing(arg_juan, arg_deux) do
+   arg_juan + arg_deux
+end,
+
+do
+    io.prln("hello!"),
+    b = true,
+    if b do
+        io.prln("semantics be damned"),
+    end,
+    x = 37,
+    while x > 32 do
+        io.prln(thing(x, x / 2), " bottles of beer on the wall"),
+    end,
+    io.pr("access with dot I suppose"),
+end
+*)
+
+(* strip whitespace/comments first *)
+
+piccolo    = {block | fn | data, ","} ;
+block      = "do", {item, ","}, "end" ;
+item       = assignment | expr ;
+expr       = fncall | access | flow | block | math | literal ;
+assignment = name | namelist, "=", expr ;
+name       = letter, { letter | digit | "_" } ;
+fncall     = name | access, "(", {expr, ","}, ")" ;
+access     = name, ".", name ;
+
