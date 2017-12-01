@@ -1,39 +1,52 @@
 
-fn thing(arg_juan, arg_deux) do
-    sum = arg_juan + arg_deux
-    if sum == 23.45 do
-        err "stop following me"
-    else
-        ok sum
-    end
-end
-
 fn main(args) do
     io.prln("hello!")
     b = true
     if b do
+        # maybe only false/nil be falsey?
         io.prln("semantics be damned")
     end
     x = 37
-    while x > 32 do
+    while x > 30.2999 do
         io.prln(thing(x, x / 2), " bottles of beer on the wall")
         x = x / 2
     end
     j = new foobar
+    q = new foobar(a = false, b = "oof ouch owie")
+    q.shout_b()
+    j.set_c(55)
+    io.prln(q.compare_c(j))
+    arr = [1, 2, 3, 4, "five"]
+    if arr[0] != 1 do
+        err "array machine broke"
+    end
+    for item in arr do
+        io.prln(item)
+    end
+end
+
+fn thing(arg_juan, arg_deux) do
+    sum = arg_juan + arg_deux
+    if sum == 23 do
+        # daniel
+        err "stop following me"
+    else
+        retn sum
+    end
 end
 
 data foobar is
     pub a = true
-    b = 23
-    c = "perhaps?"
-    fn shout_c() do
+    pub b = "perhaps?"
+    c = 23
+    fn shout_b() do
         io.prln(me.c.upper())
     end
-    fn b_times(t) do
+    fn c_times(t) do
         me.set_c(me.c * t)
     end
-    fn compare_b(other) do
-        ok me.b > other.get_b()
+    fn compare_c(other) do
+        retn me.c > other.get_c()
     end
 end
 

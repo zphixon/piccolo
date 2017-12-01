@@ -14,9 +14,11 @@ pub enum TokenKind {
     Is,
     New,
     Err,
-    Ok,
+    Retn,
 
     // syntax
+    LBracket,
+    RBracket,
     LParen,
     RParen,
     Comma,

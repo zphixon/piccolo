@@ -15,7 +15,7 @@ fn keywords(s: &str) -> Option<TokenKind> {
         "is" =>    Some(TokenKind::Is),
         "new" =>   Some(TokenKind::New),
         "err" =>   Some(TokenKind::Err),
-        "ok" =>    Some(TokenKind::Ok),
+        "retn" =>  Some(TokenKind::Retn),
         _ => None
     }
 }
@@ -75,6 +75,8 @@ impl Scanner {
 
             b' ' | b'\t' | b'\r' => {}
 
+            b'[' => self.add_token(TokenKind::LBracket),
+            b']' => self.add_token(TokenKind::RBracket),
             b'(' => self.add_token(TokenKind::LParen),
             b')' => self.add_token(TokenKind::RParen),
             b',' => self.add_token(TokenKind::Comma),
@@ -135,7 +137,7 @@ impl Scanner {
             }
 
             c => {
-                println!("{}", self.peek() as char);
+                //println!("{}", self.peek() as char);
                 if is_alpha(c) {
                     self.ident();
                 } else if is_digit(c) {
