@@ -1,6 +1,25 @@
 
 use token::{Token, TokenKind};
 
+fn keywords(s: &str) -> Option<TokenKind> {
+    match s {
+        "do" =>    Some(TokenKind::Do),
+        "end" =>   Some(TokenKind::End),
+        "fn" =>    Some(TokenKind::Fn),
+        "if" =>    Some(TokenKind::If),
+        "else" =>  Some(TokenKind::Else),
+        "while" => Some(TokenKind::While),
+        "for" =>   Some(TokenKind::For),
+        "in" =>    Some(TokenKind::In),
+        "data" =>  Some(TokenKind::Data),
+        "is" =>    Some(TokenKind::Is),
+        "new" =>   Some(TokenKind::New),
+        "err" =>   Some(TokenKind::Err),
+        "ok" =>    Some(TokenKind::Ok),
+        _ => None
+    }
+}
+
 pub struct Scanner {
     source: Vec<u8>,
     tokens: Vec<Token>,
@@ -26,7 +45,8 @@ impl Scanner {
         while !self.is_at_end() {
             self.start = self.current;
             if let Err(e) = self.scan_token() {
-                err = format!("{}\n\n{}", err, e);
+                err.push_str(&e);
+                err.push('\n');
             }
         }
 
@@ -55,49 +75,73 @@ impl Scanner {
 
             b' ' | b'\t' | b'\r' => {}
 
+            b'(' => self.add_token(TokenKind::LParen),
+            b')' => self.add_token(TokenKind::RParen),
             b',' => self.add_token(TokenKind::Comma),
             b'.' => self.add_token(TokenKind::Dot),
             b'-' => self.add_token(TokenKind::Hyphen),
             b'+' => self.add_token(TokenKind::Plus),
             b'*' => self.add_token(TokenKind::Star),
+            b'/' => self.add_token(TokenKind::FSlash),
+
+            b'!' => {
+                if self.peek() == b'=' {
+                    self.advance();
+                    //self.advance();
+                    self.add_token(TokenKind::BangEquals);
+                } else {
+                    //self.advance();
+                    self.add_token(TokenKind::Bang);
+                }
+            }
 
             b'=' => {
                 if self.peek() == b'=' {
                     self.advance();
+                    //self.advance();
                     self.add_token(TokenKind::Equals);
                 } else {
+                    //self.advance();
                     self.add_token(TokenKind::Assign);
                 }
-                self.advance();
             }
 
             b'>' => {
                 if self.peek() == b'=' {
                     self.advance();
+                    //self.advance();
                     self.add_token(TokenKind::GreaterThanEquals);
                 } else {
+                    //self.advance();
                     self.add_token(TokenKind::GreaterThan);
                 }
-                self.advance();
             }
 
             b'<' => {
                 if self.peek() == b'=' {
                     self.advance();
+                    //self.advance();
                     self.add_token(TokenKind::LessThanEquals);
                 } else {
+                    //self.advance();
                     self.add_token(TokenKind::LessThan);
                 }
-                self.advance();
             }
 
-            _ => {
-                if is_alpha(self.peek()) {
+            b'"' => {
+                if let Err(e) = self.string() {
+                    err = Err(format!("{}: Bad string: {}", self.line, e));
+                }
+            }
+
+            c => {
+                println!("{}", self.peek() as char);
+                if is_alpha(c) {
                     self.ident();
-                } else if is_digit(self.peek()) {
+                } else if is_digit(c) {
                     err = self.number();
                 } else {
-                    err = Err("dunno".into());
+                    err = Err(format!("{}: Unexpected char: {}", self.line, c as char));
                 }
             }
         }
@@ -105,10 +149,62 @@ impl Scanner {
     }
 
     fn ident(&mut self) {
-        while is_alpha(self.peek()) {
+        while is_alphanumeric(self.peek()) {
+            //print!("{}", self.peek() as char);
             self.advance();
         }
-        self.add_token(TokenKind::Ident);
+        let value = String::from_utf8(self.source[self.start..self.current].to_vec()).unwrap();
+        //println!("({}-{}) {} {}", self.start, self.current, self.line, value);
+        if let Some(tk) = keywords(&value) {
+            self.add_token(tk);
+        } else {
+            self.add_token(TokenKind::Ident);
+        }
+    }
+
+    fn string(&mut self) -> Result<(), String> {
+        let mut value = String::new();
+        let line_start = self.line;
+        while self.peek() != b'"' && !self.is_at_end() {
+            if self.peek() == b'\n' {
+                self.line += 1;
+            }
+
+            if self.peek() == b'\\' {
+                match self.advance() {
+                    b'n' => {
+                        value.push('\n');
+                    },
+                    b'r' => {
+                        value.push('\r');
+                    }
+                    b'\\' => {
+                        value.push('\\');
+                    },
+                    b'"' => {
+                        value.push('"');
+                    },
+                    b'\n' => {
+                        self.advance();
+                        while self.peek() == b' ' || self.peek() == b'\t' {
+                            self.advance();
+                        }
+                        self.reverse();
+                    },
+                    c => return Err(format!("{} unknown format code: {}", self.line, c))
+                }
+            } else {
+                value.push(self.advance() as char);
+            }
+        }
+
+        if self.is_at_end() {
+            Err(format!("{} Unterminated string starting at {}", self.line, line_start))
+        } else {
+            self.advance();
+            self.add_token_string(TokenKind::String, value);
+            Ok(())
+        }
     }
 
     fn number(&mut self) -> Result<(), String> {

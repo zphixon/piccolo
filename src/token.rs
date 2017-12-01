@@ -13,6 +13,8 @@ pub enum TokenKind {
     Data,
     Is,
     New,
+    Err,
+    Ok,
 
     // syntax
     LParen,
