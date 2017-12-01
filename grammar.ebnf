@@ -1,31 +1,66 @@
 
 (*
 fn thing(arg_juan, arg_deux) do
-   arg_juan + arg_deux
-end,
+    sum = arg_juan + arg_deux
+    if sum == 23 do
+        err "stop following me"
+    else
+        ok sum
+    end
+end
 
-do
-    io.prln("hello!"),
-    b = true,
+fn main(args) do
+    io.prln("hello!")
+    b = true
     if b do
-        io.prln("semantics be damned"),
-    end,
-    x = 37,
+        io.prln("semantics be damned")
+    end
+    x = 37
     while x > 32 do
-        io.prln(thing(x, x / 2), " bottles of beer on the wall"),
-    end,
-    io.pr("access with dot I suppose"),
+        io.prln(thing(x, x / 2), " bottles of beer on the wall")
+    end
+    j = new foobar
+end
+
+data foobar is
+    pub a = true
+    b = 23
+    c = "perhaps?"
+    fn shout_c() do
+        io.prln(me.c.upper())
+    end
+    fn b_times(t) do
+        me.set_c(me.c * t)
+    end
+    fn compare_b(other) do
+        me.b > other.get_b()
+    end
 end
 *)
 
-(* strip whitespace/comments first *)
-
-piccolo    = {block | fn | data, ","} ;
-block      = "do", {item, ","}, "end" ;
+grammar    = piccolo ;
+piccolo    = [{ fn | data, nl}], [fn | data, [nl]] ;
+block      = "do", [{item, nl}], item, [nl], "end" ;
 item       = assignment | expr ;
-expr       = fncall | access | flow | block | math | literal ;
+expr       = flow | block | access | fncall | construct | math | literal | name ;
 assignment = name | namelist, "=", expr ;
 name       = letter, { letter | digit | "_" } ;
-fncall     = name | access, "(", {expr, ","}, ")" ;
-access     = name, ".", name ;
+fncall     = expr, "(", {expr, ","}, ")" ;
+access     = expr, "." expr ;
+fn         = "fn", name, "(", {name, ","}, ")", block ;
+math       = unary, expr | expr, op, expr ;
+unary      = "!" | "-" ;
+op         = "*" | "+" | "/" | "-" | "%" | "&" | "|" ;
+literal    = {digit} | bool | string | range ;
+string     = "\"", {letter}, "\"" ;
+range      = expr, "...", expr ;
+bool       = "true" | "false" ;
+flow       = if | while | for, block, ["else", block] ;
+if         = "if", expr ;
+while      = "while", expr ;
+for        = "for", expr, "in", expr ;
+construct  = "new", name, ["(", {assignment, ","}, ")"] ;
+data       = "data", name, "is", attr, methods, "end" ;
+attr       = {["pub"], assignment, nl} ;
+methods    = {fn, nl} ;
 
