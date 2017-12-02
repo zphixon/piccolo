@@ -21,7 +21,10 @@ fn main(args) do
         err "array machine broke"
     end
     for item in arr do
-        io.prln(item)
+        for x in 0..23 do
+            io.prln(item + x)
+            # eventually print five0, five1, five2, ...five22
+        end
     end
 end
 
@@ -36,9 +39,11 @@ fn thing(arg_juan, arg_deux) do
 end
 
 data foobar is
-    pub a = true
-    pub b = "perhaps?"
-    c = 23
+    do
+        pub a = true
+        pub b = "perhaps?"
+        c = 23
+    end
     fn shout_b() do
         io.prln(me.c.upper())
     end

@@ -1,5 +1,35 @@
 
-grammar    = piccolo ;
+(* builtin: char, alpha, alphanumeric, number *)
+
+grammar = piccolo;
+piccolo = {fn | data};
+fn = "fn", name, "(", [name, {",", name}], ")", block;
+name = alpha, {alphanumeric};
+block = "do", {stmt}, "end";
+stmt = {expr} | assignment, nl;
+expr = access | name | flow | literal | fncall | math | construct | index;
+access = expr, ".", expr;
+flow = if | while | for;
+if = "if", expr, block, ["else", block];
+while = "while", expr, block;
+for = "for", name, "in", expr, block;
+literal = number | string | bool | exrange | inrange | array;
+string = "\"", {char}, "\"";
+bool = "true" | "false";
+exrange = expr, "..", expr;
+inrange = expr, "...", expr;
+array = "[", [expr, {",", expr}], "]";
+fncall = expr, "(", [expr, [{",", expr}]], ")";
+math = (unary, expr) | (expr, op, expr);
+unary = "-" | "!";
+op = "+" | "*" | "-" | "/" | "%" | "&" | "|" | "^" | "||" | "&&";
+construct = "new", name, ["(", [assignment, {",", assignment}], ")"];
+index = expr, "[", expr, "]";
+assignment = name, "=", expr;
+nl = "\n";
+data = "data", name, "is", [block], {fn}, "end";
+
+(*grammar    = piccolo ;
 piccolo    = [{ fn | data, nl}], [fn | data, [nl]] ;
 block      = "do", [{item, nl}], item, [nl], "end" ;
 item       = assignment | expr ;
@@ -23,5 +53,5 @@ for        = "for", expr, "in", expr ;
 construct  = "new", name, ["(", {assignment, ","}, ")"] ;
 data       = "data", name, "is", attr, methods, "end" ;
 attr       = {["pub"], assignment, nl} ;
-methods    = {fn, nl} ;
+methods    = {fn, nl} ;*)
 
