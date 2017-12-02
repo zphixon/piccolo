@@ -80,19 +80,50 @@ impl Scanner {
             b'(' => self.add_token(TokenKind::LParen),
             b')' => self.add_token(TokenKind::RParen),
             b',' => self.add_token(TokenKind::Comma),
-            b'.' => self.add_token(TokenKind::Dot),
             b'-' => self.add_token(TokenKind::Hyphen),
             b'+' => self.add_token(TokenKind::Plus),
             b'*' => self.add_token(TokenKind::Star),
             b'/' => self.add_token(TokenKind::FSlash),
+            b'^' => self.add_token(TokenKind::BXor),
+            b'%' => self.add_token(TokenKind::Mod),
+
+            b'&' => {
+                if self.peek() == b'&' {
+                    self.advance();
+                    self.add_token(TokenKind::And);
+                } else {
+                    self.add_token(TokenKind::BAnd);
+                }
+            }
+
+            b'|' => {
+                if self.peek() == b'|' {
+                    self.advance();
+                    self.add_token(TokenKind::Or);
+                } else {
+                    self.add_token(TokenKind::BOr);
+                }
+            }
+
+            b'.' => {
+                if self.peek() == b'.' {
+                    self.advance();
+                    if self.peek() == b'.' {
+                        self.advance();
+                        self.add_token(TokenKind::IRange);
+                    } else {
+                        self.add_token(TokenKind::ERange);
+                    }
+                } else {
+                    self.add_token(TokenKind::Dot);
+                }
+            }
 
             b'!' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    //self.advance();
                     self.add_token(TokenKind::BangEquals);
                 } else {
-                    //self.advance();
                     self.add_token(TokenKind::Bang);
                 }
             }
@@ -100,10 +131,8 @@ impl Scanner {
             b'=' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    //self.advance();
                     self.add_token(TokenKind::Equals);
                 } else {
-                    //self.advance();
                     self.add_token(TokenKind::Assign);
                 }
             }
@@ -111,10 +140,8 @@ impl Scanner {
             b'>' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    //self.advance();
                     self.add_token(TokenKind::GreaterThanEquals);
                 } else {
-                    //self.advance();
                     self.add_token(TokenKind::GreaterThan);
                 }
             }
@@ -122,10 +149,8 @@ impl Scanner {
             b'<' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    //self.advance();
                     self.add_token(TokenKind::LessThanEquals);
                 } else {
-                    //self.advance();
                     self.add_token(TokenKind::LessThan);
                 }
             }

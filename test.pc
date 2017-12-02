@@ -1,29 +1,37 @@
 
 fn main(args) do
     io.prln("hello!")
+
     b = true
     if b do
         # maybe only false/nil be falsey?
         io.prln("semantics be damned")
     end
+
     x = 37
     while x > 30.2999 do
         io.prln(thing(x, x / 2), " bottles of beer on the wall")
         x = x / 2
     end
+
     j = new foobar
     q = new foobar(a = false, b = "oof ouch owie")
     q.shout_b()
     j.set_c(55)
     io.prln(q.compare_c(j))
+
     arr = [1, 2, 3, 4, "five"]
     if arr[0] != 1 do
         err "array machine broke"
     end
+
     for item in arr do
-        for x in 0..23 do
-            io.prln(item + x)
-            # eventually print five0, five1, five2, ...five22
+        for x in 0..23 do # exclusive range: [0, 23)
+            if x == item && x % 2 == 1 do
+                io.prln("wowie")
+            else
+                io.prln(item + x)
+            end
         end
     end
 end

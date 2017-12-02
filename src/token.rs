@@ -2,48 +2,50 @@
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     // keywords
-    Do,
-    End,
-    Fn,
-    If,
-    Else,
-    While,
-    For,
-    In,
-    Data,
-    Is,
-    New,
-    Err,
-    Retn,
+    Do,       // do
+    End,      // end
+    Fn,       // fn
+    If,       // if
+    Else,     // else
+    While,    // while
+    For,      // for
+    In,       // in
+    Data,     // data
+    Is,       // is
+    New,      // new
+    Err,      // err
+    Retn,     // retn
 
     // syntax
-    LBracket,
-    RBracket,
-    LParen,
-    RParen,
-    Comma,
-    Dot,
-    Assign,
-    Newline,
+    LBracket, // [
+    RBracket, // ]
+    LParen,   // (
+    RParen,   // )
+    Comma,    // ,
+    Dot,      // .
+    IRange,   // ..
+    ERange,   // ...
+    Assign,   // =
+    Newline,  // \n
 
     // operators
-    Bang,
-    Plus,
-    Hyphen,
-    Star,
-    FSlash,
-    Mod,
-    And,
-    Or,
-    BAnd,
-    BOr,
-    BXor,
-    Equals,
-    BangEquals,
-    LessThan,
-    GreaterThan,
-    LessThanEquals,
-    GreaterThanEquals,
+    Bang,                // !
+    Plus,                // +
+    Hyphen,              // -
+    Star,                // *
+    FSlash,              // /
+    Mod,                 // %
+    And,                 // &&
+    Or,                  // ||
+    BAnd,                // &
+    BOr,                 // |
+    BXor,                // ^
+    Equals,              // ==
+    BangEquals,          // !=
+    LessThan,            // <
+    GreaterThan,         // >
+    LessThanEquals,      // <=
+    GreaterThanEquals,   // >=
 
     // other syntax elements
     Ident,
