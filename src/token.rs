@@ -12,6 +12,8 @@ pub enum TokenKind {
     In,       // in
     Data,     // data
     Is,       // is
+    Pub,      // pub
+    Me,       // me
     New,      // new
     Err,      // err
     Retn,     // retn
@@ -23,8 +25,8 @@ pub enum TokenKind {
     RParen,   // )
     Comma,    // ,
     Dot,      // .
-    IRange,   // ..
-    ERange,   // ...
+    ERange,   // ..
+    IRange,   // ...
     Assign,   // =
     Newline,  // \n
 

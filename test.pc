@@ -47,11 +47,10 @@ fn thing(arg_juan, arg_deux) do
 end
 
 data foobar is
-    do
-        pub a = true
-        pub b = "perhaps?"
-        c = 23
-    end
+    pub a = true
+    pub b = "perhaps?"
+    c = 23
+
     fn shout_b() do
         io.prln(me.c.upper())
     end
