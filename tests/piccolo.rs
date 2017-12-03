@@ -24,3 +24,50 @@ fn test_file() {
     println!("{:?}", piccolo::parse_file("test.pc").unwrap());
 }
 
+#[test]
+fn parse() {
+    use piccolo::scanner::Scanner;
+    use piccolo::parser::Parser;
+    use piccolo::ast::*;
+
+    let code = "fn main() x = obj.field end".into();
+
+    let parse = Parser::new(Scanner::new(code).scan_tokens().unwrap()).parse();
+
+    let ast: Result<Ast, String> = Ok(Ast {
+        inner: vec![
+            Piccolo::Function(Box::new(
+                Function {
+                    name: "main".into(),
+                    args: vec![],
+                    inner: vec![
+                        Statement::Assignment(Box::new(
+                            Assignment {
+                                name: "x".into(),
+                                expr: Expression::Access(Box::new(
+                                    Access { // would raise an error
+                                        from: Expression::Variable(Box::new(
+                                            Variable {
+                                                name: "obj".into(),
+                                                value: Expression::Nil
+                                            }
+                                        )),
+                                        of: Expression::Variable(Box::new(
+                                            Variable {
+                                                name: "field".into(),
+                                                value: Expression::Nil,
+                                            }
+                                        ))
+                                    }
+                                ))
+                            }
+                        )),
+                    ]
+                }
+            ))
+        ]
+    });
+
+    assert_eq!(ast, parse);
+}
+

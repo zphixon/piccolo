@@ -2,6 +2,8 @@
 pub mod parser;
 pub mod token;
 pub mod scanner;
+pub mod expr;
+pub mod ast;
 
 use scanner::Scanner;
 

@@ -2,12 +2,12 @@
 (* builtin: char, alpha, alphanumeric, number *)
 
 grammar = piccolo;
-piccolo = {fn | data};
+piccolo = {stmt | fn | data};
 fn = "fn", name, "(", [name, {",", name}], ")", block;
 name = alpha, {alphanumeric};
 block = "do", {stmt}, "end";
-stmt = {expr} | assignment, nl;
-expr = paren | access | name | flow | literal | fncall | math | construct | index;
+stmt = expr | assignment | retn | err | flow, nl;
+expr = paren | access | name | literal | fncall | math | construct | index;
 paren = "(", expr, ")";
 access = expr, ".", expr;
 flow = if | while | for;
@@ -21,38 +21,23 @@ exrange = expr, "..", expr;
 inrange = expr, "...", expr;
 array = "[", [expr, {",", expr}], "]";
 fncall = expr, "(", [expr, [{",", expr}]], ")";
-math = (unary, expr) | (expr, op, expr);
-unary = "-" | "!";
-op = "+" | "*" | "-" | "/" | "%" | "&" | "|" | "^" | "||" | "&&";
+(* math = (unary, expr) | (expr, op, expr); *)
+(* unary = "-" | "!"; *)
+(* op = "+" | "*" | "-" | "/" | "%" | "&" | "|" | "^" | "||" | "&&" | "==" | "!=" | ">=" | "<=" | ">" | "<"; *)
 construct = "new", name, ["(", [assignment, {",", assignment}], ")"];
 index = expr, "[", expr, "]";
 assignment = name, "=", expr;
+retn = "retn", expr;
+err = "err", expr;
 nl = "\n";
 data = "data", name, "is", [["pub"], assignment, {",", ["pub"], assignment}], {fn}, "end";
 
-(*grammar    = piccolo ;
-piccolo    = [{ fn | data, nl}], [fn | data, [nl]] ;
-block      = "do", [{item, nl}], item, [nl], "end" ;
-item       = assignment | expr ;
-expr       = flow | block | access | fncall | construct | math | literal | name ;
-assignment = name | namelist, "=", expr ;
-name       = letter, { letter | digit | "_" } ;
-fncall     = expr, "(", {expr, ","}, ")" ;
-access     = expr, "." expr ;
-fn         = "fn", name, "(", {name, ","}, ")", block ;
-math       = unary, expr | expr, op, expr ;
-unary      = "!" | "-" ;
-op         = "*" | "+" | "/" | "-" | "%" | "&" | "|" ;
-literal    = {digit} | bool | string | range ;
-string     = "\"", {letter}, "\"" ;
-range      = expr, "...", expr ;
-bool       = "true" | "false" ;
-flow       = if | while | for, block, ["else", block] ;
-if         = "if", expr ;
-while      = "while", expr ;
-for        = "for", expr, "in", expr ;
-construct  = "new", name, ["(", {assignment, ","}, ")"] ;
-data       = "data", name, "is", attr, methods, "end" ;
-attr       = {["pub"], assignment, nl} ;
-methods    = {fn, nl} ;*)
+math = and, {"&&", and};
+and = or, {"||", or};
+or = comparison, {"!=" | "==", comparison};
+comparison = addition, {">" | ">=" | "<" | "<=", addition};
+addition = multip1ication, {"-" | "+", multiplication};
+multiplication = unary, {"/" | "*", unary};
+unary = ("!" | "-", unary) | primary;
+primary = number | string | "false" | "true" | paren;
 
