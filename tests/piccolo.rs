@@ -36,12 +36,12 @@ fn parse() {
 
     let ast: Result<Ast, String> = Ok(Ast {
         inner: vec![
-            Piccolo::Function(Box::new(
+            Statement::Function(
                 Function {
                     name: "main".into(),
                     args: vec![],
                     inner: vec![
-                        Statement::Assignment(Box::new(
+                        Statement::Assignment(
                             Assignment {
                                 name: "x".into(),
                                 expr: Expression::Access(Box::new(
@@ -61,10 +61,10 @@ fn parse() {
                                     }
                                 ))
                             }
-                        )),
+                        ),
                     ]
                 }
-            ))
+            )
         ]
     });
 

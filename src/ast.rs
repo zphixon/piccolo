@@ -202,12 +202,14 @@ pub struct Flow {
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {
-    Expression(Box<Expression>),
-    Assignment(Box<Assignment>),
-    Return(Box<Return>),
-    Error(Box<Error>),
-    Flow(Box<Flow>),
+    Expression(Expression),
+    Assignment(Assignment),
+    Return(Return),
+    Error(Error),
+    Flow(Flow),
     Block(Vec<Statement>),
+    Function(Function),
+    Data(Data),
 }
 
 #[derive(Debug, PartialEq)]
@@ -245,13 +247,6 @@ pub struct Data {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Piccolo {
-    Statement(Box<Statement>),
-    Function(Box<Function>),
-    Data(Box<Data>),
-}
-
-#[derive(Debug, PartialEq)]
 pub struct Ast {
-    pub inner: Vec<Piccolo>,
+    pub inner: Vec<Statement>,
 }
