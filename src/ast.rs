@@ -231,10 +231,17 @@ impl<'a> From<&'a str> for Name {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct Field {
+    pub public: bool,
+    pub name: Name,
+    pub value: Expression,
+}
+
+#[derive(Debug, PartialEq)]
 pub struct Data {
     pub name: Name,
-    pub fields: Option<Vec<Assignment>>,
-    pub methods: Option<Vec<Function>>,
+    pub fields: Vec<Field>,
+    pub methods: Vec<Function>,
 }
 
 #[derive(Debug, PartialEq)]
