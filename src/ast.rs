@@ -14,7 +14,7 @@ pub struct Access {
 
 #[derive(Debug, PartialEq)]
 pub struct Variable {
-    pub name: String,
+    pub name: Name,
     pub value: Expression, // TODO
 }
 
@@ -171,7 +171,7 @@ pub enum Expression {
 
 #[derive(Debug, PartialEq)]
 pub struct Assignment {
-    pub name: String,
+    pub name: Name,
     pub expr: Expression,
 }
 
@@ -212,14 +212,27 @@ pub enum Statement {
 
 #[derive(Debug, PartialEq)]
 pub struct Function {
-    pub name: String,
-    pub args: Vec<String>,
+    pub name: Name,
+    pub args: Vec<Name>,
     pub inner: Vec<Statement>,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Data {
+pub struct Name {
     pub name: String,
+}
+
+impl<'a> From<&'a str> for Name {
+    fn from(name: &str) -> Self {
+        Name {
+            name: name.to_owned()
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Data {
+    pub name: Name,
     pub fields: Option<Vec<Assignment>>,
     pub methods: Option<Vec<Function>>,
 }
