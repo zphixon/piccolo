@@ -1,6 +1,4 @@
 
-//use ::expr::*;
-
 #[derive(Debug, PartialEq)]
 pub struct Paren {
     pub inner: Expression,
@@ -19,12 +17,26 @@ pub struct Variable {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct ExclusiveRange {
+    pub lower: Expression,
+    pub upper: Expression,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct InclusiveRange {
+    pub lower: Expression,
+    pub upper: Expression,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Literal {
     String(String),
     Integer(i64),
     Float(f64),
     True,
     False,
+    ExclusiveRange(ExclusiveRange),
+    InclusiveRange(InclusiveRange),
     Paren(Paren),
 }
 
@@ -70,8 +82,8 @@ pub struct MultiplicationRest {
 
 #[derive(Debug, PartialEq)]
 pub struct Multiplication {
-    pub unary: Unary,
-    pub rest: MultiplicationRest,
+    pub inner: Unary,
+    pub rest: Vec<MultiplicationRest>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -88,7 +100,7 @@ pub struct AdditionRest {
 
 #[derive(Debug, PartialEq)]
 pub struct Addition {
-    pub addition: Multiplication,
+    pub inner: Multiplication,
     pub rest: Vec<AdditionRest>,
 }
 
@@ -108,7 +120,7 @@ pub struct ComparisonRest {
 
 #[derive(Debug, PartialEq)]
 pub struct Comparison {
-    pub addition: Addition,
+    pub inner: Addition,
     pub rest: Vec<ComparisonRest>
 }
 
@@ -126,7 +138,7 @@ pub struct EqualityRest {
 
 #[derive(Debug, PartialEq)]
 pub struct Equality {
-    pub comparison: Comparison,
+    pub inner: Comparison,
     pub rest: Vec<ComparisonRest>,
 }
 
@@ -137,7 +149,7 @@ pub struct OrRest {
 
 #[derive(Debug, PartialEq)]
 pub struct Or {
-    pub equality: Equality,
+    pub inner: Equality,
     pub rest: Vec<EqualityRest>,
 }
 
@@ -148,13 +160,15 @@ pub struct AndRest {
 
 #[derive(Debug, PartialEq)]
 pub struct And {
-    pub or: Or,
+    pub inner: Or,
     pub rest: Vec<OrRest>,
 }
 
+// math: and -> or -> equality -> comparison -> addition -> multiplication -> unary -> primary
+
 #[derive(Debug, PartialEq)]
 pub struct Math {
-    pub and: And,
+    pub inner: And,
     pub rest: Vec<AndRest>,
 }
 
@@ -246,7 +260,94 @@ pub struct Data {
     pub methods: Vec<Function>,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Ast {
-    pub inner: Vec<Statement>,
+use token::Token;
+/////////////////////////////////////////////
+// ad-hoc implementation of all this stuff //
+/////////////////////////////////////////////
+
+pub enum BinaryOp {
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Mod,
+    And,
+    Or,
+    BinaryAnd,
+    BinaryOr,
+    BinaryXor,
+    Equals,
+    NotEquals,
+    Less,
+    Greater,
+    LessEquals,
+    GreaterEquals,
 }
+
+// uncomment when you eventually delete the rest of this file
+//pub enum UnaryOp {
+//    Not,
+//    Negate,
+//}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Lit {
+    Bool(bool),
+    Integer(i64),
+    Float(f64),
+    String(String),
+    Range, // TODO
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Expr {
+    Binary {
+        lhs: Box<Expr>,
+        op: Token,
+        rhs: Box<Expr>,
+    },
+    Unary {
+        op: Token,
+        rhs: Box<Expr>,
+    },
+    Literal(Lit),
+    Paren(Box<Expr>),
+}
+
+pub fn pprint_ast(e: Expr) {
+    pp_rec(e, 0);
+}
+
+fn pp_rec(e: Expr, indent: u64) {
+    match e {
+        Expr::Binary { lhs, op, rhs } => {
+            for _ in 0..indent { print!("    "); }
+            println!("binary");
+            for _ in 0..indent { print!("    "); }
+            println!("    lhs");
+            pp_rec(*lhs, indent + 2);
+            for _ in 0..indent { print!("    "); }
+            println!("    op: {:?}", op.kind);
+            for _ in 0..indent { print!("    "); }
+            println!("    rhs");
+            pp_rec(*rhs, indent + 2);
+        },
+        Expr::Unary { op, rhs } =>  {
+            for _ in 0..indent { print!("    "); }
+            println!("unary");
+            for _ in 0..indent { print!("    "); }
+            println!("    op: {:?}", op.kind);
+            for _ in 0..indent { print!("    "); }
+            println!("    rhs");
+            pp_rec(*rhs, indent + 1);
+        },
+        Expr::Literal(l) => {
+            for _ in 0..indent { print!("    "); }
+            println!("{:?}", l);
+        },
+        Expr::Paren(p) => {
+            pp_rec(*p, indent + 1);
+        }
+    }
+}
+

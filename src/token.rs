@@ -52,6 +52,8 @@ pub enum TokenKind {
     // other syntax elements
     Ident,
     String,
+    True,
+    False,
     Double(f64),
     Integer(i64),
 

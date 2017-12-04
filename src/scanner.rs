@@ -61,7 +61,7 @@ impl Scanner {
         }
     }
 
-    pub fn scan_token(&mut self) -> Result<(), String> {
+    fn scan_token(&mut self) -> Result<(), String> {
         let mut err = Ok(());
         match self.advance() {
             b'#' => {
