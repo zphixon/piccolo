@@ -1,5 +1,6 @@
 
 use token::{Token, TokenKind};
+use err::{PiccoloError, ErrorKind};
 
 fn keywords(s: &str) -> Option<TokenKind> {
     match s {
@@ -18,6 +19,8 @@ fn keywords(s: &str) -> Option<TokenKind> {
         "new" =>   Some(TokenKind::New),
         "err" =>   Some(TokenKind::Err),
         "retn" =>  Some(TokenKind::Retn),
+        "true" =>  Some(TokenKind::True),
+        "false" => Some(TokenKind::False),
         _ => None
     }
 }
@@ -82,7 +85,7 @@ impl Scanner {
             b'(' => self.add_token(TokenKind::LParen),
             b')' => self.add_token(TokenKind::RParen),
             b',' => self.add_token(TokenKind::Comma),
-            b'-' => self.add_token(TokenKind::Hyphen),
+            b'-' => self.add_token(TokenKind::Minus),
             b'+' => self.add_token(TokenKind::Plus),
             b'*' => self.add_token(TokenKind::Star),
             b'/' => self.add_token(TokenKind::FSlash),
@@ -220,7 +223,7 @@ impl Scanner {
                         }
                         self.reverse();
                     },
-                    c => return Err(format!("{} unknown format code: {}", self.line, c))
+                    c => return Err(format!("{} unknown format code: {}", self.line, c as char))
                 }
             } else {
                 value.push(self.advance() as char);

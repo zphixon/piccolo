@@ -1,9 +1,14 @@
 
+#[macro_use]
+extern crate failure_derive;
+extern crate failure;
+
 pub mod parser;
 pub mod token;
 pub mod scanner;
 pub mod expr;
 pub mod ast;
+pub mod err;
 
 use scanner::Scanner;
 

@@ -13,7 +13,7 @@ fn scan_correctly() {
     assert_eq!(tk, vec![
         Do, End, Fn, If, Else, While, For, In, Data, Is, Pub, Me, New, Err, Retn,
         LBracket, RBracket, LParen, RParen, Comma, Dot, ERange, IRange, Assign,
-        Newline, Bang, Plus, Hyphen, Star, FSlash, Mod, And, Or, BAnd, BOr, BXor,
+        Newline, Bang, Plus, Minus, Star, FSlash, Mod, And, Or, BAnd, BOr, BXor,
         Equals, BangEquals, LessThan, GreaterThan, LessThanEquals, GreaterThanEquals,
         Ident, String, Double(3.14), Integer(23), Eof
     ]);
@@ -41,7 +41,7 @@ fn parse_math() {
                 lhs: Box::new(Literal(Lit::Integer(32))),
                 op: Token { kind: TokenKind::Plus, lexeme: "+".into(), line: 1 },
                 rhs: Box::new(Unary {
-                    op: Token { kind: TokenKind::Hyphen, lexeme: "-".into(), line: 1 },
+                    op: Token { kind: TokenKind::Minus, lexeme: "-".into(), line: 1 },
                     rhs: Box::new(Literal(Lit::Float(4.5))),
                 })
             }),

@@ -33,7 +33,7 @@ pub enum TokenKind {
     // operators
     Bang,                // !
     Plus,                // +
-    Hyphen,              // -
+    Minus,              // -
     Star,                // *
     FSlash,              // /
     Mod,                 // %

@@ -1,44 +1,56 @@
 
+use err::{PiccoloError, ErrorKind};
 use token::{Token, TokenKind};
 use ast::*;
 
 #[derive(Debug)]
 pub struct Parser {
+    line: u64,
+    err: String,
     current: usize,
     tokens: Vec<Token>,
-    line: u64,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Parser {
+            line: 1,
+            err: String::new(),
             current: 0,
             tokens,
-            line: 1,
         }
     }
 
-    pub fn parse(&mut self) -> Result<Expr, String> {
+    pub fn parse(mut self) -> Result<Expr, String> {
+        let r = self.start_parse();
+        if r.is_some() {
+            Ok(r.unwrap())
+        } else {
+            Err(self.err)
+        }
+    }
+
+    fn start_parse(&mut self) -> Option<Expr> {
         self.expression()
     }
 
-    fn expression(&mut self) -> Result<Expr, String> {
+    fn expression(&mut self) -> Option<Expr> {
         self.math() // TODO: add more
     }
 
-    fn math(&mut self) -> Result<Expr, String> {
+    fn math(&mut self) -> Option<Expr> {
         self.and()
     }
 
-    fn and(&mut self) -> Result<Expr, String> {
+    fn and(&mut self) -> Option<Expr> {
         let expr = self.or()?;
-        let mut r = Ok(expr.clone()); // TODO: figure out error handling
+        let mut r = Some(expr.clone()); // TODO: figure out error handling
         //let mut r = Err("Expected &&".into());
 
         while self.matches(&[TokenKind::And]) {
             let op = self.previous();
             let right = self.or()?;
-            r = Ok(Expr::Binary {
+            r = Some(Expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -48,15 +60,15 @@ impl Parser {
         r
     }
 
-    fn or(&mut self) -> Result<Expr, String> {
+    fn or(&mut self) -> Option<Expr> {
         let expr = self.equality()?;
-        let mut r = Ok(expr.clone());
+        let mut r = Some(expr.clone());
         //let mut r = Err("Expected ||".into());
 
         while self.matches(&[TokenKind::Or]) {
             let op = self.previous();
             let right = self.equality()?;
-            r = Ok(Expr::Binary {
+            r = Some(Expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -66,15 +78,15 @@ impl Parser {
         r
     }
 
-    fn equality(&mut self) -> Result<Expr, String> {
+    fn equality(&mut self) -> Option<Expr> {
         let expr = self.comparison()?;
-        let mut r = Ok(expr.clone());
+        let mut r = Some(expr.clone());
         //let mut r = Err("Expected ==, !=".into());
 
         while self.matches(&[TokenKind::BangEquals, TokenKind::Equals]) {
             let op = self.previous();
             let right = self.comparison()?;
-            r = Ok(Expr::Binary {
+            r = Some(Expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -84,15 +96,15 @@ impl Parser {
         r
     }
 
-    fn comparison(&mut self) -> Result<Expr, String> {
+    fn comparison(&mut self) -> Option<Expr> {
         let expr = self.addition()?;
-        let mut r = Ok(expr.clone());
+        let mut r = Some(expr.clone());
         //let mut r = Err("Expected >, <, >=, <=".into());
 
         while self.matches(&[TokenKind::GreaterThan, TokenKind::GreaterThanEquals, TokenKind::LessThan, TokenKind::LessThanEquals]) {
             let op = self.previous();
             let right = self.addition()?;
-            r = Ok(Expr::Binary {
+            r = Some(Expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -102,10 +114,10 @@ impl Parser {
         r
     }
 
-    fn addition(&mut self) -> Result<Expr, String> {
+    fn addition(&mut self) -> Option<Expr> {
         let mut expr = self.multiplication()?;
 
-        while self.matches(&[TokenKind::Hyphen, TokenKind::Plus]) {
+        while self.matches(&[TokenKind::Minus, TokenKind::Plus]) {
             let op = self.previous();
             let right = self.multiplication()?;
             expr = Expr::Binary {
@@ -115,10 +127,10 @@ impl Parser {
             };
         }
 
-        Ok(expr)
+        Some(expr)
     }
 
-    fn multiplication(&mut self) -> Result<Expr, String> {
+    fn multiplication(&mut self) -> Option<Expr> {
         let mut expr = self.unary()?;
 
         while self.matches(&[TokenKind::FSlash, TokenKind::Star]) {
@@ -131,14 +143,14 @@ impl Parser {
             }
         }
 
-        Ok(expr)
+        Some(expr)
     }
 
-    fn unary(&mut self) -> Result<Expr, String> {
-        if self.matches(&[TokenKind::Bang, TokenKind::Hyphen]) {
+    fn unary(&mut self) -> Option<Expr> {
+        if self.matches(&[TokenKind::Bang, TokenKind::Minus]) {
             let op = self.previous();
             let rhs = Box::new(self.unary()?);
-            Ok(Expr::Unary {
+            Some(Expr::Unary {
                 op,
                 rhs
             })
@@ -147,30 +159,36 @@ impl Parser {
         }
     }
 
-    fn primary(&mut self) -> Result<Expr, String> {
+    fn primary(&mut self) -> Option<Expr> {
         let t = self.advance();
         match t.kind {
-            TokenKind::True => Ok(Expr::Literal(Lit::Bool(true))),
-            TokenKind::False => Ok(Expr::Literal(Lit::Bool(false))),
-            //TokenKind::Nil => Ok(Expr::Literal(Lit::Nil)),
-            TokenKind::Integer(i) => Ok(Expr::Literal(Lit::Integer(i))),
-            TokenKind::Double(d) => Ok(Expr::Literal(Lit::Float(d))),
-            TokenKind::String => Ok(Expr::Literal(Lit::String(t.lexeme.clone()))),
+            TokenKind::True => Some(Expr::Literal(Lit::Bool(true))),
+            TokenKind::False => Some(Expr::Literal(Lit::Bool(false))),
+            //TokenKind::Nil => Some(Expr::Literal(Lit::Nil)),
+            TokenKind::Integer(i) => Some(Expr::Literal(Lit::Integer(i))),
+            TokenKind::Double(d) => Some(Expr::Literal(Lit::Float(d))),
+            TokenKind::String => Some(Expr::Literal(Lit::String(t.lexeme.clone()))),
             TokenKind::LParen => {
                 let expr = self.expression()?;
                 let l = self.line;
-                self.consume(TokenKind::RParen, format!("Line {}: Found {}, expected )", l, t.lexeme.clone()));
-                Ok(Expr::Paren(Box::new(expr.clone())))
+                self.consume(TokenKind::RParen)?;
+                Some(Expr::Paren(Box::new(expr.clone())))
             }
-            _ => Err(format!("Line {}: Found {}, expected literal", self.line, t.lexeme.clone()))
+            // TokenKind::Ident => {get value of variable}
+            tk => {
+                self.error(ErrorKind::UnexpectedToken, format!("Found {:?}, expected literal ({:?})", t.lexeme, tk));
+                None
+            }
         }
     }
 
-    fn consume(&mut self, tk: TokenKind, msg: String) -> Result<Token, String> {
+    fn consume(&mut self, tk: TokenKind) -> Option<Token> {
         if self.matches(&[tk]) {
-            Ok(self.advance())
+            Some(self.advance())
         } else {
-            Err(msg)
+            let t = self.peek().kind;
+            self.error(ErrorKind::UnexpectedToken, format!("Found {:?}, expected {:?}", t, tk));
+            None
         }
     }
 
@@ -229,6 +247,10 @@ impl Parser {
 
     fn previous(&self) -> Token {
         self.tokens[self.current - 1].clone()
+    }
+
+    fn error(&mut self, kind: ErrorKind, msg: String) {
+        self.err.push_str(&format!("Line {} - {:?}: {}\n", self.line, kind, msg));
     }
 
     //pub fn parse(mut self) -> Result<Vec<Statement>, String> {
