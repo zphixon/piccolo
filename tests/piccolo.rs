@@ -74,6 +74,7 @@ fn parse() {
 
     let parse = Parser::new(Scanner::new(code).scan_tokens().unwrap()).parse();
 
+    /*
     let ast: Result<Vec<Statement>, String> = Ok(vec![
         Statement::Function(
             Function {
@@ -119,7 +120,7 @@ fn parse() {
                 ]
             }
         )
-    ]);
+    ]);*/
 
     //assert_eq!(ast, parse);
 }

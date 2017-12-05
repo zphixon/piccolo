@@ -1,4 +1,4 @@
-
+/*
 #[derive(Debug, PartialEq)]
 pub struct Paren {
     pub inner: Expression,
@@ -44,9 +44,9 @@ pub enum Literal {
 pub struct FunctionCall {
     pub callee: Expression,
     pub args: Vec<Expression>,
-}
+}*/
 
-#[derive(Debug, PartialEq)]
+/*#[derive(Debug, PartialEq)]
 pub enum UnaryOp {
     Negate,
     Not,
@@ -170,8 +170,8 @@ pub struct And {
 pub struct Math {
     pub inner: And,
     pub rest: Vec<AndRest>,
-}
-
+} */
+/*
 #[derive(Debug, PartialEq)]
 pub enum Expression {
     //Paren(Box<Paren>),
@@ -181,8 +181,8 @@ pub enum Expression {
     FunctionCall(Box<FunctionCall>),
     Math(Box<Math>),
     Nil,
-}
-
+}*/
+/*
 #[derive(Debug, PartialEq)]
 pub struct Assignment {
     pub name: Name,
@@ -258,31 +258,31 @@ pub struct Data {
     pub name: Name,
     pub fields: Vec<Field>,
     pub methods: Vec<Function>,
-}
+} */
 
 use token::Token;
 /////////////////////////////////////////////
 // ad-hoc implementation of all this stuff //
 /////////////////////////////////////////////
 
-pub enum BinaryOp {
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    Mod,
-    And,
-    Or,
-    BinaryAnd,
-    BinaryOr,
-    BinaryXor,
-    Equals,
-    NotEquals,
-    Less,
-    Greater,
-    LessEquals,
-    GreaterEquals,
-}
+//pub enum BinaryOp {
+//    Plus,
+//    Minus,
+//    Multiply,
+//    Divide,
+//    Mod,
+//    And,
+//    Or,
+//    BinaryAnd,
+//    BinaryOr,
+//    BinaryXor,
+//    Equals,
+//    NotEquals,
+//    Less,
+//    Greater,
+//    LessEquals,
+//    GreaterEquals,
+//}
 
 // uncomment when you eventually delete the rest of this file
 //pub enum UnaryOp {
