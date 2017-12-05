@@ -50,11 +50,11 @@ impl Parser {
         while self.matches(&[TokenKind::And]) {
             let op = self.previous();
             let right = self.or()?;
-            r = Some(Expr::Binary {
+            r = Some(Expr::Binary(Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
-            });
+            }));
         }
 
         r
@@ -68,11 +68,11 @@ impl Parser {
         while self.matches(&[TokenKind::Or]) {
             let op = self.previous();
             let right = self.equality()?;
-            r = Some(Expr::Binary {
+            r = Some(Expr::Binary(Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
-            });
+            }));
         }
 
         r
@@ -86,11 +86,11 @@ impl Parser {
         while self.matches(&[TokenKind::BangEquals, TokenKind::Equals]) {
             let op = self.previous();
             let right = self.comparison()?;
-            r = Some(Expr::Binary {
+            r = Some(Expr::Binary(Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
-            });
+            }));
         }
 
         r
@@ -104,11 +104,11 @@ impl Parser {
         while self.matches(&[TokenKind::GreaterThan, TokenKind::GreaterThanEquals, TokenKind::LessThan, TokenKind::LessThanEquals]) {
             let op = self.previous();
             let right = self.addition()?;
-            r = Some(Expr::Binary {
+            r = Some(Expr::Binary(Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
-            });
+            }));
         }
 
         r
@@ -120,11 +120,11 @@ impl Parser {
         while self.matches(&[TokenKind::Minus, TokenKind::Plus]) {
             let op = self.previous();
             let right = self.multiplication()?;
-            expr = Expr::Binary {
+            expr = Expr::Binary(Binary{
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
-            };
+            });
         }
 
         Some(expr)
@@ -136,11 +136,11 @@ impl Parser {
         while self.matches(&[TokenKind::FSlash, TokenKind::Star]) {
             let op = self.previous();
             let right = self.unary()?;
-            expr = Expr::Binary {
+            expr = Expr::Binary(Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
-            }
+            });
         }
 
         Some(expr)
@@ -150,10 +150,10 @@ impl Parser {
         if self.matches(&[TokenKind::Bang, TokenKind::Minus]) {
             let op = self.previous();
             let rhs = Box::new(self.unary()?);
-            Some(Expr::Unary {
+            Some(Expr::Unary(Unary {
                 op,
                 rhs
-            })
+            }))
         } else {
             self.primary()
         }
@@ -162,12 +162,12 @@ impl Parser {
     fn primary(&mut self) -> Option<Expr> {
         let t = self.advance();
         match t.kind {
-            TokenKind::True => Some(Expr::Literal(Lit::Bool(true))),
-            TokenKind::False => Some(Expr::Literal(Lit::Bool(false))),
+            TokenKind::True => Some(Expr::Literal(Literal::Bool(true))),
+            TokenKind::False => Some(Expr::Literal(Literal::Bool(false))),
             //TokenKind::Nil => Some(Expr::Literal(Lit::Nil)),
-            TokenKind::Integer(i) => Some(Expr::Literal(Lit::Integer(i))),
-            TokenKind::Double(d) => Some(Expr::Literal(Lit::Float(d))),
-            TokenKind::String => Some(Expr::Literal(Lit::String(t.lexeme.clone()))),
+            TokenKind::Integer(i) => Some(Expr::Literal(Literal::Integer(i))),
+            TokenKind::Double(d) => Some(Expr::Literal(Literal::Float(d))),
+            TokenKind::String => Some(Expr::Literal(Literal::String(t.lexeme.clone()))),
             TokenKind::LParen => {
                 let expr = self.expression()?;
                 let l = self.line;
