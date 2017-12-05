@@ -1,6 +1,6 @@
 
 use token::{Token, TokenKind};
-use err::{PiccoloError, ErrorKind};
+use err::ErrorKind;
 
 fn keywords(s: &str) -> Option<TokenKind> {
     match s {

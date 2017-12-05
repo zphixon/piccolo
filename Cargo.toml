@@ -5,6 +5,4 @@ version = "0.1.0"
 authors = ["Zack <zackh@firemail.cc>"]
 
 [dependencies]
-failure = "0.1"
-failure_derive = "0.1"
 

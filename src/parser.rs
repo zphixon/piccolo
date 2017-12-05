@@ -1,5 +1,5 @@
 
-use err::{PiccoloError, ErrorKind};
+use err::ErrorKind;
 use token::{Token, TokenKind};
 use ast::*;
 

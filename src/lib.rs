@@ -1,8 +1,4 @@
 
-#[macro_use]
-extern crate failure_derive;
-extern crate failure;
-
 pub mod parser;
 pub mod token;
 pub mod scanner;
