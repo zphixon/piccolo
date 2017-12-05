@@ -2,7 +2,7 @@
 pub mod parser;
 pub mod token;
 pub mod scanner;
-pub mod expr;
+//pub mod expr;
 pub mod ast;
 pub mod err;
 
@@ -22,4 +22,7 @@ pub fn parse_file(filename: &str) -> Result<Vec<token::Token>, String> {
         Err("could not read file".into())
     }
 }
+
+pub struct AstPrinter;
+//impl 
 
