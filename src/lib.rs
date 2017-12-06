@@ -8,6 +8,7 @@ pub mod err;
 pub mod interp;
 
 use scanner::Scanner;
+use ast::Accept;
 
 use std::fs::File;
 use std::io::Read;
@@ -29,8 +30,8 @@ impl AstPrinter {
         AstPrinter
     }
 
-    pub fn print(mut self, mut e: &ast::Expr) -> String {
-        ast::walk_expr(&mut self, e)
+    pub fn print(mut self, e: &ast::Expr) -> String {
+        e.accept(&mut self)
     }
 
     fn parenthesize(mut self, name: &str, l: &[&ast::Expr]) -> String {
@@ -39,7 +40,7 @@ impl AstPrinter {
 
         for expr in l {
             s.push_str(" ");
-            s.push_str(&ast::walk_expr(&mut self, expr));
+            s.push_str(&expr.accept(&mut self));
         }
         s.push_str(")");
 
