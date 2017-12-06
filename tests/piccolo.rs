@@ -28,37 +28,38 @@ fn test_file() {
 fn parse_math() {
     use piccolo::scanner::Scanner;
     use piccolo::parser::Parser;
-    use piccolo::ast::Expr::*;
-    use piccolo::ast::Lit;
+    //use piccolo::ast::Expr::*;
+    //use piccolo::ast::Literal;
+    use piccolo::ast::*;
     use piccolo::token::{Token, TokenKind};
 
     let code = "32 + -4.5 == 72 * 3 && 4 != 5".into();
     let parse = Parser::new(Scanner::new(code).scan_tokens().unwrap()).parse();
 
-    let ast = Ok(Binary {
-        lhs: Box::new(Binary {
-            lhs: Box::new(Binary {
-                lhs: Box::new(Literal(Lit::Integer(32))),
+    let ast = Ok(Expr::Binary(Binary {
+        lhs: Box::new(Expr::Binary(Binary {
+            lhs: Box::new(Expr::Binary(Binary {
+                lhs: Box::new(Expr::Literal(Literal::Integer(32))),
                 op: Token { kind: TokenKind::Plus, lexeme: "+".into(), line: 1 },
-                rhs: Box::new(Unary {
+                rhs: Box::new(Expr::Unary(Unary {
                     op: Token { kind: TokenKind::Minus, lexeme: "-".into(), line: 1 },
-                    rhs: Box::new(Literal(Lit::Float(4.5))),
-                })
-            }),
+                    rhs: Box::new(Expr::Literal(Literal::Float(4.5))),
+                }))
+            })),
             op: Token { kind: TokenKind::Equals, lexeme: "==".into(), line: 1 },
-            rhs: Box::new(Binary {
-                lhs: Box::new(Literal(Lit::Integer(72))),
+            rhs: Box::new(Expr::Binary(Binary {
+                lhs: Box::new(Expr::Literal(Literal::Integer(72))),
                 op: Token { kind: TokenKind::Star, lexeme: "*".into(), line: 1 },
-                rhs: Box::new(Literal(Lit::Integer(3))),
-            })
-        }),
+                rhs: Box::new(Expr::Literal(Literal::Integer(3))),
+            }))
+        })),
         op: Token { kind: TokenKind::And, lexeme: "&&".into(), line: 1 },
-        rhs: Box::new(Binary {
-            lhs: Box::new(Literal(Lit::Integer(4))),
+        rhs: Box::new(Expr::Binary(Binary {
+            lhs: Box::new(Expr::Literal(Literal::Integer(4))),
             op: Token { kind: TokenKind::BangEquals, lexeme: "!=".into(), line: 1 },
-            rhs: Box::new(Literal(Lit::Integer(5))),
-        })
-    });
+            rhs: Box::new(Expr::Literal(Literal::Integer(5))),
+        }))
+    }));
 
     assert_eq!(ast, parse);
 }
