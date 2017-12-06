@@ -172,7 +172,7 @@ impl Parser {
                 let expr = self.expression()?;
                 let l = self.line;
                 self.consume(TokenKind::RParen)?;
-                Some(Expr::Paren(Box::new(expr.clone())))
+                Some(expr.clone())
             }
             // TokenKind::Ident => {get value of variable}
             tk => {

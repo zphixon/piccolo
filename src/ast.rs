@@ -1,10 +1,16 @@
 
 use token::Token;
 
-pub trait ExprVisitor<T> {
-    fn visit_binary(&mut self, b: Binary) -> T;
-    fn visit_unary(&mut self, b: Unary) -> T;
-    fn visit_paren(&mut self, b: Paren) -> T;
+pub trait Accept {
+    fn accept<T: ExprVisitor>(&self, visitor: &mut T) -> T;
+}
+
+pub trait ExprVisitor {
+    type Output;
+    fn visit_binary(&mut self, b: &Binary) -> Self::Output;
+    fn visit_unary(&mut self, u: &Unary) -> Self::Output;
+    fn visit_paren(&mut self, p: &Paren) -> Self::Output;
+    fn visit_literal(&mut self, l: &Literal) -> Self::Output;
     //fn visit_fncall(&mut self, b: FnCall) -> T; // TODO
     //fn visit_me(&mut self, b: Me) -> T;
 }
@@ -32,17 +38,33 @@ pub struct Unary {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Paren(Box<Expr>);
+pub struct Paren(pub Box<Expr>);
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Binary(Binary),
     Unary(Unary),
     Literal(Literal),
-    Paren(Box<Expr>),
+    Paren(Paren),
 }
 
-pub fn pprint_ast(e: Expr) {
+pub fn walk_expr<T: ExprVisitor>(visitor: &mut T, e: &Expr) -> T::Output {
+    match *e {
+        Expr::Binary(ref e) => visitor.visit_binary(e),
+        Expr::Unary(ref e) => visitor.visit_unary(e),
+        Expr::Literal(ref e) => visitor.visit_literal(e),
+        Expr::Paren(ref e) => visitor.visit_paren(e),
+    }
+}
+
+use std::fmt;
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", ::AstPrinter::new().print(self))
+    }
+}
+
+/*pub fn pprint_ast(e: Expr) {
     pp_rec(e, 0);
 }
 
@@ -74,8 +96,8 @@ fn pp_rec(e: Expr, indent: u64) {
             println!("{:?}", l);
         },
         Expr::Paren(p) => {
-            pp_rec(*p, indent + 1);
+            pp_rec(*p.0, indent + 1);
         }
     }
-}
+}*/
 
