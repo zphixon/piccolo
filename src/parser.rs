@@ -166,7 +166,6 @@ impl Parser {
             TokenKind::String => Some(Expr::Literal(Literal::String(t.lexeme.clone()))),
             TokenKind::LParen => {
                 let expr = self.expression()?;
-                let l = self.line;
                 self.consume(TokenKind::RParen)?;
                 Some(expr.clone())
             }
