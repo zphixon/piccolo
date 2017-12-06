@@ -24,6 +24,50 @@ pub fn parse_file(filename: &str) -> Result<Vec<token::Token>, String> {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct AstPrinter;
-//impl 
+impl AstPrinter {
+    pub fn new() -> Self {
+        AstPrinter
+    }
+
+    pub fn print(mut self, mut e: &ast::Expr) -> String {
+        ast::walk_expr(&mut self, e)
+        //e.accept(&mut self)
+    }
+
+    fn parenthesize(mut self, name: &str, l: &[&ast::Expr]) -> String {
+        let mut s = String::from("(");
+        s.push_str(name);
+
+        for expr in l {
+            s.push_str(" ");
+            s.push_str(&ast::walk_expr(&mut self, expr));
+        }
+        s.push_str(")");
+
+        s
+    }
+}
+
+impl ast::ExprVisitor for AstPrinter {
+    type Output = String;
+
+    fn visit_binary(&mut self, b: &ast::Binary) -> Self::Output {
+        self.parenthesize(&b.op.lexeme, &[&b.lhs, &b.rhs])
+    }
+
+    fn visit_paren(&mut self, p: &ast::Paren) -> Self::Output {
+        self.parenthesize("paren", &[&p.0])
+    }
+
+    fn visit_unary(&mut self, u: &ast::Unary) -> Self::Output {
+        self.parenthesize(&u.op.lexeme, &[&u.rhs])
+    }
+
+    fn visit_literal(&mut self, l: &ast::Literal) -> Self::Output {
+        //if l == Literal::Nil { "nil".into() } // TODO
+        format!("{:?}", l)
+    }
+}
 
