@@ -5,6 +5,7 @@ pub mod scanner;
 //pub mod expr;
 pub mod ast;
 pub mod err;
+pub mod interp;
 
 use scanner::Scanner;
 
