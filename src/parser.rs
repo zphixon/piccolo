@@ -45,7 +45,6 @@ impl Parser {
     fn and(&mut self) -> Option<Expr> {
         let expr = self.or()?;
         let mut r = Some(expr.clone()); // TODO: figure out error handling
-        //let mut r = Err("Expected &&".into());
 
         while self.matches(&[TokenKind::And]) {
             let op = self.previous();
@@ -63,7 +62,6 @@ impl Parser {
     fn or(&mut self) -> Option<Expr> {
         let expr = self.equality()?;
         let mut r = Some(expr.clone());
-        //let mut r = Err("Expected ||".into());
 
         while self.matches(&[TokenKind::Or]) {
             let op = self.previous();
@@ -81,7 +79,6 @@ impl Parser {
     fn equality(&mut self) -> Option<Expr> {
         let expr = self.comparison()?;
         let mut r = Some(expr.clone());
-        //let mut r = Err("Expected ==, !=".into());
 
         while self.matches(&[TokenKind::BangEquals, TokenKind::Equals]) {
             let op = self.previous();
@@ -99,7 +96,6 @@ impl Parser {
     fn comparison(&mut self) -> Option<Expr> {
         let expr = self.addition()?;
         let mut r = Some(expr.clone());
-        //let mut r = Err("Expected >, <, >=, <=".into());
 
         while self.matches(&[TokenKind::GreaterThan, TokenKind::GreaterThanEquals, TokenKind::LessThan, TokenKind::LessThanEquals]) {
             let op = self.previous();
@@ -164,7 +160,7 @@ impl Parser {
         match t.kind {
             TokenKind::True => Some(Expr::Literal(Literal::Bool(true))),
             TokenKind::False => Some(Expr::Literal(Literal::Bool(false))),
-            //TokenKind::Nil => Some(Expr::Literal(Lit::Nil)),
+            //TokenKind::Nil => Some(Expr::Literal(Lit::Nil)), // TODO
             TokenKind::Integer(i) => Some(Expr::Literal(Literal::Integer(i))),
             TokenKind::Double(d) => Some(Expr::Literal(Literal::Float(d))),
             TokenKind::String => Some(Expr::Literal(Literal::String(t.lexeme.clone()))),

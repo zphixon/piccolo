@@ -17,8 +17,6 @@ pub fn parse_file(filename: &str) -> Result<Vec<token::Token>, String> {
         let mut data = String::new();
         file.read_to_string(&mut data).unwrap();
         Scanner::new(data).scan_tokens()
-        //println!("{:?}", Scanner::new(data).scan_tokens()?);
-        //Ok(())
     } else {
         Err("could not read file".into())
     }
@@ -33,7 +31,6 @@ impl AstPrinter {
 
     pub fn print(mut self, mut e: &ast::Expr) -> String {
         ast::walk_expr(&mut self, e)
-        //e.accept(&mut self)
     }
 
     fn parenthesize(mut self, name: &str, l: &[&ast::Expr]) -> String {

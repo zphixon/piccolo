@@ -28,8 +28,6 @@ fn test_file() {
 fn parse_math() {
     use piccolo::scanner::Scanner;
     use piccolo::parser::Parser;
-    //use piccolo::ast::Expr::*;
-    //use piccolo::ast::Literal;
     use piccolo::ast::*;
     use piccolo::token::{Token, TokenKind};
 
