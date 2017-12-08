@@ -129,7 +129,7 @@ impl Parser {
     fn multiplication(&mut self) -> Option<Expr> {
         let mut expr = self.unary()?;
 
-        while self.matches(&[TokenKind::FSlash, TokenKind::Star]) {
+        while self.matches(&[TokenKind::Divide, TokenKind::Star]) {
             let op = self.previous();
             let right = self.unary()?;
             expr = Expr::Binary(Binary {

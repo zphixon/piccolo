@@ -88,7 +88,7 @@ impl Scanner {
             b'-' => self.add_token(TokenKind::Minus),
             b'+' => self.add_token(TokenKind::Plus),
             b'*' => self.add_token(TokenKind::Star),
-            b'/' => self.add_token(TokenKind::FSlash),
+            b'/' => self.add_token(TokenKind::Divide),
             b'^' => self.add_token(TokenKind::BXor),
             b'%' => self.add_token(TokenKind::Mod),
 

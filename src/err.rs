@@ -9,5 +9,6 @@ pub enum ErrorKind {
     BadFloat,
     UnexpectedChar,
     UnexpectedToken,
+    MathError,
 }
 

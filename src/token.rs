@@ -38,7 +38,7 @@ pub enum TokenKind {
     Plus,                // +
     Minus,              // -
     Star,                // *
-    FSlash,              // /
+    Divide,              // /
     Mod,                 // %
     And,                 // &&
     Or,                  // ||

@@ -13,8 +13,8 @@ fn scan_correctly() {
     assert_eq!(tk, vec![
         Do, End, Fn, If, Else, While, For, In, Data, Is, Pub, Me, New, Err, Retn,
         LBracket, RBracket, LParen, RParen, Comma, Dot, ERange, IRange, Assign,
-        Newline, Bang, Plus, Minus, Star, FSlash, Mod, And, Or, BAnd, BOr, BXor,
-        Equals, BangEquals, LessThan, GreaterThan, LessThanEquals, GreaterThanEquals,
+        Newline, Not, Plus, Minus, Star, FSlash, Mod, And, Or, BAnd, BOr, BXor,
+        Equals, NotEquals, LessThan, GreaterThan, LessThanEquals, GreaterThanEquals,
         Ident, String, Double(3.14), Integer(23), Eof
     ]);
 }
@@ -22,6 +22,19 @@ fn scan_correctly() {
 #[test]
 fn test_file() {
     println!("{:?}", piccolo::parse_file("test.pc").unwrap());
+}
+
+#[test]
+fn equal_truthy() {
+    use piccolo::interp::{is_equal, is_truthy};
+    use piccolo::value::Value;
+    assert!(is_equal(&Value::Nil, &Value::Nil));
+    assert!(!is_truthy(&Value::Nil));
+    assert!(is_equal(&Value::String("a".into()), &Value::String("a".into())));
+    assert!(!is_equal(&Value::String("a".into()), &Value::String("b".into())));
+    assert!(!is_equal(&Value::Float(3.0), &Value::Integer(3)));
+    assert!(is_equal(&Value::Integer(3), &Value::Integer(3)));
+    assert!(is_truthy(&Value::String("".into())));
 }
 
 #[test]
@@ -54,7 +67,7 @@ fn parse_math() {
         op: Token { kind: TokenKind::And, lexeme: "&&".into(), line: 1 },
         rhs: Box::new(Expr::Binary(Binary {
             lhs: Box::new(Expr::Literal(Literal::Integer(4))),
-            op: Token { kind: TokenKind::BangEquals, lexeme: "!=".into(), line: 1 },
+            op: Token { kind: TokenKind::NotEquals, lexeme: "!=".into(), line: 1 },
             rhs: Box::new(Expr::Literal(Literal::Integer(5))),
         }))
     }));
