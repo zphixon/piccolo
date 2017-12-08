@@ -5,6 +5,7 @@ pub mod scanner;
 pub mod ast;
 pub mod err;
 pub mod interp;
+pub mod value;
 
 use scanner::Scanner;
 use ast::Accept;
@@ -63,8 +64,11 @@ impl ast::ExprVisitor for AstPrinter {
     }
 
     fn visit_literal(&mut self, l: &ast::Literal) -> Self::Output {
-        //if l == Literal::Nil { "nil".into() } // TODO
-        format!("{:?}", l)
+        if *l == ast::Literal::Nil {
+            "nil".into()
+        } else {
+            format!("{:?}", l)
+        }
     }
 }
 

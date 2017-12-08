@@ -80,7 +80,7 @@ impl Parser {
         let expr = self.comparison()?;
         let mut r = Some(expr.clone());
 
-        while self.matches(&[TokenKind::BangEquals, TokenKind::Equals]) {
+        while self.matches(&[TokenKind::NotEquals, TokenKind::Equals]) {
             let op = self.previous();
             let right = self.comparison()?;
             r = Some(Expr::Binary(Binary {
@@ -143,7 +143,7 @@ impl Parser {
     }
 
     fn unary(&mut self) -> Option<Expr> {
-        if self.matches(&[TokenKind::Bang, TokenKind::Minus]) {
+        if self.matches(&[TokenKind::Not, TokenKind::Minus]) {
             let op = self.previous();
             let rhs = Box::new(self.unary()?);
             Some(Expr::Unary(Unary {
@@ -160,7 +160,7 @@ impl Parser {
         match t.kind {
             TokenKind::True => Some(Expr::Literal(Literal::Bool(true))),
             TokenKind::False => Some(Expr::Literal(Literal::Bool(false))),
-            //TokenKind::Nil => Some(Expr::Literal(Lit::Nil)), // TODO
+            TokenKind::Nil => Some(Expr::Literal(Literal::Nil)),
             TokenKind::Integer(i) => Some(Expr::Literal(Literal::Integer(i))),
             TokenKind::Double(d) => Some(Expr::Literal(Literal::Float(d))),
             TokenKind::String => Some(Expr::Literal(Literal::String(t.lexeme.clone()))),

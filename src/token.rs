@@ -19,6 +19,7 @@ pub enum TokenKind {
     New,      // new
     Err,      // err
     Retn,     // retn
+    Nil,      // nil
 
     // syntax
     LBracket, // [
@@ -33,7 +34,7 @@ pub enum TokenKind {
     Newline,  // \n
 
     // operators
-    Bang,                // !
+    Not,                // !
     Plus,                // +
     Minus,              // -
     Star,                // *
@@ -45,7 +46,7 @@ pub enum TokenKind {
     BOr,                 // |
     BXor,                // ^
     Equals,              // ==
-    BangEquals,          // !=
+    NotEquals,          // !=
     LessThan,            // <
     GreaterThan,         // >
     LessThanEquals,      // <=

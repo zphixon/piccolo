@@ -21,6 +21,7 @@ pub enum Literal {
     Integer(i64),
     Float(f64),
     String(String),
+    Nil,
     Range, // TODO
 }
 

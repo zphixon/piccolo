@@ -20,6 +20,7 @@ fn keywords(s: &str) -> Option<TokenKind> {
         "retn" =>  Some(TokenKind::Retn),
         "true" =>  Some(TokenKind::True),
         "false" => Some(TokenKind::False),
+        "nil" =>   Some(TokenKind::Nil),
         _ => None
     }
 }
@@ -126,9 +127,9 @@ impl Scanner {
             b'!' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    self.add_token(TokenKind::BangEquals);
+                    self.add_token(TokenKind::NotEquals);
                 } else {
-                    self.add_token(TokenKind::Bang);
+                    self.add_token(TokenKind::Not);
                 }
             }
 
