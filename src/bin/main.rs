@@ -7,12 +7,14 @@ fn main() {
     //let code = "\"strang\" == \"string\"";
     //let code = "\"string\" == \"string\"";
     //let code = "me 32 + 32\n\nme true\n\n\nme \"it is wednesday, my dudes\"\n";
-    let code = "test = 32\n\nme 33 + 24";
+    let code = "a = 0.1\n\nb=0.2\nme a + b == 0.3\na = 9\nme a + c\n";
 
+
+    println!("program:\n{}\n", code);
     let s = piccolo::scanner::Scanner::new(code.into()).scan_tokens();
 
     if s.is_err() {
-        println!("scan err\n\n{}", s.err().unwrap());
+        println!("scan err!\n{}", s.err().unwrap());
     } else {
         println!("tokens:");
         for tok in s.clone().unwrap() {
@@ -23,22 +25,23 @@ fn main() {
         let p = piccolo::parser::Parser::new(s.unwrap()).parse();
 
         if p.is_err() {
-            println!("parse err\\n{}", p.err().unwrap());
+            println!("parse err!\n{}", p.err().unwrap());
         } else {
             println!("statements:");
             for stmt in p.clone().unwrap() {
                 println!("{:?}", stmt);
             }
 
+            let mut interp = piccolo::interp::Interpreter::new();
             println!("\noutput:");
-            let i = piccolo::interp::Interpreter::new().interpret(p.unwrap());
+            let i = interp.interpret(p.unwrap());
 
             println!();
 
             if i.is_err() {
-                println!("runtime err\n\n{}", i.err().unwrap());
+                println!("runtime err!\n{}", i.err().unwrap());
             } else {
-                println!("huzzah");
+                println!("huzzah!\n{:?}", interp.env);
             }
         }
     }

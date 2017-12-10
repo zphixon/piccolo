@@ -7,6 +7,7 @@ pub mod stmt;
 pub mod err;
 pub mod interp;
 pub mod value;
+pub mod env;
 
 use scanner::Scanner;
 use expr::ExprAccept;

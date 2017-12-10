@@ -10,5 +10,6 @@ pub enum ErrorKind {
     UnexpectedChar,
     UnexpectedToken,
     MathError,
+    UndefinedVariable,
 }
 

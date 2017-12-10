@@ -1,9 +1,8 @@
 
 use std::any::Any;
 
-use ::expr;
+use ::*;
 use expr::ExprAccept;
-use ::stmt;
 use stmt::StmtAccept;
 use value::Value;
 use token::TokenKind;
@@ -11,8 +10,9 @@ use err::ErrorKind;
 
 #[derive(Debug, Clone)]
 pub struct Interpreter {
-    err: String,
-    had_err: bool,
+    pub err: String,
+    pub had_err: bool,
+    pub env: env::Env,
 }
 
 impl expr::ExprVisitor for Interpreter {
@@ -274,7 +274,12 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_variable(&mut self, e: &expr::Variable) -> Value {
-        Value::Nil
+        if let Some(v) = self.env.get(&e.0) {
+            v
+        } else {
+            self.error(ErrorKind::UndefinedVariable, e.0.line, format!("variable {} is undefined", e.0.lexeme));
+            Value::Nil
+        }
     }
 }
 
@@ -291,6 +296,10 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_assignment(&mut self, e: &stmt::Assignment) {
+        let value = self.evaluate(&e.value);
+        self.env.define(e.name.lexeme.clone(), value);
+        //if e.value == value::Value::Nil {
+        //}
     }
 }
 
@@ -299,6 +308,7 @@ impl Interpreter {
         Interpreter {
             had_err: false,
             err: String::new(),
+            env: env::Env::new(),
         }
     }
 
