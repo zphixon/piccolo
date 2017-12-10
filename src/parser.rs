@@ -26,9 +26,12 @@ impl Parser {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
+            self.skip_newlines();
+            //while self.peek().kind != TokenKind::Newline { self.advance(); self.line += 1; }
             if let Some(s) = self.declaration() {
                 statements.push(s);
             } else {
+                self.synchronize();
                 return Err(self.err)
             }
         }
@@ -37,27 +40,64 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Option<Stmt> {
-        while self.matches(&[TokenKind::Newline]) { self.line += 1; }
         if self.is_at_end() { return None }
-
         let r = if self.lookahead(1).kind == TokenKind::Assign {
-            self.assignment()
+            self.var_declaration()
         } else {
+        //} else class, etc {
             self.statement()
         };
-
-        if r.is_none() {
-            self.synchronize();
-        }
 
         r
     }
 
-    fn assignment(&mut self) -> Option<Stmt> {
+    fn var_declaration(&mut self) -> Option<Stmt> {
         let name = self.consume(TokenKind::Ident)?;
-        self.consume(TokenKind::Assign)?;
-        let value = self.expression()?;
-        Some(Stmt::Assignment(Assignment { name, value }))
+        let init = if self.matches(&[TokenKind::Assign]) {
+            self.expression()?
+        } else {
+            Expr::Literal(Literal::Nil)
+        };
+        //self.consume(TokenKind::Newline); // TODO
+        Some(Stmt::Assignment(::stmt::Assignment { name, value: init }))
+        //while self.matches(&[TokenKind::Newline]) { self.line += 1; }
+        //if self.is_at_end() { return None }
+
+        //let r = if self.lookahead(1).kind == TokenKind::Assign {
+        //    self.assignment()
+        //} else {
+        //    self.statement()
+        //};
+
+        //if r.is_none() {
+        //    self.synchronize();
+        //}
+
+        //r
+    }
+
+    fn assignment(&mut self) -> Option<Expr> {
+        let expr = self.math()?;
+        if self.matches(&[TokenKind::Assign]) {
+            let equals = self.previous();
+            let value = Box::new(self.assignment()?);
+            match expr {
+                Expr::Variable(v) => {
+                    let name = v.0.clone();
+                    Some(Expr::Assignment(::expr::Assignment{ name, value }))
+                }
+                v => {
+                    self.error(ErrorKind::UnexpectedToken, format!("expected variable name, got {:?}", v));
+                    None
+                }
+            }
+        } else {
+            Some(expr)
+        }
+        //let name = self.consume(TokenKind::Ident)?;
+        //self.consume(TokenKind::Assign)?;
+        //let value = self.expression()?;
+        //Some(Stmt::Assignment(Assignment { name, value }))
     }
 
     fn statement(&mut self) -> Option<Stmt> {
@@ -70,20 +110,23 @@ impl Parser {
 
     fn me_statement_tmp(&mut self) -> Option<Stmt> {
         let value = self.expression()?;
-        if !self.is_at_end() {
-            self.consume(TokenKind::Newline)?;
-        }
+        self.skip_newlines();
+        //if !self.is_at_end() {
+        //    self.consume(TokenKind::Newline)?;
+        //}
         Some(Stmt::MeTmp(MeTmp(value)))
     }
 
     fn expression_statement(&mut self) -> Option<Stmt> {
         let value = self.expression()?;
-        self.consume(TokenKind::Newline)?;
+        self.skip_newlines();
+        //self.consume(TokenKind::Newline)?;
         Some(Stmt::StmtExpr(StmtExpr(value)))
     }
 
     fn expression(&mut self) -> Option<Expr> {
-        self.math() // TODO: add more
+        self.assignment()
+        //self.math() // TODO: add more
     }
 
     fn math(&mut self) -> Option<Expr> {
@@ -252,6 +295,12 @@ impl Parser {
             }
 
             self.advance();
+        }
+    }
+
+    fn skip_newlines(&mut self) {
+        while self.matches(&[TokenKind::Newline]) {
+            self.line += 1;
         }
     }
 

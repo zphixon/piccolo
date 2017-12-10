@@ -7,7 +7,7 @@ fn main() {
     //let code = "\"strang\" == \"string\"";
     //let code = "\"string\" == \"string\"";
     //let code = "me 32 + 32\n\nme true\n\n\nme \"it is wednesday, my dudes\"\n";
-    let code = "a = 0.1\n\nb=0.2\nme a + b == 0.3\na = 9\nme a + c\n";
+    let code = "a = 0.1\n\nb=0.2\nme a + b == 0.3\na = 9\nme a + b";
 
 
     println!("program:\n{}\n", code);

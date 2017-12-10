@@ -281,6 +281,10 @@ impl expr::ExprVisitor for Interpreter {
             Value::Nil
         }
     }
+
+    fn visit_assign(&mut self, e: &expr::Assignment) -> Value {
+        Value::Nil
+    }
 }
 
 impl stmt::StmtVisitor for Interpreter {
