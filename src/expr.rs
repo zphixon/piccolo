@@ -1,7 +1,7 @@
 
 use token::Token;
 
-pub trait Accept {
+pub trait ExprAccept {
     fn accept<T: ExprVisitor>(&self, visitor: &mut T) -> T::Output;
 }
 
@@ -25,7 +25,7 @@ pub enum Literal {
     Range, // TODO
 }
 
-impl Accept for Literal {
+impl ExprAccept for Literal {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         v.visit_literal(&self)
     }
@@ -38,7 +38,7 @@ pub struct Binary {
     pub rhs: Box<Expr>,
 }
 
-impl Accept for Binary {
+impl ExprAccept for Binary {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         v.visit_binary(&self)
     }
@@ -50,7 +50,7 @@ pub struct Unary {
     pub rhs: Box<Expr>,
 }
 
-impl Accept for Unary {
+impl ExprAccept for Unary {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         v.visit_unary(&self)
     }
@@ -59,7 +59,7 @@ impl Accept for Unary {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Paren(pub Box<Expr>);
 
-impl Accept for Paren {
+impl ExprAccept for Paren {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         v.visit_paren(&self)
     }
@@ -73,7 +73,7 @@ pub enum Expr {
     Paren(Paren),
 }
 
-impl Accept for Expr {
+impl ExprAccept for Expr {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         match *self {
             Expr::Binary(ref e) => e.accept(v),

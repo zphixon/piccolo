@@ -1,7 +1,8 @@
 
 use err::ErrorKind;
 use token::{Token, TokenKind};
-use ast::*;
+use expr::*;
+use stmt::*;
 
 #[derive(Debug)]
 pub struct Parser {
@@ -21,17 +22,47 @@ impl Parser {
         }
     }
 
-    pub fn parse(mut self) -> Result<Expr, String> {
-        let r = self.start_parse();
-        if r.is_some() {
-            Ok(r.unwrap())
+    pub fn parse(mut self) -> Result<Vec<Stmt>, String> {
+        let mut statements = Vec::new();
+
+        while !self.is_at_end() {
+            if let Some(s) = self.statement() {
+                statements.push(s);
+            } else {
+                return Err(self.err)
+            }
+        }
+
+        Ok(statements)
+    }
+
+    //pub fn parse(mut self) -> Result<Expr, String> {
+    //    let r = self.start_parse();
+    //    if r.is_some() {
+    //        Ok(r.unwrap())
+    //    } else {
+    //        Err(self.err)
+    //    }
+    //}
+
+    fn statement(&mut self) -> Option<Stmt> {
+        if self.matches(&[TokenKind::Me]) {
+            self.me_statement_tmp()
         } else {
-            Err(self.err)
+            self.expression_statement()
         }
     }
 
-    fn start_parse(&mut self) -> Option<Expr> {
-        self.expression()
+    fn me_statement_tmp(&mut self) -> Option<Stmt> {
+        let value = self.expression()?;
+        self.consume(TokenKind::Newline)?;
+        Some(Stmt::MeTmp(MeTmp(value)))
+    }
+
+    fn expression_statement(&mut self) -> Option<Stmt> {
+        let value = self.expression()?;
+        self.consume(TokenKind::Newline)?;
+        Some(Stmt::StmtExpr(StmtExpr(value)))
     }
 
     fn expression(&mut self) -> Option<Expr> {
@@ -178,7 +209,7 @@ impl Parser {
     }
 
     fn consume(&mut self, tk: TokenKind) -> Option<Token> {
-        if self.matches(&[tk]) {
+        if self.check(tk) {
             Some(self.advance())
         } else {
             let t = self.peek().kind;

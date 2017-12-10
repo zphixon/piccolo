@@ -1,8 +1,10 @@
 
 use std::any::Any;
 
-use ::ast;
-use ast::Accept;
+use ::expr;
+use expr::ExprAccept;
+use ::stmt;
+use stmt::StmtAccept;
 use value::Value;
 use token::TokenKind;
 use err::ErrorKind;
@@ -13,18 +15,18 @@ pub struct Interpreter {
     had_err: bool,
 }
 
-impl ast::ExprVisitor for Interpreter {
+impl expr::ExprVisitor for Interpreter {
     type Output = Value;
 
-    fn visit_literal(&mut self, e: &ast::Literal) -> Value {
-        (::std::mem::replace(&mut e.clone(), ast::Literal::Nil)).into()
+    fn visit_literal(&mut self, e: &expr::Literal) -> Value {
+        (::std::mem::replace(&mut e.clone(), expr::Literal::Nil)).into()
     }
 
-    fn visit_paren(&mut self, e: &ast::Paren) -> Value {
-        self.evaluate(&ast::Expr::Paren(e.clone()))
+    fn visit_paren(&mut self, e: &expr::Paren) -> Value {
+        self.evaluate(&expr::Expr::Paren(e.clone()))
     }
 
-    fn visit_unary(&mut self, e: &ast::Unary) -> Value {
+    fn visit_unary(&mut self, e: &expr::Unary) -> Value {
         let rhs = self.evaluate(&e.rhs);
         match e.op.kind {
             TokenKind::Minus => match rhs {
@@ -42,7 +44,7 @@ impl ast::ExprVisitor for Interpreter {
         }
     }
 
-    fn visit_binary(&mut self, e: &ast::Binary) -> Value {
+    fn visit_binary(&mut self, e: &expr::Binary) -> Value {
         let lhs = self.evaluate(&e.lhs);
         let rhs = self.evaluate(&e.rhs);
 
@@ -272,6 +274,19 @@ impl ast::ExprVisitor for Interpreter {
     }
 }
 
+impl stmt::StmtVisitor for Interpreter {
+    type Output = ();
+
+    fn visit_expr(&mut self, e: &stmt::StmtExpr) {
+        self.evaluate(&e.0);
+    }
+
+    fn visit_me_tmp(&mut self, e: &stmt::MeTmp) {
+        let value = self.evaluate(&e.0);
+        println!("{}", value);
+    }
+}
+
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
@@ -280,16 +295,27 @@ impl Interpreter {
         }
     }
 
-    pub fn interpret(&mut self, e: &ast::Expr) -> Result<Value, String> {
-        let v = self.evaluate(e);
-        if self.had_err {
-            Err(self.err.clone())
-        } else {
-            Ok(v)
+    pub fn interpret(&mut self, statements: Vec<stmt::Stmt>) -> Result<(), String> {
+        for stmt in statements {
+            self.execute(&stmt);
+            if self.had_err {
+                return Err(self.err.clone())
+            }
         }
+        Ok(())
+        //let v = self.evaluate(e);
+        //if self.had_err {
+        //    Err(self.err.clone())
+        //} else {
+        //    Ok(v)
+        //}
     }
 
-    fn evaluate(&mut self, e: &ast::Expr) -> Value {
+    fn execute(&mut self, s: &stmt::Stmt) {
+        s.accept(&mut *self);
+    }
+
+    fn evaluate(&mut self, e: &expr::Expr) -> Value {
         e.accept(&mut *self)
     }
 

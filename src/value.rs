@@ -83,15 +83,15 @@ impl From<f32> for Value {
     }
 }
 
-impl From<::ast::Literal> for Value {
-    fn from(f: ::ast::Literal) -> Self {
+impl From<::expr::Literal> for Value {
+    fn from(f: ::expr::Literal) -> Self {
         match f {
-            ::ast::Literal::Float(v) => v.into(),
-            ::ast::Literal::Integer(v) => v.into(),
-            ::ast::Literal::Bool(v) => v.into(),
-            ::ast::Literal::String(v) => v.into(),
-            ::ast::Literal::Nil => Value::Nil,
-            ::ast::Literal::Range => Value::Nil, // TODO
+            ::expr::Literal::Float(v) => v.into(),
+            ::expr::Literal::Integer(v) => v.into(),
+            ::expr::Literal::Bool(v) => v.into(),
+            ::expr::Literal::String(v) => v.into(),
+            ::expr::Literal::Nil => Value::Nil,
+            ::expr::Literal::Range => Value::Nil, // TODO
         }
     }
 }
