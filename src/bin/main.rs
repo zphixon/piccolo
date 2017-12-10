@@ -6,7 +6,7 @@ fn main() {
     //let code = "false == false";
     //let code = "\"strang\" == \"string\"";
     //let code = "\"string\" == \"string\"";
-    let code = "me 32 + 32\n\nme true\n\nme 5 + -3\n";
+    let code = "me 32 + 32\n\nme true\n\n\nme \"it is wednesday,\\nmy dudes\"\n";
 
     let s = piccolo::scanner::Scanner::new(code.into()).scan_tokens();
 

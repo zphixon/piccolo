@@ -46,6 +46,7 @@ impl Parser {
     //}
 
     fn statement(&mut self) -> Option<Stmt> {
+        while self.matches(&[TokenKind::Newline]) {}
         if self.matches(&[TokenKind::Me]) {
             self.me_statement_tmp()
         } else {
