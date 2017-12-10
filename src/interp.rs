@@ -283,7 +283,10 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_assign(&mut self, e: &expr::Assignment) -> Value {
-        Value::Nil
+        let value = self.evaluate(&e.value);
+        self.env.define(e.name.lexeme.clone(), value.clone());
+        //Value::Nil // TODO
+        value
     }
 }
 

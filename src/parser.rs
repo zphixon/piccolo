@@ -86,8 +86,8 @@ impl Parser {
                     let name = v.0.clone();
                     Some(Expr::Assignment(::expr::Assignment{ name, value }))
                 }
-                v => {
-                    self.error(ErrorKind::UnexpectedToken, format!("expected variable name, got {:?}", v));
+                _ => {
+                    self.error(ErrorKind::UnexpectedToken, format!("expected variable name, got {:?}", equals));
                     None
                 }
             }
