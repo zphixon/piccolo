@@ -203,6 +203,7 @@ impl Scanner {
             }
 
             if self.peek() == b'\\' {
+                self.advance();
                 match self.advance() {
                     b'n' => {
                         value.push('\n');
