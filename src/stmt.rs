@@ -1,5 +1,5 @@
 
-use token::Token;
+use ::*;
 
 pub trait StmtAccept {
     fn accept<T: StmtVisitor>(&self, visitor: &mut T) -> T::Output;
@@ -13,7 +13,7 @@ pub trait StmtVisitor {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct MeTmp(pub ::expr::Expr);
+pub struct MeTmp(pub expr::Expr);
 
 impl StmtAccept for MeTmp {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
@@ -22,7 +22,7 @@ impl StmtAccept for MeTmp {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct StmtExpr(pub ::expr::Expr);
+pub struct StmtExpr(pub expr::Expr);
 
 impl StmtAccept for StmtExpr {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
@@ -32,8 +32,8 @@ impl StmtAccept for StmtExpr {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Assignment {
-    pub name: ::token::Token,
-    pub value: ::expr::Expr,
+    pub name: token::Token,
+    pub value: expr::Expr,
 }
 
 impl StmtAccept for Assignment {

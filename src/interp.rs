@@ -1,6 +1,4 @@
 
-use std::any::Any;
-
 use ::*;
 use expr::ExprAccept;
 use stmt::StmtAccept;
@@ -79,7 +77,7 @@ impl expr::ExprVisitor for Interpreter {
                     _ => {
                         self.error(ErrorKind::MathError, e.op.line, format!("Tried to add {:?} to {:?}", lhs, rhs));
                         Value::Nil
-                    }//panic!("unreachable: {:?} {}", v, e.op.line)
+                    }
                 },
                 Value::Integer(l) => match rhs {
                     Value::Float(r) => Value::Float(l as f64 + r),
@@ -305,8 +303,6 @@ impl stmt::StmtVisitor for Interpreter {
     fn visit_assignment(&mut self, e: &stmt::Assignment) {
         let value = self.evaluate(&e.value);
         self.env.define(e.name.lexeme.clone(), value);
-        //if e.value == value::Value::Nil {
-        //}
     }
 }
 

@@ -34,9 +34,9 @@ pub enum TokenKind {
     Newline,  // \n
 
     // operators
-    Not,                // !
+    Not,                 // !
     Plus,                // +
-    Minus,              // -
+    Minus,               // -
     Star,                // *
     Divide,              // /
     Mod,                 // %
@@ -46,7 +46,7 @@ pub enum TokenKind {
     BOr,                 // |
     BXor,                // ^
     Equals,              // ==
-    NotEquals,          // !=
+    NotEquals,           // !=
     LessThan,            // <
     GreaterThan,         // >
     LessThanEquals,      // <=

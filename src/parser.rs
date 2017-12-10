@@ -1,19 +1,17 @@
 
 use err::ErrorKind;
-use token::{Token, TokenKind};
-use expr::*;
-use stmt::*;
+use ::*;
 
 #[derive(Debug)]
 pub struct Parser {
     line: u64,
     err: String,
     current: usize,
-    tokens: Vec<Token>,
+    tokens: Vec<token::Token>,
 }
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+    pub fn new(tokens: Vec<token::Token>) -> Self {
         Parser {
             line: 1,
             err: String::new(),
@@ -22,12 +20,11 @@ impl Parser {
         }
     }
 
-    pub fn parse(mut self) -> Result<Vec<Stmt>, String> {
+    pub fn parse(mut self) -> Result<Vec<stmt::Stmt>, String> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
             self.skip_newlines();
-            //while self.peek().kind != TokenKind::Newline { self.advance(); self.line += 1; }
             if let Some(s) = self.declaration() {
                 statements.push(s);
             } else {
@@ -39,108 +36,90 @@ impl Parser {
         Ok(statements)
     }
 
-    fn declaration(&mut self) -> Option<Stmt> {
+    fn declaration(&mut self) -> Option<stmt::Stmt> {
         if self.is_at_end() { return None }
-        let r = if self.lookahead(1).kind == TokenKind::Assign {
+
+        let r = if self.lookahead(1).kind == token::TokenKind::Assign {
             self.var_declaration()
         } else {
-        //} else class, etc {
+        //} else class, etc { // TODO
             self.statement()
         };
 
         r
     }
 
-    fn var_declaration(&mut self) -> Option<Stmt> {
-        let name = self.consume(TokenKind::Ident)?;
-        let init = if self.matches(&[TokenKind::Assign]) {
+    fn var_declaration(&mut self) -> Option<stmt::Stmt> {
+        let name = self.consume(token::TokenKind::Ident)?;
+
+        let init = if self.matches(&[token::TokenKind::Assign]) {
             self.expression()?
         } else {
-            Expr::Literal(Literal::Nil)
+            expr::Expr::Literal(expr::Literal::Nil)
         };
-        //self.consume(TokenKind::Newline); // TODO
-        Some(Stmt::Assignment(::stmt::Assignment { name, value: init }))
-        //while self.matches(&[TokenKind::Newline]) { self.line += 1; }
-        //if self.is_at_end() { return None }
 
-        //let r = if self.lookahead(1).kind == TokenKind::Assign {
-        //    self.assignment()
-        //} else {
-        //    self.statement()
-        //};
-
-        //if r.is_none() {
-        //    self.synchronize();
-        //}
-
-        //r
+        Some(stmt::Stmt::Assignment(stmt::Assignment { name, value: init }))
     }
 
-    fn assignment(&mut self) -> Option<Expr> {
+    fn assignment(&mut self) -> Option<expr::Expr> {
         let expr = self.math()?;
-        if self.matches(&[TokenKind::Assign]) {
+
+        if self.matches(&[token::TokenKind::Assign]) {
             let equals = self.previous();
             let value = Box::new(self.assignment()?);
             match expr {
-                Expr::Variable(v) => {
+                expr::Expr::Variable(v) => {
                     let name = v.0.clone();
-                    Some(Expr::Assignment(::expr::Assignment{ name, value }))
+                    Some(expr::Expr::Assignment(expr::Assignment{ name, value }))
                 }
                 _ => {
-                    self.error(ErrorKind::UnexpectedToken, format!("expected variable name, got {:?}", equals));
+                    self.error(err::ErrorKind::UnexpectedToken, format!("expected variable name, got {:?}", equals));
                     None
                 }
             }
         } else {
             Some(expr)
         }
-        //let name = self.consume(TokenKind::Ident)?;
-        //self.consume(TokenKind::Assign)?;
-        //let value = self.expression()?;
-        //Some(Stmt::Assignment(Assignment { name, value }))
     }
 
-    fn statement(&mut self) -> Option<Stmt> {
-        if self.matches(&[TokenKind::Me]) {
+    fn statement(&mut self) -> Option<stmt::Stmt> {
+        if self.matches(&[token::TokenKind::Me]) {
             self.me_statement_tmp()
         } else {
             self.expression_statement()
         }
     }
 
-    fn me_statement_tmp(&mut self) -> Option<Stmt> {
+    fn me_statement_tmp(&mut self) -> Option<stmt::Stmt> {
         let value = self.expression()?;
+
         self.skip_newlines();
-        //if !self.is_at_end() {
-        //    self.consume(TokenKind::Newline)?;
-        //}
-        Some(Stmt::MeTmp(MeTmp(value)))
+        Some(stmt::Stmt::MeTmp(stmt::MeTmp(value)))
     }
 
-    fn expression_statement(&mut self) -> Option<Stmt> {
+    fn expression_statement(&mut self) -> Option<stmt::Stmt> {
         let value = self.expression()?;
+
         self.skip_newlines();
-        //self.consume(TokenKind::Newline)?;
-        Some(Stmt::StmtExpr(StmtExpr(value)))
+        Some(stmt::Stmt::StmtExpr(stmt::StmtExpr(value)))
     }
 
-    fn expression(&mut self) -> Option<Expr> {
+    fn expression(&mut self) -> Option<expr::Expr> {
         self.assignment()
-        //self.math() // TODO: add more
     }
 
-    fn math(&mut self) -> Option<Expr> {
+    fn math(&mut self) -> Option<expr::Expr> {
         self.and()
     }
 
-    fn and(&mut self) -> Option<Expr> {
+    fn and(&mut self) -> Option<expr::Expr> {
         let expr = self.or()?;
         let mut r = Some(expr.clone()); // TODO: figure out error handling
 
-        while self.matches(&[TokenKind::And]) {
+        while self.matches(&[token::TokenKind::And]) {
             let op = self.previous();
             let right = self.or()?;
-            r = Some(Expr::Binary(Binary {
+            r = Some(expr::Expr::Binary(expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -150,14 +129,14 @@ impl Parser {
         r
     }
 
-    fn or(&mut self) -> Option<Expr> {
+    fn or(&mut self) -> Option<expr::Expr> {
         let expr = self.equality()?;
         let mut r = Some(expr.clone());
 
-        while self.matches(&[TokenKind::Or]) {
+        while self.matches(&[token::TokenKind::Or]) {
             let op = self.previous();
             let right = self.equality()?;
-            r = Some(Expr::Binary(Binary {
+            r = Some(expr::Expr::Binary(expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -167,14 +146,14 @@ impl Parser {
         r
     }
 
-    fn equality(&mut self) -> Option<Expr> {
+    fn equality(&mut self) -> Option<expr::Expr> {
         let expr = self.comparison()?;
         let mut r = Some(expr.clone());
 
-        while self.matches(&[TokenKind::NotEquals, TokenKind::Equals]) {
+        while self.matches(&[token::TokenKind::NotEquals, token::TokenKind::Equals]) {
             let op = self.previous();
             let right = self.comparison()?;
-            r = Some(Expr::Binary(Binary {
+            r = Some(expr::Expr::Binary(expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -184,14 +163,17 @@ impl Parser {
         r
     }
 
-    fn comparison(&mut self) -> Option<Expr> {
+    fn comparison(&mut self) -> Option<expr::Expr> {
         let expr = self.addition()?;
         let mut r = Some(expr.clone());
 
-        while self.matches(&[TokenKind::GreaterThan, TokenKind::GreaterThanEquals, TokenKind::LessThan, TokenKind::LessThanEquals]) {
+        while self.matches(&[token::TokenKind::GreaterThan,
+                             token::TokenKind::GreaterThanEquals,
+                             token::TokenKind::LessThan,
+                             token::TokenKind::LessThanEquals]) {
             let op = self.previous();
             let right = self.addition()?;
-            r = Some(Expr::Binary(Binary {
+            r = Some(expr::Expr::Binary(expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -201,13 +183,13 @@ impl Parser {
         r
     }
 
-    fn addition(&mut self) -> Option<Expr> {
+    fn addition(&mut self) -> Option<expr::Expr> {
         let mut expr = self.multiplication()?;
 
-        while self.matches(&[TokenKind::Minus, TokenKind::Plus]) {
+        while self.matches(&[token::TokenKind::Minus, token::TokenKind::Plus]) {
             let op = self.previous();
             let right = self.multiplication()?;
-            expr = Expr::Binary(Binary{
+            expr = expr::Expr::Binary(expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -217,13 +199,13 @@ impl Parser {
         Some(expr)
     }
 
-    fn multiplication(&mut self) -> Option<Expr> {
+    fn multiplication(&mut self) -> Option<expr::Expr> {
         let mut expr = self.unary()?;
 
-        while self.matches(&[TokenKind::Divide, TokenKind::Star]) {
+        while self.matches(&[token::TokenKind::Divide, token::TokenKind::Star]) {
             let op = self.previous();
             let right = self.unary()?;
-            expr = Expr::Binary(Binary {
+            expr = expr::Expr::Binary(expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -233,11 +215,11 @@ impl Parser {
         Some(expr)
     }
 
-    fn unary(&mut self) -> Option<Expr> {
-        if self.matches(&[TokenKind::Not, TokenKind::Minus]) {
+    fn unary(&mut self) -> Option<expr::Expr> {
+        if self.matches(&[token::TokenKind::Not, token::TokenKind::Minus]) {
             let op = self.previous();
             let rhs = Box::new(self.unary()?);
-            Some(Expr::Unary(Unary {
+            Some(expr::Expr::Unary(expr::Unary {
                 op,
                 rhs
             }))
@@ -246,34 +228,34 @@ impl Parser {
         }
     }
 
-    fn primary(&mut self) -> Option<Expr> {
+    fn primary(&mut self) -> Option<expr::Expr> {
         let t = self.advance();
         match t.kind {
-            TokenKind::True => Some(Expr::Literal(Literal::Bool(true))),
-            TokenKind::False => Some(Expr::Literal(Literal::Bool(false))),
-            TokenKind::Nil => Some(Expr::Literal(Literal::Nil)),
-            TokenKind::Integer(i) => Some(Expr::Literal(Literal::Integer(i))),
-            TokenKind::Double(d) => Some(Expr::Literal(Literal::Float(d))),
-            TokenKind::String => Some(Expr::Literal(Literal::String(t.lexeme.clone()))),
-            TokenKind::LParen => {
+            token::TokenKind::True => Some(expr::Expr::Literal(expr::Literal::Bool(true))),
+            token::TokenKind::False => Some(expr::Expr::Literal(expr::Literal::Bool(false))),
+            token::TokenKind::Nil => Some(expr::Expr::Literal(expr::Literal::Nil)),
+            token::TokenKind::Integer(i) => Some(expr::Expr::Literal(expr::Literal::Integer(i))),
+            token::TokenKind::Double(d) => Some(expr::Expr::Literal(expr::Literal::Float(d))),
+            token::TokenKind::String => Some(expr::Expr::Literal(expr::Literal::String(t.lexeme.clone()))),
+            token::TokenKind::LParen => {
                 let expr = self.expression()?;
-                self.consume(TokenKind::RParen)?;
+                self.consume(token::TokenKind::RParen)?;
                 Some(expr.clone())
             },
-            TokenKind::Ident => Some(Expr::Variable(Variable(self.previous()))),
+            token::TokenKind::Ident => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
             tk => {
-                self.error(ErrorKind::UnexpectedToken, format!("Found {:?}, expected literal ({:?})", t.lexeme, tk));
+                self.error(err::ErrorKind::UnexpectedToken, format!("Found {:?}, expected literal ({:?})", t.lexeme, tk));
                 None
             }
         }
     }
 
-    fn consume(&mut self, tk: TokenKind) -> Option<Token> {
+    fn consume(&mut self, tk: token::TokenKind) -> Option<token::Token> {
         if self.check(tk) {
             Some(self.advance())
         } else {
             let t = self.peek().kind;
-            self.error(ErrorKind::UnexpectedToken, format!("Found {:?}, expected {:?}", t, tk));
+            self.error(err::ErrorKind::UnexpectedToken, format!("Found {:?}, expected {:?}", t, tk));
             None
         }
     }
@@ -281,13 +263,13 @@ impl Parser {
     fn synchronize(&mut self) {
         self.advance();
         while !self.is_at_end() {
-            if self.previous().kind == TokenKind::Newline { return }
+            if self.previous().kind == token::TokenKind::Newline { return }
 
             match self.peek().kind {
-                TokenKind::Data | TokenKind::Fn | TokenKind::For | TokenKind::If
-                    | TokenKind::While | TokenKind::Retn | TokenKind::Err
-                    | TokenKind::In | TokenKind::Is | TokenKind::Do | TokenKind::End
-                    | TokenKind::Me =>
+                token::TokenKind::Data | token::TokenKind::Fn | token::TokenKind::For | token::TokenKind::If
+                    | token::TokenKind::While | token::TokenKind::Retn | token::TokenKind::Err
+                    | token::TokenKind::In | token::TokenKind::Is | token::TokenKind::Do | token::TokenKind::End
+                    | token::TokenKind::Me =>
                 {
                     return
                 }
@@ -299,12 +281,12 @@ impl Parser {
     }
 
     fn skip_newlines(&mut self) {
-        while self.matches(&[TokenKind::Newline]) {
+        while self.matches(&[token::TokenKind::Newline]) {
             self.line += 1;
         }
     }
 
-    fn matches(&mut self, list: &[TokenKind]) -> bool {
+    fn matches(&mut self, list: &[token::TokenKind]) -> bool {
         for tk in list {
             if self.check(*tk) {
                 self.advance();
@@ -314,7 +296,7 @@ impl Parser {
         false
     }
 
-    fn check(&mut self, tk: TokenKind) -> bool {
+    fn check(&mut self, tk: token::TokenKind) -> bool {
         if self.is_at_end() {
             false
         } else {
@@ -322,7 +304,7 @@ impl Parser {
         }
     }
 
-    fn advance(&mut self) -> Token {
+    fn advance(&mut self) -> token::Token {
         if !self.is_at_end() {
             self.current += 1;
         }
@@ -330,53 +312,23 @@ impl Parser {
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek().kind == TokenKind::Eof
+        self.peek().kind == token::TokenKind::Eof
     }
 
-    fn peek(&self) -> Token {
+    fn peek(&self) -> token::Token {
         self.tokens[self.current].clone()
     }
 
-    fn lookahead(&self, n: usize) -> Token {
+    fn lookahead(&self, n: usize) -> token::Token {
         self.tokens[self.current + n].clone()
     }
 
-    fn previous(&self) -> Token {
+    fn previous(&self) -> token::Token {
         self.tokens[self.current - 1].clone()
     }
 
     fn error(&mut self, kind: ErrorKind, msg: String) {
         self.err.push_str(&format!("Line {} - {:?}: {}\n", self.line, kind, msg));
     }
-
-    //pub fn parse(mut self) -> Result<Vec<Statement>, String> {
-    //    let mut err = String::new();
-    //    let mut stmt = vec![];
-
-    //    while !self.is_at_end() {
-    //        let r = self.statement();
-    //        if r.is_err() {
-    //            err.push_str(&r.err().unwrap());
-    //        } else {
-    //            stmt.push(r.unwrap());
-    //        }
-    //    }
-
-    //    Ok(stmt)
-    //}
-
-    //fn statement(&mut self) -> Result<Statement, String> {
-    //    if self.next_is(TokenKind::Me) {
-    //        self.placeholder_print()
-    //    } else {
-    //        self.expression()
-    //    }
-    //}
-
-    //fn placeholder_print(&mut self) -> Result<Statement, String> {
-    //    let value: Expression = self.expression()?;
-    //    self.consume(TokenKind::Newline)?;
-    //    Ok(Statement::Me(format!("{:?}", value)))
-    //}
 }
 

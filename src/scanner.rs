@@ -167,7 +167,6 @@ impl Scanner {
             }
 
             c => {
-                //println!("{}", self.peek() as char);
                 if is_alpha(c) {
                     self.ident();
                 } else if is_digit(c) {
@@ -182,11 +181,11 @@ impl Scanner {
 
     fn ident(&mut self) {
         while is_alphanumeric(self.peek()) {
-            //print!("{}", self.peek() as char);
             self.advance();
         }
+
         let value = String::from_utf8(self.source[self.start..self.current].to_vec()).unwrap();
-        //println!("({}-{}) {} {}", self.start, self.current, self.line, value);
+
         if let Some(tk) = keywords(&value) {
             self.add_token(tk);
         } else {
@@ -246,7 +245,6 @@ impl Scanner {
         }
 
         if self.peek() == b'.' {
-            // XXX: sketchy
             self.reverse();
             while is_digit(self.peek()) {
                 self.reverse();

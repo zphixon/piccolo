@@ -10,7 +10,6 @@ pub mod value;
 pub mod env;
 
 use scanner::Scanner;
-use expr::ExprAccept;
 
 use std::fs::File;
 use std::io::Read;
@@ -25,6 +24,9 @@ pub fn parse_file(filename: &str) -> Result<Vec<token::Token>, String> {
     }
 }
 
+// TODO
+//use expr::ExprAccept;
+//
 //#[derive(Copy, Clone)]
 //pub struct AstPrinter;
 //impl AstPrinter {

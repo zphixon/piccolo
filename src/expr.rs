@@ -1,5 +1,5 @@
 
-use token::Token;
+use ::*;
 
 pub trait ExprAccept {
     fn accept<T: ExprVisitor>(&self, visitor: &mut T) -> T::Output;
@@ -14,7 +14,6 @@ pub trait ExprVisitor {
     fn visit_variable(&mut self, v: &Variable) -> Self::Output;
     fn visit_assign(&mut self, a: &Assignment) -> Self::Output;
     //fn visit_fncall(&mut self, b: FnCall) -> T; // TODO
-    //fn visit_me(&mut self, b: Me) -> T;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -36,7 +35,7 @@ impl ExprAccept for Literal {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Binary {
     pub lhs: Box<Expr>,
-    pub op: Token,
+    pub op: token::Token,
     pub rhs: Box<Expr>,
 }
 
@@ -48,7 +47,7 @@ impl ExprAccept for Binary {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Unary {
-    pub op: Token,
+    pub op: token::Token,
     pub rhs: Box<Expr>,
 }
 
@@ -68,7 +67,7 @@ impl ExprAccept for Paren {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Variable(pub ::token::Token);
+pub struct Variable(pub token::Token);
 
 impl ExprAccept for Variable {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
@@ -78,7 +77,7 @@ impl ExprAccept for Variable {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Assignment {
-    pub name: ::token::Token,
+    pub name: token::Token,
     pub value: Box<Expr>,
 }
 
@@ -114,8 +113,8 @@ impl ExprAccept for Expr {
 use std::fmt;
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "TODO {:?}", &self)
-        //write!(f, "{}", ::AstPrinter::new().print(self))
+        write!(f, "{:?}", &self)
+        //write!(f, "{}", ::AstPrinter::new().print(self)) // TODO
     }
 }
 
