@@ -272,6 +272,10 @@ impl expr::ExprVisitor for Interpreter {
             v => panic!("unreachable: {:?} {}", v, e.op.line)
         }
     }
+
+    fn visit_variable(&mut self, e: &expr::Variable) -> Value {
+        Value::Nil
+    }
 }
 
 impl stmt::StmtVisitor for Interpreter {
@@ -284,6 +288,9 @@ impl stmt::StmtVisitor for Interpreter {
     fn visit_me_tmp(&mut self, e: &stmt::MeTmp) {
         let value = self.evaluate(&e.0);
         println!("{}", value);
+    }
+
+    fn visit_assignment(&mut self, e: &stmt::Assignment) {
     }
 }
 
@@ -303,12 +310,6 @@ impl Interpreter {
             }
         }
         Ok(())
-        //let v = self.evaluate(e);
-        //if self.had_err {
-        //    Err(self.err.clone())
-        //} else {
-        //    Ok(v)
-        //}
     }
 
     fn execute(&mut self, s: &stmt::Stmt) {

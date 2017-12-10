@@ -11,6 +11,7 @@ pub trait ExprVisitor {
     fn visit_unary(&mut self, u: &Unary) -> Self::Output;
     fn visit_paren(&mut self, p: &Paren) -> Self::Output;
     fn visit_literal(&mut self, l: &Literal) -> Self::Output;
+    fn visit_variable(&mut self, v: &Variable) -> Self::Output;
     //fn visit_fncall(&mut self, b: FnCall) -> T; // TODO
     //fn visit_me(&mut self, b: Me) -> T;
 }
@@ -66,11 +67,21 @@ impl ExprAccept for Paren {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Variable(pub ::token::Token);
+
+impl ExprAccept for Variable {
+    fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
+        v.visit_variable(&self)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Binary(Binary),
     Unary(Unary),
     Literal(Literal),
     Paren(Paren),
+    Variable(Variable),
 }
 
 impl ExprAccept for Expr {
@@ -80,6 +91,7 @@ impl ExprAccept for Expr {
             Expr::Unary(ref e) => e.accept(v),
             Expr::Literal(ref e) => e.accept(v),
             Expr::Paren(ref e) => e.accept(v),
+            Expr::Variable(ref e) => e.accept(v),
         }
     }
 }
@@ -87,7 +99,8 @@ impl ExprAccept for Expr {
 use std::fmt;
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", ::AstPrinter::new().print(self))
+        write!(f, "TODO {:?}", &self)
+        //write!(f, "{}", ::AstPrinter::new().print(self))
     }
 }
 

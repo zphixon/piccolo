@@ -26,7 +26,7 @@ impl Parser {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
-            if let Some(s) = self.statement() {
+            if let Some(s) = self.declaration() {
                 statements.push(s);
             } else {
                 return Err(self.err)
@@ -36,17 +36,31 @@ impl Parser {
         Ok(statements)
     }
 
-    //pub fn parse(mut self) -> Result<Expr, String> {
-    //    let r = self.start_parse();
-    //    if r.is_some() {
-    //        Ok(r.unwrap())
-    //    } else {
-    //        Err(self.err)
-    //    }
-    //}
+    fn declaration(&mut self) -> Option<Stmt> {
+        while self.matches(&[TokenKind::Newline]) { self.line += 1; }
+        if self.is_at_end() { return None }
+
+        let r = if self.lookahead(1).kind == TokenKind::Assign {
+            self.assignment()
+        } else {
+            self.statement()
+        };
+
+        if r.is_none() {
+            self.synchronize();
+        }
+
+        r
+    }
+
+    fn assignment(&mut self) -> Option<Stmt> {
+        let name = self.consume(TokenKind::Ident)?;
+        self.consume(TokenKind::Assign)?;
+        let value = self.expression()?;
+        Some(Stmt::Assignment(Assignment { name, value }))
+    }
 
     fn statement(&mut self) -> Option<Stmt> {
-        while self.matches(&[TokenKind::Newline]) {}
         if self.matches(&[TokenKind::Me]) {
             self.me_statement_tmp()
         } else {
@@ -56,7 +70,9 @@ impl Parser {
 
     fn me_statement_tmp(&mut self) -> Option<Stmt> {
         let value = self.expression()?;
-        self.consume(TokenKind::Newline)?;
+        if !self.is_at_end() {
+            self.consume(TokenKind::Newline)?;
+        }
         Some(Stmt::MeTmp(MeTmp(value)))
     }
 
@@ -200,8 +216,8 @@ impl Parser {
                 let expr = self.expression()?;
                 self.consume(TokenKind::RParen)?;
                 Some(expr.clone())
-            }
-            // TokenKind::Ident => {get value of variable}
+            },
+            TokenKind::Ident => Some(Expr::Variable(Variable(self.previous()))),
             tk => {
                 self.error(ErrorKind::UnexpectedToken, format!("Found {:?}, expected literal ({:?})", t.lexeme, tk));
                 None
@@ -270,6 +286,10 @@ impl Parser {
 
     fn peek(&self) -> Token {
         self.tokens[self.current].clone()
+    }
+
+    fn lookahead(&self, n: usize) -> Token {
+        self.tokens[self.current + n].clone()
     }
 
     fn previous(&self) -> Token {
