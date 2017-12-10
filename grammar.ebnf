@@ -2,11 +2,13 @@
 (* builtin: char, alpha, alphanumeric, number *)
 
 grammar = piccolo;
-piccolo = {stmt | fn | data};
+(*piccolo = {stmt | fn | data};*)
+piccolo = {decl};
+decl = assignment | stmt;
 fn = "fn", name, "(", [name, {",", name}], ")", block;
 name = alpha, {alphanumeric};
 block = "do", {stmt}, "end";
-stmt = (expr, nl) | assignment | retn | err | flow;
+stmt = (expr, nl) | retn | err | flow;
 expr = paren | access | name | literal | fncall | math | construct | index;
 paren = "(", expr, ")";
 access = expr, ".", expr;
@@ -39,5 +41,5 @@ comparison = addition, {">" | ">=" | "<" | "<=", addition};
 addition = multip1ication, {"-" | "+", multiplication};
 multiplication = unary, {"/" | "*", unary};
 unary = ("!" | "-", unary) | primary;
-primary = number | string | "false" | "true" | paren;
+primary = number | string | "false" | "true" | paren | name;
 
