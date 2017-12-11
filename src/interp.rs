@@ -264,8 +264,25 @@ impl expr::ExprVisitor for Interpreter {
             TokenKind::Equals => Value::Bool(is_equal(&lhs, &rhs)),
             TokenKind::NotEquals => Value::Bool(!is_equal(&lhs, &rhs)),
 
-            TokenKind::And => Value::Bool(is_truthy(&lhs) && is_truthy(&rhs)),
-            TokenKind::Or => Value::Bool(is_truthy(&lhs) || is_truthy(&rhs)),
+            TokenKind::And => {
+                if is_truthy(&lhs) {
+                    if is_truthy(&rhs) {
+                        rhs
+                    } else {
+                        rhs
+                    }
+                } else {
+                    lhs
+                }
+            },
+
+            TokenKind::Or => {
+                if is_truthy(&lhs) {
+                    lhs
+                } else {
+                    rhs
+                }
+            },
 
             v => panic!("unreachable: {:?} {}", v, e.op.line)
         }
