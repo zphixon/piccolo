@@ -315,14 +315,27 @@ impl Interpreter {
         }
     }
 
-    pub fn interpret(&mut self, statements: Vec<stmt::Stmt>) -> Result<(), String> {
-        for stmt in statements {
+    pub fn reset_err(&mut self) {
+        self.had_err = false;
+        self.err = String::new();
+    }
+
+    pub fn interpret(&mut self, statements: &Vec<stmt::Stmt>) -> Result<(), String> {
+        for stmt in statements.iter() {
             self.execute(&stmt);
             if self.had_err {
                 return Err(self.err.clone())
             }
         }
         Ok(())
+    }
+
+    pub fn eval(&mut self, e: &expr::Expr) -> Result<Value, String> {
+        let v = self.evaluate(e);
+        if self.had_err {
+            return Err(self.err.clone())
+        }
+        Ok(v)
     }
 
     fn execute(&mut self, s: &stmt::Stmt) {

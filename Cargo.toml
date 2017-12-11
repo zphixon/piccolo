@@ -6,7 +6,14 @@ authors = ["Zack <zackh@firemail.cc>"]
 
 [dependencies]
 
-[[bin]]
-name = "main"
-path = "src/bin/main.rs"
+[dev-dependencies]
+rustyline = "1.0"
+
+[[example]]
+name = "interpreter"
+path = "src/bin/interpreter.rs"
+
+[[example]]
+name = "repl"
+path = "src/bin/repl.rs"
 
