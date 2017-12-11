@@ -265,7 +265,7 @@ impl expr::ExprVisitor for Interpreter {
             TokenKind::NotEquals => Value::Bool(!is_equal(&lhs, &rhs)),
 
             TokenKind::And => Value::Bool(is_truthy(&lhs) && is_truthy(&rhs)),
-            TokenKind::Or => Value::Bool(is_truthy(&lhs) && is_truthy(&rhs)),
+            TokenKind::Or => Value::Bool(is_truthy(&lhs) || is_truthy(&rhs)),
 
             v => panic!("unreachable: {:?} {}", v, e.op.line)
         }
