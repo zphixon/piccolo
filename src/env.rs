@@ -24,6 +24,11 @@ impl Env {
     }
 
     pub fn define(&mut self, name: &str, value: value::Value) {
+        // TODO: redefine env to be a list of hashmaps
+        // if any above contains name
+        //     above insert name value
+        // else
+        //     self insert name value
         if self.values.contains_key(name) {
             self.values.insert(name.to_owned(), value);
         } else {
