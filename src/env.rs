@@ -32,14 +32,6 @@ impl Env {
                 None => {self.values.insert(name.to_owned(), value);}
             }
         }
-        //if self.values.contains_key(name) {
-        //    Some(())
-        //} else {
-        //    match self.parent {
-        //        Some(ref mut p) => p.define(name, value),
-        //        None => None
-        //    }
-        //}
     }
 
     pub fn get(&mut self, name: &token::Token) -> Option<value::Value> {
@@ -51,13 +43,6 @@ impl Env {
                 None => None
             }
         }
-        //match self.values.get(&name.lexeme).cloned() {
-        //    Some(v) => Some(v),
-        //    None => match self.parent {
-        //        Some(ref mut p) => p.get(&name),
-        //        None => None,
-        //    }
-        //}
     }
 }
 
