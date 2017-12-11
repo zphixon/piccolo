@@ -299,7 +299,7 @@ impl expr::ExprVisitor for Interpreter {
 
     fn visit_assign(&mut self, e: &expr::Assignment) -> Value {
         let value = self.evaluate(&e.value);
-        self.env.define(e.name.lexeme.clone(), value.clone());
+        self.env.define(&e.name.lexeme, value.clone());
         //Value::Nil // TODO
         value
     }
@@ -319,7 +319,7 @@ impl stmt::StmtVisitor for Interpreter {
 
     fn visit_assignment(&mut self, e: &stmt::Assignment) {
         let value = self.evaluate(&e.value);
-        self.env.define(e.name.lexeme.clone(), value);
+        self.env.define(&e.name.lexeme, value);
     }
 }
 
@@ -337,7 +337,7 @@ impl Interpreter {
         self.err = String::new();
     }
 
-    pub fn interpret(&mut self, statements: &Vec<stmt::Stmt>) -> Result<(), String> {
+    pub fn interpret(&mut self, statements: &[stmt::Stmt]) -> Result<(), String> {
         for stmt in statements.iter() {
             self.execute(&stmt);
             if self.had_err {
