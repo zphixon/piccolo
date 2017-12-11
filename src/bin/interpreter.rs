@@ -10,7 +10,8 @@ fn main() {
         //"me 32 + 32\n\nme true\n\n\nme \"it is wednesday, my dudes\"\n";
         //"a = 0.1\n\nb=0.2\nme a + b == 0.3\na = 9\nme a + b";
         //"a = 2 b = 3 a b = 4";
-        "me a = 2";
+        //"me a = 2";
+        "x = \"yes\"\nx or or or or";
 
     println!("program:\n{}\n", code);
     let s = piccolo::scanner::Scanner::new(code.into()).scan_tokens();
@@ -36,7 +37,7 @@ fn main() {
 
             let mut interp = piccolo::interp::Interpreter::new();
             println!("\noutput:");
-            let i = interp.interpret(p.unwrap());
+            let i = interp.interpret(&p.unwrap());
 
             println!();
 
