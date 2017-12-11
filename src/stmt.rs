@@ -10,6 +10,7 @@ pub trait StmtVisitor {
     fn visit_expr(&mut self, e: &StmtExpr) -> Self::Output;
     fn visit_me_tmp(&mut self, m: &MeTmp) -> Self::Output;
     fn visit_assignment(&mut self, a: &Assignment) -> Self::Output;
+    fn visit_block(&mut self, b: &Block) -> Self::Output;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -43,10 +44,20 @@ impl StmtAccept for Assignment {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Block(pub Vec<Stmt>);
+
+impl StmtAccept for Block {
+    fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
+        v.visit_block(&self)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Stmt {
     StmtExpr(StmtExpr),
     MeTmp(MeTmp),
     Assignment(Assignment),
+    Block(Block),
 }
 
 impl StmtAccept for Stmt {
@@ -55,6 +66,7 @@ impl StmtAccept for Stmt {
             Stmt::StmtExpr(ref e) => e.accept(v),
             Stmt::MeTmp(ref e) => e.accept(v),
             Stmt::Assignment(ref e) => e.accept(v),
+            Stmt::Block(ref e) => e.accept(v),
         }
     }
 }

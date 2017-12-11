@@ -16,10 +16,10 @@ impl Env {
         }
     }
 
-    pub fn with_parent(parent: Env) -> Self {
+    pub fn with_parent(parent: Box<Env>) -> Self {
         Env {
             values: HashMap::new(),
-            parent: Some(Box::new(parent)),
+            parent: Some(parent),
         }
     }
 

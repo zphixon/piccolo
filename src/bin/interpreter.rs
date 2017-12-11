@@ -11,9 +11,14 @@ fn main() {
         //"a = 0.1\n\nb=0.2\nme a + b == 0.3\na = 9\nme a + b";
         //"a = 2 b = 3 a b = 4";
         //"me a = 2";
-        "x = \"yes\"\nx or or or or";
+        //"x = \"yes\"\nx or or or or";
+        "a = 1\nb = 1\nc = 1\ndo\n  a = 2\n  b = 2\n  do\n    a = 3\n    me a\n    me b\n    me c\n  end\n  me a\n  me b\n  me c\nend\nme a\nme b\nme c\n";
 
-    println!("program:\n{}\n", code);
+    println!("program:");
+    for (k, v) in code.lines().enumerate() {
+        println!("{}\t{}", k + 1, v);
+    }
+
     let s = piccolo::scanner::Scanner::new(code.into()).scan_tokens();
 
     if s.is_err() {

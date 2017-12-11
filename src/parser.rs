@@ -83,8 +83,11 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Option<stmt::Stmt> {
+        self.skip_newlines();
         if self.matches(&[token::TokenKind::Me]) {
             self.me_statement_tmp()
+        } else if self.matches(&[token::TokenKind::Do]) {
+            self.block()
         } else {
             self.expression_statement()
         }
@@ -95,6 +98,18 @@ impl Parser {
 
         self.skip_newlines();
         Some(stmt::Stmt::MeTmp(stmt::MeTmp(value)))
+    }
+
+    fn block(&mut self) -> Option<stmt::Stmt> {
+        let mut stmts = Vec::new();
+
+        while !self.check(token::TokenKind::End) && !self.is_at_end() {
+            stmts.push(self.declaration()?);
+        }
+
+        self.consume(token::TokenKind::End)?;
+
+        Some(stmt::Stmt::Block(stmt::Block(stmts)))
     }
 
     fn expression_statement(&mut self) -> Option<stmt::Stmt> {
