@@ -323,8 +323,7 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_block(&mut self, e: &stmt::Block) {
-        //let env = self.env.clone(); // TODO
-        self.execute_block(&e.0);//, env::Env::with_parent(Box::new(env)));
+        self.execute_block(&e.0);
     }
 }
 
@@ -364,12 +363,12 @@ impl Interpreter {
         s.accept(&mut *self);
     }
 
-    fn execute_block(&mut self, stmts: &[stmt::Stmt]) { //, env: env::Env) {
-        //let prev = std::mem::replace(&mut self.env, env);
+    fn execute_block(&mut self, stmts: &[stmt::Stmt]) {
+        self.env.push();
         for stmt in stmts {
             self.execute(stmt);
         }
-        //self.env = prev;
+        self.env.pop();
     }
 
     fn evaluate(&mut self, e: &expr::Expr) -> Value {

@@ -4,50 +4,44 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Env {
-    pub values: HashMap<String, value::Value>,
-    pub parent: Option<Box<Env>>,
+    inner: Vec<HashMap<String, value::Value>>,
 }
 
 impl Env {
     pub fn new() -> Self {
         Env {
-            values: HashMap::new(),
-            parent: None
+            inner: vec![HashMap::new()]
         }
     }
 
-    pub fn with_parent(parent: Box<Env>) -> Self {
-        Env {
-            values: HashMap::new(),
-            parent: Some(parent),
-        }
+    pub fn push(&mut self) {
+        self.inner.push(HashMap::new());
+    }
+
+    pub fn pop(&mut self) -> Option<HashMap<String, value::Value>> {
+        self.inner.pop()
     }
 
     pub fn define(&mut self, name: &str, value: value::Value) {
-        // TODO: redefine env to be a list of hashmaps
-        // if any above contains name
-        //     above insert name value
-        // else
-        //     self insert name value
-        if self.values.contains_key(name) {
-            self.values.insert(name.to_owned(), value);
-        } else {
-            match self.parent {
-                Some(ref mut p) => p.define(name, value),
-                None => {self.values.insert(name.to_owned(), value);}
+        for scope in self.inner.iter_mut().rev().skip(1) {
+            if scope.contains_key(name) {
+                scope.insert(name.to_owned(), value);
+                return
             }
         }
+
+        self.inner.iter_mut().rev().nth(0)
+            .map(|m| m.insert(name.to_owned(), value))
+            .expect("env is empty");
     }
 
     pub fn get(&mut self, name: &token::Token) -> Option<value::Value> {
-        if self.values.contains_key(&name.lexeme) {
-            self.values.get(&name.lexeme).cloned()
-        } else {
-            match self.parent {
-                Some(ref mut p) => p.get(&name),
-                None => None
+        for scope in self.inner.iter().rev() {
+            if scope.contains_key(&name.lexeme) {
+                return scope.get(&name.lexeme).cloned()
             }
         }
+        None
     }
 }
 
