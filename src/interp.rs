@@ -308,18 +308,22 @@ impl expr::ExprVisitor for Interpreter {
 impl stmt::StmtVisitor for Interpreter {
     type Output = ();
 
-    fn visit_expr(&mut self, e: &stmt::StmtExpr) {
-        self.evaluate(&e.0);
+    fn visit_expr(&mut self, s: &stmt::StmtExpr) {
+        self.evaluate(&s.0);
     }
 
-    fn visit_me_tmp(&mut self, e: &stmt::MeTmp) {
-        let value = self.evaluate(&e.0);
+    fn visit_me_tmp(&mut self, s: &stmt::MeTmp) {
+        let value = self.evaluate(&s.0);
         println!("{}", value);
     }
 
-    fn visit_assignment(&mut self, e: &stmt::Assignment) {
-        let value = self.evaluate(&e.value);
-        self.env.define(&e.name.lexeme, value);
+    fn visit_assignment(&mut self, s: &stmt::Assignment) {
+        let value = self.evaluate(&s.value);
+        self.env.define(&s.name.lexeme, value);
+    }
+
+    fn visit_block(&mut self, s: &stmt::Block) {
+        self.execute_block(&s.0);
     }
 
     fn visit_block(&mut self, e: &stmt::Block) {

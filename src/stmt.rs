@@ -7,10 +7,10 @@ pub trait StmtAccept {
 
 pub trait StmtVisitor {
     type Output;
-    fn visit_expr(&mut self, e: &StmtExpr) -> Self::Output;
-    fn visit_me_tmp(&mut self, m: &MeTmp) -> Self::Output;
-    fn visit_assignment(&mut self, a: &Assignment) -> Self::Output;
-    fn visit_block(&mut self, b: &Block) -> Self::Output;
+    fn visit_expr(&mut self, s: &StmtExpr) -> Self::Output;
+    fn visit_me_tmp(&mut self, s: &MeTmp) -> Self::Output;
+    fn visit_assignment(&mut self, s: &Assignment) -> Self::Output;
+    fn visit_block(&mut self, s: &Block) -> Self::Output;
 }
 
 #[derive(Debug, PartialEq, Clone)]
