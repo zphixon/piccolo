@@ -25,6 +25,7 @@ impl Parser {
 
         while !self.is_at_end() {
             self.skip_newlines();
+            if self.is_at_end() { break; }
             if let Some(s) = self.declaration() {
                 statements.push(s);
             } else {
