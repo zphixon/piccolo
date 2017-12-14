@@ -18,6 +18,7 @@ fn main() {
     for (k, v) in code.lines().enumerate() {
         println!("{}\t{}", k + 1, v);
     }
+    println!();
 
     let s = piccolo::scanner::Scanner::new(code.into()).scan_tokens();
 
