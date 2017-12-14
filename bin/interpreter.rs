@@ -13,7 +13,8 @@ fn main() {
         //"me a = 2";
         //"x = \"yes\"\nx or or or or";
         //"a = 1\nb = 1\nc = 1\ndo\n  a = 2\n  b = 2\n  do\n    a = 3\n    me a\n    me b\n    me c\n  end\n  me a\n  me b\n  me c\nend\nme a\nme b\nme c\n";
-        "x = true\nif x do\n  me \"hey, not bad\"\nend\n";
+        //"x = true\nif x do\n  me \"hey, not bad\"\nend\n";
+        "x = nil\nif x do\n  me \"crepe\"\nelse\n  me \"no crepe\"\nend\n";
 
     println!("program:");
     for (k, v) in code.lines().enumerate() {
