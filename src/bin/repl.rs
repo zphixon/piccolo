@@ -14,6 +14,7 @@ fn main() {
 
         match input {
             Ok(line) => {
+                rl.add_history_entry(&line);
                 interp.reset_err();
                 let s = piccolo::scanner::Scanner::new(line).scan_tokens();
                 if s.is_err() {
