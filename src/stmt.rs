@@ -11,6 +11,7 @@ pub trait StmtVisitor {
     fn visit_me_tmp(&mut self, s: &MeTmp) -> Self::Output;
     fn visit_assignment(&mut self, s: &Assignment) -> Self::Output;
     fn visit_block(&mut self, s: &Block) -> Self::Output;
+    fn visit_if(&mut self, s: &If) -> Self::Output;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -53,20 +54,35 @@ impl StmtAccept for Block {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct If {
+    pub cond: expr::Expr,
+    pub then: Vec<Stmt>,
+    pub else_: Option<Vec<Stmt>>,
+}
+
+impl StmtAccept for If {
+    fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
+        v.visit_if(&self)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Stmt {
     StmtExpr(StmtExpr),
     MeTmp(MeTmp),
     Assignment(Assignment),
     Block(Block),
+    If(If),
 }
 
 impl StmtAccept for Stmt {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
         match *self {
-            Stmt::StmtExpr(ref e) => e.accept(v),
-            Stmt::MeTmp(ref e) => e.accept(v),
-            Stmt::Assignment(ref e) => e.accept(v),
-            Stmt::Block(ref e) => e.accept(v),
+            Stmt::StmtExpr(ref s) => s.accept(v),
+            Stmt::MeTmp(ref s) => s.accept(v),
+            Stmt::Assignment(ref s) => s.accept(v),
+            Stmt::Block(ref s) => s.accept(v),
+            Stmt::If(ref s) => s.accept(v),
         }
     }
 }
