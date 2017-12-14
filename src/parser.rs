@@ -133,7 +133,7 @@ impl Parser {
 
         let else_ = if self.matches(&[token::TokenKind::Else]) {
             let mut block = Vec::new();
-            while (!self.check(token::TokenKind::End) || !self.check(token::TokenKind::Else)) && !self.is_at_end() {
+            while !self.is_at_end() && !self.check(token::TokenKind::End) && !self.check(token::TokenKind::Else) {
                 block.push(self.declaration()?);
             }
             Some(block)
