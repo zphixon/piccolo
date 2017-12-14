@@ -11,9 +11,9 @@ rustyline = "1.0"
 
 [[example]]
 name = "interpreter"
-path = "src/bin/interpreter.rs"
+path = "bin/interpreter.rs"
 
 [[example]]
 name = "repl"
-path = "src/bin/repl.rs"
+path = "bin/repl.rs"
 
