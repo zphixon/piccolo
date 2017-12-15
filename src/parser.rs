@@ -91,6 +91,8 @@ impl Parser {
             self.block()
         } else if self.matches(&[token::TokenKind::If]) {
             self.if_statement()
+        } else if self.matches(&[token::TokenKind::While]) {
+            self.while_statement()
         } else {
             self.expression_statement()
         }
@@ -145,6 +147,22 @@ impl Parser {
 
         Some(stmt::Stmt::If(stmt::If {
             cond, then, else_
+        }))
+    }
+
+    fn while_statement(&mut self) -> Option<stmt::Stmt> {
+        let cond = self.expression()?;
+        self.consume(token::TokenKind::Do);
+
+        let mut body = Vec::new();
+        while !self.is_at_end() && !self.check(token::TokenKind::End) {
+            body.push(self.declaration()?);
+        }
+
+        self.consume(token::TokenKind::End)?;
+
+        Some(stmt::Stmt::While(stmt::While {
+            cond, body
         }))
     }
 

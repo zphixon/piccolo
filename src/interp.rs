@@ -329,6 +329,12 @@ impl stmt::StmtVisitor for Interpreter {
             self.execute_block(s.else_.as_ref().unwrap());
         }
     }
+
+    fn visit_while(&mut self, s: &stmt::While) {
+        while is_truthy(&self.evaluate(&s.cond)) {
+            self.execute_block(&s.body);
+        }
+    }
 }
 
 impl Interpreter {
