@@ -163,7 +163,7 @@ impl Parser {
         while self.matches(&[token::TokenKind::And]) {
             let op = self.previous();
             let right = self.or()?;
-            r = Some(expr::Expr::Binary(expr::Binary {
+            r = Some(expr::Expr::Logical(expr::Logical {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -180,7 +180,7 @@ impl Parser {
         while self.matches(&[token::TokenKind::Or]) {
             let op = self.previous();
             let right = self.equality()?;
-            r = Some(expr::Expr::Binary(expr::Binary {
+            r = Some(expr::Expr::Logical(expr::Logical {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),

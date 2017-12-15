@@ -42,6 +42,22 @@ impl expr::ExprVisitor for Interpreter {
         }
     }
 
+    fn visit_logical(&mut self, e: &expr::Logical) -> Value {
+        let left = self.evaluate(&e.lhs);
+
+        if e.op.kind == token::TokenKind::Or {
+            if is_truthy(&left) {
+                return left
+            }
+        } else {
+            if !is_truthy(&left) {
+                return left
+            }
+        }
+
+        self.evaluate(&e.rhs)
+    }
+
     fn visit_binary(&mut self, e: &expr::Binary) -> Value {
         let lhs = self.evaluate(&e.lhs);
         let rhs = self.evaluate(&e.rhs);
@@ -263,26 +279,6 @@ impl expr::ExprVisitor for Interpreter {
 
             TokenKind::Equals => Value::Bool(is_equal(&lhs, &rhs)),
             TokenKind::NotEquals => Value::Bool(!is_equal(&lhs, &rhs)),
-
-            TokenKind::And => {
-                if is_truthy(&lhs) {
-                    if is_truthy(&rhs) {
-                        rhs
-                    } else {
-                        rhs
-                    }
-                } else {
-                    lhs
-                }
-            },
-
-            TokenKind::Or => {
-                if is_truthy(&lhs) {
-                    lhs
-                } else {
-                    rhs
-                }
-            },
 
             v => panic!("unreachable: {:?} {}", v, e.op.line)
         }

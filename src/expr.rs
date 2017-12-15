@@ -13,6 +13,7 @@ pub trait ExprVisitor {
     fn visit_literal(&mut self, e: &Literal) -> Self::Output;
     fn visit_variable(&mut self, e: &Variable) -> Self::Output;
     fn visit_assign(&mut self, e: &Assignment) -> Self::Output;
+    fn visit_logical(&mut self, e: &Logical) -> Self::Output;
     //fn visit_fncall(&mut self, b: FnCall) -> T; // TODO
 }
 
@@ -88,13 +89,27 @@ impl ExprAccept for Assignment {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Logical {
+    pub lhs: Box<Expr>,
+    pub op: token::Token,
+    pub rhs: Box<Expr>,
+}
+
+impl ExprAccept for Logical {
+    fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
+        v.visit_logical(&self)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Binary(Binary),
     Unary(Unary),
     Literal(Literal),
     Paren(Paren),
     Variable(Variable),
-    Assignment(Assignment)
+    Assignment(Assignment),
+    Logical(Logical),
 }
 
 impl ExprAccept for Expr {
@@ -106,6 +121,7 @@ impl ExprAccept for Expr {
             Expr::Paren(ref e) => e.accept(v),
             Expr::Variable(ref e) => e.accept(v),
             Expr::Assignment(ref e) => e.accept(v),
+            Expr::Logical(ref e) => e.accept(v),
         }
     }
 }
