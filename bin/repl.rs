@@ -33,7 +33,7 @@ fn main() {
                                     println!("{}", v.err().unwrap());
                                     continue
                                 } else {
-                                    println!("{}", v.unwrap());
+                                    println!("{:?}", v.unwrap());
                                 }
                             } else {
                                 let i = interp.interpret(&p);
