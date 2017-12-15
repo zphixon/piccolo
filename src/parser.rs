@@ -299,11 +299,13 @@ impl Parser {
             token::TokenKind::Integer(i) => Some(expr::Expr::Literal(expr::Literal::Integer(i))),
             token::TokenKind::Double(d) => Some(expr::Expr::Literal(expr::Literal::Float(d))),
             token::TokenKind::String => Some(expr::Expr::Literal(expr::Literal::String(t.lexeme.clone()))),
+
             token::TokenKind::LParen => {
                 let expr = self.expression()?;
                 self.consume(token::TokenKind::RParen)?;
                 Some(expr.clone())
             },
+
             token::TokenKind::LBracket => {
                 let mut inner = Vec::new();
                 while !self.matches(&[token::TokenKind::RBracket]) {
@@ -319,7 +321,9 @@ impl Parser {
                     inner
                 })))
             },
+
             token::TokenKind::Ident => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
+
             tk => {
                 self.error(err::ErrorKind::UnexpectedToken, format!("Found {:?}, expected literal ({:?})", t.lexeme, tk));
                 None
