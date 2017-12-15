@@ -17,7 +17,12 @@ impl expr::ExprVisitor for Interpreter {
     type Output = Value;
 
     fn visit_literal(&mut self, e: &expr::Literal) -> Value {
-        (::std::mem::replace(&mut e.clone(), expr::Literal::Nil)).into()
+        match e {
+            &expr::Literal::Array(expr::Array { len, ref inner }) => {
+                Value::Array(inner.iter().cloned().map(|e| self.evaluate(&e)).collect())
+            }
+            l => (::std::mem::replace(&mut l.clone(), expr::Literal::Nil)).into(),
+        }
     }
 
     fn visit_paren(&mut self, e: &expr::Paren) -> Value {

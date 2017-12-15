@@ -26,6 +26,7 @@ pub enum Value {
     Bool(bool),
     Integer(i64),
     Float(f64),
+    Array(Vec<Value>),
     Nil,
 }
 
@@ -83,6 +84,12 @@ impl From<f32> for Value {
     }
 }
 
+impl From<Vec<Value>> for Value {
+    fn from(f: Vec<Value>) -> Self {
+        Value::Array(f)
+    }
+}
+
 impl From<::expr::Literal> for Value {
     fn from(f: ::expr::Literal) -> Self {
         match f {
@@ -90,6 +97,7 @@ impl From<::expr::Literal> for Value {
             ::expr::Literal::Integer(v) => v.into(),
             ::expr::Literal::Bool(v) => v.into(),
             ::expr::Literal::String(v) => v.into(),
+            ::expr::Literal::Array(v) => panic!("unreachable: .into() on literal array"),
             ::expr::Literal::Nil => Value::Nil,
             ::expr::Literal::Range => Value::Nil, // TODO
         }
@@ -103,6 +111,7 @@ impl fmt::Display for Value {
             &Value::String(ref s) => write!(f, "{}", s),
             &Value::Float(fl) => write!(f, "{}", fl),
             &Value::Integer(i) => write!(f, "{}", i),
+            &Value::Array(ref a) => write!(f, "{:?}", a),
             &Value::Nil => write!(f, "nil"),
         }
     }

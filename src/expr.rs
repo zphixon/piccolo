@@ -23,6 +23,7 @@ pub enum Literal {
     Integer(i64),
     Float(f64),
     String(String),
+    Array(Array),
     Nil,
     Range, // TODO
 }
@@ -31,6 +32,12 @@ impl ExprAccept for Literal {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         v.visit_literal(&self)
     }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Array {
+    pub len: usize,
+    pub inner: Vec<Expr>,
 }
 
 #[derive(Debug, PartialEq, Clone)]

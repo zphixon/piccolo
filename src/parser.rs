@@ -304,6 +304,21 @@ impl Parser {
                 self.consume(token::TokenKind::RParen)?;
                 Some(expr.clone())
             },
+            token::TokenKind::LBracket => {
+                let mut inner = Vec::new();
+                while !self.matches(&[token::TokenKind::RBracket]) {
+                    inner.push(self.expression()?);
+                    if self.matches(&[token::TokenKind::RBracket]) {
+                        break
+                    } else {
+                        self.consume(token::TokenKind::Comma)?;
+                    }
+                }
+                Some(expr::Expr::Literal(expr::Literal::Array(expr::Array {
+                    len: inner.len(),
+                    inner
+                })))
+            },
             token::TokenKind::Ident => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
             tk => {
                 self.error(err::ErrorKind::UnexpectedToken, format!("Found {:?}, expected literal ({:?})", t.lexeme, tk));
