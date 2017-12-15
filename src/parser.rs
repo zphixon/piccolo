@@ -153,11 +153,11 @@ impl Parser {
     }
 
     fn math(&mut self) -> Option<expr::Expr> {
-        self.and()
+        self.or()
     }
 
     fn and(&mut self) -> Option<expr::Expr> {
-        let expr = self.or()?;
+        let expr = self.equality()?;
         let mut r = Some(expr.clone()); // TODO: figure out error handling
 
         while self.matches(&[token::TokenKind::And]) {
@@ -174,7 +174,7 @@ impl Parser {
     }
 
     fn or(&mut self) -> Option<expr::Expr> {
-        let expr = self.equality()?;
+        let expr = self.and()?;
         let mut r = Some(expr.clone());
 
         while self.matches(&[token::TokenKind::Or]) {
