@@ -7,12 +7,12 @@ pub trait ExprAccept {
 
 pub trait ExprVisitor {
     type Output;
-    fn visit_binary(&mut self, b: &Binary) -> Self::Output;
-    fn visit_unary(&mut self, u: &Unary) -> Self::Output;
-    fn visit_paren(&mut self, p: &Paren) -> Self::Output;
-    fn visit_literal(&mut self, l: &Literal) -> Self::Output;
-    fn visit_variable(&mut self, v: &Variable) -> Self::Output;
-    fn visit_assign(&mut self, a: &Assignment) -> Self::Output;
+    fn visit_binary(&mut self, e: &Binary) -> Self::Output;
+    fn visit_unary(&mut self, e: &Unary) -> Self::Output;
+    fn visit_paren(&mut self, e: &Paren) -> Self::Output;
+    fn visit_literal(&mut self, e: &Literal) -> Self::Output;
+    fn visit_variable(&mut self, e: &Variable) -> Self::Output;
+    fn visit_assign(&mut self, e: &Assignment) -> Self::Output;
     //fn visit_fncall(&mut self, b: FnCall) -> T; // TODO
 }
 
