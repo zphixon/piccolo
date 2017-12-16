@@ -104,11 +104,8 @@ impl stmt::StmtVisitor for AstPrinter {
     fn visit_if(&mut self, s: &stmt::If) -> String {
         if s.else_.is_none() {
             self.parenthesize_list("if", Some(&s.cond), &s.then)
-            //self.parenthesize("if", &[s.cond, s.then])
         } else {
             self.parenthesize_lists("if-else", Some(&s.cond), &[&s.then, &s.clone().else_.unwrap()])
-            //self.parenthesize_list("if-else", (Some(&s.cond), &s.then.iter().chain(s.else_.unwrap().iter().cloned()).cloned().collect()))
-            //self.parenthesize("if-else", &[s.cond, s.then, s.else_.as_ref().unwrap()])
         }
     }
 
