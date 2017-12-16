@@ -37,108 +37,77 @@ fn equal_truthy() {
     assert!(is_truthy(&Value::String("".into())));
 }
 
-/*
 #[test]
-fn parse_math() {
-    use piccolo::scanner::Scanner;
-    use piccolo::parser::Parser;
-    //use piccolo::ast::*;
-    use piccolo::expr::*;
-    use piccolo::*;
-    use piccolo::expr::Expr::Binary;
-    use piccolo::expr::Expr::*;
-    use piccolo::token::{Token, TokenKind};
+fn random() {
+    let progs = vec![
+     // (pass,  program)
+        (true,  "32 + -4.5 - 3 == 72 * 3 && 4 != 5"),
+        (true,  "false == false"),
+        (true,  "\"strang\" == \"string\""),
+        (true,  "\"string\" == \"string\""),
+        (true,  "prln(32 + 32)\n\nprln(true)\n\n\nprln(\"it is wednesday, my dudes\")\n"),
+        (true,  "a = 0.1\n\nb=0.2\nprln(a + b == 0.3)\na = 9\nprln(a + b)"),
+        (true,  "a = 2 b = 3 a b = 4"),
+        (true,  "prln(a = 2)"),
+        (false, "x = \"yes\"\nx or or or or"),
+        (true,  "a = 1\nb = 1\nc = 1\ndo\n  a = 2\n  b = 2\n  do\n    a = 3\n    prln(a)\n    prln(b)\n    prln(c)\n  end\n  prln(a)\n  prln(b)\n  prln(c)\nend\nprln(a)\nprln(b)\nprln(c)\n"),
+        (true,  "x = true\nif x do\n  prln(\"hey, not bad\")\nend\n"),
+        (true,  "x = nil\nif x do\n  prln(\"crepe\")\nelse\n  prln(\"no crepe\")\nend\n"),
+        (true,  "i = 0\nwhile i < 10 do\n  i = i + 1\n  prln(i)\nend\n"),
+        (true,  "arr = [8, 6, 7, 5, 3, 0, 9]\nfor num in arr do\n  prln(num)\nend\n"),
+        (true,  "for i in 2...4 do\n  prln(i)\nend"),
+        (false, "for i in 4..5..6 do\n  prln(i)\nend\n"),
+        (true,  "x = 1...10\n\nfor i in x do\n  prln((i * 29) % 34)\nend\n"),
+        (true,  "a = 0\nb = 1\n\nwhile a < 10000 do\n  prln(a)\n  tmp = a\n  a = b\n  b = tmp + b\nend\n"),
+        (true,  "b = 6\nb b b b b"),
+        (true,  "prln(clock())\n"),
+    ];
 
-    let code = "32 + -4.5 == 72 * 3 && 4 != 5".into();
-    let parse = Parser::new(Scanner::new(code).scan_tokens().unwrap()).parse();
+    for (should_pass, prog) in progs {
+        println!("program:");
+        for (k, v) in prog.lines().enumerate() {
+            println!("{}\t{}", k + 1, v);
+        }
+        println!();
 
-    let ast = Ok(Expr::Binary(expr::Binary {
-        lhs: Box::new(Expr::Binary(expr::Binary {
-            lhs: Box::new(Expr::Binary(expr::Binary {
-                lhs: Box::new(Expr::Literal(expr::Literal::Integer(32))),
-                op: Token { kind: TokenKind::Plus, lexeme: "+".into(), line: 1 },
-                rhs: Box::new(Expr::Unary(expr::Unary {
-                    op: Token { kind: TokenKind::Minus, lexeme: "-".into(), line: 1 },
-                    rhs: Box::new(Expr::Literal(expr::Literal::Float(4.5))),
-                }))
-            })),
-            op: Token { kind: TokenKind::Equals, lexeme: "==".into(), line: 1 },
-            rhs: Box::new(Expr::Binary(expr::Binary {
-                lhs: Box::new(Expr::Literal(expr::Literal::Integer(72))),
-                op: Token { kind: TokenKind::Star, lexeme: "*".into(), line: 1 },
-                rhs: Box::new(Expr::Literal(expr::Literal::Integer(3))),
-            }))
-        })),
-        op: Token { kind: TokenKind::And, lexeme: "&&".into(), line: 1 },
-        rhs: Box::new(Expr::Binary(expr::Binary {
-            lhs: Box::new(Expr::Literal(expr::Literal::Integer(4))),
-            op: Token { kind: TokenKind::NotEquals, lexeme: "!=".into(), line: 1 },
-            rhs: Box::new(Expr::Literal(expr::Literal::Integer(5))),
-        }))
-    }));
+        let s = piccolo::scanner::Scanner::new(prog.into()).scan_tokens();
 
-    assert_eq!(ast, parse);
-}
-
-#[test]
-#[ignore]
-fn parse() {
-    use piccolo::scanner::Scanner;
-    use piccolo::parser::Parser;
-    use piccolo::ast::*;
-
-    let code = "fn main() x = 3 + 2.3 end".into();
-
-    let parse = Parser::new(Scanner::new(code).scan_tokens().unwrap()).parse();
-
-    /*
-    let ast: Result<Vec<Statement>, String> = Ok(vec![
-        Statement::Function(
-            Function {
-                name: "main".into(),
-                args: vec![],
-                inner: vec![
-                    Statement::Assignment(
-                        Assignment {
-                            name: "x".into(),
-                            expr: Expression::Math(Box::new(Math {
-                                    inner: And {
-                                        inner: Or {
-                                            inner: Equality {
-                                                inner: Comparison {
-                                                    inner: Addition {
-                                                        inner: Multiplication {
-                                                            inner: Unary::Primary(Literal::Integer(3)),
-                                                            rest: vec![]
-                                                        },
-                                                        rest: vec![
-                                                            AdditionRest {
-                                                                op: AdditionOp::Plus,
-                                                                rhs: Multiplication {
-                                                                    inner: Unary::Primary(Literal::Float(2.3)),
-                                                                    rest: vec![]
-                                                                }
-                                                            }
-                                                        ]
-                                                    },
-                                                    rest: vec![]
-                                                },
-                                                rest: vec![]
-                                            },
-                                            rest: vec![]
-                                        },
-                                        rest: vec![]
-                                    },
-                                    rest: vec![]
-                                })
-                            )
-                        }
-                    ),
-                ]
+        if s.is_err() {
+            if should_pass {
+                panic!("scan err!\n{}", s.err().unwrap());
             }
-        )
-    ]);*/
+        } else {
+            println!("tokens:");
+            for tok in s.clone().unwrap() {
+                println!("{:?}", tok);
+            }
+            println!();
 
-    //assert_eq!(ast, parse);
-}*/
+            let p = piccolo::parser::Parser::new(s.unwrap()).parse();
+
+            if p.is_err() {
+                if should_pass {
+                    panic!("parse err!\n{}", p.err().unwrap());
+                }
+            } else {
+                println!("ast:");
+                println!("{}", piccolo::AstPrinter.print(&p.as_ref().unwrap()));
+
+                let mut interp = piccolo::interp::Interpreter::new();
+                println!("\noutput:");
+                let i = interp.interpret(&p.unwrap());
+
+                println!();
+
+                if i.is_err() {
+                    if should_pass {
+                        panic!("runtime err!\n{}", i.err().unwrap());
+                    }
+                } else {
+                    println!("huzzah!\n{:?}", interp.env);
+                }
+            }
+        }
+    }
+}
 
