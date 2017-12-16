@@ -3,6 +3,7 @@
 name = "piccolo"
 version = "0.1.0"
 authors = ["Zack <zackh@firemail.cc>"]
+license = "MIT"
 
 [dependencies]
 
