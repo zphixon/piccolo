@@ -15,6 +15,71 @@ pub struct Interpreter {
     pub env: env::Env,
 }
 
+impl Interpreter {
+    pub fn new() -> Interpreter {
+        let mut env = env::Env::new();
+
+        env.define("clock", value::Value::Func(func::Func::new(0, |_, _| {
+            time::now().to_timespec().sec.into()
+        })));
+
+        env.define("prln", value::Value::Func(func::Func::new(1, |_, args| {
+            println!("{}", args[0]);
+            Value::Nil
+        })));
+
+        Interpreter {
+            had_err: false,
+            err: String::new(),
+            env
+        }
+    }
+
+    pub fn reset_err(&mut self) {
+        self.had_err = false;
+        self.err = String::new();
+    }
+
+    pub fn interpret(&mut self, statements: &[stmt::Stmt]) -> Result<(), String> {
+        for stmt in statements.iter() {
+            self.execute(&stmt);
+            if self.had_err {
+                return Err(self.err.clone())
+            }
+        }
+        Ok(())
+    }
+
+    pub fn eval(&mut self, e: &expr::Expr) -> Result<Value, String> {
+        let v = self.evaluate(e);
+        if self.had_err {
+            return Err(self.err.clone())
+        }
+        Ok(v)
+    }
+
+    fn execute(&mut self, s: &stmt::Stmt) {
+        s.accept(&mut *self);
+    }
+
+    fn execute_block(&mut self, stmts: &[stmt::Stmt]) {
+        self.env.push();
+        for stmt in stmts {
+            self.execute(stmt);
+        }
+        self.env.pop();
+    }
+
+    fn evaluate(&mut self, e: &expr::Expr) -> Value {
+        e.accept(&mut *self)
+    }
+
+    fn error(&mut self, kind: ErrorKind, line: u64, msg: String) {
+        self.had_err = true;
+        self.err.push_str(&format!("Line {} - {:?}: {}\n", line, kind, msg));
+    }
+}
+
 impl expr::ExprVisitor for Interpreter {
     type Output = Value;
 
@@ -399,71 +464,6 @@ impl stmt::StmtVisitor for Interpreter {
             _ => {}
         }
         self.env.pop();
-    }
-}
-
-impl Interpreter {
-    pub fn new() -> Interpreter {
-        let mut env = env::Env::new();
-
-        env.define("clock", value::Value::Func(func::Func::new(0, |_, _| {
-            time::now().to_timespec().sec.into()
-        })));
-
-        env.define("print", value::Value::Func(func::Func::new(1, |_, args| {
-            println!("{}", args[0]);
-            Value::Nil
-        })));
-
-        Interpreter {
-            had_err: false,
-            err: String::new(),
-            env
-        }
-    }
-
-    pub fn reset_err(&mut self) {
-        self.had_err = false;
-        self.err = String::new();
-    }
-
-    pub fn interpret(&mut self, statements: &[stmt::Stmt]) -> Result<(), String> {
-        for stmt in statements.iter() {
-            self.execute(&stmt);
-            if self.had_err {
-                return Err(self.err.clone())
-            }
-        }
-        Ok(())
-    }
-
-    pub fn eval(&mut self, e: &expr::Expr) -> Result<Value, String> {
-        let v = self.evaluate(e);
-        if self.had_err {
-            return Err(self.err.clone())
-        }
-        Ok(v)
-    }
-
-    fn execute(&mut self, s: &stmt::Stmt) {
-        s.accept(&mut *self);
-    }
-
-    fn execute_block(&mut self, stmts: &[stmt::Stmt]) {
-        self.env.push();
-        for stmt in stmts {
-            self.execute(stmt);
-        }
-        self.env.pop();
-    }
-
-    fn evaluate(&mut self, e: &expr::Expr) -> Value {
-        e.accept(&mut *self)
-    }
-
-    fn error(&mut self, kind: ErrorKind, line: u64, msg: String) {
-        self.had_err = true;
-        self.err.push_str(&format!("Line {} - {:?}: {}\n", line, kind, msg));
     }
 }
 
