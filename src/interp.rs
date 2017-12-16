@@ -383,7 +383,7 @@ impl stmt::StmtVisitor for Interpreter {
                     self.execute_block(&s.body);
                 }
             },
-            // fn -> repeatedly call
+            // fn -> repeatedly call until nil
             i => panic!("unimplemented: {:?}", i)
         }
         self.env.pop();
