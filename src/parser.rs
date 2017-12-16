@@ -159,6 +159,7 @@ impl Parser {
         let mut body = Vec::new();
         while !self.is_at_end() && !self.check(token::TokenKind::End) {
             body.push(self.declaration()?);
+            self.skip_newlines();
         }
 
         self.consume(token::TokenKind::End)?;
