@@ -97,9 +97,8 @@ impl From<::expr::Literal> for Value {
             ::expr::Literal::Integer(v) => v.into(),
             ::expr::Literal::Bool(v) => v.into(),
             ::expr::Literal::String(v) => v.into(),
-            ::expr::Literal::Array(v) => panic!("unreachable: .into() on literal array"),
+            ::expr::Literal::Array(_) => panic!("unreachable: .into() on literal array"),
             ::expr::Literal::Nil => Value::Nil,
-            ::expr::Literal::Range => Value::Nil, // TODO
         }
     }
 }

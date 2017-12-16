@@ -25,7 +25,6 @@ pub enum Literal {
     String(String),
     Array(Array),
     Nil,
-    Range, // TODO
 }
 
 impl ExprAccept for Literal {
@@ -38,6 +37,18 @@ impl ExprAccept for Literal {
 pub struct Array {
     pub len: usize,
     pub inner: Vec<Expr>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ERange {
+    pub from: Box<Expr>,
+    pub to: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct IRange {
+    pub from: Box<Expr>,
+    pub to: Box<Expr>,
 }
 
 #[derive(Debug, PartialEq, Clone)]

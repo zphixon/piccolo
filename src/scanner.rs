@@ -245,12 +245,18 @@ impl Scanner {
         }
 
         if self.peek() == b'.' {
-            self.reverse();
-            while is_digit(self.peek()) {
+            let mut range = false;
+            if self.lookahead(1) == b'.' {
+                range = true;
+            }
+
+            while self.current != 0 && is_digit(self.peek()) {
                 self.reverse();
             }
-            self.advance();
-            return self.float();
+
+            if !range {
+                return self.float()
+            }
         }
 
         let value = String::from_utf8(self.source[self.start..self.current].to_vec()).unwrap();
@@ -310,6 +316,16 @@ impl Scanner {
             b'\0'
         } else {
             self.source[self.current]
+        }
+    }
+
+    fn lookahead(&mut self, n: usize) -> u8 {
+        if self.is_at_end() {
+            b'\0'
+        } else if self.current + n >= self.source.len() {
+            b'\0'
+        } else {
+            self.source[self.current + n]
         }
     }
 }

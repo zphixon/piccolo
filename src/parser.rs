@@ -93,6 +93,8 @@ impl Parser {
             self.if_statement()
         } else if self.matches(&[token::TokenKind::While]) {
             self.while_statement()
+        } else if self.matches(&[token::TokenKind::For]) {
+            self.for_statement()
         } else {
             self.expression_statement()
         }
@@ -166,6 +168,24 @@ impl Parser {
         }))
     }
 
+    fn for_statement(&mut self) -> Option<stmt::Stmt> {
+        let name = self.consume(token::TokenKind::Ident)?;
+        self.consume(token::TokenKind::In)?;
+        let iter = self.expression()?;
+        self.consume(token::TokenKind::Do)?;
+
+        let mut body = Vec::new();
+        while !self.is_at_end() && !self.check(token::TokenKind::End) {
+            body.push(self.declaration()?);
+        }
+
+        self.consume(token::TokenKind::End)?;
+
+        Some(stmt::Stmt::For(stmt::For {
+            name, iter, body
+        }))
+    }
+
     fn expression(&mut self) -> Option<expr::Expr> {
         self.assignment()
     }
@@ -226,7 +246,7 @@ impl Parser {
     }
 
     fn comparison(&mut self) -> Option<expr::Expr> {
-        let expr = self.addition()?;
+        let expr = self.range()?;
         let mut r = Some(expr.clone());
 
         while self.matches(&[token::TokenKind::GreaterThan,
@@ -243,6 +263,22 @@ impl Parser {
         }
 
         r
+    }
+
+    fn range(&mut self) -> Option<expr::Expr> {
+        let mut expr = self.addition()?;
+
+        while self.matches(&[token::TokenKind::IRange, token::TokenKind::ERange]) {
+            let op = self.previous();
+            let right = self.addition()?;
+            expr = expr::Expr::Binary(expr::Binary {
+                lhs: Box::new(expr.clone()),
+                op,
+                rhs: Box::new(right),
+            })
+        }
+
+        Some(expr)
     }
 
     fn addition(&mut self) -> Option<expr::Expr> {
@@ -292,6 +328,7 @@ impl Parser {
 
     fn primary(&mut self) -> Option<expr::Expr> {
         let t = self.advance();
+
         match t.kind {
             token::TokenKind::True => Some(expr::Expr::Literal(expr::Literal::Bool(true))),
             token::TokenKind::False => Some(expr::Expr::Literal(expr::Literal::Bool(false))),

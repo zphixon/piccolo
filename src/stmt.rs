@@ -13,6 +13,7 @@ pub trait StmtVisitor {
     fn visit_block(&mut self, s: &Block) -> Self::Output;
     fn visit_if(&mut self, s: &If) -> Self::Output;
     fn visit_while(&mut self, s: &While) -> Self::Output;
+    fn visit_for(&mut self, s: &For) -> Self::Output;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -80,6 +81,19 @@ impl StmtAccept for While {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct For {
+    pub name: token::Token,
+    pub iter: expr::Expr,
+    pub body: Vec<Stmt>,
+}
+
+impl StmtAccept for For {
+    fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
+        v.visit_for(&self)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Stmt {
     StmtExpr(StmtExpr),
     MeTmp(MeTmp),
@@ -87,6 +101,7 @@ pub enum Stmt {
     Block(Block),
     If(If),
     While(While),
+    For(For),
 }
 
 impl StmtAccept for Stmt {
@@ -98,6 +113,7 @@ impl StmtAccept for Stmt {
             Stmt::Block(ref s) => s.accept(v),
             Stmt::If(ref s) => s.accept(v),
             Stmt::While(ref s) => s.accept(v),
+            Stmt::For(ref s) => s.accept(v),
         }
     }
 }

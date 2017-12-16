@@ -15,7 +15,10 @@ fn main() {
         //"a = 1\nb = 1\nc = 1\ndo\n  a = 2\n  b = 2\n  do\n    a = 3\n    me a\n    me b\n    me c\n  end\n  me a\n  me b\n  me c\nend\nme a\nme b\nme c\n";
         //"x = true\nif x do\n  me \"hey, not bad\"\nend\n";
         //"x = nil\nif x do\n  me \"crepe\"\nelse\n  me \"no crepe\"\nend\n";
-        "i = 0\nwhile i < 10 do\n  i = i + 1\n  me i\nend\n";
+        //"i = 0\nwhile i < 10 do\n  i = i + 1\n  me i\nend\n";
+        //"arr = [8, 6, 7, 5, 3, 0, 9]\nfor num in arr do\n  me num\nend\n";
+        "for i in 2...4 do\n  me i\nend";
+        //"for i in 4..5..6 do\n  me i\nend\n";
 
     println!("program:");
     for (k, v) in code.lines().enumerate() {
@@ -39,10 +42,12 @@ fn main() {
         if p.is_err() {
             println!("parse err!\n{}", p.err().unwrap());
         } else {
-            println!("statements:");
-            for stmt in p.clone().unwrap() {
-                println!("{:?}", stmt);
-            }
+            println!("ast:");
+            println!("{}", piccolo::AstPrinter.print(&p.as_ref().unwrap()));
+            //println!("statements:");
+            //for stmt in p.clone().unwrap() {
+            //    println!("{:?}", stmt);
+            //}
 
             let mut interp = piccolo::interp::Interpreter::new();
             println!("\noutput:");

@@ -285,6 +285,38 @@ impl expr::ExprVisitor for Interpreter {
             TokenKind::Equals => Value::Bool(is_equal(&lhs, &rhs)),
             TokenKind::NotEquals => Value::Bool(!is_equal(&lhs, &rhs)),
 
+            TokenKind::ERange => match lhs {
+                Value::Integer(l) => match rhs {
+                    Value::Integer(r) => {
+                        Value::Array((l..r).map(|n| n.into()).collect())
+                    },
+                    _ => {
+                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}..{:?}", lhs, rhs));
+                        Value::Nil
+                    }
+                },
+                _ => {
+                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}..{:?}", lhs, rhs));
+                    Value::Nil
+                }
+            },
+
+            TokenKind::IRange => match lhs {
+                Value::Integer(l) => match rhs {
+                    Value::Integer(r) => {
+                        Value::Array((l..r + 1).map(|n| n.into()).collect())
+                    },
+                    _ => {
+                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}..{:?}", lhs, rhs));
+                        Value::Nil
+                    }
+                },
+                _ => {
+                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}..{:?}", lhs, rhs));
+                    Value::Nil
+                }
+            },
+
             v => panic!("unreachable: {:?} {}", v, e.op.line)
         }
     }
@@ -339,6 +371,22 @@ impl stmt::StmtVisitor for Interpreter {
         while is_truthy(&self.evaluate(&s.cond)) {
             self.execute_block(&s.body);
         }
+    }
+
+    fn visit_for(&mut self, s: &stmt::For) {
+        let iter = self.evaluate(&s.iter);
+        self.env.push();
+        match iter {
+            Value::Array(a) => {
+                for item in a {
+                    self.env.define(&s.name.lexeme, item);
+                    self.execute_block(&s.body);
+                }
+            },
+            // fn -> repeatedly call
+            i => panic!("unimplemented: {:?}", i)
+        }
+        self.env.pop();
     }
 }
 
