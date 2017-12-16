@@ -17,8 +17,9 @@ fn main() {
         //"x = nil\nif x do\n  me \"crepe\"\nelse\n  me \"no crepe\"\nend\n";
         //"i = 0\nwhile i < 10 do\n  i = i + 1\n  me i\nend\n";
         //"arr = [8, 6, 7, 5, 3, 0, 9]\nfor num in arr do\n  me num\nend\n";
-        "for i in 2...4 do\n  me i\nend";
+        //"for i in 2...4 do\n  me i\nend";
         //"for i in 4..5..6 do\n  me i\nend\n";
+        "x = 1...10\n\nfor i in x do\n  me (i * 29) % 34\nend\n";
 
     println!("program:");
     for (k, v) in code.lines().enumerate() {

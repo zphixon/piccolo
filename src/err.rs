@@ -3,6 +3,7 @@
 
 #[derive(Debug, Clone, Copy)]
 pub enum ErrorKind {
+    SyntaxError,
     UnknownFormatCode,
     UnterminatedString,
     BadInteger,

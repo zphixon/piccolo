@@ -74,7 +74,7 @@ impl Parser {
                     Some(expr::Expr::Assignment(expr::Assignment{ name, value }))
                 }
                 _ => {
-                    self.error(err::ErrorKind::UnexpectedToken, format!("expected variable name, got {:?}", equals));
+                    self.error(err::ErrorKind::SyntaxError, format!("expected variable name, got {:?}", equals));
                     None
                 }
             }
@@ -269,6 +269,13 @@ impl Parser {
         let mut expr = self.addition()?;
 
         while self.matches(&[token::TokenKind::IRange, token::TokenKind::ERange]) {
+            if self.lookahead(1).kind == token::TokenKind::IRange ||
+                self.lookahead(1).kind == token::TokenKind::ERange
+            {
+                self.error(err::ErrorKind::SyntaxError, "range is non-associative".into());
+                return None
+            }
+
             let op = self.previous();
             let right = self.addition()?;
             expr = expr::Expr::Binary(expr::Binary {
@@ -300,7 +307,7 @@ impl Parser {
     fn multiplication(&mut self) -> Option<expr::Expr> {
         let mut expr = self.unary()?;
 
-        while self.matches(&[token::TokenKind::Divide, token::TokenKind::Star]) {
+        while self.matches(&[token::TokenKind::Divide, token::TokenKind::Star, token::TokenKind::Mod]) {
             let op = self.previous();
             let right = self.unary()?;
             expr = expr::Expr::Binary(expr::Binary {
@@ -361,8 +368,8 @@ impl Parser {
 
             token::TokenKind::Ident => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
 
-            tk => {
-                self.error(err::ErrorKind::UnexpectedToken, format!("Found {:?}, expected literal ({:?})", t.lexeme, tk));
+            _ => {
+                self.error(err::ErrorKind::SyntaxError, format!("Found {:?}, expected expression", t.lexeme));
                 None
             }
         }

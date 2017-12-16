@@ -18,7 +18,7 @@ impl expr::ExprVisitor for Interpreter {
 
     fn visit_literal(&mut self, e: &expr::Literal) -> Value {
         match e {
-            &expr::Literal::Array(expr::Array { len, ref inner }) => {
+            &expr::Literal::Array(expr::Array { ref inner, .. }) => {
                 Value::Array(inner.iter().cloned().map(|e| self.evaluate(&e)).collect())
             }
             l => (::std::mem::replace(&mut l.clone(), expr::Literal::Nil)).into(),
@@ -307,12 +307,12 @@ impl expr::ExprVisitor for Interpreter {
                         Value::Array((l..r + 1).map(|n| n.into()).collect())
                     },
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}..{:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}...{:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}..{:?}", lhs, rhs));
+                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}...{:?}", lhs, rhs));
                     Value::Nil
                 }
             },
@@ -383,8 +383,12 @@ impl stmt::StmtVisitor for Interpreter {
                     self.execute_block(&s.body);
                 }
             },
+            //Value::Nil => { // TODO
+            //    return
+            //}
             // fn -> repeatedly call until nil
-            i => panic!("unimplemented: {:?}", i)
+            //i => panic!("unimplemented: {:?}", i)
+            _ => {}
         }
         self.env.pop();
     }
