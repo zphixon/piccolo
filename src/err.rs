@@ -12,5 +12,6 @@ pub enum ErrorKind {
     UnexpectedToken,
     MathError,
     UndefinedVariable,
+    IncorrectArity,
 }
 

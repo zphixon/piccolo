@@ -20,8 +20,10 @@ fn main() {
         //"for i in 2...4 do\n  me i\nend";
         //"for i in 4..5..6 do\n  me i\nend\n";
         //"x = 1...10\n\nfor i in x do\n  me (i * 29) % 34\nend\n";
-        "a = 0\nb = 1\n\nwhile a < 10000 do\n  me a\n  tmp = a\n  a = b\n  b = tmp + b\nend\n";
+        //"a = 0\nb = 1\n\nwhile a < 10000 do\n  me a\n  tmp = a\n  a = b\n  b = tmp + b\nend\n";
         //"b = 6\nb b b b b";
+        //"me clock()\n";
+        "print(\"testarino\")";
 
     println!("program:");
     for (k, v) in code.lines().enumerate() {

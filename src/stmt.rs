@@ -8,21 +8,11 @@ pub trait StmtAccept {
 pub trait StmtVisitor {
     type Output;
     fn visit_expr(&mut self, s: &StmtExpr) -> Self::Output;
-    fn visit_me_tmp(&mut self, s: &MeTmp) -> Self::Output;
     fn visit_assignment(&mut self, s: &Assignment) -> Self::Output;
     fn visit_block(&mut self, s: &Block) -> Self::Output;
     fn visit_if(&mut self, s: &If) -> Self::Output;
     fn visit_while(&mut self, s: &While) -> Self::Output;
     fn visit_for(&mut self, s: &For) -> Self::Output;
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct MeTmp(pub expr::Expr);
-
-impl StmtAccept for MeTmp {
-    fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_me_tmp(&self)
-    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -96,7 +86,6 @@ impl StmtAccept for For {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Stmt {
     StmtExpr(StmtExpr),
-    MeTmp(MeTmp),
     Assignment(Assignment),
     Block(Block),
     If(If),
@@ -108,7 +97,6 @@ impl StmtAccept for Stmt {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
         match *self {
             Stmt::StmtExpr(ref s) => s.accept(v),
-            Stmt::MeTmp(ref s) => s.accept(v),
             Stmt::Assignment(ref s) => s.accept(v),
             Stmt::Block(ref s) => s.accept(v),
             Stmt::If(ref s) => s.accept(v),

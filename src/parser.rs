@@ -85,9 +85,7 @@ impl Parser {
 
     fn statement(&mut self) -> Option<stmt::Stmt> {
         self.skip_newlines();
-        if self.matches(&[token::TokenKind::Me]) {
-            self.me_statement_tmp()
-        } else if self.matches(&[token::TokenKind::Do]) {
+        if self.matches(&[token::TokenKind::Do]) {
             self.block()
         } else if self.matches(&[token::TokenKind::If]) {
             self.if_statement()
@@ -100,18 +98,12 @@ impl Parser {
         }
     }
 
-    fn me_statement_tmp(&mut self) -> Option<stmt::Stmt> {
-        let value = self.expression()?;
-
-        self.skip_newlines();
-        Some(stmt::Stmt::MeTmp(stmt::MeTmp(value)))
-    }
-
     fn block(&mut self) -> Option<stmt::Stmt> {
         let mut stmts = Vec::new();
 
         while !self.check(token::TokenKind::End) && !self.is_at_end() {
             stmts.push(self.declaration()?);
+            self.skip_newlines();
         }
 
         self.consume(token::TokenKind::End)?;
@@ -333,8 +325,42 @@ impl Parser {
                 rhs
             }))
         } else {
-            self.primary()
+            self.call()
         }
+    }
+
+    fn call(&mut self) -> Option<expr::Expr> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.matches(&[token::TokenKind::LParen]) {
+                expr = self.finish_call(Box::new(expr))?;
+            } else {
+                break
+            }
+        }
+
+        Some(expr)
+    }
+
+    fn finish_call(&mut self, callee: Box<expr::Expr>) -> Option<expr::Expr> {
+        let mut args = Vec::new();
+
+        if !self.check(token::TokenKind::RParen) {
+            args.push(self.expression()?);
+            while self.matches(&[token::TokenKind::Comma]) {
+                if args.len() >= 64 {
+                    self.error(err::ErrorKind::SyntaxError, "Cannot have more than 64 arguments to a function\n(do you *really* need that many anyway?)".into())
+                }
+                args.push(self.expression()?);
+            }
+        }
+
+        let paren = self.consume(token::TokenKind::RParen)?;
+
+        Some(expr::Expr::Call(expr::Call {
+            callee, paren, args
+        }))
     }
 
     fn primary(&mut self) -> Option<expr::Expr> {

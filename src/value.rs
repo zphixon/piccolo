@@ -1,6 +1,8 @@
 
 use std::fmt;
 
+use ::*;
+
 pub fn parse_into_value(into: String) -> Value {
     match into.parse::<bool>() {
         Ok(b) => return Value::Bool(b),
@@ -27,6 +29,7 @@ pub enum Value {
     Integer(i64),
     Float(f64),
     Array(Vec<Value>),
+    Func(func::Func),
     Nil,
 }
 
@@ -90,15 +93,24 @@ impl From<Vec<Value>> for Value {
     }
 }
 
-impl From<::expr::Literal> for Value {
-    fn from(f: ::expr::Literal) -> Self {
+impl From<expr::Literal> for Value {
+    fn from(f: expr::Literal) -> Self {
         match f {
-            ::expr::Literal::Float(v) => v.into(),
-            ::expr::Literal::Integer(v) => v.into(),
-            ::expr::Literal::Bool(v) => v.into(),
-            ::expr::Literal::String(v) => v.into(),
-            ::expr::Literal::Array(_) => panic!("unreachable: .into() on literal array"),
-            ::expr::Literal::Nil => Value::Nil,
+            expr::Literal::Float(v) => v.into(),
+            expr::Literal::Integer(v) => v.into(),
+            expr::Literal::Bool(v) => v.into(),
+            expr::Literal::String(v) => v.into(),
+            expr::Literal::Array(_) => panic!("unreachable: .into() on literal array"),
+            expr::Literal::Nil => Value::Nil,
+        }
+    }
+}
+
+impl Into<func::Func> for Value {
+    fn into(self) -> func::Func {
+        match self {
+            Value::Func(f) => f,
+            v => panic!("unreachable: .into::<func::Func>() on non-func: {:?}", v)
         }
     }
 }
@@ -106,11 +118,12 @@ impl From<::expr::Literal> for Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &Value::Bool(b) => write!(f, "{}", b),
-            &Value::String(ref s) => write!(f, "{}", s),
-            &Value::Float(fl) => write!(f, "{}", fl),
-            &Value::Integer(i) => write!(f, "{}", i),
-            &Value::Array(ref a) => write!(f, "{:?}", a),
+            &Value::Bool(v) => write!(f, "{}", v),
+            &Value::String(ref v) => write!(f, "{}", v),
+            &Value::Float(v) => write!(f, "{}", v),
+            &Value::Integer(v) => write!(f, "{}", v),
+            &Value::Array(ref v) => write!(f, "{:?}", v),
+            &Value::Func(_) => write!(f, "fn"),
             &Value::Nil => write!(f, "nil"),
         }
     }

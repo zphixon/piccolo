@@ -1,4 +1,6 @@
 
+extern crate time;
+
 use ::*;
 use expr::ExprAccept;
 use stmt::StmtAccept;
@@ -336,6 +338,17 @@ impl expr::ExprVisitor for Interpreter {
         //Value::Nil // TODO
         value
     }
+
+    fn visit_call(&mut self, e: &expr::Call) -> Value {
+        let callee = self.evaluate(&e.callee);
+        let args: Vec<Value> = e.args.iter().map(|arg| self.evaluate(arg)).collect();
+        let func: func::Func = callee.into();
+        if args.len() != func.arity() {
+            self.error(ErrorKind::IncorrectArity, e.paren.line, format!("expected {} args, got {}", func.arity(), args.len()));
+            return Value::Nil;
+        }
+        func.call(&mut *self, args)
+    }
 }
 
 impl stmt::StmtVisitor for Interpreter {
@@ -343,11 +356,6 @@ impl stmt::StmtVisitor for Interpreter {
 
     fn visit_expr(&mut self, s: &stmt::StmtExpr) {
         self.evaluate(&s.0);
-    }
-
-    fn visit_me_tmp(&mut self, s: &stmt::MeTmp) {
-        let value = self.evaluate(&s.0);
-        println!("{}", value);
     }
 
     fn visit_assignment(&mut self, s: &stmt::Assignment) {
@@ -396,10 +404,21 @@ impl stmt::StmtVisitor for Interpreter {
 
 impl Interpreter {
     pub fn new() -> Interpreter {
+        let mut env = env::Env::new();
+
+        env.define("clock", value::Value::Func(func::Func::new(0, |_, _| {
+            time::now().to_timespec().sec.into()
+        })));
+
+        env.define("print", value::Value::Func(func::Func::new(1, |_, args| {
+            println!("{}", args[0]);
+            Value::Nil
+        })));
+
         Interpreter {
             had_err: false,
             err: String::new(),
-            env: env::Env::new(),
+            env
         }
     }
 

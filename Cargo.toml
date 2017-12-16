@@ -6,6 +6,7 @@ authors = ["Zack <zackh@firemail.cc>"]
 license = "MIT"
 
 [dependencies]
+time = "0.1"
 
 [dev-dependencies]
 rustyline = "1.0"

@@ -8,6 +8,7 @@ pub mod err;
 pub mod interp;
 pub mod value;
 pub mod env;
+pub mod func;
 
 use scanner::Scanner;
 
@@ -32,7 +33,7 @@ impl AstPrinter {
         let mut s = String::new();
         for stmt in ast.iter() {
             s.push_str(&stmt.accept(&mut *self));
-            s.push_str(" ");
+            s.push_str("\n");
         }
         s
     }
@@ -109,10 +110,6 @@ impl stmt::StmtVisitor for AstPrinter {
         }
     }
 
-    fn visit_me_tmp(&mut self, s: &stmt::MeTmp) -> String {
-        self.parenthesize("me", &[&s.0])
-    }
-
     fn visit_assignment(&mut self, s: &stmt::Assignment) -> String {
         let mut name = String::from("= ");
         name.push_str(&s.name.lexeme);
@@ -166,6 +163,13 @@ impl expr::ExprVisitor for AstPrinter {
 
     fn visit_variable(&mut self, e: &expr::Variable) -> String {
         e.0.lexeme.clone()
+    }
+
+    fn visit_call(&mut self, e: &expr::Call) -> String {
+        let args: Vec<&expr::Expr> = e.args.iter().map(|x| x).collect();
+        let mut name = String::from("call ");
+        name.push_str(&e.callee.accept(&mut *self));
+        self.parenthesize(&name, &args)
     }
 }
 
