@@ -2,7 +2,7 @@
 use ::*;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Env {
     pub inner: Vec<HashMap<String, value::Value>>,
 }
@@ -37,13 +37,13 @@ impl Env {
     pub fn define(&mut self, name: &str, value: value::Value) {
         for scope in self.inner.iter_mut().rev().skip(1) {
             if scope.contains_key(name) {
-                scope.insert(name.to_owned(), value.clone());
+                scope.insert(name.to_owned(), value);
                 return
             }
         }
 
         self.inner.iter_mut().rev().nth(0)
-            .map(|m| m.insert(name.to_owned(), value.clone()))
+            .map(|m| m.insert(name.to_owned(), value))
             .expect("env is empty");
     }
 
@@ -77,18 +77,18 @@ impl std::fmt::Display for Env {
             s.push_str(&format!("  layer {}\n", n));
             'inner: for (k, v) in ctx.iter() {
                 s.push_str(&format!("    {} = ", k));
-                match v {
-                    &value::Value::Func(ref f) => {
+                match *v {
+                    value::Value::Func(ref f) => {
                         s.push_str(&format!("fn {} ", f.name));
                         if f.is_native() {
                             s.push_str("(native)\n");
                             continue 'inner;
                         } else {
-                            for arg in f.decl.as_ref().unwrap().args.iter() {
+                            for arg in &f.decl.as_ref().unwrap().args {
                                 s.push_str(&format!("{}, ", arg.lexeme));
                             }
                             s.push_str("\n");
-                            for stmt in f.decl.as_ref().unwrap().body.iter() {
+                            for stmt in &f.decl.as_ref().unwrap().body {
                                 s.push_str(&format!("      {}\n", AstPrinter.print_stmt(stmt)))
                             }
                         }

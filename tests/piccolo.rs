@@ -93,7 +93,7 @@ fn list_progs() {
                 }
             } else {
                 println!("ast:");
-                println!("{}", piccolo::AstPrinter.print(&p.as_ref().unwrap()));
+                println!("{}", piccolo::AstPrinter.print(p.as_ref().unwrap()));
 
                 let mut interp = piccolo::interp::Interpreter::new();
                 println!("\noutput:");

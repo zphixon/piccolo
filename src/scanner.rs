@@ -57,7 +57,7 @@ impl Scanner {
 
         self.tokens.push(Token::new(TokenKind::Eof, "".into(), self.line));
 
-        if err.len() > 0 {
+        if !err.is_empty() {
             Err(err)
         } else {
             Ok(self.tokens)
@@ -245,10 +245,7 @@ impl Scanner {
         }
 
         if self.peek() == b'.' {
-            let mut range = false;
-            if self.lookahead(1) == b'.' {
-                range = true;
-            }
+            let range = self.lookahead(1) == b'.';
 
             while self.current != 0 && is_digit(self.peek()) {
                 self.reverse();
@@ -320,9 +317,7 @@ impl Scanner {
     }
 
     fn lookahead(&mut self, n: usize) -> u8 {
-        if self.is_at_end() {
-            b'\0'
-        } else if self.current + n >= self.source.len() {
+        if self.is_at_end() || self.current + n >= self.source.len() {
             b'\0'
         } else {
             self.source[self.current + n]

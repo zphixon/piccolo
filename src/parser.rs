@@ -40,14 +40,12 @@ impl Parser {
     fn declaration(&mut self) -> Option<stmt::Stmt> {
         if self.is_at_end() { return None }
 
-        let r = if self.lookahead(1).kind == token::TokenKind::Assign {
+        if self.lookahead(1).kind == token::TokenKind::Assign {
             self.var_declaration()
         } else {
         //} else class, etc { // TODO
             self.statement()
-        };
-
-        r
+        }
     }
 
     fn var_declaration(&mut self) -> Option<stmt::Stmt> {
@@ -74,7 +72,7 @@ impl Parser {
                     Some(expr::Expr::Assignment(expr::Assignment{ name, value }))
                 }
                 _ => {
-                    self.error(err::ErrorKind::SyntaxError, format!("expected variable name, got {:?}", equals));
+                    self.error(err::ErrorKind::SyntaxError, &format!("expected variable name, got {:?}", equals));
                     None
                 }
             }
@@ -176,7 +174,7 @@ impl Parser {
         if !self.check(token::TokenKind::RParen) {
             while {
                 if args.len() >= 64 {
-                    self.error(err::ErrorKind::SyntaxError, "cannot have more than 64 parameters".into());
+                    self.error(err::ErrorKind::SyntaxError, "cannot have more than 64 parameters");
                     return None
                 }
                 args.push(self.consume(token::TokenKind::Ident)?);
@@ -195,7 +193,7 @@ impl Parser {
         let value = if self.check(token::TokenKind::Newline) {
             self.skip_newlines();
             if !self.check(token::TokenKind::End) {
-                self.error(err::ErrorKind::SyntaxError, "cannot have expressions after return\nMove on to the same line as return if you'd like to return it".into());
+                self.error(err::ErrorKind::SyntaxError, "cannot have expressions after return\nMove on to the same line as return if you'd like to return it");
                 return None;
             } else {
                 self.consume(token::TokenKind::End)?;
@@ -308,7 +306,7 @@ impl Parser {
             if self.lookahead(1).kind == token::TokenKind::IRange ||
                 self.lookahead(1).kind == token::TokenKind::ERange
             {
-                self.error(err::ErrorKind::SyntaxError, "range is non-associative".into());
+                self.error(err::ErrorKind::SyntaxError, "range is non-associative");
                 return None
             }
 
@@ -389,7 +387,7 @@ impl Parser {
         if !self.check(token::TokenKind::RParen) {
             while {
                 if args.len() >= 64 {
-                    self.error(err::ErrorKind::SyntaxError, "Cannot have more than 64 arguments to a function\n(do you *really* need that many anyway?)".into())
+                    self.error(err::ErrorKind::SyntaxError, "Cannot have more than 64 arguments to a function\n(do you *really* need that many anyway?)")
                 }
                 args.push(self.expression()?);
                 self.matches(&[token::TokenKind::Comma])
@@ -439,7 +437,7 @@ impl Parser {
             token::TokenKind::Ident => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
 
             _ => {
-                self.error(err::ErrorKind::SyntaxError, format!("Found {:?}, expected expression", t.lexeme));
+                self.error(err::ErrorKind::SyntaxError, &format!("Found {:?}, expected expression", t.lexeme));
                 None
             }
         }
@@ -451,7 +449,7 @@ impl Parser {
             Some(self.advance())
         } else {
             let t = self.peek().kind;
-            self.error(err::ErrorKind::UnexpectedToken, format!("Found {:?}, expected {:?}", t, tk));
+            self.error(err::ErrorKind::UnexpectedToken, &format!("Found {:?}, expected {:?}", t, tk));
             None
         }
     }
@@ -523,7 +521,7 @@ impl Parser {
         self.tokens[self.current - 1].clone()
     }
 
-    fn error(&mut self, kind: ErrorKind, msg: String) {
+    fn error(&mut self, kind: ErrorKind, msg: &str) {
         self.err.push_str(&format!("Line {} - {:?}: {}\n", self.line, kind, msg));
     }
 }

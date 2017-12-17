@@ -1,4 +1,6 @@
 
+#![allow(unknown_lints)]
+
 pub mod parser;
 pub mod token;
 pub mod scanner;
@@ -98,7 +100,7 @@ impl stmt::StmtVisitor for AstPrinter {
 
     fn visit_block(&mut self, s: &stmt::Block) -> String {
         let mut res = String::from("(block");
-        for stmt in s.0.iter() {
+        for stmt in &s.0 {
             res.push_str(" ");
             res.push_str(&stmt.accept(&mut *self));
         }

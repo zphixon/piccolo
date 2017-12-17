@@ -29,7 +29,7 @@ pub enum Literal {
 
 impl ExprAccept for Literal {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_literal(&self)
+        v.visit_literal(self)
     }
 }
 
@@ -60,7 +60,7 @@ pub struct Binary {
 
 impl ExprAccept for Binary {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_binary(&self)
+        v.visit_binary(self)
     }
 }
 
@@ -72,7 +72,7 @@ pub struct Unary {
 
 impl ExprAccept for Unary {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_unary(&self)
+        v.visit_unary(self)
     }
 }
 
@@ -81,7 +81,7 @@ pub struct Paren(pub Box<Expr>);
 
 impl ExprAccept for Paren {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_paren(&self)
+        v.visit_paren(self)
     }
 }
 
@@ -90,7 +90,7 @@ pub struct Variable(pub token::Token);
 
 impl ExprAccept for Variable {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_variable(&self)
+        v.visit_variable(self)
     }
 }
 
@@ -102,7 +102,7 @@ pub struct Assignment {
 
 impl ExprAccept for Assignment {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_assign(&self)
+        v.visit_assign(self)
     }
 }
 
@@ -115,7 +115,7 @@ pub struct Logical {
 
 impl ExprAccept for Logical {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_logical(&self)
+        v.visit_logical(self)
     }
 }
 
@@ -128,7 +128,7 @@ pub struct Call {
 
 impl ExprAccept for Call {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_call(&self)
+        v.visit_call(self)
     }
 }
 
@@ -162,7 +162,7 @@ impl ExprAccept for Expr {
 use std::fmt;
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", AstPrinter.print_expr(&self))
+        write!(f, "{}", AstPrinter.print_expr(self))
         //write!(f, "{:?}", &self)
         //write!(f, "{}", ::AstPrinter::new().print(self)) // TODO
     }

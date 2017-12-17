@@ -25,7 +25,7 @@ fn main() {
                         println!("{}", p.err().unwrap());
                     } else {
                         let p = p.unwrap();
-                        if p.len() == 0 { continue }
+                        if p.is_empty() { continue }
                         if p.len() == 1 {
                             if let piccolo::stmt::Stmt::StmtExpr(piccolo::stmt::StmtExpr(ref stmt)) = p[0] {
                                 let v = interp.eval(stmt);

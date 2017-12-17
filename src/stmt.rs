@@ -22,7 +22,7 @@ pub struct StmtExpr(pub expr::Expr);
 
 impl StmtAccept for StmtExpr {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_expr(&self)
+        v.visit_expr(self)
     }
 }
 
@@ -34,7 +34,7 @@ pub struct Assignment {
 
 impl StmtAccept for Assignment {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_assignment(&self)
+        v.visit_assignment(self)
     }
 }
 
@@ -43,7 +43,7 @@ pub struct Block(pub Vec<Stmt>);
 
 impl StmtAccept for Block {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_block(&self)
+        v.visit_block(self)
     }
 }
 
@@ -56,7 +56,7 @@ pub struct If {
 
 impl StmtAccept for If {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_if(&self)
+        v.visit_if(self)
     }
 }
 
@@ -68,7 +68,7 @@ pub struct While {
 
 impl StmtAccept for While {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_while(&self)
+        v.visit_while(self)
     }
 }
 
@@ -81,7 +81,7 @@ pub struct For {
 
 impl StmtAccept for For {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_for(&self)
+        v.visit_for(self)
     }
 }
 
@@ -94,7 +94,7 @@ pub struct Func {
 
 impl StmtAccept for Func {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_func(&self)
+        v.visit_func(self)
     }
 }
 
@@ -106,7 +106,7 @@ pub struct Retn {
 
 impl StmtAccept for Retn {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_retn(&self)
+        v.visit_retn(self)
     }
 }
 

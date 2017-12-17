@@ -4,19 +4,16 @@ use std::fmt;
 use ::*;
 
 pub fn parse_into_value(into: String) -> Value {
-    match into.parse::<bool>() {
-        Ok(b) => return Value::Bool(b),
-        Err(_) => {},
+    if let Ok(b) = into.parse::<bool>() {
+        return Value::Bool(b);
     }
 
-    match into.parse::<i64>() {
-        Ok(i) => return Value::Integer(i),
-        Err(_) => {},
+    if let Ok(i) = into.parse::<i64>() {
+        return Value::Integer(i);
     }
 
-    match into.parse::<f64>() {
-        Ok(f) => return Value::Float(f),
-        Err(_) => {},
+    if let Ok(f) = into.parse::<f64>() {
+        return Value::Float(f);
     }
 
     Value::String(into)
@@ -57,33 +54,9 @@ impl From<i64> for Value {
     }
 }
 
-impl From<u64> for Value {
-    fn from(u: u64) -> Self {
-        Value::Integer(u as i64)
-    }
-}
-
-impl From<i32> for Value {
-    fn from(i: i32) -> Self {
-        Value::Integer(i as i64)
-    }
-}
-
-impl From<u32> for Value {
-    fn from(u: u32) -> Self {
-        Value::Integer(u as i64)
-    }
-}
-
 impl From<f64> for Value {
     fn from(f: f64) -> Self {
         Value::Float(f)
-    }
-}
-
-impl From<f32> for Value {
-    fn from(f: f32) -> Self {
-        Value::Float(f as f64)
     }
 }
 
@@ -96,10 +69,10 @@ impl From<Vec<Value>> for Value {
 impl From<expr::Literal> for Value {
     fn from(f: expr::Literal) -> Self {
         match f {
-            expr::Literal::Float(v) => v.into(),
-            expr::Literal::Integer(v) => v.into(),
-            expr::Literal::Bool(v) => v.into(),
-            expr::Literal::String(v) => v.into(),
+            expr::Literal::Float(v) => Value::Float(v),
+            expr::Literal::Integer(v) => Value::Integer(v),
+            expr::Literal::Bool(v) => Value::Bool(v),
+            expr::Literal::String(v) => Value::String(v),
             expr::Literal::Array(_) => panic!("unreachable: .into() on literal array"),
             expr::Literal::Nil => Value::Nil,
         }
@@ -108,20 +81,20 @@ impl From<expr::Literal> for Value {
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Value::Bool(v) => write!(f, "{}", v),
-            &Value::String(ref v) => write!(f, "{}", v),
-            &Value::Float(v) => write!(f, "{}", v),
-            &Value::Integer(v) => write!(f, "{}", v),
-            &Value::Array(ref v) => write!(f, "{:?}", v),
-            &Value::Func(ref v) => {
+        match *self {
+            Value::Bool(v) => write!(f, "{}", v),
+            Value::String(ref v) => write!(f, "{}", v),
+            Value::Float(v) => write!(f, "{}", v),
+            Value::Integer(v) => write!(f, "{}", v),
+            Value::Array(ref v) => write!(f, "{:?}", v),
+            Value::Func(ref v) => {
                 if v.is_native() {
                     write!(f, "native fn {}", v.name)
                 } else {
                     write!(f, "fn {}", v.name)
                 }
             },
-            &Value::Nil => write!(f, "nil"),
+            Value::Nil => write!(f, "nil"),
         }
     }
 }

@@ -8,7 +8,7 @@ use value::Value;
 use token::TokenKind;
 use err::ErrorKind;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Interpreter {
     pub err: String,
     pub had_err: bool,
@@ -66,7 +66,7 @@ impl Interpreter {
 
     pub fn interpret(&mut self, statements: &[stmt::Stmt]) -> Result<(), String> {
         for stmt in statements.iter() {
-            self.execute(&stmt);
+            self.execute(stmt);
             if self.had_err {
                 return Err(self.err.clone())
             }
@@ -119,7 +119,7 @@ impl Interpreter {
         e.accept(&mut *self)
     }
 
-    fn error(&mut self, kind: ErrorKind, line: u64, msg: String) {
+    fn error(&mut self, kind: ErrorKind, line: u64, msg: &str) {
         self.had_err = true;
         self.err.push_str(&format!("Line {} - {:?}: {}\n", line, kind, msg));
     }
@@ -148,7 +148,7 @@ impl expr::ExprVisitor for Interpreter {
                 Value::Integer(n) => (-n).into(),
                 Value::Float(n) => (-n).into(),
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to negate {:?}", rhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to negate {:?}", rhs));
                     Value::Nil
                 }
             },
@@ -166,15 +166,14 @@ impl expr::ExprVisitor for Interpreter {
             if is_truthy(&left) {
                 return left
             }
-        } else {
-            if !is_truthy(&left) {
-                return left
-            }
+        } else if !is_truthy(&left) {
+            return left
         }
 
         self.evaluate(&e.rhs)
     }
 
+    #[allow(cyclomatic_complexity)]
     fn visit_binary(&mut self, e: &expr::Binary) -> Value {
         let lhs = self.evaluate(&e.lhs);
         let rhs = self.evaluate(&e.rhs);
@@ -185,7 +184,7 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Float(l - r),
                     Value::Integer(r) => Value::Float(l - r as f64),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to subtract {:?} from {:?}", rhs, lhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to subtract {:?} from {:?}", rhs, lhs));
                         Value::Nil
                     }
                 },
@@ -193,12 +192,12 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Float(l as f64 - r),
                     Value::Integer(r) => Value::Integer(l - r),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to subtract {:?} from {:?}", rhs, lhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to subtract {:?} from {:?}", rhs, lhs));
                         Value::Nil
                     }
                 },
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to subtract {:?} from {:?}", rhs, lhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to subtract {:?} from {:?}", rhs, lhs));
                     Value::Nil
                 }
             },
@@ -208,7 +207,7 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Float(l + r),
                     Value::Integer(r) => Value::Float(l + r as f64),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to add {:?} to {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to add {:?} to {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
@@ -216,19 +215,19 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Float(l as f64 + r),
                     Value::Integer(r) => Value::Integer(l + r),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to add {:?} to {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to add {:?} to {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
                 Value::String(mut l) => match rhs {
                     Value::String(r) => Value::String({l.push_str(&r); l}),
                     r => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to add {:?} to {:?}", l, r));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to add {:?} to {:?}", l, r));
                         Value::Nil
                     }
                 },
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to add {:?} to {:?}", lhs, rhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to add {:?} to {:?}", lhs, rhs));
                     Value::Nil
                 }
             },
@@ -238,7 +237,7 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Float(l / r),
                     Value::Integer(r) => Value::Float(l / r as f64),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to divide {:?} by {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to divide {:?} by {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
@@ -246,12 +245,12 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Float(l as f64 / r),
                     Value::Integer(r) => Value::Integer(l / r),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to divide {:?} by {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to divide {:?} by {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to divide {:?} by {:?}", lhs, rhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to divide {:?} by {:?}", lhs, rhs));
                     Value::Nil
                 }
             },
@@ -261,7 +260,7 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Float(l * r),
                     Value::Integer(r) => Value::Float(l * r as f64),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to multiply {:?} by {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to multiply {:?} by {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
@@ -269,12 +268,12 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Float(l as f64 * r),
                     Value::Integer(r) => Value::Integer(l * r),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to multiply {:?} by {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to multiply {:?} by {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to multiply {:?} by {:?}", lhs, rhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to multiply {:?} by {:?}", lhs, rhs));
                     Value::Nil
                 }
             },
@@ -284,7 +283,7 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Float(l % r),
                     Value::Integer(r) => Value::Float(l % r as f64),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to modulo {:?} by {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to modulo {:?} by {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
@@ -292,12 +291,12 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Float(l as f64 % r),
                     Value::Integer(r) => Value::Integer(l % r),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to modulo {:?} by {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to modulo {:?} by {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to modulo {:?} by {:?}", lhs, rhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to modulo {:?} by {:?}", lhs, rhs));
                     Value::Nil
                 }
             },
@@ -307,7 +306,7 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Bool(l > r),
                     Value::Integer(r) => Value::Bool(l > r as f64),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
@@ -315,12 +314,12 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Bool(l as f64 > r),
                     Value::Integer(r) => Value::Bool(l > r),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                         Value::Nil
                     }
                 }
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                     Value::Nil
                 }
             },
@@ -330,7 +329,7 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Bool(l < r),
                     Value::Integer(r) => Value::Bool(l < r as f64),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
@@ -338,12 +337,12 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Bool((l as f64) < r),
                     Value::Integer(r) => Value::Bool(l < r),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                         Value::Nil
                     }
                 }
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                     Value::Nil
                 }
             },
@@ -353,7 +352,7 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Bool(l >= r),
                     Value::Integer(r) => Value::Bool(l >= r as f64),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
@@ -361,12 +360,12 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Bool(l as f64 >= r),
                     Value::Integer(r) => Value::Bool(l >= r),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                         Value::Nil
                     }
                 }
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                     Value::Nil
                 }
             },
@@ -376,7 +375,7 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Bool(l <= r),
                     Value::Integer(r) => Value::Bool(l <= r as f64),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
@@ -384,12 +383,12 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Float(r) => Value::Bool(l as f64 <= r),
                     Value::Integer(r) => Value::Bool(l <= r),
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                         Value::Nil
                     }
                 }
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to compare {:?} to {:?}", lhs, rhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to compare {:?} to {:?}", lhs, rhs));
                     Value::Nil
                 }
             },
@@ -403,12 +402,12 @@ impl expr::ExprVisitor for Interpreter {
                         Value::Array((l..r).map(|n| n.into()).collect())
                     },
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}..{:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to create range {:?}..{:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}..{:?}", lhs, rhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to create range {:?}..{:?}", lhs, rhs));
                     Value::Nil
                 }
             },
@@ -419,12 +418,12 @@ impl expr::ExprVisitor for Interpreter {
                         Value::Array((l..r + 1).map(|n| n.into()).collect())
                     },
                     _ => {
-                        self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}...{:?}", lhs, rhs));
+                        self.error(ErrorKind::MathError, e.op.line, &format!("Tried to create range {:?}...{:?}", lhs, rhs));
                         Value::Nil
                     }
                 },
                 _ => {
-                    self.error(ErrorKind::MathError, e.op.line, format!("Tried to create range {:?}...{:?}", lhs, rhs));
+                    self.error(ErrorKind::MathError, e.op.line, &format!("Tried to create range {:?}...{:?}", lhs, rhs));
                     Value::Nil
                 }
             },
@@ -437,7 +436,7 @@ impl expr::ExprVisitor for Interpreter {
         if let Some(v) = self.env.get(&e.0.lexeme) {
             v
         } else {
-            self.error(ErrorKind::UndefinedVariable, e.0.line, format!("variable {} is undefined", e.0.lexeme));
+            self.error(ErrorKind::UndefinedVariable, e.0.line, &format!("variable {} is undefined", e.0.lexeme));
             Value::Nil
         }
     }
@@ -455,7 +454,7 @@ impl expr::ExprVisitor for Interpreter {
         let mut func = match callee {
             Value::Func(f) => f,
             v => {
-                self.error(ErrorKind::NonFunction, e.paren.line, format!("attempt to call non-function {:?}", v));
+                self.error(ErrorKind::NonFunction, e.paren.line, &format!("attempt to call non-function {:?}", v));
                 return Value::Nil;
             }
         };
@@ -463,7 +462,7 @@ impl expr::ExprVisitor for Interpreter {
         let args: Vec<Value> = e.args.iter().map(|arg| self.evaluate(arg)).collect();
 
         if args.len() != func.arity() {
-            self.error(ErrorKind::IncorrectArity, e.paren.line, format!("expected {} args, got {}", func.arity(), args.len()));
+            self.error(ErrorKind::IncorrectArity, e.paren.line, &format!("expected {} args, got {}", func.arity(), args.len()));
             return Value::Nil;
         }
 
@@ -515,12 +514,20 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_for(&mut self, s: &stmt::For) -> Option<Value> {
-        let iter = self.evaluate(&s.iter);
+        let mut iter = self.evaluate(&s.iter);
         self.env.push();
         match iter {
             Value::Array(a) => {
                 for item in a {
                     self.env.define(&s.name.lexeme, item);
+                    if let Some(r) = self.execute_block(&s.body) {
+                        self.env.pop();
+                        return Some(r)
+                    }
+                }
+            },
+            Value::Func(ref mut f) => {
+                while f.call(&mut *self, vec![]) != Value::Nil {
                     if let Some(r) = self.execute_block(&s.body) {
                         self.env.pop();
                         return Some(r)
@@ -549,7 +556,7 @@ impl stmt::StmtVisitor for Interpreter {
 
     fn visit_retn(&mut self, s: &stmt::Retn) -> Option<Value> {
         let value = if s.value != None {
-            self.evaluate(&s.value.as_ref().unwrap())
+            self.evaluate(s.value.as_ref().unwrap())
         } else {
             Value::Nil
         };
@@ -558,9 +565,9 @@ impl stmt::StmtVisitor for Interpreter {
 }
 
 pub fn is_truthy(e: &Value) -> bool {
-    match e {
-        &Value::Bool(b) => b,
-        &Value::Nil => false,
+    match *e {
+        Value::Bool(b) => b,
+        Value::Nil => false,
         _ => true,
     }
 }
