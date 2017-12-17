@@ -15,26 +15,6 @@ pub struct Interpreter {
     pub env: env::Env,
 }
 
-fn fibonacci(i: &mut Interpreter, args: Vec<Value>) -> Value {
-    if let Value::Integer(n) = args[0] {
-        if n <= 1 {
-            Value::Integer(n)
-        } else {
-            if let Value::Integer(l) = fibonacci(i, vec![Value::Integer(n - 2)]) {
-                if let Value::Integer(r) = fibonacci(i, vec![Value::Integer(n - 1)]) {
-                    Value::Integer(l + r)
-                } else {
-                    panic!("not int")
-                }
-            } else {
-                panic!("not int")
-            }
-        }
-    } else {
-        panic!("not int")
-    }
-}
-
 impl Interpreter {
     pub fn new() -> Interpreter {
         let mut env = env::Env::new();
@@ -65,7 +45,12 @@ impl Interpreter {
             Value::Bool(true)
         }));
 
-        env.define("fibonacci_native", func::new_native_func("fibonacci_native", 1, fibonacci));
+        env.define("show_env", func::new_native_func("show_env", 0, |i, _| {
+            println!("{}", i.env);
+            Value::Nil
+        }));
+
+        env.push();
 
         Interpreter {
             had_err: false,
@@ -121,6 +106,14 @@ impl Interpreter {
         }
         None
     }
+
+    //pub fn execute_block_local_with_env(&mut self, stmts: &[stmt::Stmt], mut env: env::Env) -> Option<Value> {
+    //    env.push_parent(self.env.clone());
+    //    let old_env = std::mem::replace(&mut self.env, env);
+    //    let r = self.execute_block_local(stmts);
+    //    self.env = old_env;
+    //    r
+    //}
 
     fn evaluate(&mut self, e: &expr::Expr) -> Value {
         e.accept(&mut *self)
@@ -441,7 +434,7 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_variable(&mut self, e: &expr::Variable) -> Value {
-        if let Some(v) = self.env.get(&e.0) {
+        if let Some(v) = self.env.get(&e.0.lexeme) {
             v
         } else {
             self.error(ErrorKind::UndefinedVariable, e.0.line, format!("variable {} is undefined", e.0.lexeme));
@@ -459,7 +452,7 @@ impl expr::ExprVisitor for Interpreter {
     fn visit_call(&mut self, e: &expr::Call) -> Value {
         let callee = self.evaluate(&e.callee);
 
-        let func = match callee {
+        let mut func = match callee {
             Value::Func(f) => f,
             v => {
                 self.error(ErrorKind::NonFunction, e.paren.line, format!("attempt to call non-function {:?}", v));
@@ -529,6 +522,7 @@ impl stmt::StmtVisitor for Interpreter {
                 for item in a {
                     self.env.define(&s.name.lexeme, item);
                     if let Some(r) = self.execute_block(&s.body) {
+                        self.env.pop();
                         return Some(r)
                     }
                 }
@@ -545,6 +539,9 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_func(&mut self, s: &stmt::Func) -> Option<Value> {
+        // TODO
+        //fn make_counter() do i = 0 fn counter() do i = i + 1 retn i end retn counter end
+        //let func = Value::Func(func::Func::with_closure(s.clone(), self.env.children()));
         let func = Value::Func(func::Func::new(s.clone()));
         self.env.define(&s.name.lexeme, func);
         None

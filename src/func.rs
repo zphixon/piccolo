@@ -6,6 +6,7 @@ pub struct Func {
     pub native: Option<NativeFunc>,
     pub decl: Option<stmt::Func>,
     pub name: String,
+    //pub closure: env::Env, // TODO
 }
 
 impl Func {
@@ -31,7 +32,7 @@ impl Func {
         else { panic!("arity on empty function") }
     }
 
-    pub fn call(&self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> value::Value {
+    pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> value::Value {
         if self.native.is_some() {
             self.native.as_ref().unwrap().call(interp, args)
         } else if self.decl.is_some() {

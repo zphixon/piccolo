@@ -2,9 +2,9 @@
 use ::*;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Env {
-    inner: Vec<HashMap<String, value::Value>>,
+    pub inner: Vec<HashMap<String, value::Value>>,
 }
 
 impl Env {
@@ -14,8 +14,20 @@ impl Env {
         }
     }
 
+    pub fn with_parent(parent: Env) -> Self {
+        let mut e = Env {
+            inner: parent.inner
+        };
+        e.push();
+        e
+    }
+
     pub fn push(&mut self) {
         self.inner.push(HashMap::new());
+    }
+
+    pub fn push_parent(&mut self, mut parent: Env) {
+        self.inner.append(&mut parent.inner);
     }
 
     pub fn pop(&mut self) -> Option<HashMap<String, value::Value>> {
@@ -25,20 +37,20 @@ impl Env {
     pub fn define(&mut self, name: &str, value: value::Value) {
         for scope in self.inner.iter_mut().rev().skip(1) {
             if scope.contains_key(name) {
-                scope.insert(name.to_owned(), value);
+                scope.insert(name.to_owned(), value.clone());
                 return
             }
         }
 
         self.inner.iter_mut().rev().nth(0)
-            .map(|m| m.insert(name.to_owned(), value))
+            .map(|m| m.insert(name.to_owned(), value.clone()))
             .expect("env is empty");
     }
 
-    pub fn get(&mut self, name: &token::Token) -> Option<value::Value> {
-        for scope in self.inner.iter().rev() {
-            if scope.contains_key(&name.lexeme) {
-                return scope.get(&name.lexeme).cloned()
+    pub fn get(&self, name: &str) -> Option<value::Value> {
+        for (n, scope) in self.inner.iter().rev().enumerate() {
+            if scope.contains_key(name) {
+                return scope.get(name).cloned()
             }
         }
         None
@@ -48,6 +60,13 @@ impl Env {
         self.inner.iter_mut().rev().nth(0)
             .map(|m| m.insert(name.to_owned(), value))
             .expect("env is empty");
+    }
+
+    // TODO: re-visit closures in ch. 11
+    pub fn children(&self) -> Env {
+        Env {
+            inner: self.inner.iter().skip(1).cloned().collect()
+        }
     }
 }
 
