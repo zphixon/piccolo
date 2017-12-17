@@ -15,6 +15,26 @@ pub struct Interpreter {
     pub env: env::Env,
 }
 
+fn fibonacci(i: &mut Interpreter, args: Vec<Value>) -> Value {
+    if let Value::Integer(n) = args[0] {
+        if n <= 1 {
+            Value::Integer(n)
+        } else {
+            if let Value::Integer(l) = fibonacci(i, vec![Value::Integer(n - 2)]) {
+                if let Value::Integer(r) = fibonacci(i, vec![Value::Integer(n - 1)]) {
+                    Value::Integer(l + r)
+                } else {
+                    panic!("not int")
+                }
+            } else {
+                panic!("not int")
+            }
+        }
+    } else {
+        panic!("not int")
+    }
+}
+
 impl Interpreter {
     pub fn new() -> Interpreter {
         let mut env = env::Env::new();
@@ -27,6 +47,25 @@ impl Interpreter {
             println!("{}", args[0]);
             Value::Nil
         }));
+
+        env.define("panic", func::new_native_func("panic", 1, |_, args| {
+            eprintln!("piccolo panic! {}", args[0]);
+            std::process::exit(1);
+        }));
+
+        env.define("str", func::new_native_func("str", 1, |_, args| {
+            Value::String(format!("{}", args[0]))
+        }));
+
+        env.define("assert", func::new_native_func("assert", 1, |_, args| {
+            if !is_truthy(&args[0]) {
+                eprintln!("assert failed: {}", args[0]);
+                std::process::exit(1);
+            }
+            Value::Bool(true)
+        }));
+
+        env.define("fibonacci_native", func::new_native_func("fibonacci_native", 1, fibonacci));
 
         Interpreter {
             had_err: false,
@@ -58,16 +97,29 @@ impl Interpreter {
         Ok(v)
     }
 
-    pub fn execute(&mut self, s: &stmt::Stmt) {
-        s.accept(&mut *self);
+    pub fn execute(&mut self, s: &stmt::Stmt) -> Option<Value> {
+        s.accept(&mut *self)
     }
 
-    pub fn execute_block(&mut self, stmts: &[stmt::Stmt]) {
+    pub fn execute_block(&mut self, stmts: &[stmt::Stmt]) -> Option<Value> {
         self.env.push();
         for stmt in stmts {
-            self.execute(stmt);
+            if let Some(r) = self.execute(stmt) {
+                self.env.pop();
+                return Some(r)
+            }
         }
         self.env.pop();
+        None
+    }
+
+    pub fn execute_block_local(&mut self, stmts: &[stmt::Stmt]) -> Option<Value> {
+        for stmt in stmts {
+            if let Some(r) = self.execute(stmt) {
+                return Some(r)
+            }
+        }
+        None
     }
 
     fn evaluate(&mut self, e: &expr::Expr) -> Value {
@@ -427,43 +479,58 @@ impl expr::ExprVisitor for Interpreter {
 }
 
 impl stmt::StmtVisitor for Interpreter {
-    type Output = ();
+    type Output = Option<Value>;
 
-    fn visit_expr(&mut self, s: &stmt::StmtExpr) {
+    fn visit_expr(&mut self, s: &stmt::StmtExpr) -> Option<Value> {
         self.evaluate(&s.0);
+        None
     }
 
-    fn visit_assignment(&mut self, s: &stmt::Assignment) {
+    fn visit_assignment(&mut self, s: &stmt::Assignment) -> Option<Value> {
         let value = self.evaluate(&s.value);
         self.env.define(&s.name.lexeme, value);
+        None
     }
 
-    fn visit_block(&mut self, s: &stmt::Block) {
+    fn visit_block(&mut self, s: &stmt::Block) -> Option<Value> {
         self.execute_block(&s.0);
+        None
     }
 
-    fn visit_if(&mut self, s: &stmt::If) {
+    fn visit_if(&mut self, s: &stmt::If) -> Option<Value> {
         if is_truthy(&self.evaluate(&s.cond)) {
-            self.execute_block(&s.then);
+            if let Some(r) = self.execute_block(&s.then) {
+                Some(r)
+            } else {
+                None
+            }
         } else if s.else_.is_some() {
             self.execute_block(s.else_.as_ref().unwrap());
+            None
+        } else {
+            None
         }
     }
 
-    fn visit_while(&mut self, s: &stmt::While) {
+    fn visit_while(&mut self, s: &stmt::While) -> Option<Value> {
         while is_truthy(&self.evaluate(&s.cond)) {
-            self.execute_block(&s.body);
+            if let Some(r) = self.execute_block(&s.body) {
+                return Some(r)
+            }
         }
+        None
     }
 
-    fn visit_for(&mut self, s: &stmt::For) {
+    fn visit_for(&mut self, s: &stmt::For) -> Option<Value> {
         let iter = self.evaluate(&s.iter);
         self.env.push();
         match iter {
             Value::Array(a) => {
                 for item in a {
                     self.env.define(&s.name.lexeme, item);
-                    self.execute_block(&s.body);
+                    if let Some(r) = self.execute_block(&s.body) {
+                        return Some(r)
+                    }
                 }
             },
             //Value::Nil => { // TODO
@@ -474,11 +541,22 @@ impl stmt::StmtVisitor for Interpreter {
             _ => {}
         }
         self.env.pop();
+        None
     }
 
-    fn visit_func(&mut self, s: &stmt::Func) {
+    fn visit_func(&mut self, s: &stmt::Func) -> Option<Value> {
         let func = Value::Func(func::Func::new(s.clone()));
         self.env.define(&s.name.lexeme, func);
+        None
+    }
+
+    fn visit_retn(&mut self, s: &stmt::Retn) -> Option<Value> {
+        let value = if s.value != None {
+            self.evaluate(&s.value.as_ref().unwrap())
+        } else {
+            Value::Nil
+        };
+        Some(value)
     }
 }
 

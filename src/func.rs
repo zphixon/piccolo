@@ -37,11 +37,11 @@ impl Func {
         } else if self.decl.is_some() {
             interp.env.push();
             for (n, arg) in args.iter().enumerate() {
-                interp.env.define(&self.decl.as_ref().unwrap().args[n].lexeme, arg.clone());
+                interp.env.set_local(&self.decl.as_ref().unwrap().args[n].lexeme, arg.clone());
             }
-            interp.execute_block(&self.decl.as_ref().unwrap().body);
+            let value = interp.execute_block_local(&self.decl.as_ref().unwrap().body);
             interp.env.pop();
-            value::Value::Nil
+            value.unwrap_or(value::Value::Nil)
         } else {
             panic!("empty function called!")
         }

@@ -132,12 +132,26 @@ impl stmt::StmtVisitor for AstPrinter {
         let mut name = String::from("for ");
         name.push_str(&s.name.lexeme);
         name.push_str(" in ");
-        name.push_str(&s.iter.accept(&mut *self));
         self.parenthesize_list(&name, Some(&s.iter), &s.body)
     }
 
     fn visit_func(&mut self, s: &stmt::Func) -> String {
-        "todo".into()
+        let mut name = String::from("fn ");
+        name.push_str(&s.name.lexeme);
+        name.push_str(" (");
+        for (n, arg) in s.args.iter().enumerate() {
+            if n + 1 != s.args.len() {
+                name.push_str(&format!("{} ", arg.lexeme));
+            } else {
+                name.push_str(&format!("{}", arg.lexeme));
+            }
+        }
+        name.push_str(")");
+        self.parenthesize_list(&name, None, &s.body)
+    }
+
+    fn visit_retn(&mut self, s: &stmt::Retn) -> String {
+        self.parenthesize("retn", &[s.value.as_ref().unwrap_or(&expr::Expr::Literal(expr::Literal::Nil))])
     }
 }
 

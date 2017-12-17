@@ -24,7 +24,10 @@ fn main() {
         //"b = 6\nb b b b b";
         //"prln(clock())\n";
         //"prln(\"testarino\")";
-        "fn something(x, y) do\n  prln(x * y)\nend\n\nsomething(3, 4)\n";
+        //"fn something(x, y) do\n  prln(x * y)\nend\n\nsomething(3, 4)\n";
+        "fn fibonacci(n) do\n  if n <= 1 do\n    retn n\n  end\n  retn fibonacci(n - 2) + fibonacci(n - 1)\nend\n\nassert(fibonacci(9) == fibonacci_native(9))\n";
+        //"if true do\n  prln(\"crepe\")\nend";
+        //"for num in 1..999 do\n  if 79 % num == 32 do\n    panic(\"it's 32: \" + str(num))\n  end\nend";
 
     println!("program:");
     for (k, v) in code.lines().enumerate() {

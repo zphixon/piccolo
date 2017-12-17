@@ -95,6 +95,8 @@ impl Parser {
             self.for_statement()
         } else if self.matches(&[token::TokenKind::Fn]) {
             self.func()
+        } else if self.matches(&[token::TokenKind::Retn]) {
+            self.retn()
         } else {
             self.expression_statement()
         }
@@ -185,6 +187,25 @@ impl Parser {
         let body = self.end_block()?;
         Some(stmt::Stmt::Func(stmt::Func {
             name, args, body
+        }))
+    }
+
+    fn retn(&mut self) -> Option<stmt::Stmt> {
+        let keyword = self.previous();
+        let value = if self.check(token::TokenKind::Newline) {
+            self.skip_newlines();
+            if !self.check(token::TokenKind::End) {
+                self.error(err::ErrorKind::SyntaxError, "cannot have expressions after return\nMove on to the same line as return if you'd like to return it".into());
+                return None;
+            } else {
+                self.consume(token::TokenKind::End)?;
+                None
+            }
+        } else {
+            self.expression()
+        };
+        Some(stmt::Stmt::Retn(stmt::Retn {
+            keyword, value
         }))
     }
 

@@ -38,7 +38,7 @@ fn equal_truthy() {
 }
 
 #[test]
-fn random() {
+fn list_progs() {
     let progs = vec![
      // (pass,  program)
         (true,  "32 + -4.5 - 3 == 72 * 3 && 4 != 5"),
@@ -62,6 +62,7 @@ fn random() {
         (true,  "b = 6\nb b b b b"),
         (true,  "prln(clock())\n"),
         (true,  "fn something(x, y) do\n  prln(x * y)\nend\n\nsomething(3, 4)\n"),
+        (true,  "fn fibonacci(n) do\n  if n <= 1 do\n    retn n\n  end\n  retn fibonacci(n - 2) + fibonacci(n - 1)\nend\n\nassert(fibonacci(9) == fibonacci_native(9))\n"),
     ];
 
     for (should_pass, prog) in progs {

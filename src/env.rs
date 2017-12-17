@@ -43,12 +43,18 @@ impl Env {
         }
         None
     }
+
+    pub fn set_local(&mut self, name: &str, value: value::Value)  {
+        self.inner.iter_mut().rev().nth(0)
+            .map(|m| m.insert(name.to_owned(), value))
+            .expect("env is empty");
+    }
 }
 
 impl std::fmt::Display for Env {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut s = String::from("env:\n");
-        for (n, ctx) in self.inner.iter().enumerate() {
+        for (n, ctx) in self.inner.iter().rev().enumerate() {
             s.push_str(&format!("  layer {}\n", n));
             'inner: for (k, v) in ctx.iter() {
                 s.push_str(&format!("    {} = ", k));
