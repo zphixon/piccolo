@@ -29,6 +29,14 @@ pub fn parse_file(filename: &str) -> Result<Vec<token::Token>, String> {
 pub struct AstPrinter;
 
 impl AstPrinter {
+    pub fn print_expr(&mut self, ast: &expr::Expr) -> String {
+        ast.accept(&mut *self)
+    }
+
+    pub fn print_stmt(&mut self, ast: &stmt::Stmt) -> String {
+        ast.accept(&mut *self)
+    }
+
     pub fn print(&mut self, ast: &[stmt::Stmt]) -> String {
         let mut s = String::new();
         for stmt in ast.iter() {
@@ -126,6 +134,10 @@ impl stmt::StmtVisitor for AstPrinter {
         name.push_str(" in ");
         name.push_str(&s.iter.accept(&mut *self));
         self.parenthesize_list(&name, Some(&s.iter), &s.body)
+    }
+
+    fn visit_func(&mut self, s: &stmt::Func) -> String {
+        "todo".into()
     }
 }
 

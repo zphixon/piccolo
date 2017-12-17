@@ -23,7 +23,8 @@ fn main() {
         //"a = 0\nb = 1\n\nwhile a < 10000 do\n  prln(a)\n  tmp = a\n  a = b\n  b = tmp + b\nend\n";
         //"b = 6\nb b b b b";
         //"prln(clock())\n";
-        "prln(\"testarino\")";
+        //"prln(\"testarino\")";
+        "fn something(x, y) do\n  prln(x * y)\nend\n\nsomething(3, 4)\n";
 
     println!("program:");
     for (k, v) in code.lines().enumerate() {
@@ -63,7 +64,7 @@ fn main() {
             if i.is_err() {
                 println!("runtime err!\n{}", i.err().unwrap());
             } else {
-                println!("huzzah!\n{:?}", interp.env);
+                println!("huzzah!\n{}", interp.env);
             }
         }
     }

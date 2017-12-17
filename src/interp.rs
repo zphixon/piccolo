@@ -19,14 +19,14 @@ impl Interpreter {
     pub fn new() -> Interpreter {
         let mut env = env::Env::new();
 
-        env.define("clock", value::Value::Func(func::Func::new(0, |_, _| {
+        env.define("clock", func::new_native_func("clock", 0, |_, _| {
             time::now().to_timespec().sec.into()
-        })));
+        }));
 
-        env.define("prln", value::Value::Func(func::Func::new(1, |_, args| {
+        env.define("prln", func::new_native_func("prln", 1, |_, args| {
             println!("{}", args[0]);
             Value::Nil
-        })));
+        }));
 
         Interpreter {
             had_err: false,
@@ -58,11 +58,11 @@ impl Interpreter {
         Ok(v)
     }
 
-    fn execute(&mut self, s: &stmt::Stmt) {
+    pub fn execute(&mut self, s: &stmt::Stmt) {
         s.accept(&mut *self);
     }
 
-    fn execute_block(&mut self, stmts: &[stmt::Stmt]) {
+    pub fn execute_block(&mut self, stmts: &[stmt::Stmt]) {
         self.env.push();
         for stmt in stmts {
             self.execute(stmt);
@@ -406,12 +406,22 @@ impl expr::ExprVisitor for Interpreter {
 
     fn visit_call(&mut self, e: &expr::Call) -> Value {
         let callee = self.evaluate(&e.callee);
+
+        let func = match callee {
+            Value::Func(f) => f,
+            v => {
+                self.error(ErrorKind::NonFunction, e.paren.line, format!("attempt to call non-function {:?}", v));
+                return Value::Nil;
+            }
+        };
+
         let args: Vec<Value> = e.args.iter().map(|arg| self.evaluate(arg)).collect();
-        let func: func::Func = callee.into();
+
         if args.len() != func.arity() {
             self.error(ErrorKind::IncorrectArity, e.paren.line, format!("expected {} args, got {}", func.arity(), args.len()));
             return Value::Nil;
         }
+
         func.call(&mut *self, args)
     }
 }
@@ -464,6 +474,11 @@ impl stmt::StmtVisitor for Interpreter {
             _ => {}
         }
         self.env.pop();
+    }
+
+    fn visit_func(&mut self, s: &stmt::Func) {
+        let func = Value::Func(func::Func::new(s.clone()));
+        self.env.define(&s.name.lexeme, func);
     }
 }
 

@@ -13,5 +13,6 @@ pub enum ErrorKind {
     MathError,
     UndefinedVariable,
     IncorrectArity,
+    NonFunction,
 }
 

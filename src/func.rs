@@ -1,37 +1,100 @@
 
 use ::*;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Func {
-    inner: fn(&mut interp::Interpreter, Vec<value::Value>) -> value::Value,
-    arity: usize,
-}
-
-impl std::fmt::Debug for Func {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Func {{ inner: ..., arity: {} }}", self.arity)
-    }
-}
-
-impl std::cmp::PartialEq for Func {
-    fn eq(&self, _other: &Func) -> bool { false }
+    pub native: Option<NativeFunc>,
+    pub decl: Option<stmt::Func>,
+    pub name: String,
 }
 
 impl Func {
-    pub fn new(arity: usize, inner: fn(&mut interp::Interpreter, Vec<value::Value>) -> value::Value) -> Self {
+    pub fn new(decl: stmt::Func) -> Self {
         Func {
-            inner,
-            arity,
+            native: None,
+            name: decl.name.lexeme.clone(),
+            decl: Some(decl),
         }
     }
 
-    pub fn call(&self, mut i: &mut interp::Interpreter, args: Vec<value::Value>) -> value::Value {
-        let inner = self.inner;
-        inner(&mut i, args)
+    pub fn new_native(native: NativeFunc) -> Self {
+        Func {
+            name: native.name(),
+            native: Some(native),
+            decl: None,
+        }
     }
 
     pub fn arity(&self) -> usize {
+        if self.native.is_some() { self.native.as_ref().unwrap().arity() }
+        else if self.decl.is_some() { self.decl.as_ref().unwrap().args.len() }
+        else { panic!("arity on empty function") }
+    }
+
+    pub fn call(&self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> value::Value {
+        if self.native.is_some() {
+            self.native.as_ref().unwrap().call(interp, args)
+        } else if self.decl.is_some() {
+            interp.env.push();
+            for (n, arg) in args.iter().enumerate() {
+                interp.env.define(&self.decl.as_ref().unwrap().args[n].lexeme, arg.clone());
+            }
+            interp.execute_block(&self.decl.as_ref().unwrap().body);
+            interp.env.pop();
+            value::Value::Nil
+        } else {
+            panic!("empty function called!")
+        }
+    }
+
+    pub fn is_native(&self) -> bool {
+        self.native.is_some()
+    }
+}
+
+#[derive(Clone)]
+pub struct NativeFunc {
+    arity: usize,
+    inner: fn(&mut interp::Interpreter, Vec<value::Value>) -> value::Value,
+    name: String,
+}
+
+impl std::fmt::Debug for NativeFunc {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "NativeFunc {{ inner: ..., arity: {} }}", self.arity())
+    }
+}
+
+impl std::cmp::PartialEq for NativeFunc {
+    fn eq(&self, _other: &NativeFunc) -> bool { false }
+}
+
+impl NativeFunc {
+    pub fn new(name: String, arity: usize, inner: fn(&mut interp::Interpreter, Vec<value::Value>) -> value::Value) -> Self {
+        NativeFunc {
+            arity,
+            inner,
+            name,
+        }
+    }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl NativeFunc {
+    fn call(&self, mut interp: &mut interp::Interpreter, args: Vec<value::Value>) -> value::Value {
+        let inner = self.inner;
+        inner(&mut interp, args)
+    }
+
+    fn arity(&self) -> usize {
         self.arity
     }
+}
+
+pub fn new_native_func(name: &str, arity: usize, inner: fn(&mut interp::Interpreter, Vec<value::Value>) -> value::Value) -> value::Value {
+    value::Value::Func(Func::new_native(NativeFunc::new(name.to_owned(), arity, inner)))
 }
 

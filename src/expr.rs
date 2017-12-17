@@ -162,7 +162,8 @@ impl ExprAccept for Expr {
 use std::fmt;
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", &self)
+        write!(f, "{}", AstPrinter.print_expr(&self))
+        //write!(f, "{:?}", &self)
         //write!(f, "{}", ::AstPrinter::new().print(self)) // TODO
     }
 }

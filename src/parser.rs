@@ -93,6 +93,8 @@ impl Parser {
             self.while_statement()
         } else if self.matches(&[token::TokenKind::For]) {
             self.for_statement()
+        } else if self.matches(&[token::TokenKind::Fn]) {
+            self.func()
         } else {
             self.expression_statement()
         }
@@ -148,15 +150,7 @@ impl Parser {
 
     fn while_statement(&mut self) -> Option<stmt::Stmt> {
         let cond = self.expression()?;
-        self.consume(token::TokenKind::Do);
-
-        let mut body = Vec::new();
-        while !self.is_at_end() && !self.check(token::TokenKind::End) {
-            body.push(self.declaration()?);
-            self.skip_newlines();
-        }
-
-        self.consume(token::TokenKind::End)?;
+        let body = self.end_block()?;
 
         Some(stmt::Stmt::While(stmt::While {
             cond, body
@@ -167,6 +161,34 @@ impl Parser {
         let name = self.consume(token::TokenKind::Ident)?;
         self.consume(token::TokenKind::In)?;
         let iter = self.expression()?;
+        let body = self.end_block()?;
+        Some(stmt::Stmt::For(stmt::For {
+            name, iter, body
+        }))
+    }
+
+    fn func(&mut self) -> Option<stmt::Stmt> {
+        let name = self.consume(token::TokenKind::Ident)?;
+        self.consume(token::TokenKind::LParen)?;
+        let mut args = Vec::new();
+        if !self.check(token::TokenKind::RParen) {
+            while {
+                if args.len() >= 64 {
+                    self.error(err::ErrorKind::SyntaxError, "cannot have more than 64 parameters".into());
+                    return None
+                }
+                args.push(self.consume(token::TokenKind::Ident)?);
+                self.matches(&[token::TokenKind::Comma])
+            } {}
+        }
+        self.consume(token::TokenKind::RParen)?;
+        let body = self.end_block()?;
+        Some(stmt::Stmt::Func(stmt::Func {
+            name, args, body
+        }))
+    }
+
+    fn end_block(&mut self) -> Option<Vec<stmt::Stmt>> {
         self.consume(token::TokenKind::Do)?;
 
         let mut body = Vec::new();
@@ -176,10 +198,7 @@ impl Parser {
         }
 
         self.consume(token::TokenKind::End)?;
-
-        Some(stmt::Stmt::For(stmt::For {
-            name, iter, body
-        }))
+        Some(body)
     }
 
     fn expression(&mut self) -> Option<expr::Expr> {
@@ -347,13 +366,13 @@ impl Parser {
         let mut args = Vec::new();
 
         if !self.check(token::TokenKind::RParen) {
-            args.push(self.expression()?);
-            while self.matches(&[token::TokenKind::Comma]) {
+            while {
                 if args.len() >= 64 {
                     self.error(err::ErrorKind::SyntaxError, "Cannot have more than 64 arguments to a function\n(do you *really* need that many anyway?)".into())
                 }
                 args.push(self.expression()?);
-            }
+                self.matches(&[token::TokenKind::Comma])
+            } {}
         }
 
         let paren = self.consume(token::TokenKind::RParen)?;
@@ -406,6 +425,7 @@ impl Parser {
     }
 
     fn consume(&mut self, tk: token::TokenKind) -> Option<token::Token> {
+        self.skip_newlines();
         if self.check(tk) {
             Some(self.advance())
         } else {

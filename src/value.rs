@@ -106,15 +106,6 @@ impl From<expr::Literal> for Value {
     }
 }
 
-impl Into<func::Func> for Value {
-    fn into(self) -> func::Func {
-        match self {
-            Value::Func(f) => f,
-            v => panic!("unreachable: .into::<func::Func>() on non-func: {:?}", v)
-        }
-    }
-}
-
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -123,7 +114,13 @@ impl fmt::Display for Value {
             &Value::Float(v) => write!(f, "{}", v),
             &Value::Integer(v) => write!(f, "{}", v),
             &Value::Array(ref v) => write!(f, "{:?}", v),
-            &Value::Func(_) => write!(f, "fn"),
+            &Value::Func(ref v) => {
+                if v.is_native() {
+                    write!(f, "native fn {}", v.name)
+                } else {
+                    write!(f, "fn {}", v.name)
+                }
+            },
             &Value::Nil => write!(f, "nil"),
         }
     }

@@ -61,6 +61,7 @@ fn random() {
         (true,  "a = 0\nb = 1\n\nwhile a < 10000 do\n  prln(a)\n  tmp = a\n  a = b\n  b = tmp + b\nend\n"),
         (true,  "b = 6\nb b b b b"),
         (true,  "prln(clock())\n"),
+        (true,  "fn something(x, y) do\n  prln(x * y)\nend\n\nsomething(3, 4)\n"),
     ];
 
     for (should_pass, prog) in progs {

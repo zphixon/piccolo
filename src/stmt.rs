@@ -13,6 +13,7 @@ pub trait StmtVisitor {
     fn visit_if(&mut self, s: &If) -> Self::Output;
     fn visit_while(&mut self, s: &While) -> Self::Output;
     fn visit_for(&mut self, s: &For) -> Self::Output;
+    fn visit_func(&mut self, s: &Func) -> Self::Output;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -84,6 +85,19 @@ impl StmtAccept for For {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Func {
+    pub name: token::Token,
+    pub args: Vec<token::Token>,
+    pub body: Vec<Stmt>,
+}
+
+impl StmtAccept for Func {
+    fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
+        v.visit_func(&self)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Stmt {
     StmtExpr(StmtExpr),
     Assignment(Assignment),
@@ -91,6 +105,7 @@ pub enum Stmt {
     If(If),
     While(While),
     For(For),
+    Func(Func),
 }
 
 impl StmtAccept for Stmt {
@@ -102,6 +117,7 @@ impl StmtAccept for Stmt {
             Stmt::If(ref s) => s.accept(v),
             Stmt::While(ref s) => s.accept(v),
             Stmt::For(ref s) => s.accept(v),
+            Stmt::Func(ref s) => s.accept(v),
         }
     }
 }
