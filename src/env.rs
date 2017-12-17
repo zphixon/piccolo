@@ -48,7 +48,7 @@ impl Env {
     }
 
     pub fn get(&self, name: &str) -> Option<value::Value> {
-        for (n, scope) in self.inner.iter().rev().enumerate() {
+        for scope in self.inner.iter().rev() {
             if scope.contains_key(name) {
                 return scope.get(name).cloned()
             }
