@@ -217,5 +217,11 @@ impl expr::ExprVisitor for AstPrinter {
         name.push_str(&e.name.lexeme);
         self.parenthesize(&name, &[&*e.object])
     }
+
+    fn visit_set(&mut self, e: &expr::Set) -> String {
+        let mut name = String::from("set ");
+        name.push_str(&e.name.lexeme);
+        self.parenthesize(&name, &[&*e.object])
+    }
 }
 

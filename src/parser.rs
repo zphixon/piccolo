@@ -70,6 +70,13 @@ impl Parser {
                     let name = v.0.clone();
                     Some(expr::Expr::Assignment(expr::Assignment{ name, value }))
                 }
+                expr::Expr::Get(g) => {
+                    Some(expr::Expr::Set(expr::Set {
+                        object: g.object,
+                        name: g.name,
+                        value,
+                    }))
+                }
                 _ => {
                     self.error(err::ErrorKind::SyntaxError, &format!("expected variable name, got {:?}", equals));
                     None

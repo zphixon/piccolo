@@ -503,11 +503,22 @@ impl expr::ExprVisitor for Interpreter {
     fn visit_get(&mut self, e: &expr::Get) -> Value {
         let value = self.evaluate(&*e.object);
         if let Value::Instance(mut value) = value {
-            value.get(&e.name.lexeme).unwrap().clone()// TODO
+            // TODO - move everything to RefCell
+            value.get(&e.name.lexeme).unwrap()
         } else {
             self.error(ErrorKind::NonInstance, e.name.line, &format!("not an instance of data: {:?}", value));
             Value::Nil
         }
+    }
+
+    fn visit_set(&mut self, e: &expr::Set) -> Value {
+        if let Value::Instance(mut object) = self.evaluate(&*e.object) {
+            let value = self.evaluate(&*e.value);
+            object.set(&e.name.lexeme, value);
+        } else {
+            self.error(ErrorKind::NonInstance, e.name.line, &format!("only instances have fields"));
+        }
+        Value::Nil
     }
 }
 

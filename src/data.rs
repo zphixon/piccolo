@@ -21,12 +21,16 @@ pub struct Instance {
 }
 
 impl Instance {
-    pub fn get(&mut self, name: &str) -> Option<&mut value::Value> {
+    pub fn get(&mut self, name: &str) -> Option<value::Value> {
         if self.vars.contains_key(name) {
-            self.vars.get_mut(name)
+            self.vars.get(name).cloned()
         } else {
             None
         }
+    }
+
+    pub fn set(&mut self, name: &str, value: value::Value) {
+        self.vars.insert(name.to_owned(), value);
     }
 }
 
