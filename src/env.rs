@@ -42,7 +42,7 @@ impl Env {
     }
 
     pub fn define(&mut self, name: &str, value: value::Value) {
-        if name == "counter" {
+        /*if name == "counter" {
             println!("found");
             backtrace::trace(|frame| {
                 backtrace::resolve(frame.ip(), |symbol| {
@@ -64,7 +64,7 @@ impl Env {
                 });
                 true
             });
-        }
+        }*/
 
         for scope in self.inner.iter_mut().rev().skip(1) {
             if scope.contains_key(name) {

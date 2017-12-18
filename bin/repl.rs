@@ -6,8 +6,8 @@ use rustyline::Editor;
 use rustyline::error::ReadlineError;
 
 fn main() {
-    let mut rl = Editor::<()>::new();
     let mut interp = piccolo::interp::Interpreter::new();
+    let mut rl = Editor::<()>::new();
 
     loop {
         let input = rl.readline("-- ");
@@ -15,20 +15,25 @@ fn main() {
         match input {
             Ok(line) => {
                 rl.add_history_entry(&line);
+
                 interp.reset_err();
                 let s = piccolo::scanner::Scanner::new(line).scan_tokens();
+
                 if s.is_err() {
                     println!("{}", s.err().unwrap());
                 } else {
                     let p = piccolo::parser::Parser::new(s.unwrap()).parse();
+
                     if p.is_err() {
                         println!("{}", p.err().unwrap());
                     } else {
                         let p = p.unwrap();
                         if p.is_empty() { continue }
+
                         if p.len() == 1 {
                             if let piccolo::stmt::Stmt::StmtExpr(piccolo::stmt::StmtExpr(ref stmt)) = p[0] {
                                 let v = interp.eval(stmt);
+
                                 if v.is_err() {
                                     println!("{}", v.err().unwrap());
                                     continue
@@ -37,6 +42,7 @@ fn main() {
                                 }
                             } else {
                                 let i = interp.interpret(&p);
+
                                 if i.is_err() {
                                     println!("{}", i.err().unwrap());
                                 } else {
@@ -47,6 +53,7 @@ fn main() {
                             }
                         } else {
                             let i = interp.interpret(&p);
+
                             if i.is_err() {
                                 println!("{}", i.err().unwrap());
                             }
@@ -54,10 +61,16 @@ fn main() {
                     }
                 }
             },
-            Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => {
+
+            Err(ReadlineError::Interrupted) => {
+                break
+            },
+
+            Err(ReadlineError::Eof) => {
                 println!("bye!");
                 break
             },
+
             Err(e) => {
                 println!("err: {:?}", e);
                 break
