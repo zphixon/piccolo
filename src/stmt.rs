@@ -15,6 +15,7 @@ pub trait StmtVisitor {
     fn visit_for(&mut self, s: &For) -> Self::Output;
     fn visit_func(&mut self, s: &Func) -> Self::Output;
     fn visit_retn(&mut self, s: &Retn) -> Self::Output;
+    fn visit_data(&mut self, s: &Data) -> Self::Output;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -111,6 +112,18 @@ impl StmtAccept for Retn {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Data {
+    pub name: token::Token,
+    pub methods: Vec<Func>,
+}
+
+impl StmtAccept for Data {
+    fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
+        v.visit_data(self)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Stmt {
     StmtExpr(StmtExpr),
     Assignment(Assignment),
@@ -120,6 +133,7 @@ pub enum Stmt {
     For(For),
     Func(Func),
     Retn(Retn),
+    Data(Data),
 }
 
 impl StmtAccept for Stmt {
@@ -133,6 +147,7 @@ impl StmtAccept for Stmt {
             Stmt::For(ref s) => s.accept(v),
             Stmt::Func(ref s) => s.accept(v),
             Stmt::Retn(ref s) => s.accept(v),
+            Stmt::Data(ref s) => s.accept(v),
         }
     }
 }

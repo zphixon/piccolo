@@ -39,6 +39,10 @@ fn main() {
                                 let i = interp.interpret(&p);
                                 if i.is_err() {
                                     println!("{}", i.err().unwrap());
+                                } else {
+                                    if let Some(ret) = i.unwrap() {
+                                        println!("{:?}", ret);
+                                    }
                                 }
                             }
                         } else {

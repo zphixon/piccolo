@@ -43,7 +43,6 @@ impl Parser {
         if self.lookahead(1).kind == token::TokenKind::Assign {
             self.var_declaration()
         } else {
-        //} else class, etc { // TODO
             self.statement()
         }
     }
@@ -83,7 +82,9 @@ impl Parser {
 
     fn statement(&mut self) -> Option<stmt::Stmt> {
         self.skip_newlines();
-        if self.matches(&[token::TokenKind::Do]) {
+        if self.matches(&[token::TokenKind::Data]) {
+            self.data()
+        } else if self.matches(&[token::TokenKind::Do]) {
             self.block()
         } else if self.matches(&[token::TokenKind::If]) {
             self.if_statement()
@@ -204,6 +205,22 @@ impl Parser {
         };
         Some(stmt::Stmt::Retn(stmt::Retn {
             keyword, value
+        }))
+    }
+
+    fn data(&mut self) -> Option<stmt::Stmt> {
+        let name = self.consume(token::TokenKind::Ident)?;
+        self.consume(token::TokenKind::Is)?;
+        let mut methods = Vec::new();
+        while !self.check(token::TokenKind::End) && !self.is_at_end() {
+            self.consume(token::TokenKind::Fn)?;
+            if let stmt::Stmt::Func(func) = self.func()? {
+                methods.push(func);
+            } else { panic!("rust broke") }
+        }
+        self.consume(token::TokenKind::End)?;
+        Some(stmt::Stmt::Data(stmt::Data {
+            name, methods,
         }))
     }
 
@@ -373,6 +390,11 @@ impl Parser {
         loop {
             if self.matches(&[token::TokenKind::LParen]) {
                 expr = self.finish_call(Box::new(expr))?;
+            } else if self.matches(&[token::TokenKind::Dot]) {
+                let name = self.consume(token::TokenKind::Ident)?;
+                expr = expr::Expr::Get(expr::Get {
+                    name, expr: expr.clone()
+                })
             } else {
                 break
             }
@@ -434,6 +456,8 @@ impl Parser {
                 })))
             },
 
+            token::TokenKind::New => self.new_expr(),
+
             token::TokenKind::Ident => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
 
             _ => {
@@ -441,6 +465,27 @@ impl Parser {
                 None
             }
         }
+    }
+
+    fn new_expr(&mut self) -> Option<expr::Expr> {
+        let name = self.consume(token::TokenKind::Ident)?;
+        let mut args = Vec::new();
+        if let Some(_) = self.consume(token::TokenKind::LParen) {
+            loop {
+                let inst = self.consume(token::TokenKind::Ident)?.lexeme;
+                self.consume(token::TokenKind::Assign)?;
+                let value = self.expression()?;
+                args.push((inst, value));
+                if !self.matches(&[token::TokenKind::RParen]) {
+                    self.consume(token::TokenKind::Comma)?;
+                } else {
+                    break
+                }
+            }
+        }
+        Some(expr::Expr::New(expr::New {
+            name, args
+        }))
     }
 
     fn consume(&mut self, tk: token::TokenKind) -> Option<token::Token> {

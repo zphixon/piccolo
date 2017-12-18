@@ -11,6 +11,7 @@ pub mod interp;
 pub mod value;
 pub mod env;
 pub mod func;
+pub mod data;
 
 use scanner::Scanner;
 
@@ -155,6 +156,10 @@ impl stmt::StmtVisitor for AstPrinter {
     fn visit_retn(&mut self, s: &stmt::Retn) -> String {
         self.parenthesize("retn", &[s.value.as_ref().unwrap_or(&expr::Expr::Literal(expr::Literal::Nil))])
     }
+
+    fn visit_data(&mut self, _s: &stmt::Data) -> String {
+        self.parenthesize("data", &[])
+    }
 }
 
 impl expr::ExprVisitor for AstPrinter {
@@ -198,6 +203,19 @@ impl expr::ExprVisitor for AstPrinter {
         let mut name = String::from("call ");
         name.push_str(&e.callee.accept(&mut *self));
         self.parenthesize(&name, &args)
+    }
+
+    fn visit_new(&mut self, e: &expr::New) -> String {
+        let mut name = String::from("new ");
+        name.push_str(&e.name.lexeme);
+        let args: Vec<&expr::Expr> = e.args.iter().map(|x| &x.1).collect();
+        self.parenthesize(&name, &args)
+    }
+
+    fn visit_get(&mut self, e: &expr::Get) -> String {
+        let mut name = String::from("get ");
+        name.push_str(e.name.lexeme);
+        self.parenthesize(name, &[&*e.object])
     }
 }
 

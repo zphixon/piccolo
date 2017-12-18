@@ -14,7 +14,9 @@ pub trait ExprVisitor {
     fn visit_variable(&mut self, e: &Variable) -> Self::Output;
     fn visit_assign(&mut self, e: &Assignment) -> Self::Output;
     fn visit_logical(&mut self, e: &Logical) -> Self::Output;
-    fn visit_call(&mut self, b: &Call) -> Self::Output;
+    fn visit_call(&mut self, e: &Call) -> Self::Output;
+    fn visit_new(&mut self, e: &New) -> Self::Output;
+    fn visit_get(&mut self, e: &Get) -> Self::Output;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -133,6 +135,30 @@ impl ExprAccept for Call {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct New {
+    pub name: token::Token,
+    pub args: Vec<(String, Expr)>,
+}
+
+impl ExprAccept for New {
+    fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
+        v.visit_new(self)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Get {
+    pub object: Box<Expr>,
+    pub name: token::Token,
+}
+
+impl ExprAccept for Get {
+    fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
+        v.visit_get(self)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Binary(Binary),
     Unary(Unary),
@@ -142,6 +168,8 @@ pub enum Expr {
     Assignment(Assignment),
     Logical(Logical),
     Call(Call),
+    New(New),
+    Get(Get),
 }
 
 impl ExprAccept for Expr {
@@ -155,6 +183,8 @@ impl ExprAccept for Expr {
             Expr::Assignment(ref e) => e.accept(v),
             Expr::Logical(ref e) => e.accept(v),
             Expr::Call(ref e) => e.accept(v),
+            Expr::New(ref e) => e.accept(v),
+            Expr::Get(ref e) => e.accept(v),
         }
     }
 }

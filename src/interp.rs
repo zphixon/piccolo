@@ -64,14 +64,17 @@ impl Interpreter {
         self.err = String::new();
     }
 
-    pub fn interpret(&mut self, statements: &[stmt::Stmt]) -> Result<(), String> {
+    pub fn interpret(&mut self, statements: &[stmt::Stmt]) -> Result<Option<Value>, String> {
         for stmt in statements.iter() {
-            self.execute(stmt);
+            let ret = self.execute(stmt);
             if self.had_err {
                 return Err(self.err.clone())
             }
+            if ret.is_some() {
+                return Ok(ret)
+            }
         }
-        Ok(())
+        Ok(None)
     }
 
     pub fn eval(&mut self, e: &expr::Expr) -> Result<Value, String> {
@@ -132,7 +135,7 @@ impl expr::ExprVisitor for Interpreter {
         match e {
             &expr::Literal::Array(expr::Array { ref inner, .. }) => {
                 Value::Array(inner.iter().cloned().map(|e| self.evaluate(&e)).collect())
-            }
+            },
             l => (::std::mem::replace(&mut l.clone(), expr::Literal::Nil)).into(),
         }
     }
@@ -468,6 +471,27 @@ impl expr::ExprVisitor for Interpreter {
 
         func.call(&mut *self, args)
     }
+
+    fn visit_new(&mut self, e: &expr::New) -> Value {
+        if let Some(Value::Data(data)) = self.env.get(&e.name.lexeme) {
+            Value::Instance(data::Instance {
+                data,
+            })
+        } else {
+            self.error(ErrorKind::UndefinedVariable, e.name.line, &format!("undefined data name: {}", e.name.lexeme));
+            Value::Nil
+        }
+    }
+
+    fn visit_get(&mut self, e: &expr::Get) -> Value {
+        let value = self.evaluate(&*e.object);
+        if let Value::Instance(value) = value {
+            value.get(&e.name.lexeme)
+        } else {
+            self.error(ErrorKind::NonInstance, e.name.line, &format!("not an instance of data: {:?}", value));
+            Value::Nil
+        }
+    }
 }
 
 impl stmt::StmtVisitor for Interpreter {
@@ -561,6 +585,12 @@ impl stmt::StmtVisitor for Interpreter {
             Value::Nil
         };
         Some(value)
+    }
+
+    fn visit_data(&mut self, s: &stmt::Data) -> Option<Value> {
+        let data = data::Data::new(&s.name.lexeme);
+        self.env.define(&s.name.lexeme, Value::Data(data));
+        None
     }
 }
 

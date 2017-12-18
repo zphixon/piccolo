@@ -27,6 +27,8 @@ pub enum Value {
     Float(f64),
     Array(Vec<Value>),
     Func(func::Func),
+    Data(data::Data),
+    Instance(data::Instance),
     Nil,
 }
 
@@ -94,6 +96,8 @@ impl fmt::Display for Value {
                     write!(f, "fn {}", v.name)
                 }
             },
+            Value::Data(ref _v) => write!(f, "todo: data"),
+            Value::Instance(ref _v) => write!(f, "todo: instance"),
             Value::Nil => write!(f, "nil"),
         }
     }

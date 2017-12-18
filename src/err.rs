@@ -14,5 +14,6 @@ pub enum ErrorKind {
     UndefinedVariable,
     IncorrectArity,
     NonFunction,
+    NonInstance,
 }
 
