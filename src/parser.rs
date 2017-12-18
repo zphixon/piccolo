@@ -393,7 +393,7 @@ impl Parser {
             } else if self.matches(&[token::TokenKind::Dot]) {
                 let name = self.consume(token::TokenKind::Ident)?;
                 expr = expr::Expr::Get(expr::Get {
-                    name, expr: expr.clone()
+                    name, object: Box::new(expr.clone())
                 })
             } else {
                 break

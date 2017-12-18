@@ -214,8 +214,8 @@ impl expr::ExprVisitor for AstPrinter {
 
     fn visit_get(&mut self, e: &expr::Get) -> String {
         let mut name = String::from("get ");
-        name.push_str(e.name.lexeme);
-        self.parenthesize(name, &[&*e.object])
+        name.push_str(&e.name.lexeme);
+        self.parenthesize(&name, &[&*e.object])
     }
 }
 

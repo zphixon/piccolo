@@ -1,4 +1,6 @@
 
+use ::*;
+
 #[derive(PartialEq, Clone, Debug)]
 pub struct Data {
     pub name: String,
@@ -19,9 +21,11 @@ pub struct Instance {
 }
 
 impl Instance {
-    pub fn get(&self, name: &str) -> value::Value {
-        if vars.contains_key(name) {
-            self.vars.get_mut()
+    pub fn get(&mut self, name: &str) -> Option<&mut value::Value> {
+        if self.vars.contains_key(name) {
+            self.vars.get_mut(name)
+        } else {
+            None
         }
     }
 }

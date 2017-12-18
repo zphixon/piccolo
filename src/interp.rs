@@ -50,6 +50,14 @@ impl Interpreter {
             Value::Nil
         }));
 
+        env.define("show_closure", func::new_native_func("show_closure", 1, |_, args| {
+            match args[0] {
+                Value::Func(ref f) => println!("{}", f.closure),
+                ref v => println!("not a function: {}", v)
+            }
+            Value::Nil
+        }));
+
         env.push();
 
         Interpreter {
@@ -110,13 +118,21 @@ impl Interpreter {
         None
     }
 
-    //pub fn execute_block_local_with_env(&mut self, stmts: &[stmt::Stmt], mut env: env::Env) -> Option<Value> {
-    //    env.push_parent(self.env.clone());
-    //    let old_env = std::mem::replace(&mut self.env, env);
-    //    let r = self.execute_block_local(stmts);
-    //    self.env = old_env;
-    //    r
-    //}
+    pub fn execute_block_local_closure(&mut self, stmts: &[stmt::Stmt], mut env: &mut env::Env) -> Option<Value> {
+        env.push_parent(self.env.clone());
+        //println!("recieved env: {}", env);
+        std::mem::swap(&mut self.env, &mut env);
+        let r = self.execute_block_local(stmts);
+        std::mem::swap(&mut self.env, &mut env);
+        *env = env.split();
+        //println!("returned env: {}", env);
+        r
+        ////env.push_parent(self.env.clone());
+        //let old_env = std::mem::replace(&mut self.env, env);
+        //let r = self.execute_block_local(stmts);
+        //self.env = old_env;
+        //r
+    }
 
     fn evaluate(&mut self, e: &expr::Expr) -> Value {
         e.accept(&mut *self)
@@ -476,6 +492,7 @@ impl expr::ExprVisitor for Interpreter {
         if let Some(Value::Data(data)) = self.env.get(&e.name.lexeme) {
             Value::Instance(data::Instance {
                 data,
+                vars: std::collections::HashMap::new() // TODO
             })
         } else {
             self.error(ErrorKind::UndefinedVariable, e.name.line, &format!("undefined data name: {}", e.name.lexeme));
@@ -485,8 +502,8 @@ impl expr::ExprVisitor for Interpreter {
 
     fn visit_get(&mut self, e: &expr::Get) -> Value {
         let value = self.evaluate(&*e.object);
-        if let Value::Instance(value) = value {
-            value.get(&e.name.lexeme)
+        if let Value::Instance(mut value) = value {
+            value.get(&e.name.lexeme).unwrap().clone()// TODO
         } else {
             self.error(ErrorKind::NonInstance, e.name.line, &format!("not an instance of data: {:?}", value));
             Value::Nil
@@ -572,8 +589,8 @@ impl stmt::StmtVisitor for Interpreter {
     fn visit_func(&mut self, s: &stmt::Func) -> Option<Value> {
         // TODO
         //fn make_counter() do i = 0 fn counter() do i = i + 1 retn i end retn counter end
-        //let func = Value::Func(func::Func::with_closure(s.clone(), self.env.children()));
-        let func = Value::Func(func::Func::new(s.clone()));
+        let func = Value::Func(func::Func::with_closure(s.clone(), self.env.children()));//self.env.children()));
+        //let func = Value::Func(func::Func::new(s.clone()));
         self.env.define(&s.name.lexeme, func);
         None
     }
