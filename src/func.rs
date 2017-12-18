@@ -6,7 +6,7 @@ pub struct Func {
     pub native: Option<NativeFunc>,
     pub decl: Option<stmt::Func>,
     pub name: String,
-    pub closure: env::Env, // TODO
+    //pub closure: env::Env, // TODO
 }
 
 impl Func {
@@ -15,7 +15,7 @@ impl Func {
             native: None,
             name: decl.name.lexeme.clone(),
             decl: Some(decl),
-            closure: env::Env::new()
+            //closure: env::Env::new()
         }
     }
 
@@ -24,18 +24,18 @@ impl Func {
             name: native.name(),
             native: Some(native),
             decl: None,
-            closure: env::Env::new()
+            //closure: env::Env::new()
         }
     }
 
-    pub fn with_closure(decl: stmt::Func, closure: env::Env) -> Self {
-        Func {
-            native: None,
-            name: decl.name.lexeme.clone(),
-            decl: Some(decl),
-            closure
-        }
-    }
+    //pub fn with_closure(decl: stmt::Func, closure: env::Env) -> Self {
+    //    Func {
+    //        native: None,
+    //        name: decl.name.lexeme.clone(),
+    //        decl: Some(decl),
+    //        closure
+    //    }
+    //}
 
     pub fn arity(&self) -> usize {
         if self.native.is_some() { self.native.as_ref().unwrap().arity() }
@@ -47,16 +47,14 @@ impl Func {
         if self.native.is_some() {
             self.native.as_ref().unwrap().call(interp, args)
         } else if self.decl.is_some() {
-            //interp.env.push();
+            interp.env.push();
             for (n, arg) in args.iter().enumerate() {
                 interp.env.set_local(&self.decl.as_ref().unwrap().args[n].lexeme, arg.clone());
             }
-            //println!("closure before: {}", self.closure);
-            let value = interp.execute_block_local_closure(&self.decl.as_ref().unwrap().body, &mut self.closure);
-            //println!("{}", self.name);
-            interp.env.define(&self.name, value::Value::Func(self.clone()));
-            //println!("cloned after: {:?}", self.clone());
-            //interp.env.pop();
+            let value = interp.execute_block_local(&self.decl.as_ref().unwrap().body);
+            interp.env.pop();
+            //let value = interp.execute_block_local_closure(&self.decl.as_ref().unwrap().body, &mut self.closure);
+            //interp.env.define(&self.name, value::Value::Func(self.clone()));
             value.unwrap_or(value::Value::Nil)
         } else {
             panic!("empty function called!")

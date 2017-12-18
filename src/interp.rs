@@ -50,13 +50,13 @@ impl Interpreter {
             Value::Nil
         }));
 
-        env.define("show_closure", func::new_native_func("show_closure", 1, |_, args| {
-            match args[0] {
-                Value::Func(ref f) => println!("{}", f.closure),
-                ref v => println!("not a function: {}", v)
-            }
-            Value::Nil
-        }));
+        //env.define("show_closure", func::new_native_func("show_closure", 1, |_, args| {
+        //    match args[0] {
+        //        Value::Func(ref f) => println!("{}", f.closure),
+        //        ref v => println!("not a function: {}", v)
+        //    }
+        //    Value::Nil
+        //}));
 
         env.push();
 
@@ -118,14 +118,14 @@ impl Interpreter {
         None
     }
 
-    pub fn execute_block_local_closure(&mut self, stmts: &[stmt::Stmt], mut env: &mut env::Env) -> Option<Value> {
-        env.push_parent(self.env.clone());
-        std::mem::swap(&mut self.env, &mut env);
-        let r = self.execute_block_local(stmts);
-        std::mem::swap(&mut self.env, &mut env);
-        *env = env.split();
-        r
-    }
+    //pub fn execute_block_local_closure(&mut self, stmts: &[stmt::Stmt], mut env: &mut env::Env) -> Option<Value> {
+    //    env.push_parent(self.env.clone());
+    //    std::mem::swap(&mut self.env, &mut env);
+    //    let r = self.execute_block_local(stmts);
+    //    std::mem::swap(&mut self.env, &mut env);
+    //    *env = env.split();
+    //    r
+    //}
 
     fn evaluate(&mut self, e: &expr::Expr) -> Value {
         e.accept(&mut *self)
@@ -594,7 +594,8 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_func(&mut self, s: &stmt::Func) -> Option<Value> {
-        let func = Value::Func(func::Func::with_closure(s.clone(), self.env.children()));
+        let func = Value::Func(func::Func::new(s.clone()));
+        //let func = Value::Func(func::Func::with_closure(s.clone(), self.env.children()));
         //let func = Value::Func(func::Func::with_closure(s.clone(), env::Env { inner: vec![self.env.inner[self.env.inner.len() - 1].clone()], splits: Vec::new() }));//self.env.children()));
         self.env.define(&s.name.lexeme, func);
         None
