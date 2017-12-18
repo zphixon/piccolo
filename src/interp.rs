@@ -120,18 +120,11 @@ impl Interpreter {
 
     pub fn execute_block_local_closure(&mut self, stmts: &[stmt::Stmt], mut env: &mut env::Env) -> Option<Value> {
         env.push_parent(self.env.clone());
-        //println!("recieved env: {}", env);
         std::mem::swap(&mut self.env, &mut env);
         let r = self.execute_block_local(stmts);
         std::mem::swap(&mut self.env, &mut env);
         *env = env.split();
-        //println!("returned env: {}", env);
         r
-        ////env.push_parent(self.env.clone());
-        //let old_env = std::mem::replace(&mut self.env, env);
-        //let r = self.execute_block_local(stmts);
-        //self.env = old_env;
-        //r
     }
 
     fn evaluate(&mut self, e: &expr::Expr) -> Value {
@@ -462,10 +455,8 @@ impl expr::ExprVisitor for Interpreter {
 
     fn visit_assign(&mut self, e: &expr::Assignment) -> Value {
         let value = self.evaluate(&e.value);
-        //println!("{} = {}", e.name.lexeme, value);
         let value = match value { // HACK also not ideal
             Value::Func(mut f) => {
-                //println!("gotcha: {} -> {}", f.name, e.name.lexeme);
                 f.name = e.name.lexeme.clone();
                 Value::Func(f)
             },
@@ -529,13 +520,9 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_assignment(&mut self, s: &stmt::Assignment) -> Option<Value> {
-        //let value = self.evaluate(&s.value);
-        //self.env.define(&s.name.lexeme, value);
         let value = self.evaluate(&s.value);
-        //println!("{} = {}", s.name.lexeme, value);
         let value = match value { // HACK this is not ideal
             Value::Func(mut f) => {
-                //println!("gotcha: {} -> {}", f.name, s.name.lexeme);
                 f.name = s.name.lexeme.clone();
                 Value::Func(f)
             },
@@ -607,10 +594,8 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_func(&mut self, s: &stmt::Func) -> Option<Value> {
-        // TODO
-        //fn make_counter() do i = 0 fn counter() do i = i + 1 retn i end retn counter end
-        let func = Value::Func(func::Func::with_closure(s.clone(), self.env.children()));//self.env.children()));
-        //let func = Value::Func(func::Func::new(s.clone()));
+        let func = Value::Func(func::Func::with_closure(s.clone(), self.env.children()));
+        //let func = Value::Func(func::Func::with_closure(s.clone(), env::Env { inner: vec![self.env.inner[self.env.inner.len() - 1].clone()], splits: Vec::new() }));//self.env.children()));
         self.env.define(&s.name.lexeme, func);
         None
     }

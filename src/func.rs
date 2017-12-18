@@ -53,7 +53,7 @@ impl Func {
             }
             //println!("closure before: {}", self.closure);
             let value = interp.execute_block_local_closure(&self.decl.as_ref().unwrap().body, &mut self.closure);
-            println!("{}", self.name);
+            //println!("{}", self.name);
             interp.env.define(&self.name, value::Value::Func(self.clone()));
             //println!("cloned after: {:?}", self.clone());
             //interp.env.pop();
