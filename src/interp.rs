@@ -462,6 +462,15 @@ impl expr::ExprVisitor for Interpreter {
 
     fn visit_assign(&mut self, e: &expr::Assignment) -> Value {
         let value = self.evaluate(&e.value);
+        //println!("{} = {}", e.name.lexeme, value);
+        let value = match value { // HACK also not ideal
+            Value::Func(mut f) => {
+                //println!("gotcha: {} -> {}", f.name, e.name.lexeme);
+                f.name = e.name.lexeme.clone();
+                Value::Func(f)
+            },
+            v => v
+        };
         self.env.define(&e.name.lexeme, value.clone());
         //Value::Nil // TODO
         value
@@ -520,8 +529,19 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_assignment(&mut self, s: &stmt::Assignment) -> Option<Value> {
+        //let value = self.evaluate(&s.value);
+        //self.env.define(&s.name.lexeme, value);
         let value = self.evaluate(&s.value);
-        self.env.define(&s.name.lexeme, value);
+        //println!("{} = {}", s.name.lexeme, value);
+        let value = match value { // HACK this is not ideal
+            Value::Func(mut f) => {
+                //println!("gotcha: {} -> {}", f.name, s.name.lexeme);
+                f.name = s.name.lexeme.clone();
+                Value::Func(f)
+            },
+            v => v
+        };
+        self.env.define(&s.name.lexeme, value.clone());
         None
     }
 
