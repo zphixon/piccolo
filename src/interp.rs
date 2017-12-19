@@ -31,6 +31,13 @@ impl Interpreter {
         Ok(None)
     }
 
+    pub fn execute_list(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Rc<RefCell<Value>>>, String> {
+        self.env.push();
+        let result = self.interpret(stmts);
+        self.env.pop();
+        result
+    }
+
     pub fn execute(&mut self, stmt: &stmt::Stmt) -> Result<Option<Rc<RefCell<Value>>>, String> {
         stmt.accept(&mut *self)
     }
@@ -310,10 +317,7 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_block(&mut self, s: &stmt::Block) -> Self::Output {
-        self.env.push();
-        let result = self.interpret(&s.0);
-        self.env.pop();
-        result
+        self.execute_list(&s.0)
     }
 
     fn visit_if(&mut self, s: &stmt::If) -> Self::Output {
