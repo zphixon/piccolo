@@ -39,7 +39,7 @@ fn main() {
                                     continue
                                 } else {
                                     let val = &mut v.unwrap();
-                                    println!("{:?}", std::rc::Rc::make_mut(val).borrow());
+                                    println!("{:?}", val);
                                 }
                             } else {
                                 let mut v = interp.interpret(&p);
@@ -48,8 +48,7 @@ fn main() {
                                     println!("{}", v.err().unwrap());
                                 } else {
                                     if let Some(mut ret) = v.unwrap() {
-                                        //let val = &mut ret.unwrap();
-                                        println!("{:?}", std::rc::Rc::get_mut(&mut ret).unwrap().borrow());
+                                        println!("{:?}", ret);
                                     }
                                 }
                             }

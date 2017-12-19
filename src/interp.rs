@@ -21,7 +21,7 @@ impl Interpreter {
         }
     }
 
-    pub fn interpret(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Rc<RefCell<Value>>>, String> {
+    pub fn interpret(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Value>, String> {
         for stmt in stmts {
             if let Some(v) = self.execute(stmt)? {
                 return Ok(Some(v))
@@ -31,18 +31,18 @@ impl Interpreter {
         Ok(None)
     }
 
-    pub fn execute_list(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Rc<RefCell<Value>>>, String> {
+    pub fn execute_list(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Value>, String> {
         self.env.push();
         let result = self.interpret(stmts);
         self.env.pop();
         result
     }
 
-    pub fn execute(&mut self, stmt: &stmt::Stmt) -> Result<Option<Rc<RefCell<Value>>>, String> {
+    pub fn execute(&mut self, stmt: &stmt::Stmt) -> Result<Option<Value>, String> {
         stmt.accept(&mut *self)
     }
 
-    pub fn evaluate(&mut self, expr: &expr::Expr) -> Result<Rc<RefCell<Value>>, String> {
+    pub fn evaluate(&mut self, expr: &expr::Expr) -> Result<Value, String> {
         expr.accept(&mut *self)
     }
 
@@ -53,15 +53,13 @@ impl Interpreter {
 }
 
 impl expr::ExprVisitor for Interpreter {
-    type Output = Result<Rc<RefCell<Value>>, String>;
+    type Output = Result<Value, String>;
 
     fn visit_binary(&mut self, e: &expr::Binary) -> Self::Output {
-        let lhs = &mut self.evaluate(&e.lhs)?;
-        let mut lhs = Rc::make_mut(lhs).borrow_mut().clone();
-        let rhs = &mut self.evaluate(&e.rhs)?;
-        let mut rhs = Rc::make_mut(rhs).borrow_mut().clone();
+        let mut lhs = self.evaluate(&e.lhs)?;
+        let mut rhs = self.evaluate(&e.rhs)?;
 
-        Ok(Rc::new(RefCell::new(match e.op.kind {
+        Ok(match e.op.kind {
             TokenKind::Minus => match lhs {
                 Value::Float(l) => match rhs {
                     Value::Float(r) => Value::Float(l - r),
@@ -200,7 +198,7 @@ impl expr::ExprVisitor for Interpreter {
             TokenKind::ERange => match lhs {
                 Value::Integer(l) => match rhs {
                     Value::Integer(r) => {
-                        Value::Array((l..r).map(|n| Rc::new(RefCell::new(n.into()))).collect())
+                        Value::Array((l..r).map(|n| n.into()).collect())
                     },
                     _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to create range {:?}..{:?}", lhs, rhs)))
                 },
@@ -210,7 +208,7 @@ impl expr::ExprVisitor for Interpreter {
             TokenKind::IRange => match lhs {
                 Value::Integer(l) => match rhs {
                     Value::Integer(r) => {
-                        Value::Array((l..r + 1).map(|n| Rc::new(RefCell::new(n.into()))).collect())
+                        Value::Array((l..r + 1).map(|n| n.into()).collect())
                     },
                     _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to create range {:?}...{:?}", lhs, rhs)))
                 },
@@ -218,22 +216,21 @@ impl expr::ExprVisitor for Interpreter {
             },
 
             v => panic!("unreachable: {:?} {}", v, e.op.line)
-        })))
+        })
     }
 
     fn visit_unary(&mut self, e: &expr::Unary) -> Self::Output {
-        let mut rhs = &mut self.evaluate(&e.rhs)?;
-        let rhs = Rc::make_mut(&mut rhs).borrow_mut().clone();
+        let rhs = self.evaluate(&e.rhs)?;
 
         match e.op.kind {
             TokenKind::Minus => match rhs {
-                Value::Integer(ref n) => Ok(Rc::new(RefCell::new((-n).into()))),
-                Value::Float(ref n) => Ok(Rc::new(RefCell::new((-n).into()))),
+                Value::Integer(ref n) => Ok((-n).into()),
+                Value::Float(ref n) => Ok((-n).into()),
                 v => Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to negate non-bool/number {:?}", v)))
             },
             TokenKind::Not => {
                 let b: bool = is_truthy(&rhs);
-                Ok(Rc::new(RefCell::new(Value::Bool(!b))))
+                Ok(Value::Bool(!b))
             },
             _ => Err(self.error(e.op.line, ErrorKind::MathError, &format!("Not a unary operator: \"{}\"", e.op.lexeme)))
         }
@@ -251,9 +248,9 @@ impl expr::ExprVisitor for Interpreter {
                     let new_item = self.evaluate(item)?;
                     new.push(new_item);
                 }
-                Ok(Rc::new(RefCell::new(Value::Array(new))))
+                Ok(Value::Array(new))
             },
-            l => Ok(Rc::new(RefCell::new(std::mem::replace(&mut l.clone(), expr::Literal::Nil).into())))
+            l => Ok(std::mem::replace(&mut l.clone(), expr::Literal::Nil).into())
         }
     }
 
@@ -276,10 +273,10 @@ impl expr::ExprVisitor for Interpreter {
         let lhs = self.evaluate(&e.lhs)?;
 
         if e.op.kind == token::TokenKind::Or {
-            if is_truthy(&lhs.borrow()) {
+            if is_truthy(&lhs) {
                 return Ok(lhs)
             }
-        } else if !is_truthy(&lhs.borrow()) {
+        } else if !is_truthy(&lhs) {
             return Ok(lhs)
         }
 
@@ -304,7 +301,7 @@ impl expr::ExprVisitor for Interpreter {
 }
 
 impl stmt::StmtVisitor for Interpreter {
-    type Output = Result<Option<Rc<RefCell<Value>>>, String>;
+    type Output = Result<Option<Value>, String>;
 
     fn visit_expr(&mut self, s: &stmt::StmtExpr) -> Self::Output {
         Ok(Some(s.0.accept(&mut *self)?))
@@ -323,7 +320,7 @@ impl stmt::StmtVisitor for Interpreter {
     fn visit_if(&mut self, s: &stmt::If) -> Self::Output {
         let cond = self.evaluate(&s.cond)?;
 
-        let result = if is_truthy(&cond.borrow()) {
+        let result = if is_truthy(&cond) {
             self.execute_list(&s.then)?
         } else if let Some(ref else_) = s.else_ {
             self.execute_list(&else_)?
@@ -336,7 +333,7 @@ impl stmt::StmtVisitor for Interpreter {
 
     fn visit_while(&mut self, s: &stmt::While) -> Self::Output {
         let mut cond = self.evaluate(&s.cond)?;
-        while is_truthy(&cond.borrow()) {
+        while is_truthy(&cond) {
             if let Some(v) = self.execute_list(&s.body)? {
                 return Ok(Some(v))
             }
@@ -346,7 +343,22 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_for(&mut self, s: &stmt::For) -> Self::Output {
-        Err(self.error(s.name.line, ErrorKind::Unimplemented, "not yet implemented"))
+        let iter = self.evaluate(&s.iter)?;
+        self.env.push();
+        match iter {
+            Value::Array(ref a) => {
+                for item in a {
+                    self.env.set(&s.name.lexeme, item.clone());
+                    if let Some(r) = self.interpret(&s.body)? {
+                        self.env.pop();
+                        return Ok(Some(r))
+                    }
+                }
+            }
+            _ => return Err(self.error(s.name.line, ErrorKind::NonIterator, &format!("Cannot be iterated over: {:?}", iter))),
+        }
+        self.env.pop();
+        Ok(None)
     }
 
     fn visit_func(&mut self, s: &stmt::Func) -> Self::Output {

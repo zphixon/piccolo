@@ -28,7 +28,7 @@ pub enum Value {
     Bool(bool),
     Integer(i64),
     Float(f64),
-    Array(Vec<Rc<RefCell<Value>>>),
+    Array(Vec<Value>),
     Func(func::Func),
     Data(data::Data),
     Instance(data::Instance),
@@ -65,8 +65,8 @@ impl From<f64> for Value {
     }
 }
 
-impl From<Vec<Rc<RefCell<Value>>>> for Value {
-    fn from(f: Vec<Rc<RefCell<Value>>>) -> Self {
+impl From<Vec<Value>> for Value {
+    fn from(f: Vec<Value>) -> Self {
         Value::Array(f)
     }
 }
@@ -116,7 +116,7 @@ impl fmt::Debug for Value {
             Value::Array(ref v) => {
                 let mut s = String::from("(arr");
                 for item in v {
-                    s.push_str(&format!(" {:?}", (*item).borrow()));
+                    s.push_str(&format!(" {:?}", item));
                 }
                 s.push_str(")");
                 write!(f, "{}", s)

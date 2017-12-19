@@ -10,7 +10,7 @@ use std::cell::RefCell;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 struct EnvInner {
-    inner: Vec<HashMap<String, Rc<RefCell<value::Value>>>>,
+    inner: Vec<HashMap<String, value::Value>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -60,7 +60,7 @@ impl Env {
         self.inner.borrow_mut().inner.pop();
     }
 
-    pub fn set(&self, name: &str, value: Rc<RefCell<value::Value>>) {
+    pub fn set(&self, name: &str, value: value::Value) {
         let mut inner = self.inner.borrow_mut();
         for scope in inner.inner.iter_mut().rev() {
             if scope.contains_key(name) {
@@ -109,7 +109,7 @@ impl Env {
             .expect("env is empty");*/
     }
 
-    pub fn get(&self, name: &str) -> Option<Rc<RefCell<value::Value>>> {
+    pub fn get(&self, name: &str) -> Option<value::Value> {
         for scope in self.inner.borrow().inner.iter().rev() {
             if scope.contains_key(name) {
                 if let Some(r) = scope.get(name) {
@@ -154,7 +154,7 @@ impl std::fmt::Display for Env {
             s.push_str(&format!("  layer {}\n", n));
             'inner: for (k, v) in ctx.iter() {
                 s.push_str(&format!("    {} = ", k));
-                match *v.borrow() {
+                match *v {
                     value::Value::Func(ref f) => {
                         s.push_str(&format!("fn {} ", f.name));
                         if f.is_native() {

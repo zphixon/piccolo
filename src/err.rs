@@ -16,5 +16,6 @@ pub enum ErrorKind {
     NonFunction,
     NonInstance,
     Unimplemented,
+    NonIterator,
 }
 
