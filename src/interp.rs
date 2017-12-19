@@ -215,7 +215,21 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_unary(&mut self, e: &expr::Unary) -> Self::Output {
-        Err(self.error(e.op.line, ErrorKind::Unimplemented, "not yet implemented"))
+        let mut rhs = &mut self.evaluate(&e.rhs)?;
+        let rhs = Rc::make_mut(&mut rhs).borrow_mut().clone();
+
+        match e.op.kind {
+            TokenKind::Minus => match rhs {
+                Value::Integer(ref n) => Ok(Rc::new(RefCell::new((-n).into()))),
+                Value::Float(ref n) => Ok(Rc::new(RefCell::new((-n).into()))),
+                v => Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to negate non-bool/number {:?}", v)))
+            },
+            TokenKind::Not => {
+                let b: bool = is_truthy(&rhs);
+                Ok(Rc::new(RefCell::new(Value::Bool(!b))))
+            },
+            _ => Err(self.error(e.op.line, ErrorKind::MathError, &format!("Not a unary operator: \"{}\"", e.op.lexeme)))
+        }
     }
 
     fn visit_paren(&mut self, e: &expr::Paren) -> Self::Output {
@@ -296,7 +310,10 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_block(&mut self, s: &stmt::Block) -> Self::Output {
-        Err(self.error(0, ErrorKind::Unimplemented, "not yet implemented"))
+        self.env.push();
+        let result = self.interpret(&s.0);
+        self.env.pop();
+        result
     }
 
     fn visit_if(&mut self, s: &stmt::If) -> Self::Output {
