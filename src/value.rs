@@ -3,6 +3,9 @@ use std::fmt;
 
 use ::*;
 
+use std::rc::Rc;
+use std::cell::RefCell;
+
 pub fn parse_into_value(into: String) -> Value {
     if let Ok(b) = into.parse::<bool>() {
         return Value::Bool(b);
@@ -19,13 +22,13 @@ pub fn parse_into_value(into: String) -> Value {
     Value::String(into)
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub enum Value {
     String(String),
     Bool(bool),
     Integer(i64),
     Float(f64),
-    Array(Vec<Value>),
+    Array(Vec<Rc<RefCell<Value>>>),
     Func(func::Func),
     Data(data::Data),
     Instance(data::Instance),
@@ -62,8 +65,8 @@ impl From<f64> for Value {
     }
 }
 
-impl From<Vec<Value>> for Value {
-    fn from(f: Vec<Value>) -> Self {
+impl From<Vec<Rc<RefCell<Value>>>> for Value {
+    fn from(f: Vec<Rc<RefCell<Value>>>) -> Self {
         Value::Array(f)
     }
 }
@@ -102,3 +105,65 @@ impl fmt::Display for Value {
         }
     }
 }
+
+impl fmt::Debug for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Value::Bool(v) => write!(f, "(bool {})", v),
+            Value::String(ref v) => write!(f, "(string \"{}\")", v),
+            Value::Float(v) => write!(f, "(float {})", v),
+            Value::Integer(v) => write!(f, "(int {})", v),
+            Value::Array(ref v) => {
+                let mut s = String::from("(arr");
+                for item in v {
+                    s.push_str(&format!(" {:?}", (*item).borrow()));
+                }
+                s.push_str(")");
+                write!(f, "{}", s)
+            },
+            Value::Func(ref v) => {
+                if v.is_native() {
+                    write!(f, "(native fn {})", v.name)
+                } else {
+                    let mut s = format!("(fn {}", v.name);
+                    for arg in &v.decl.as_ref().unwrap().args {
+                        s.push_str(&format!(" {}", arg.lexeme))
+                    }
+                    s.push_str(")");
+                    write!(f, "{}", s)
+                }
+            },
+            Value::Data(ref v) => {
+                write!(f, "(data {})", v.name)
+            },
+            Value::Instance(ref v) => {
+                let mut s = format!("(instance of {}", v.data.name);
+                for (k, v) in &v.vars {
+                    s.push_str(&format!(" ({} = {:?})", k, v));
+                }
+                s.push_str(")");
+                write!(f, "{}", s)
+            },
+            Value::Nil => write!(f, "(nil)")
+        }
+    }
+}
+
+pub fn is_truthy(e: &Value) -> bool {
+    match *e {
+        Value::Bool(b) => b,
+        Value::Nil => false,
+        _ => true,
+    }
+}
+
+pub fn is_equal(lhs: &Value, rhs: &Value) -> bool {
+    if lhs == &Value::Nil && rhs == &Value::Nil {
+        true
+    } else if lhs == &Value::Nil || rhs == &Value::Nil {
+        false
+    } else {
+        lhs == rhs
+    }
+}
+

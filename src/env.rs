@@ -2,11 +2,14 @@
 extern crate backtrace;
 
 use ::*;
+
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Env {
-    pub inner: Vec<HashMap<String, value::Value>>,
+    pub inner: Vec<HashMap<String, Rc<RefCell<value::Value>>>>,
     pub splits: Vec<usize>,
 }
 
@@ -37,11 +40,11 @@ impl Env {
         self.inner.append(&mut old);
     }
 
-    pub fn pop(&mut self) -> Option<HashMap<String, value::Value>> {
+    pub fn pop(&mut self) -> Option<HashMap<String, Rc<RefCell<value::Value>>>> {
         self.inner.pop()
     }
 
-    pub fn define(&mut self, name: &str, value: value::Value) {
+    pub fn define(&mut self, name: &str, value: Rc<RefCell<value::Value>>) {
         /*if name == "counter" {
             println!("found");
             backtrace::trace(|frame| {
@@ -78,7 +81,7 @@ impl Env {
             .expect("env is empty");
     }
 
-    pub fn get(&self, name: &str) -> Option<value::Value> {
+    pub fn get(&self, name: &str) -> Option<Rc<RefCell<value::Value>>> {
         for scope in self.inner.iter().rev() {
             if scope.contains_key(name) {
                 return scope.get(name).cloned()
@@ -87,7 +90,7 @@ impl Env {
         None
     }
 
-    pub fn set_local(&mut self, name: &str, value: value::Value)  {
+    pub fn set_local(&mut self, name: &str, value: Rc<RefCell<value::Value>>)  {
         self.inner.iter_mut().rev().nth(0)
             .map(|m| m.insert(name.to_owned(), value))
             .expect("env is empty");
@@ -118,7 +121,7 @@ impl std::fmt::Display for Env {
             s.push_str(&format!("  layer {}\n", n));
             'inner: for (k, v) in ctx.iter() {
                 s.push_str(&format!("    {} = ", k));
-                match *v {
+                match *v.borrow() {
                     value::Value::Func(ref f) => {
                         s.push_str(&format!("fn {} ", f.name));
                         if f.is_native() {

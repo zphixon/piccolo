@@ -16,7 +16,7 @@ fn main() {
             Ok(line) => {
                 rl.add_history_entry(&line);
 
-                interp.reset_err();
+                //interp.reset_err();
                 let s = piccolo::scanner::Scanner::new(line).scan_tokens();
 
                 if s.is_err() {
@@ -32,22 +32,24 @@ fn main() {
 
                         if p.len() == 1 {
                             if let piccolo::stmt::Stmt::StmtExpr(piccolo::stmt::StmtExpr(ref stmt)) = p[0] {
-                                let v = interp.eval(stmt);
+                                let mut v = interp.evaluate(stmt);
 
                                 if v.is_err() {
                                     println!("{}", v.err().unwrap());
                                     continue
                                 } else {
-                                    println!("{:?}", v.unwrap());
+                                    let val = &mut v.unwrap();
+                                    println!("{:?}", std::rc::Rc::get_mut(val).unwrap().borrow());
                                 }
                             } else {
-                                let i = interp.interpret(&p);
+                                let mut v = interp.interpret(&p);
 
-                                if i.is_err() {
-                                    println!("{}", i.err().unwrap());
+                                if v.is_err() {
+                                    println!("{}", v.err().unwrap());
                                 } else {
-                                    if let Some(ret) = i.unwrap() {
-                                        println!("{:?}", ret);
+                                    if let Some(mut ret) = v.unwrap() {
+                                        //let val = &mut ret.unwrap();
+                                        println!("{:?}", std::rc::Rc::get_mut(&mut ret).unwrap().borrow());
                                     }
                                 }
                             }

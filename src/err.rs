@@ -15,5 +15,6 @@ pub enum ErrorKind {
     IncorrectArity,
     NonFunction,
     NonInstance,
+    Unimplemented,
 }
 

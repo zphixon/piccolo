@@ -1,6 +1,9 @@
 
 use ::*;
 
+use std::rc::Rc;
+use std::cell::RefCell;
+
 #[derive(PartialEq, Clone, Debug)]
 pub struct Data {
     pub name: String,
@@ -17,11 +20,11 @@ impl Data {
 #[derive(PartialEq, Clone, Debug)]
 pub struct Instance {
     pub data: Data,
-    pub vars: std::collections::HashMap<String, value::Value>,
+    pub vars: std::collections::HashMap<String, Rc<RefCell<value::Value>>>,
 }
 
 impl Instance {
-    pub fn get(&mut self, name: &str) -> Option<value::Value> {
+    pub fn get(&mut self, name: &str) -> Option<Rc<RefCell<value::Value>>> {
         if self.vars.contains_key(name) {
             self.vars.get(name).cloned()
         } else {
@@ -29,7 +32,8 @@ impl Instance {
         }
     }
 
-    pub fn set(&mut self, name: &str, value: value::Value) {
+    pub fn set(&mut self, name: &str, value: Rc<RefCell<value::Value>>) {
+        println!("set");
         self.vars.insert(name.to_owned(), value);
     }
 }

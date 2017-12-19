@@ -1,6 +1,9 @@
 
 use ::*;
 
+use std::rc::Rc;
+use std::cell::RefCell;
+
 #[derive(Clone, PartialEq, Debug)]
 pub struct Func {
     pub native: Option<NativeFunc>,
@@ -43,19 +46,20 @@ impl Func {
         else { panic!("arity on empty function") }
     }
 
-    pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> value::Value {
+    pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<Rc<RefCell<value::Value>>>) -> Rc<RefCell<value::Value>> {
         if self.native.is_some() {
             self.native.as_ref().unwrap().call(interp, args)
         } else if self.decl.is_some() {
-            interp.env.push();
-            for (n, arg) in args.iter().enumerate() {
-                interp.env.set_local(&self.decl.as_ref().unwrap().args[n].lexeme, arg.clone());
-            }
-            let value = interp.execute_block_local(&self.decl.as_ref().unwrap().body);
-            interp.env.pop();
+            //interp.env.push();
+            //for (n, arg) in args.iter().enumerate() {
+            //    interp.env.set_local(&self.decl.as_ref().unwrap().args[n].lexeme, arg.clone());
+            //}
+            //let value = interp.execute_block_local(&self.decl.as_ref().unwrap().body);
+            //interp.env.pop();
             //let value = interp.execute_block_local_closure(&self.decl.as_ref().unwrap().body, &mut self.closure);
             //interp.env.define(&self.name, value::Value::Func(self.clone()));
-            value.unwrap_or(value::Value::Nil)
+            //value.unwrap_or(value::Value::Nil)
+            Rc::new(RefCell::new(value::Value::Nil))
         } else {
             panic!("empty function called!")
         }
@@ -69,7 +73,7 @@ impl Func {
 #[derive(Clone)]
 pub struct NativeFunc {
     arity: usize,
-    inner: fn(&mut interp::Interpreter, Vec<value::Value>) -> value::Value,
+    inner: fn(&mut interp::Interpreter, Vec<Rc<RefCell<value::Value>>>) -> Rc<RefCell<value::Value>>,
     name: String,
 }
 
@@ -84,7 +88,7 @@ impl std::cmp::PartialEq for NativeFunc {
 }
 
 impl NativeFunc {
-    pub fn new(name: String, arity: usize, inner: fn(&mut interp::Interpreter, Vec<value::Value>) -> value::Value) -> Self {
+    pub fn new(name: String, arity: usize, inner: fn(&mut interp::Interpreter, Vec<Rc<RefCell<value::Value>>>) -> Rc<RefCell<value::Value>>) -> Self {
         NativeFunc {
             arity,
             inner,
@@ -98,7 +102,7 @@ impl NativeFunc {
 }
 
 impl NativeFunc {
-    fn call(&self, mut interp: &mut interp::Interpreter, args: Vec<value::Value>) -> value::Value {
+    fn call(&self, mut interp: &mut interp::Interpreter, args: Vec<Rc<RefCell<value::Value>>>) -> Rc<RefCell<value::Value>> {
         let inner = self.inner;
         inner(&mut interp, args)
     }
@@ -108,7 +112,10 @@ impl NativeFunc {
     }
 }
 
-pub fn new_native_func(name: &str, arity: usize, inner: fn(&mut interp::Interpreter, Vec<value::Value>) -> value::Value) -> value::Value {
-    value::Value::Func(Func::new_native(NativeFunc::new(name.to_owned(), arity, inner)))
+pub fn new_native_func(name: &str,
+                       arity: usize,
+                       inner: fn(&mut interp::Interpreter, Vec<Rc<RefCell<value::Value>>>) -> Rc<RefCell<value::Value>>)
+                       -> Rc<RefCell<value::Value>> {
+    Rc::new(RefCell::new(value::Value::Func(Func::new_native(NativeFunc::new(name.to_owned(), arity, inner)))))
 }
 
