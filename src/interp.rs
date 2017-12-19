@@ -217,7 +217,7 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_paren(&mut self, e: &expr::Paren) -> Self::Output {
-        Err(self.error(0, ErrorKind::Unimplemented, "not yet implemented"))
+        self.evaluate(&e.0)
     }
 
     fn visit_literal(&mut self, e: &expr::Literal) -> Self::Output {
@@ -235,23 +235,32 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_variable(&mut self, e: &expr::Variable) -> Self::Output {
-        Err(self.error(0, ErrorKind::Unimplemented, "not yet implemented"))
+        if let Some(v) = self.env.get(&e.0.lexeme) {
+            Ok(v)
+        } else {
+            Err(self.error(e.0.line, ErrorKind::UndefinedVariable, &format!("{} is undefined", e.0.lexeme)))
+        }
     }
 
     fn visit_assign(&mut self, e: &expr::Assignment) -> Self::Output {
-        Err(self.error(e.name.line, ErrorKind::Unimplemented, "not yet implemented"))
+        let value = self.evaluate(&e.value)?;
+        // function hack?
+        self.env.set(&e.name.lexeme, value.clone());
+        Ok(value)
     }
 
     fn visit_logical(&mut self, e: &expr::Logical) -> Self::Output {
         let lhs = self.evaluate(&e.lhs)?;
 
-        if e.op.kind == token::TokenKind::Or && is_truthy(&lhs.borrow()) {
-            Ok(lhs)
+        if e.op.kind == token::TokenKind::Or {
+            if is_truthy(&lhs.borrow()) {
+                return Ok(lhs)
+            }
         } else if !is_truthy(&lhs.borrow()) {
-            Ok(lhs)
-        } else {
-            self.evaluate(&e.rhs)
+            return Ok(lhs)
         }
+
+        self.evaluate(&e.rhs)
     }
 
     fn visit_call(&mut self, e: &expr::Call) -> Self::Output {
@@ -279,7 +288,9 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_assignment(&mut self, s: &stmt::Assignment) -> Self::Output {
-        Err(self.error(s.name.line, ErrorKind::Unimplemented, "not yet implemented"))
+        let value = self.evaluate(&s.value)?;
+        self.env.set(&s.name.lexeme, value);
+        Ok(None)
     }
 
     fn visit_block(&mut self, s: &stmt::Block) -> Self::Output {
