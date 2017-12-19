@@ -22,11 +22,13 @@ impl Interpreter {
     }
 
     pub fn interpret(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Rc<RefCell<Value>>>, String> {
-        let mut r = None;
         for stmt in stmts {
-            r = self.execute(stmt)?;
+            if let Some(v) = self.execute(stmt)? {
+                return Ok(Some(v))
+            }
         }
-        Ok(r)
+
+        Ok(None)
     }
 
     pub fn execute(&mut self, stmt: &stmt::Stmt) -> Result<Option<Rc<RefCell<Value>>>, String> {
