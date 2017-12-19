@@ -335,7 +335,14 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_while(&mut self, s: &stmt::While) -> Self::Output {
-        Err(self.error(0, ErrorKind::Unimplemented, "not yet implemented"))
+        let mut cond = self.evaluate(&s.cond)?;
+        while is_truthy(&cond.borrow()) {
+            if let Some(v) = self.execute_list(&s.body)? {
+                return Ok(Some(v))
+            }
+            cond = self.evaluate(&s.cond)?;
+        }
+        Ok(None)
     }
 
     fn visit_for(&mut self, s: &stmt::For) -> Self::Output {
