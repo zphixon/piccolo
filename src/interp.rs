@@ -1,4 +1,6 @@
 
+extern crate time;
+
 use ::*;
 
 use expr::ExprAccept;
@@ -16,9 +18,41 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
-        Interpreter {
-            env: env::Env::new(),
-        }
+        let env = env::Env::new();
+
+        env.set("clock", func::new_native_func("clock", 0, |_, _| {
+            let ts = time::now().to_timespec();
+            Ok((ts.sec * 1_000 + ts.nsec as i64 / 1_000_000).into())
+        }));
+
+        env.set("prln", func::new_native_func("prln", 1, |_, args| {
+            println!("{}", args[0]);
+            Ok(Value::Nil)
+        }));
+
+        env.set("panic", func::new_native_func("panic", 1, |_, args| {
+            eprintln!("piccolo panic! {}", args[0]);
+            std::process::exit(1);
+        }));
+
+        env.set("str", func::new_native_func("str", 1, |_, args| {
+            Ok(Value::String(format!("{}", args[0])))
+        }));
+
+        env.set("assert", func::new_native_func("assert", 1, |_, args| {
+            if !is_truthy(&args[0]) {
+                eprintln!("assert failed: {}", args[0]);
+                std::process::exit(1);
+            }
+            Ok(Value::Bool(true))
+        }));
+
+        env.set("show_env", func::new_native_func("show_env", 0, |i, _| {
+            println!("{}", i.env);
+            Ok(Value::Nil)
+        }));
+
+        Interpreter { env }
     }
 
     pub fn interpret(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Value>, String> {
@@ -284,7 +318,23 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_call(&mut self, e: &expr::Call) -> Self::Output {
-        Err(self.error(e.paren.line, ErrorKind::Unimplemented, "not yet implemented"))
+        let callee = self.evaluate(&e.callee)?;
+
+        let mut func = match callee {
+            Value::Func(f) => f,
+            v => {
+                return Err(self.error(e.paren.line, ErrorKind::NonFunction, &format!("attempt to call non-function {:?}", v)));
+            }
+        };
+
+        let args: Result<Vec<Value>, String> = e.args.iter().map(|arg| self.evaluate(arg)).collect();
+        let args = args?;
+
+        if args.len() != func.arity() {
+            return Err(self.error(e.paren.line, ErrorKind::IncorrectArity, &format!("expected {} args, got {}", func.arity(), args.len())));
+        }
+
+        func.call(&mut *self, args)
     }
 
     fn visit_new(&mut self, e: &expr::New) -> Self::Output {
@@ -304,7 +354,8 @@ impl stmt::StmtVisitor for Interpreter {
     type Output = Result<Option<Value>, String>;
 
     fn visit_expr(&mut self, s: &stmt::StmtExpr) -> Self::Output {
-        Ok(Some(s.0.accept(&mut *self)?))
+        s.0.accept(&mut *self)?;
+        Ok(None)
     }
 
     fn visit_assignment(&mut self, s: &stmt::Assignment) -> Self::Output {

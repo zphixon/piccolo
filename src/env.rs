@@ -122,11 +122,11 @@ impl Env {
         None
     }
 
-    pub fn set_local(&mut self, name: &str, value: Rc<RefCell<value::Value>>)  {
-        //self.inner.iter_mut().rev().nth(0)
-        //    .map(|m| m.insert(name.to_owned(), value))
-        //    .expect("env is empty");
-    }
+    //pub fn set_local(&mut self, name: &str, value: Rc<RefCell<value::Value>>)  {
+    //    //self.inner.iter_mut().rev().nth(0)
+    //    //    .map(|m| m.insert(name.to_owned(), value))
+    //    //    .expect("env is empty");
+    //}
 
     //// TODO: re-visit closures in ch. 11
     //pub fn split(&mut self) -> Env {
@@ -152,30 +152,8 @@ impl std::fmt::Display for Env {
         //let mut s = format!("env: {:?}\n", self.splits);
         for (n, ctx) in self.inner.borrow().inner.iter().rev().enumerate() {
             s.push_str(&format!("  layer {}\n", n));
-            'inner: for (k, v) in ctx.iter() {
-                s.push_str(&format!("    {} = ", k));
-                match *v {
-                    value::Value::Func(ref f) => {
-                        s.push_str(&format!("fn {} ", f.name));
-                        if f.is_native() {
-                            s.push_str("(native)\n");
-                            continue 'inner;
-                        } else {
-                            for arg in &f.decl.as_ref().unwrap().args {
-                                s.push_str(&format!("{}, ", arg.lexeme));
-                            }
-                            s.push_str("\n");
-                            //s.push_str("\n      closure:\n");
-                            //for item in &f.closure.inner {
-                            //    s.push_str(&format!("        {:?}\n", item));
-                            //}
-                            for stmt in &f.decl.as_ref().unwrap().body {
-                                s.push_str(&format!("      {}\n", AstPrinter.print_stmt(stmt)))
-                            }
-                        }
-                    }
-                    _ => s.push_str(&format!("{:?}\n", v))
-                }
+            for (k, v) in ctx.iter() {
+                s.push_str(&format!("    {} = {}\n", k, v));
             }
         }
         write!(f, "{}", s)

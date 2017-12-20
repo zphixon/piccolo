@@ -6,75 +6,105 @@ use std::cell::RefCell;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Func {
-    pub native: Option<NativeFunc>,
-    pub decl: Option<stmt::Func>,
+    pub kind: FuncKind,
     pub name: String,
-    //pub closure: env::Env, // TODO
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum FuncKind {
+    Native(NativeFunc),
+    Normal(NormalFunc),
 }
 
 impl Func {
     pub fn new(decl: stmt::Func) -> Self {
         Func {
-            native: None,
             name: decl.name.lexeme.clone(),
-            decl: Some(decl),
-            //closure: env::Env::new()
+            kind: FuncKind::Normal(NormalFunc { decl }),
         }
     }
 
-    pub fn new_native(native: NativeFunc) -> Self {
+    pub fn new_native(name: &str, native: NativeFunc) -> Self {
         Func {
-            name: native.name(),
-            native: Some(native),
-            decl: None,
+            name: name.to_owned(),
+            kind: FuncKind::Native(native)
             //closure: env::Env::new()
         }
     }
 
     //pub fn with_closure(decl: stmt::Func, closure: env::Env) -> Self {
     //    Func {
-    //        native: None,
     //        name: decl.name.lexeme.clone(),
-    //        decl: Some(decl),
-    //        closure
+    //        kind: FuncKind::Normal(NormalFunc { decl, closure })
     //    }
+    //    //Func {
+    //    //    native: None,
+    //    //    name: decl.name.lexeme.clone(),
+    //    //    decl: Some(decl),
+    //    //    closure
+    //    //}
     //}
 
     pub fn arity(&self) -> usize {
-        if self.native.is_some() { self.native.as_ref().unwrap().arity() }
-        else if self.decl.is_some() { self.decl.as_ref().unwrap().args.len() }
-        else { panic!("arity on empty function") }
-    }
-
-    pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<Rc<RefCell<value::Value>>>) -> Rc<RefCell<value::Value>> {
-        if self.native.is_some() {
-            self.native.as_ref().unwrap().call(interp, args)
-        } else if self.decl.is_some() {
-            //interp.env.push();
-            //for (n, arg) in args.iter().enumerate() {
-            //    interp.env.set_local(&self.decl.as_ref().unwrap().args[n].lexeme, arg.clone());
-            //}
-            //let value = interp.execute_block_local(&self.decl.as_ref().unwrap().body);
-            //interp.env.pop();
-            //let value = interp.execute_block_local_closure(&self.decl.as_ref().unwrap().body, &mut self.closure);
-            //interp.env.define(&self.name, value::Value::Func(self.clone()));
-            //value.unwrap_or(value::Value::Nil)
-            Rc::new(RefCell::new(value::Value::Nil))
-        } else {
-            panic!("empty function called!")
+        match self.kind {
+            FuncKind::Native(ref n) => n.arity(),
+            FuncKind::Normal(ref n) => n.arity(),
         }
     }
 
+    pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, String> {
+        match self.kind {
+            FuncKind::Normal(ref mut f) => f.call(interp, args),
+            FuncKind::Native(ref mut f) => f.call(interp, args),
+        }
+        //if self.native.is_some() {
+        //    self.native.as_ref().unwrap().call(interp, args)
+        //} else if self.decl.is_some() {
+        //    //interp.env.push();
+        //    //for (n, arg) in args.iter().enumerate() {
+        //    //    interp.env.set_local(&self.decl.as_ref().unwrap().args[n].lexeme, arg.clone());
+        //    //}
+        //    //let value = interp.execute_block_local(&self.decl.as_ref().unwrap().body);
+        //    //interp.env.pop();
+        //    //let value = interp.execute_block_local_closure(&self.decl.as_ref().unwrap().body, &mut self.closure);
+        //    //interp.env.define(&self.name, value::Value::Func(self.clone()));
+        //    //value.unwrap_or(value::Value::Nil)
+        //    Rc::new(RefCell::new(value::Value::Nil))
+        //} else {
+        //    panic!("empty function called!")
+        //}
+    }
+
     pub fn is_native(&self) -> bool {
-        self.native.is_some()
+        match self.kind {
+            FuncKind::Native(_) => true,
+            _ => false,
+        }
     }
 }
 
+#[derive(Clone, PartialEq, Debug)]
+pub struct NormalFunc {
+    pub decl: stmt::Func,
+    //closure: env::Env, // TODO
+}
+
+impl NormalFunc {
+    pub fn arity(&self) -> usize {
+        self.decl.args.len()
+    }
+
+    pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, String> {
+        Err("not implemented".into())
+    }
+}
+
+pub type NativeFuncType = fn(&mut interp::Interpreter, Vec<value::Value>) -> Result<value::Value, String>;
+
 #[derive(Clone)]
 pub struct NativeFunc {
-    arity: usize,
-    inner: fn(&mut interp::Interpreter, Vec<Rc<RefCell<value::Value>>>) -> Rc<RefCell<value::Value>>,
-    name: String,
+    pub arity: usize,
+    pub inner: NativeFuncType,
 }
 
 impl std::fmt::Debug for NativeFunc {
@@ -88,21 +118,16 @@ impl std::cmp::PartialEq for NativeFunc {
 }
 
 impl NativeFunc {
-    pub fn new(name: String, arity: usize, inner: fn(&mut interp::Interpreter, Vec<Rc<RefCell<value::Value>>>) -> Rc<RefCell<value::Value>>) -> Self {
+    pub fn new(arity: usize, inner: NativeFuncType) -> Self {
         NativeFunc {
             arity,
             inner,
-            name,
         }
-    }
-
-    pub fn name(&self) -> String {
-        self.name.clone()
     }
 }
 
 impl NativeFunc {
-    fn call(&self, mut interp: &mut interp::Interpreter, args: Vec<Rc<RefCell<value::Value>>>) -> Rc<RefCell<value::Value>> {
+    fn call(&self, mut interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, String> {
         let inner = self.inner;
         inner(&mut interp, args)
     }
@@ -114,8 +139,8 @@ impl NativeFunc {
 
 pub fn new_native_func(name: &str,
                        arity: usize,
-                       inner: fn(&mut interp::Interpreter, Vec<Rc<RefCell<value::Value>>>) -> Rc<RefCell<value::Value>>)
-                       -> Rc<RefCell<value::Value>> {
-    Rc::new(RefCell::new(value::Value::Func(Func::new_native(NativeFunc::new(name.to_owned(), arity, inner)))))
+                       inner: NativeFuncType)
+                       -> value::Value {
+    value::Value::Func(Func::new_native(name, NativeFunc::new(arity, inner)))
 }
 

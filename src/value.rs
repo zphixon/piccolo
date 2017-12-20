@@ -122,16 +122,27 @@ impl fmt::Debug for Value {
                 write!(f, "{}", s)
             },
             Value::Func(ref v) => {
-                if v.is_native() {
-                    write!(f, "(native fn {})", v.name)
-                } else {
-                    let mut s = format!("(fn {}", v.name);
-                    for arg in &v.decl.as_ref().unwrap().args {
-                        s.push_str(&format!(" {}", arg.lexeme))
+                match v.kind {
+                    func::FuncKind::Native(_) => write!(f, "(native fn {})", v.name),
+                    func::FuncKind::Normal(ref n) => {
+                        let mut s = format!("(fn {}", v.name);
+                        for arg in &n.decl.args {
+                            s.push_str(&format!(" {}", arg.lexeme));
+                        }
+                        s.push_str(")");
+                        write!(f, "{}", s)
                     }
-                    s.push_str(")");
-                    write!(f, "{}", s)
                 }
+                //if v.is_native() {
+                //    write!(f, "(native fn {})", v.name)
+                //} else {
+                //    let mut s = format!("(fn {}", v.name);
+                //    for arg in &v.args().as_ref().unwrap().args {
+                //        s.push_str(&format!(" {}", arg.lexeme))
+                //    }
+                //    s.push_str(")");
+                //    write!(f, "{}", s)
+                //}
             },
             Value::Data(ref v) => {
                 write!(f, "(data {})", v.name)
