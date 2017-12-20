@@ -126,6 +126,7 @@ impl ExprAccept for Logical {
 pub struct Call {
     pub callee: Box<Expr>,
     pub paren: token::Token,
+    pub arity: func::Arity,
     pub args: Vec<Expr>,
 }
 

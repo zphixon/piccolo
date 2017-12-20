@@ -178,21 +178,43 @@ impl Parser {
     fn func(&mut self) -> Option<stmt::Stmt> {
         let name = self.consume(token::TokenKind::Ident)?;
         self.consume(token::TokenKind::LParen)?;
+
         let mut args = Vec::new();
+        let mut multi = false;
+
         if !self.check(token::TokenKind::RParen) {
-            while {
+            'outer: while {
                 if args.len() >= 64 {
                     self.error(err::ErrorKind::SyntaxError, "cannot have more than 64 parameters");
                     return None
                 }
+
+                if self.lookahead(1).kind == token::TokenKind::IRange {
+                    let name = self.consume(token::TokenKind::Ident)?;
+                    self.consume(token::TokenKind::IRange)?;
+                    args.push(name);
+                    multi = true;
+                    break 'outer;
+                }
+
                 args.push(self.consume(token::TokenKind::Ident)?);
                 self.matches(&[token::TokenKind::Comma])
             } {}
         }
         self.consume(token::TokenKind::RParen)?;
+
         let body = self.end_block()?;
+
+        let arity = if multi {
+            func::Arity::Multi
+        } else if args.is_empty() {
+            func::Arity::None
+        } else {
+            func::Arity::Some(args.len())
+        };
+
         Some(stmt::Stmt::Func(stmt::Func {
-            name, args, body
+            arity, name, args, body,
         }))
     }
 
@@ -414,7 +436,7 @@ impl Parser {
         let mut args = Vec::new();
 
         if !self.check(token::TokenKind::RParen) {
-            while {
+            'outer: while {
                 if args.len() >= 64 {
                     self.error(err::ErrorKind::SyntaxError, "Cannot have more than 64 arguments to a function\n(do you *really* need that many anyway?)")
                 }
@@ -425,8 +447,14 @@ impl Parser {
 
         let paren = self.consume(token::TokenKind::RParen)?;
 
+        let arity = if args.is_empty() {
+            func::Arity::None
+        } else {
+            func::Arity::Some(args.len())
+        };
+
         Some(expr::Expr::Call(expr::Call {
-            callee, paren, args
+            callee, paren, args, arity
         }))
     }
 

@@ -90,6 +90,7 @@ impl StmtAccept for For {
 pub struct Func {
     pub name: token::Token,
     pub args: Vec<token::Token>,
+    pub arity: func::Arity,
     pub body: Vec<Stmt>,
 }
 

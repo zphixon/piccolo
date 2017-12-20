@@ -11,9 +11,6 @@ use value::{Value, is_equal, is_truthy};
 use err::ErrorKind;
 use token::TokenKind;
 
-use std::rc::Rc;
-use std::cell::RefCell;
-
 pub struct Interpreter {
     env: env::Env,
 }
@@ -22,26 +19,36 @@ impl Interpreter {
     pub fn new() -> Self {
         let env = env::Env::new();
 
-        env.new_native_func("clock", 0, |_, _| {
+        env.new_native_func("clock", func::Arity::None, |_, _| {
             let ts = time::now().to_timespec();
             Ok((ts.sec * 1_000 + ts.nsec as i64 / 1_000_000).into())
         });
 
-        env.new_native_func("prln", 1, |_, args| {
-            println!("{}", args[0]);
+        env.new_native_func("prln", func::Arity::Multi, |_, args| {
+            if args.is_empty() {
+                println!();
+            } else if args.len() == 1 {
+                println!("{}", args[0]);
+            } else {
+                print!("{}", args[0]);
+                for item in &args[1..args.len()] {
+                    print!("\t{}", item);
+                }
+                println!();
+            }
             Ok(Value::Nil)
         });
 
-        env.new_native_func("panic", 1, |_, args| {
+        env.new_native_func("panic", func::Arity::Some(1), |_, args| {
             eprintln!("piccolo panic! {}", args[0]);
             std::process::exit(1);
         });
 
-        env.new_native_func("str", 1, |_, args| {
+        env.new_native_func("str", func::Arity::Some(1), |_, args| {
             Ok(Value::String(format!("{}", args[0])))
         });
 
-        env.new_native_func("num", 1, |_, args| {
+        env.new_native_func("num", func::Arity::Some(1), |_, args| {
             if let Ok(n) = format!("{}", args[0]).parse::<i64>() {
                 Ok(Value::Integer(n))
             } else if let Ok(n) = format!("{}", args[0]).parse::<f64>() {
@@ -51,7 +58,7 @@ impl Interpreter {
             }
         });
 
-        env.new_native_func("type", 1, |_, args| {
+        env.new_native_func("type", func::Arity::Some(1), |_, args| {
             match args[0] {
                 Value::String(_) => Ok("string".into()),
                 Value::Bool(_) => Ok("bool".into()),
@@ -65,7 +72,7 @@ impl Interpreter {
             }
         });
 
-        env.new_native_func("assert", 1, |_, args| {
+        env.new_native_func("assert", func::Arity::Some(1), |_, args| {
             if !is_truthy(&args[0]) {
                 eprintln!("assert failed: {}", args[0]);
                 std::process::exit(1);
@@ -73,12 +80,12 @@ impl Interpreter {
             Ok(Value::Bool(true))
         });
 
-        env.new_native_func("show_env", 0, |i, _| {
+        env.new_native_func("show_env", func::Arity::None, |i, _| {
             println!("{}", i.env);
             Ok(Value::Nil)
         });
 
-        env.new_native_func("input", 0, |_, _| {
+        env.new_native_func("input", func::Arity::None, |_, _| {
             let mut rl = Editor::<()>::new();
             if let Ok(input) = rl.readline("") {
                 Ok(Value::String(input))
@@ -365,8 +372,8 @@ impl expr::ExprVisitor for Interpreter {
         let args: Result<Vec<Value>, String> = e.args.iter().map(|arg| self.evaluate(arg)).collect();
         let args = args?;
 
-        if args.len() != func.arity() {
-            return Err(self.error(e.paren.line, ErrorKind::IncorrectArity, &format!("expected {} args, got {}", func.arity(), args.len())));
+        if !func.arity.compatible(e.arity) {
+            return Err(self.error(e.paren.line, ErrorKind::IncorrectArity, &format!("expected {} args, got {}", func.arity.to_number(), args.len())));
         }
 
         func.call(&mut *self, args)

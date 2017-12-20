@@ -5,7 +5,6 @@ use ::*;
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::cell::RefMut;
 use std::cell::RefCell;
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -147,8 +146,8 @@ impl Env {
     //    }
     //}
 
-    pub fn new_native_func(&self, name: &str, arity: usize, func: func::NativeFuncType) {
-        self.set(name, value::Value::Func(func::Func::new_native(name, func::NativeFunc::new(arity, func))));
+    pub fn new_native_func(&self, name: &str, arity: func::Arity, func: func::NativeFuncType) {
+        self.set(name, value::Value::Func(func::Func::new_native(name, arity, func::NativeFunc::new(func))));
     }
 }
 

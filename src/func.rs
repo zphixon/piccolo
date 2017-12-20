@@ -1,13 +1,40 @@
 
 use ::*;
 
-use std::rc::Rc;
-use std::cell::RefCell;
+#[derive(Clone, PartialEq, Debug, Copy)]
+pub enum Arity {
+    None,
+    Multi,
+    Some(usize),
+}
+
+impl Arity {
+    pub fn compatible(&self, other: Arity) -> bool {
+        match *self {
+            Arity::None => other == Arity::None,
+            Arity::Multi => true,
+            Arity::Some(own) => match other {
+                Arity::Some(n) => n == own,
+                Arity::None => false,
+                Arity::Multi => panic!("parsed a call with varargs")
+            }
+        }
+    }
+
+    pub fn to_number(&self) -> usize {
+        match *self {
+            Arity::None => 0,
+            Arity::Multi => panic!("infinity is not a number"),
+            Arity::Some(n) => n,
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Func {
     pub kind: FuncKind,
     pub name: String,
+    pub arity: Arity,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -17,16 +44,18 @@ pub enum FuncKind {
 }
 
 impl Func {
-    pub fn new(decl: stmt::Func) -> Self {
+    pub fn new(arity: Arity, decl: stmt::Func) -> Self {
         Func {
             name: decl.name.lexeme.clone(),
+            arity,
             kind: FuncKind::Normal(NormalFunc { decl }),
         }
     }
 
-    pub fn new_native(name: &str, native: NativeFunc) -> Self {
+    pub fn new_native(name: &str, arity: Arity, native: NativeFunc) -> Self {
         Func {
             name: name.to_owned(),
+            arity,
             kind: FuncKind::Native(native)
             //closure: env::Env::new()
         }
@@ -44,13 +73,6 @@ impl Func {
     //    //    closure
     //    //}
     //}
-
-    pub fn arity(&self) -> usize {
-        match self.kind {
-            FuncKind::Native(ref n) => n.arity(),
-            FuncKind::Normal(ref n) => n.arity(),
-        }
-    }
 
     pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, String> {
         match self.kind {
@@ -90,10 +112,6 @@ pub struct NormalFunc {
 }
 
 impl NormalFunc {
-    pub fn arity(&self) -> usize {
-        self.decl.args.len()
-    }
-
     pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, String> {
         Err("not implemented".into())
     }
@@ -103,37 +121,30 @@ pub type NativeFuncType = fn(&mut interp::Interpreter, Vec<value::Value>) -> Res
 
 #[derive(Clone)]
 pub struct NativeFunc {
-    pub arity: usize,
     pub inner: NativeFuncType,
+}
+
+impl NativeFunc {
+    pub fn new(inner: NativeFuncType) -> Self {
+        NativeFunc {
+            inner,
+        }
+    }
+
+    fn call(&self, mut interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, String> {
+        let inner = self.inner;
+        inner(&mut interp, args)
+    }
 }
 
 impl std::fmt::Debug for NativeFunc {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "NativeFunc {{ inner: ..., arity: {} }}", self.arity())
+        write!(f, "native func")
+        //write!(f, "NativeFunc {{ inner: ..., arity: {} }}", self.arity())
     }
 }
 
 impl std::cmp::PartialEq for NativeFunc {
     fn eq(&self, _other: &NativeFunc) -> bool { false }
-}
-
-impl NativeFunc {
-    pub fn new(arity: usize, inner: NativeFuncType) -> Self {
-        NativeFunc {
-            arity,
-            inner,
-        }
-    }
-}
-
-impl NativeFunc {
-    fn call(&self, mut interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, String> {
-        let inner = self.inner;
-        inner(&mut interp, args)
-    }
-
-    fn arity(&self) -> usize {
-        self.arity
-    }
 }
 

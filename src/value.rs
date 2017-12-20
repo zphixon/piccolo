@@ -3,9 +3,6 @@ use std::fmt;
 
 use ::*;
 
-use std::rc::Rc;
-use std::cell::RefCell;
-
 pub fn parse_into_value(into: String) -> Value {
     if let Ok(b) = into.parse::<bool>() {
         return Value::Bool(b);
