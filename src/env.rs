@@ -144,6 +144,10 @@ impl Env {
     //        splits: Vec::new(),
     //    }
     //}
+
+    pub fn new_native_func(&self, name: &str, arity: usize, func: func::NativeFuncType) {
+        self.set(name, value::Value::Func(func::Func::new_native(name, func::NativeFunc::new(arity, func))));
+    }
 }
 
 impl std::fmt::Display for Env {

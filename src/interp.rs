@@ -20,37 +20,37 @@ impl Interpreter {
     pub fn new() -> Self {
         let env = env::Env::new();
 
-        env.set("clock", func::new_native_func("clock", 0, |_, _| {
+        env.new_native_func("clock", 0, |_, _| {
             let ts = time::now().to_timespec();
             Ok((ts.sec * 1_000 + ts.nsec as i64 / 1_000_000).into())
-        }));
+        });
 
-        env.set("prln", func::new_native_func("prln", 1, |_, args| {
+        env.new_native_func("prln", 1, |_, args| {
             println!("{}", args[0]);
             Ok(Value::Nil)
-        }));
+        });
 
-        env.set("panic", func::new_native_func("panic", 1, |_, args| {
+        env.new_native_func("panic", 1, |_, args| {
             eprintln!("piccolo panic! {}", args[0]);
             std::process::exit(1);
-        }));
+        });
 
-        env.set("str", func::new_native_func("str", 1, |_, args| {
+        env.new_native_func("str", 1, |_, args| {
             Ok(Value::String(format!("{}", args[0])))
-        }));
+        });
 
-        env.set("assert", func::new_native_func("assert", 1, |_, args| {
+        env.new_native_func("assert", 1, |_, args| {
             if !is_truthy(&args[0]) {
                 eprintln!("assert failed: {}", args[0]);
                 std::process::exit(1);
             }
             Ok(Value::Bool(true))
-        }));
+        });
 
-        env.set("show_env", func::new_native_func("show_env", 0, |i, _| {
+        env.new_native_func("show_env", 0, |i, _| {
             println!("{}", i.env);
             Ok(Value::Nil)
-        }));
+        });
 
         Interpreter { env }
     }

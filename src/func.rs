@@ -137,10 +137,3 @@ impl NativeFunc {
     }
 }
 
-pub fn new_native_func(name: &str,
-                       arity: usize,
-                       inner: NativeFuncType)
-                       -> value::Value {
-    value::Value::Func(Func::new_native(name, NativeFunc::new(arity, inner)))
-}
-
