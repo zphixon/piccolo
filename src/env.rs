@@ -30,9 +30,11 @@ impl Env {
     }
 
     pub fn with_parent(parent: &Env) -> Self {
-        Env {
+        let e = Env {
             inner: parent.inner.clone()
-        }
+        };
+        e.push();
+        e
         //let inner = Rc::new(RefCell::new(EnvInner {
         //    inner: parent.inner.clone(),
         //}));
