@@ -1,8 +1,10 @@
 
 extern crate time;
+extern crate rustyline;
+
+use self::rustyline::Editor;
 
 use ::*;
-
 use expr::ExprAccept;
 use stmt::StmtAccept;
 use value::{Value, is_equal, is_truthy};
@@ -50,6 +52,15 @@ impl Interpreter {
         env.new_native_func("show_env", 0, |i, _| {
             println!("{}", i.env);
             Ok(Value::Nil)
+        });
+
+        env.new_native_func("input", 0, |_, _| {
+            let mut rl = Editor::<()>::new();
+            if let Ok(input) = rl.readline("") {
+                Ok(Value::String(input))
+            } else {
+                Ok(Value::Nil)
+            }
         });
 
         Interpreter { env }
