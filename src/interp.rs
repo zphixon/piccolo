@@ -41,6 +41,30 @@ impl Interpreter {
             Ok(Value::String(format!("{}", args[0])))
         });
 
+        env.new_native_func("num", 1, |_, args| {
+            if let Ok(n) = format!("{}", args[0]).parse::<i64>() {
+                Ok(Value::Integer(n))
+            } else if let Ok(n) = format!("{}", args[0]).parse::<f64>() {
+                Ok(Value::Float(n))
+            } else {
+                Ok(Value::Nil)
+            }
+        });
+
+        env.new_native_func("type", 1, |_, args| {
+            match args[0] {
+                Value::String(_) => Ok("string".into()),
+                Value::Bool(_) => Ok("bool".into()),
+                Value::Integer(_) => Ok("int".into()),
+                Value::Float(_) => Ok("float".into()),
+                Value::Array(_) => Ok("array".into()),
+                Value::Func(_) => Ok("fn".into()),
+                Value::Data(_) => Ok("data".into()),
+                Value::Instance(_) => Ok("instance".into()),
+                Value::Nil => Ok("nil".into()),
+            }
+        });
+
         env.new_native_func("assert", 1, |_, args| {
             if !is_truthy(&args[0]) {
                 eprintln!("assert failed: {}", args[0]);

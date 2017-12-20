@@ -41,6 +41,12 @@ impl<'a> From<&'a Value> for Value {
     }
 }
 
+impl<'a> From<&'a str> for Value {
+    fn from(v: &'a str) -> Self {
+        Value::String(v.to_owned())
+    }
+}
+
 impl From<String> for Value {
     fn from(s: String) -> Self {
         Value::String(s)
