@@ -97,9 +97,9 @@ impl fmt::Display for Value {
             Value::Array(ref v) => write!(f, "{:?}", v),
             Value::Func(ref v) => {
                 if v.is_native() {
-                    write!(f, "native fn {}", v.name)
+                    write!(f, "native fn")
                 } else {
-                    write!(f, "fn {}", v.name)
+                    write!(f, "fn")
                 }
             },
             Value::Data(ref _v) => write!(f, "todo: data"),
@@ -126,9 +126,9 @@ impl fmt::Debug for Value {
             },
             Value::Func(ref v) => {
                 match v.kind {
-                    func::FuncKind::Native(_) => write!(f, "(native fn {})", v.name),
+                    func::FuncKind::Native(_) => write!(f, "(native fn)"),
                     func::FuncKind::Normal(ref n) => {
-                        let mut s = format!("(fn {}", v.name);
+                        let mut s = format!("(fn ");
                         for arg in &n.decl.args {
                             s.push_str(&format!(" {}", arg.lexeme));
                         }

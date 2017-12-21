@@ -1,4 +1,5 @@
 
+extern crate backtrace;
 extern crate time;
 extern crate rustyline;
 
@@ -12,7 +13,7 @@ use err::ErrorKind;
 use token::TokenKind;
 
 pub struct Interpreter {
-    env: env::Env,
+    pub env: env::Env,
 }
 
 impl Interpreter {
@@ -85,6 +86,19 @@ impl Interpreter {
             Ok(Value::Nil)
         });
 
+        env.new_native_func("show_closure", func::Arity::Some(1), |_, args| {
+            if let Value::Func(ref f) = args[0] {
+                if let func::FuncKind::Normal(ref f) = f.kind {
+                    println!("{}", f.closure);
+                } else {
+                    println!("native func does not have closure");
+                }
+            } else {
+                println!("non-func does not have closure");
+            }
+            Ok(Value::Nil)
+        });
+
         env.new_native_func("input", func::Arity::None, |_, _| {
             let mut rl = Editor::<()>::new();
             if let Ok(input) = rl.readline("") {
@@ -111,6 +125,20 @@ impl Interpreter {
         self.env.push();
         let result = self.interpret(stmts);
         self.env.pop();
+        result
+    }
+
+    pub fn exec_with_env(&mut self, stmts: &[stmt::Stmt], mut env: &mut env::Env) -> Result<Option<Value>, String> {
+        std::mem::swap(&mut self.env, &mut env);
+        let result = self.execute_list(stmts);
+        std::mem::swap(&mut self.env, &mut env);
+        result
+    }
+
+    pub fn interp_with_env(&mut self, stmts: &[stmt::Stmt], mut env: &mut env::Env) -> Result<Option<Value>, String> {
+        std::mem::swap(&mut self.env, &mut env);
+        let result = self.interpret(stmts);
+        std::mem::swap(&mut self.env, &mut env);
         result
     }
 
@@ -340,7 +368,6 @@ impl expr::ExprVisitor for Interpreter {
 
     fn visit_assign(&mut self, e: &expr::Assignment) -> Self::Output {
         let value = self.evaluate(&e.value)?;
-        // function hack?
         self.env.set(&e.name.lexeme, value.clone());
         Ok(value)
     }
@@ -372,6 +399,10 @@ impl expr::ExprVisitor for Interpreter {
         let args: Result<Vec<Value>, String> = e.args.iter().map(|arg| self.evaluate(arg)).collect();
         let args = args?;
 
+        if let func::FuncKind::Normal(ref f) = func.kind {
+            println!("interp call: {}", f.closure);
+        }
+
         if !func.arity.compatible(e.arity) {
             return Err(self.error(e.paren.line, ErrorKind::IncorrectArity, &format!("expected {} args, got {}", func.arity.to_number(), args.len())));
         }
@@ -402,6 +433,33 @@ impl stmt::StmtVisitor for Interpreter {
 
     fn visit_assignment(&mut self, s: &stmt::Assignment) -> Self::Output {
         let value = self.evaluate(&s.value)?;
+        // function hack?
+        if let Value::Func(ref f) = value {
+            if let func::FuncKind::Normal(ref f) = f.kind {
+                backtrace::trace(|frame| {
+                    backtrace::resolve(frame.ip(), |symbol| {
+                        print!("{:?}: ", frame.ip());
+                        if let Some(ln) = symbol.lineno() {
+                            print!("{}\t", ln);
+                        }
+                        if let Some(name) = symbol.name() {
+                            print!("{}", name);
+                        } else {
+                            print!("anon");
+                        }
+                        print!(" in ");
+                        if let Some(filename) = symbol.filename() {
+                            println!("{}", filename.display());
+                        } else {
+                            println!("anon");
+                        }
+                    });
+                    true
+                });
+                println!("assigned's closure: {}", f.closure);
+            }
+        }
+
         self.env.set(&s.name.lexeme, value);
         Ok(None)
     }
@@ -455,11 +513,27 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_func(&mut self, s: &stmt::Func) -> Self::Output {
-        Err(self.error(s.name.line, ErrorKind::Unimplemented, "not yet implemented"))
+        println!("def func: {}", self.env);
+        let func = Value::Func(func::Func::new(s.arity, s.clone(), self.env.clone()));
+        self.env.set(&s.name.lexeme, func);
+        if let Some(Value::Func(ref f)) = self.env.get(&s.name.lexeme) {
+            if let func::FuncKind::Normal(ref f) = f.kind {
+                println!("after def: {}", f.closure);
+            }
+        }
+        Ok(None)
+        //Err(self.error(s.name.line, ErrorKind::Unimplemented, "not yet implemented"))
     }
 
     fn visit_retn(&mut self, s: &stmt::Retn) -> Self::Output {
-        Err(self.error(s.keyword.line, ErrorKind::Unimplemented, "not yet implemented"))
+        let value = if let Some(ref e) = s.value {
+            self.evaluate(e)?
+        } else {
+            Value::Nil
+        };
+
+        Ok(Some(value))
+        //Err(self.error(s.keyword.line, ErrorKind::Unimplemented, "not yet implemented"))
     }
 
     fn visit_data(&mut self, s: &stmt::Data) -> Self::Output {

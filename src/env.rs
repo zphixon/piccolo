@@ -8,13 +8,13 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 #[derive(Debug, Clone, PartialEq, Default)]
-struct EnvInner {
-    inner: Vec<HashMap<String, value::Value>>,
+pub struct EnvInner {
+    pub inner: Vec<HashMap<String, value::Value>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Env {
-    inner: Rc<RefCell<EnvInner>>
+    pub inner: Rc<RefCell<EnvInner>>
     //pub inner: Vec<HashMap<String, Rc<RefCell<value::Value>>>>,
     //pub splits: Vec<usize>,
 }
@@ -32,7 +32,7 @@ impl Env {
         let e = Env {
             inner: parent.inner.clone()
         };
-        e.push();
+        //e.push();
         e
         //let inner = Rc::new(RefCell::new(EnvInner {
         //    inner: parent.inner.clone(),
@@ -47,8 +47,32 @@ impl Env {
     }
 
     pub fn push(&self) {
+        /*backtrace::trace(|frame| {
+            backtrace::resolve(frame.ip(), |symbol| {
+                print!("{:?}: ", frame.ip());
+                if let Some(ln) = symbol.lineno() {
+                    print!("{} ", ln);
+                }
+                if let Some(name) = symbol.name() {
+                    print!("{}", name);
+                } else {
+                    print!("anon");
+                }
+                print!(" in ");
+                if let Some(filename) = symbol.filename() {
+                    println!("{}", filename.display());
+                } else {
+                    println!("anon");
+                }
+            });
+            true
+        });*/
         let mut inner = self.inner.borrow_mut();
         inner.inner.push(HashMap::new());
+    }
+
+    pub fn push_child(&self, child: Env) {
+        self.inner.borrow_mut().inner.append(&mut child.inner.borrow().inner.clone());
     }
 
     //pub fn push_parent(&mut self, parent: Env) {
@@ -57,8 +81,32 @@ impl Env {
     //    //self.inner.append(&mut old);
     //}
 
-    pub fn pop(&self) {
-        self.inner.borrow_mut().inner.pop();
+    pub fn pop(&self) -> Env {
+        backtrace::trace(|frame| {
+            backtrace::resolve(frame.ip(), |symbol| {
+                print!("{:?}: ", frame.ip());
+                if let Some(ln) = symbol.lineno() {
+                    print!("{} ", ln);
+                }
+                if let Some(name) = symbol.name() {
+                    print!("{}", name);
+                } else {
+                    print!("anon");
+                }
+                print!(" in ");
+                if let Some(filename) = symbol.filename() {
+                    println!("{}", filename.display());
+                } else {
+                    println!("anon");
+                }
+            });
+            true
+        });
+        let popped = self.inner.borrow_mut().inner.pop();
+        println!("{:?}", popped);
+        Env { inner: Rc::new(RefCell::new(EnvInner {
+            inner: vec![popped.unwrap()]
+        })) }
     }
 
     pub fn set(&self, name: &str, value: value::Value) {
@@ -147,7 +195,7 @@ impl Env {
     //}
 
     pub fn new_native_func(&self, name: &str, arity: func::Arity, func: func::NativeFuncType) {
-        self.set(name, value::Value::Func(func::Func::new_native(name, arity, func::NativeFunc::new(func))));
+        self.set(name, value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func))));
     }
 }
 

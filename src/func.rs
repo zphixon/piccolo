@@ -33,7 +33,7 @@ impl Arity {
 #[derive(Clone, PartialEq, Debug)]
 pub struct Func {
     pub kind: FuncKind,
-    pub name: String,
+    //pub name: String,
     pub arity: Arity,
 }
 
@@ -44,17 +44,18 @@ pub enum FuncKind {
 }
 
 impl Func {
-    pub fn new(arity: Arity, decl: stmt::Func) -> Self {
+    pub fn new(arity: Arity, decl: stmt::Func, closure: env::Env) -> Self {
+        println!("new func: {}", closure);
         Func {
-            name: decl.name.lexeme.clone(),
+            //name: decl.name.lexeme.clone(),
             arity,
-            kind: FuncKind::Normal(NormalFunc { decl }),
+            kind: FuncKind::Normal(NormalFunc { decl, closure }),
         }
     }
 
-    pub fn new_native(name: &str, arity: Arity, native: NativeFunc) -> Self {
+    pub fn new_native(arity: Arity, native: NativeFunc) -> Self {
         Func {
-            name: name.to_owned(),
+            //name: name.to_owned(),
             arity,
             kind: FuncKind::Native(native)
             //closure: env::Env::new()
@@ -108,12 +109,40 @@ impl Func {
 #[derive(Clone, PartialEq, Debug)]
 pub struct NormalFunc {
     pub decl: stmt::Func,
-    //closure: env::Env, // TODO
+    pub closure: env::Env, // TODO
 }
 
 impl NormalFunc {
     pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, String> {
-        Err("not implemented".into())
+        //Err("not implemented".into())
+        println!("call: {}", self.closure);
+        //self.closure.push();
+        //let mut local = env::Env::with_parent(&self.closure);
+        //self.closure.push();
+        interp.env.push();
+        for (i, arg) in args.iter().enumerate() {
+            interp.env.set(&self.decl.args[i].lexeme, arg.clone());
+        }
+
+        let result: Result<Option<value::Value>, String> = interp.interp_with_env(&self.decl.body, &mut self.closure.clone());
+
+        // random env information....
+        //   layer 1
+        //     ...
+        //
+        // true <--------------------------------------  HOLY CRAPPARONI
+        // 0x7ffeabdfeedbeef 392 somefile.rs
+        // ...
+        println!("{}", std::rc::Rc::ptr_eq(&interp.env.inner, &self.closure.inner));
+
+        interp.env.pop();
+        //self.closure.pop();
+        //self.closure.push_child(self.closure.pop()); // this does nothing????
+
+        result.map(|opt| match opt {
+            Some(v) => v,
+            None => value::Value::Nil,
+        })
     }
 }
 
