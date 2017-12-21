@@ -10,6 +10,7 @@ use std::cell::RefCell;
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct EnvInner {
     pub inner: Vec<HashMap<String, value::Value>>,
+    //pub splits: Vec<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -22,29 +23,36 @@ pub struct Env {
 impl Env {
     pub fn new() -> Self {
         let inner = Rc::new(RefCell::new(EnvInner {
-            inner: vec![HashMap::new()]
+            inner: vec![HashMap::new()],
+            //splits: vec![]
         }));
 
         Env { inner }
     }
 
-    pub fn with_parent(parent: &Env) -> Self {
-        let e = Env {
-            inner: parent.inner.clone()
-        };
-        //e.push();
-        e
-        //let inner = Rc::new(RefCell::new(EnvInner {
-        //    inner: parent.inner.clone(),
-        //}));
-        //Env { inner }
-        //let mut e = Env {
-            //inner: parent.inner,
-            ////splits: vec![]
-        //};
-        //e.push();
-        //e
-    }
+    //pub fn with_parent(parent: &Env) -> Self {
+    //    let e = Env {
+    //        inner: parent.inner.clone()
+    //    };
+    //    //e.push();
+    //    e
+    //    //let inner = Rc::new(RefCell::new(EnvInner {
+    //    //    inner: parent.inner.clone(),
+    //    //}));
+    //    //Env { inner }
+    //    //let mut e = Env {
+    //        //inner: parent.inner,
+    //        ////splits: vec![]
+    //    //};
+    //    //e.push();
+    //    //e
+    //}
+
+    //pub fn deep_clone(&mut self) -> Env {
+    //    Env {
+    //        inner: Rc::new(Rc::make_mut(&mut self.inner).clone())
+    //    }
+    //}
 
     pub fn push(&self) {
         /*backtrace::trace(|frame| {
@@ -71,9 +79,11 @@ impl Env {
         inner.inner.push(HashMap::new());
     }
 
-    pub fn push_child(&self, child: Env) {
-        self.inner.borrow_mut().inner.append(&mut child.inner.borrow().inner.clone());
-    }
+    //pub fn push_child(&self, child: &Env) {
+    //    self.inner.borrow_mut().inner.append(&mut child.inner.borrow().inner.clone());
+    //    let len = self.inner.borrow().inner.len();
+    //    self.inner.borrow_mut().splits.push(len);
+    //}
 
     //pub fn push_parent(&mut self, parent: Env) {
     //    //self.splits.push(parent.inner.len());
@@ -81,32 +91,33 @@ impl Env {
     //    //self.inner.append(&mut old);
     //}
 
-    pub fn pop(&self) -> Env {
-        backtrace::trace(|frame| {
-            backtrace::resolve(frame.ip(), |symbol| {
-                print!("{:?}: ", frame.ip());
-                if let Some(ln) = symbol.lineno() {
-                    print!("{} ", ln);
-                }
-                if let Some(name) = symbol.name() {
-                    print!("{}", name);
-                } else {
-                    print!("anon");
-                }
-                print!(" in ");
-                if let Some(filename) = symbol.filename() {
-                    println!("{}", filename.display());
-                } else {
-                    println!("anon");
-                }
-            });
-            true
-        });
+    pub fn pop(&self) {//-> Env {
+        //backtrace::trace(|frame| {
+        //    backtrace::resolve(frame.ip(), |symbol| {
+        //        print!("{:?}: ", frame.ip());
+        //        if let Some(ln) = symbol.lineno() {
+        //            print!("{} ", ln);
+        //        }
+        //        if let Some(name) = symbol.name() {
+        //            print!("{}", name);
+        //        } else {
+        //            print!("anon");
+        //        }
+        //        print!(" in ");
+        //        if let Some(filename) = symbol.filename() {
+        //            println!("{}", filename.display());
+        //        } else {
+        //            println!("anon");
+        //        }
+        //    });
+        //    true
+        //});
         let popped = self.inner.borrow_mut().inner.pop();
-        println!("{:?}", popped);
-        Env { inner: Rc::new(RefCell::new(EnvInner {
-            inner: vec![popped.unwrap()]
-        })) }
+        //println!("{:?}", popped);
+        //Env { inner: Rc::new(RefCell::new(EnvInner {
+        //    splits: vec![],
+        //    inner: vec![popped.unwrap()]
+        //})) }
     }
 
     pub fn set(&self, name: &str, value: value::Value) {
@@ -179,11 +190,13 @@ impl Env {
 
     //// TODO: re-visit closures in ch. 11
     //pub fn split(&mut self) -> Env {
-    //    let split = self.splits.pop().expect("no closure");
-    //    let inner = self.inner.iter().skip(split).cloned().collect();
+    //    let split = self.inner.borrow_mut().splits.pop().expect("no closure");
+    //    let inner = self.inner.borrow().inner.iter().skip(split).cloned().collect();
     //    Env {
-    //        inner,
-    //        splits: Vec::new(),
+    //        inner: Rc::new(RefCell::new(EnvInner {
+    //            inner,
+    //            splits: Vec::new(),
+    //        })),
     //    }
     //}
 

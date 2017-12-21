@@ -86,18 +86,18 @@ impl Interpreter {
             Ok(Value::Nil)
         });
 
-        env.new_native_func("show_closure", func::Arity::Some(1), |_, args| {
-            if let Value::Func(ref f) = args[0] {
-                if let func::FuncKind::Normal(ref f) = f.kind {
-                    println!("{}", f.closure);
-                } else {
-                    println!("native func does not have closure");
-                }
-            } else {
-                println!("non-func does not have closure");
-            }
-            Ok(Value::Nil)
-        });
+        //env.new_native_func("show_closure", func::Arity::Some(1), |_, args| {
+        //    if let Value::Func(ref f) = args[0] {
+        //        if let func::FuncKind::Normal(ref f) = f.kind {
+        //            println!("{}", f.closure);
+        //        } else {
+        //            println!("native func does not have closure");
+        //        }
+        //    } else {
+        //        println!("non-func does not have closure");
+        //    }
+        //    Ok(Value::Nil)
+        //});
 
         env.new_native_func("input", func::Arity::None, |_, _| {
             let mut rl = Editor::<()>::new();
@@ -128,19 +128,35 @@ impl Interpreter {
         result
     }
 
-    pub fn exec_with_env(&mut self, stmts: &[stmt::Stmt], mut env: &mut env::Env) -> Result<Option<Value>, String> {
-        std::mem::swap(&mut self.env, &mut env);
-        let result = self.execute_list(stmts);
-        std::mem::swap(&mut self.env, &mut env);
-        result
-    }
+    //pub fn exec_with_env(&mut self, stmts: &[stmt::Stmt], env: &mut env::Env) -> Result<Option<Value>, String> {
+    //    self.env.push_child(&env);
+    //    println!("exec with env: {}", self.env);
+    //    //std::mem::swap(&mut self.env, &mut env);
+    //    let result = self.execute_list(stmts);
+    //    let after = self.env.split();
+    //    *env = after;
+    //    println!("after exec: {}", env);
+    //    //std::mem::swap(&mut self.env, &mut env);
+    //    result
+    //}
 
-    pub fn interp_with_env(&mut self, stmts: &[stmt::Stmt], mut env: &mut env::Env) -> Result<Option<Value>, String> {
-        std::mem::swap(&mut self.env, &mut env);
-        let result = self.interpret(stmts);
-        std::mem::swap(&mut self.env, &mut env);
-        result
-    }
+    //pub fn interp_with_env(&mut self, stmts: &[stmt::Stmt], mut env: &mut env::Env) -> Result<Option<Value>, String> {
+    //    //std::mem::swap(&mut self.env, &mut env);
+    //    //let result = self.interpret(stmts);
+    //    //std::mem::swap(&mut self.env, &mut env);
+    //    //result
+    //    //self.env.push_child(&env);
+    //    //println!("exec with env: {}", self.env);
+    //    ////std::mem::swap(&mut self.env, &mut env);
+    //    //let result = self.execute_list(stmts);
+    //    //println!("interp env after exec: {}", self.env);
+    //    //let after = self.env.split();
+    //    //println!("interp env after split: {}", self.env);
+    //    //*env = after;
+    //    //println!("closure after exec: {}", env);
+    //    ////std::mem::swap(&mut self.env, &mut env);
+    //    //result
+    //}
 
     pub fn execute(&mut self, stmt: &stmt::Stmt) -> Result<Option<Value>, String> {
         stmt.accept(&mut *self)
@@ -399,9 +415,9 @@ impl expr::ExprVisitor for Interpreter {
         let args: Result<Vec<Value>, String> = e.args.iter().map(|arg| self.evaluate(arg)).collect();
         let args = args?;
 
-        if let func::FuncKind::Normal(ref f) = func.kind {
-            println!("interp call: {}", f.closure);
-        }
+        //if let func::FuncKind::Normal(ref f) = func.kind {
+        //    println!("interp call: {}", f.closure);
+        //}
 
         if !func.arity.compatible(e.arity) {
             return Err(self.error(e.paren.line, ErrorKind::IncorrectArity, &format!("expected {} args, got {}", func.arity.to_number(), args.len())));
@@ -433,32 +449,32 @@ impl stmt::StmtVisitor for Interpreter {
 
     fn visit_assignment(&mut self, s: &stmt::Assignment) -> Self::Output {
         let value = self.evaluate(&s.value)?;
-        // function hack?
-        if let Value::Func(ref f) = value {
-            if let func::FuncKind::Normal(ref f) = f.kind {
-                backtrace::trace(|frame| {
-                    backtrace::resolve(frame.ip(), |symbol| {
-                        print!("{:?}: ", frame.ip());
-                        if let Some(ln) = symbol.lineno() {
-                            print!("{}\t", ln);
-                        }
-                        if let Some(name) = symbol.name() {
-                            print!("{}", name);
-                        } else {
-                            print!("anon");
-                        }
-                        print!(" in ");
-                        if let Some(filename) = symbol.filename() {
-                            println!("{}", filename.display());
-                        } else {
-                            println!("anon");
-                        }
-                    });
-                    true
-                });
-                println!("assigned's closure: {}", f.closure);
-            }
-        }
+        //// function hack?
+        //if let Value::Func(ref f) = value {
+        //    if let func::FuncKind::Normal(ref f) = f.kind {
+        //        backtrace::trace(|frame| {
+        //            backtrace::resolve(frame.ip(), |symbol| {
+        //                print!("{:?}: ", frame.ip());
+        //                if let Some(ln) = symbol.lineno() {
+        //                    print!("{}\t", ln);
+        //                }
+        //                if let Some(name) = symbol.name() {
+        //                    print!("{}", name);
+        //                } else {
+        //                    print!("anon");
+        //                }
+        //                print!(" in ");
+        //                if let Some(filename) = symbol.filename() {
+        //                    println!("{}", filename.display());
+        //                } else {
+        //                    println!("anon");
+        //                }
+        //            });
+        //            true
+        //        });
+        //        println!("assigned's closure: {}", f.closure);
+        //    }
+        //}
 
         self.env.set(&s.name.lexeme, value);
         Ok(None)
@@ -513,14 +529,15 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_func(&mut self, s: &stmt::Func) -> Self::Output {
-        println!("def func: {}", self.env);
-        let func = Value::Func(func::Func::new(s.arity, s.clone(), self.env.clone()));
+        //println!("def func: {}", self.env);
+        //let func = Value::Func(func::Func::new(s.arity, s.clone(), self.env.deep_clone()));
+        let func = Value::Func(func::Func::new(s.arity, s.clone()));
         self.env.set(&s.name.lexeme, func);
-        if let Some(Value::Func(ref f)) = self.env.get(&s.name.lexeme) {
-            if let func::FuncKind::Normal(ref f) = f.kind {
-                println!("after def: {}", f.closure);
-            }
-        }
+        //if let Some(Value::Func(ref f)) = self.env.get(&s.name.lexeme) {
+        //    if let func::FuncKind::Normal(ref f) = f.kind {
+        //        println!("after def: {}", f.closure);
+        //    }
+        //}
         Ok(None)
         //Err(self.error(s.name.line, ErrorKind::Unimplemented, "not yet implemented"))
     }

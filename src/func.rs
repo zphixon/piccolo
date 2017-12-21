@@ -44,12 +44,12 @@ pub enum FuncKind {
 }
 
 impl Func {
-    pub fn new(arity: Arity, decl: stmt::Func, closure: env::Env) -> Self {
-        println!("new func: {}", closure);
+    pub fn new(arity: Arity, decl: stmt::Func) -> Self {
+        //println!("new func: {}", closure);
         Func {
             //name: decl.name.lexeme.clone(),
             arity,
-            kind: FuncKind::Normal(NormalFunc { decl, closure }),
+            kind: FuncKind::Normal(NormalFunc { decl }),//closure }),
         }
     }
 
@@ -109,22 +109,24 @@ impl Func {
 #[derive(Clone, PartialEq, Debug)]
 pub struct NormalFunc {
     pub decl: stmt::Func,
-    pub closure: env::Env, // TODO
+    //pub closure: env::Env, // TODO
 }
 
 impl NormalFunc {
     pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, String> {
         //Err("not implemented".into())
-        println!("call: {}", self.closure);
+        //println!("call: {}", self.closure);
         //self.closure.push();
         //let mut local = env::Env::with_parent(&self.closure);
         //self.closure.push();
         interp.env.push();
         for (i, arg) in args.iter().enumerate() {
+            //println!("{} = {:?}", self.decl.args[i].lexeme, arg);
             interp.env.set(&self.decl.args[i].lexeme, arg.clone());
         }
 
-        let result: Result<Option<value::Value>, String> = interp.interp_with_env(&self.decl.body, &mut self.closure.clone());
+        let result = interp.interpret(&self.decl.body);
+        //interp.interp_with_env(&self.decl.body, &mut self.closure.clone());
 
         // random env information....
         //   layer 1
@@ -133,7 +135,7 @@ impl NormalFunc {
         // true <--------------------------------------  HOLY CRAPPARONI
         // 0x7ffeabdfeedbeef 392 somefile.rs
         // ...
-        println!("{}", std::rc::Rc::ptr_eq(&interp.env.inner, &self.closure.inner));
+        //println!("{}", std::rc::Rc::ptr_eq(&interp.env.inner, &self.closure.inner));
 
         interp.env.pop();
         //self.closure.pop();
