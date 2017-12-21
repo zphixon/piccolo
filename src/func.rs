@@ -33,7 +33,6 @@ impl Arity {
 #[derive(Clone, PartialEq, Debug)]
 pub struct Func {
     pub kind: FuncKind,
-    //pub name: String,
     pub arity: Arity,
 }
 
@@ -45,57 +44,24 @@ pub enum FuncKind {
 
 impl Func {
     pub fn new(arity: Arity, decl: stmt::Func) -> Self {
-        //println!("new func: {}", closure);
         Func {
-            //name: decl.name.lexeme.clone(),
             arity,
-            kind: FuncKind::Normal(NormalFunc { decl }),//closure }),
+            kind: FuncKind::Normal(NormalFunc { decl }),
         }
     }
 
     pub fn new_native(arity: Arity, native: NativeFunc) -> Self {
         Func {
-            //name: name.to_owned(),
             arity,
             kind: FuncKind::Native(native)
-            //closure: env::Env::new()
         }
     }
-
-    //pub fn with_closure(decl: stmt::Func, closure: env::Env) -> Self {
-    //    Func {
-    //        name: decl.name.lexeme.clone(),
-    //        kind: FuncKind::Normal(NormalFunc { decl, closure })
-    //    }
-    //    //Func {
-    //    //    native: None,
-    //    //    name: decl.name.lexeme.clone(),
-    //    //    decl: Some(decl),
-    //    //    closure
-    //    //}
-    //}
 
     pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, String> {
         match self.kind {
             FuncKind::Normal(ref mut f) => f.call(interp, args),
             FuncKind::Native(ref mut f) => f.call(interp, args),
         }
-        //if self.native.is_some() {
-        //    self.native.as_ref().unwrap().call(interp, args)
-        //} else if self.decl.is_some() {
-        //    //interp.env.push();
-        //    //for (n, arg) in args.iter().enumerate() {
-        //    //    interp.env.set_local(&self.decl.as_ref().unwrap().args[n].lexeme, arg.clone());
-        //    //}
-        //    //let value = interp.execute_block_local(&self.decl.as_ref().unwrap().body);
-        //    //interp.env.pop();
-        //    //let value = interp.execute_block_local_closure(&self.decl.as_ref().unwrap().body, &mut self.closure);
-        //    //interp.env.define(&self.name, value::Value::Func(self.clone()));
-        //    //value.unwrap_or(value::Value::Nil)
-        //    Rc::new(RefCell::new(value::Value::Nil))
-        //} else {
-        //    panic!("empty function called!")
-        //}
     }
 
     pub fn is_native(&self) -> bool {
@@ -109,37 +75,17 @@ impl Func {
 #[derive(Clone, PartialEq, Debug)]
 pub struct NormalFunc {
     pub decl: stmt::Func,
-    //pub closure: env::Env, // TODO
 }
 
 impl NormalFunc {
     pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, String> {
-        //Err("not implemented".into())
-        //println!("call: {}", self.closure);
-        //self.closure.push();
-        //let mut local = env::Env::with_parent(&self.closure);
-        //self.closure.push();
         interp.env.push();
         for (i, arg) in args.iter().enumerate() {
-            //println!("{} = {:?}", self.decl.args[i].lexeme, arg);
             interp.env.set(&self.decl.args[i].lexeme, arg.clone());
         }
 
         let result = interp.interpret(&self.decl.body);
-        //interp.interp_with_env(&self.decl.body, &mut self.closure.clone());
-
-        // random env information....
-        //   layer 1
-        //     ...
-        //
-        // true <--------------------------------------  HOLY CRAPPARONI
-        // 0x7ffeabdfeedbeef 392 somefile.rs
-        // ...
-        //println!("{}", std::rc::Rc::ptr_eq(&interp.env.inner, &self.closure.inner));
-
         interp.env.pop();
-        //self.closure.pop();
-        //self.closure.push_child(self.closure.pop()); // this does nothing????
 
         result.map(|opt| match opt {
             Some(v) => v,
@@ -171,7 +117,6 @@ impl NativeFunc {
 impl std::fmt::Debug for NativeFunc {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "native func")
-        //write!(f, "NativeFunc {{ inner: ..., arity: {} }}", self.arity())
     }
 }
 
