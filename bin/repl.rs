@@ -26,7 +26,10 @@ fn main() {
                     let p = piccolo::parser::Parser::new(s.unwrap()).parse();
 
                     if p.is_err() {
-                        println!("{}", p.err().unwrap());
+                        for err in p.err().unwrap() {
+                            println!("{}", err);
+                        }
+                        //println!("{}", p.err().unwrap());
                     } else {
                         let p = p.unwrap();
                         if p.is_empty() { continue }

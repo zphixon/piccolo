@@ -52,7 +52,7 @@ impl Env {
     }
 
     pub fn pop(&self) {
-        let popped = self.inner.borrow_mut().inner.pop();
+        self.inner.borrow_mut().inner.pop();
     }
 
     pub fn set(&self, name: &str, value: value::Value) {

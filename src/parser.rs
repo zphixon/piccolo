@@ -1,11 +1,11 @@
 
-use err::ErrorKind;
+use err::{PiccoloError, ErrorKind};
 use ::*;
 
 #[derive(Debug)]
 pub struct Parser {
     line: u64,
-    err: String,
+    err: Vec<PiccoloError>,
     current: usize,
     tokens: Vec<token::Token>,
 }
@@ -14,13 +14,13 @@ impl Parser {
     pub fn new(tokens: Vec<token::Token>) -> Self {
         Parser {
             line: 1,
-            err: String::new(),
+            err: Vec::new(),
             current: 0,
             tokens,
         }
     }
 
-    pub fn parse(mut self) -> Result<Vec<stmt::Stmt>, String> {
+    pub fn parse(mut self) -> Result<Vec<stmt::Stmt>, Vec<PiccoloError>> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
@@ -48,7 +48,7 @@ impl Parser {
     }
 
     fn var_declaration(&mut self) -> Option<stmt::Stmt> {
-        let name = self.consume(token::TokenKind::Ident)?;
+        let name = self.consume(token::TokenKind::Ident, Some("Lookng for variable name"))?;
 
         let init = if self.matches(&[token::TokenKind::Assign]) {
             self.expression()?
@@ -78,7 +78,7 @@ impl Parser {
                     }))
                 }
                 _ => {
-                    self.error(err::ErrorKind::SyntaxError, &format!("expected variable name, got {:?}", equals));
+                    self.error(err::ErrorKind::SyntaxError, &format!("Expected variable name, got {:?}", equals), None);
                     None
                 }
             }
@@ -116,7 +116,7 @@ impl Parser {
             self.skip_newlines();
         }
 
-        self.consume(token::TokenKind::End)?;
+        self.consume(token::TokenKind::End, Some("Unterminated block"))?;
 
         Some(stmt::Stmt::Block(stmt::Block(stmts)))
     }
@@ -130,7 +130,7 @@ impl Parser {
 
     fn if_statement(&mut self) -> Option<stmt::Stmt> {
         let cond = self.expression()?;
-        self.consume(token::TokenKind::Do)?;
+        self.consume(token::TokenKind::Do, None)?;
 
         let mut then = Vec::new();
         while !self.is_at_end() && !self.check(token::TokenKind::End) && !self.check(token::TokenKind::Else) {
@@ -149,7 +149,7 @@ impl Parser {
             None
         };
 
-        self.consume(token::TokenKind::End)?;
+        self.consume(token::TokenKind::End, Some("Unterminated if statement"))?;
 
         Some(stmt::Stmt::If(stmt::If {
             cond, then, else_
@@ -158,7 +158,7 @@ impl Parser {
 
     fn while_statement(&mut self) -> Option<stmt::Stmt> {
         let cond = self.expression()?;
-        let body = self.end_block()?;
+        let body = self.do_block()?;
 
         Some(stmt::Stmt::While(stmt::While {
             cond, body
@@ -166,18 +166,18 @@ impl Parser {
     }
 
     fn for_statement(&mut self) -> Option<stmt::Stmt> {
-        let name = self.consume(token::TokenKind::Ident)?;
-        self.consume(token::TokenKind::In)?;
+        let name = self.consume(token::TokenKind::Ident, Some("Expected variable name in for block"))?;
+        self.consume(token::TokenKind::In, None)?;
         let iter = self.expression()?;
-        let body = self.end_block()?;
+        let body = self.do_block()?;
         Some(stmt::Stmt::For(stmt::For {
             name, iter, body
         }))
     }
 
     fn func(&mut self) -> Option<stmt::Stmt> {
-        let name = self.consume(token::TokenKind::Ident)?;
-        self.consume(token::TokenKind::LParen)?;
+        let name = self.consume(token::TokenKind::Ident, Some("Expected function name"))?;
+        self.consume(token::TokenKind::LParen, None)?;
 
         let mut args = Vec::new();
         let mut multi = false;
@@ -185,25 +185,26 @@ impl Parser {
         if !self.check(token::TokenKind::RParen) {
             'outer: while {
                 if args.len() >= 64 {
-                    self.error(err::ErrorKind::SyntaxError, "cannot have more than 64 parameters");
+                    self.error(err::ErrorKind::SyntaxError, "Cannot have more than 64 parameters",
+                               Some("(do you *really* need that many anyway?)"));
                     return None
                 }
 
                 if self.lookahead(1).kind == token::TokenKind::IRange {
-                    let name = self.consume(token::TokenKind::Ident)?;
-                    self.consume(token::TokenKind::IRange)?;
+                    let name = self.consume(token::TokenKind::Ident, Some("Varags needs name"))?;
+                    self.consume(token::TokenKind::IRange, None)?;
                     args.push(name);
                     multi = true;
                     break 'outer;
                 }
 
-                args.push(self.consume(token::TokenKind::Ident)?);
+                args.push(self.consume(token::TokenKind::Ident, Some("Arg must have name"))?);
                 self.matches(&[token::TokenKind::Comma])
             } {}
         }
-        self.consume(token::TokenKind::RParen)?;
+        self.consume(token::TokenKind::RParen, Some("Unterminated args list"))?;
 
-        let body = self.end_block()?;
+        let body = self.is_block()?;
 
         let arity = if multi {
             func::Arity::Multi
@@ -223,10 +224,12 @@ impl Parser {
         let value = if self.check(token::TokenKind::Newline) {
             self.skip_newlines();
             if !self.check(token::TokenKind::End) {
-                self.error(err::ErrorKind::SyntaxError, "cannot have expressions after return\nMove on to the same line as return if you'd like to return it");
+                self.error(err::ErrorKind::SyntaxError,
+                           "Cannot have expressions after return",
+                           Some("Move on to the same line if you'd like to return it"));
                 return None;
             } else {
-                self.consume(token::TokenKind::End)?;
+                self.consume(token::TokenKind::End, Some("Cannot have expressions after return"))?;
                 None
             }
         } else {
@@ -238,23 +241,23 @@ impl Parser {
     }
 
     fn data(&mut self) -> Option<stmt::Stmt> {
-        let name = self.consume(token::TokenKind::Ident)?;
-        self.consume(token::TokenKind::Is)?;
+        let name = self.consume(token::TokenKind::Ident, Some("Data needs name"))?;
+        self.consume(token::TokenKind::Is, None)?;
         let mut methods = Vec::new();
         while !self.check(token::TokenKind::End) && !self.is_at_end() {
-            self.consume(token::TokenKind::Fn)?;
+            self.consume(token::TokenKind::Fn, Some("Expected method to have name"))?;
             if let stmt::Stmt::Func(func) = self.func()? {
                 methods.push(func);
             } else { panic!("rust broke") }
         }
-        self.consume(token::TokenKind::End)?;
+        self.consume(token::TokenKind::End, Some("Unterminated data"))?;
         Some(stmt::Stmt::Data(stmt::Data {
             name, methods,
         }))
     }
 
-    fn end_block(&mut self) -> Option<Vec<stmt::Stmt>> {
-        self.consume(token::TokenKind::Do)?;
+    fn is_block(&mut self) -> Option<Vec<stmt::Stmt>> {
+        self.consume(token::TokenKind::Is, Some("fn, data start with keyword `is`"))?;
 
         let mut body = Vec::new();
         while !self.is_at_end() && !self.check(token::TokenKind::End) {
@@ -262,7 +265,20 @@ impl Parser {
             self.skip_newlines();
         }
 
-        self.consume(token::TokenKind::End)?;
+        self.consume(token::TokenKind::End, Some("Unterminated block"))?;
+        Some(body)
+    }
+
+    fn do_block(&mut self) -> Option<Vec<stmt::Stmt>> {
+        self.consume(token::TokenKind::Do, Some("if, while, for start with keyword `do`"))?;
+
+        let mut body = Vec::new();
+        while !self.is_at_end() && !self.check(token::TokenKind::End) {
+            body.push(self.declaration()?);
+            self.skip_newlines();
+        }
+
+        self.consume(token::TokenKind::End, Some("Unterminated block"))?;
         Some(body)
     }
 
@@ -352,7 +368,7 @@ impl Parser {
             if self.lookahead(1).kind == token::TokenKind::IRange ||
                 self.lookahead(1).kind == token::TokenKind::ERange
             {
-                self.error(err::ErrorKind::SyntaxError, "range is non-associative");
+                self.error(err::ErrorKind::SyntaxError, "Range is non-associative", None);
                 return None
             }
 
@@ -420,7 +436,7 @@ impl Parser {
             if self.matches(&[token::TokenKind::LParen]) {
                 expr = self.finish_call(Box::new(expr))?;
             } else if self.matches(&[token::TokenKind::Dot]) {
-                let name = self.consume(token::TokenKind::Ident)?;
+                let name = self.consume(token::TokenKind::Ident, Some("Field must be named"))?;
                 expr = expr::Expr::Get(expr::Get {
                     name, object: Box::new(expr.clone())
                 })
@@ -438,14 +454,16 @@ impl Parser {
         if !self.check(token::TokenKind::RParen) {
             'outer: while {
                 if args.len() >= 64 {
-                    self.error(err::ErrorKind::SyntaxError, "Cannot have more than 64 arguments to a function\n(do you *really* need that many anyway?)")
+                    self.error(err::ErrorKind::SyntaxError,
+                               "Cannot have more than 64 arguments to a function",
+                               Some("(do you *really* need that many anyway?)"));
                 }
                 args.push(self.expression()?);
                 self.matches(&[token::TokenKind::Comma])
             } {}
         }
 
-        let paren = self.consume(token::TokenKind::RParen)?;
+        let paren = self.consume(token::TokenKind::RParen, None)?;
 
         let arity = if args.is_empty() {
             func::Arity::None
@@ -471,7 +489,7 @@ impl Parser {
 
             token::TokenKind::LParen => {
                 let expr = self.expression()?;
-                self.consume(token::TokenKind::RParen)?;
+                self.consume(token::TokenKind::RParen, None)?;
                 Some(expr.clone())
             },
 
@@ -482,7 +500,7 @@ impl Parser {
                     if self.matches(&[token::TokenKind::RBracket]) {
                         break
                     } else {
-                        self.consume(token::TokenKind::Comma)?;
+                        self.consume(token::TokenKind::Comma, None)?;
                     }
                 }
                 Some(expr::Expr::Literal(expr::Literal::Array(expr::Array {
@@ -496,23 +514,23 @@ impl Parser {
             token::TokenKind::Ident => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
 
             _ => {
-                self.error(err::ErrorKind::SyntaxError, &format!("Found {:?}, expected expression", t.lexeme));
+                self.error(err::ErrorKind::SyntaxError, &format!("Found {:?}, expected expression", t.lexeme), None);
                 None
             }
         }
     }
 
     fn new_expr(&mut self) -> Option<expr::Expr> {
-        let name = self.consume(token::TokenKind::Ident)?;
+        let name = self.consume(token::TokenKind::Ident, Some("Instance must have name"))?;
         let mut args = Vec::new();
-        if let Some(_) = self.consume(token::TokenKind::LParen) {
+        if let Some(_) = self.consume(token::TokenKind::LParen, None) {
             loop {
-                let inst = self.consume(token::TokenKind::Ident)?.lexeme;
-                self.consume(token::TokenKind::Assign)?;
+                let inst = self.consume(token::TokenKind::Ident, Some("Data must have name"))?.lexeme;
+                self.consume(token::TokenKind::Assign, None)?;
                 let value = self.expression()?;
                 args.push((inst, value));
                 if !self.matches(&[token::TokenKind::RParen]) {
-                    self.consume(token::TokenKind::Comma)?;
+                    self.consume(token::TokenKind::Comma, None)?;
                 } else {
                     break
                 }
@@ -523,13 +541,13 @@ impl Parser {
         }))
     }
 
-    fn consume(&mut self, tk: token::TokenKind) -> Option<token::Token> {
+    fn consume(&mut self, tk: token::TokenKind, extra: Option<&str>) -> Option<token::Token> {
         self.skip_newlines();
         if self.check(tk) {
             Some(self.advance())
         } else {
             let t = self.peek().kind;
-            self.error(err::ErrorKind::UnexpectedToken, &format!("Found {:?}, expected {:?}", t, tk));
+            self.error(err::ErrorKind::UnexpectedToken, &format!("Found {:?}, expected {:?}", t, tk), extra);
             None
         }
     }
@@ -601,8 +619,12 @@ impl Parser {
         self.tokens[self.current - 1].clone()
     }
 
-    fn error(&mut self, kind: ErrorKind, msg: &str) {
-        self.err.push_str(&format!("Line {} - {:?}: {}\n", self.line, kind, msg));
+    fn error(&mut self, kind: ErrorKind, msg: &str, extra: Option<&str>) {
+        if let Some(extra) = extra {
+            self.err.push(PiccoloError::with_info(kind, msg, self.line, extra));
+        } else {
+            self.err.push(PiccoloError::new(kind, msg, self.line));
+        }
     }
 }
 

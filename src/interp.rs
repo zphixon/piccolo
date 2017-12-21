@@ -9,7 +9,7 @@ use ::*;
 use expr::ExprAccept;
 use stmt::StmtAccept;
 use value::{Value, is_equal, is_truthy};
-use err::ErrorKind;
+use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
 
 pub struct Interpreter {
@@ -98,7 +98,7 @@ impl Interpreter {
         Interpreter { env }
     }
 
-    pub fn interpret(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Value>, String> {
+    pub fn interpret(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Value>, PiccoloError> {
         for stmt in stmts {
             if let Some(v) = self.execute(stmt)? {
                 return Ok(Some(v))
@@ -108,29 +108,29 @@ impl Interpreter {
         Ok(None)
     }
 
-    pub fn execute_list(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Value>, String> {
+    pub fn execute_list(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Value>, PiccoloError> {
         self.env.push();
         let result = self.interpret(stmts);
         self.env.pop();
         result
     }
 
-    pub fn execute(&mut self, stmt: &stmt::Stmt) -> Result<Option<Value>, String> {
+    pub fn execute(&mut self, stmt: &stmt::Stmt) -> Result<Option<Value>, PiccoloError> {
         stmt.accept(&mut *self)
     }
 
-    pub fn evaluate(&mut self, expr: &expr::Expr) -> Result<Value, String> {
+    pub fn evaluate(&mut self, expr: &expr::Expr) -> Result<Value, PiccoloError> {
         expr.accept(&mut *self)
     }
 
-    fn error(&mut self, line: u64, kind: ErrorKind, why: &str) -> String {
-        // PiccoloError::new(kind, line, why)
-        format!("Error, line {}: {:?} - {}", line, kind, why)
+    fn error(&mut self, line: u64, kind: ErrorKind, why: &str) -> PiccoloError {
+        PiccoloError::new(kind, why, line)
+        //format!("Error, line {}: {:?} - {}", line, kind, why)
     }
 }
 
 impl expr::ExprVisitor for Interpreter {
-    type Output = Result<Value, String>;
+    type Output = Result<Value, PiccoloError>;
 
     fn visit_binary(&mut self, e: &expr::Binary) -> Self::Output {
         let mut lhs = self.evaluate(&e.lhs)?;
@@ -369,7 +369,7 @@ impl expr::ExprVisitor for Interpreter {
             }
         };
 
-        let args: Result<Vec<Value>, String> = e.args.iter().map(|arg| self.evaluate(arg)).collect();
+        let args: Result<Vec<Value>, PiccoloError> = e.args.iter().map(|arg| self.evaluate(arg)).collect();
         let args = args?;
 
         if !func.arity.compatible(e.arity) {
@@ -393,7 +393,7 @@ impl expr::ExprVisitor for Interpreter {
 }
 
 impl stmt::StmtVisitor for Interpreter {
-    type Output = Result<Option<Value>, String>;
+    type Output = Result<Option<Value>, PiccoloError>;
 
     fn visit_expr(&mut self, s: &stmt::StmtExpr) -> Self::Output {
         s.0.accept(&mut *self)?;
