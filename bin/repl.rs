@@ -8,6 +8,7 @@ use rustyline::error::ReadlineError;
 fn main() {
     let mut interp = piccolo::interp::Interpreter::new();
     let mut rl = Editor::<()>::new();
+    rl.load_history(".piccolo_history").unwrap();
 
     loop {
         let input = rl.readline("-- ");
@@ -78,5 +79,7 @@ fn main() {
             }
         }
     }
+
+    rl.save_history(".piccolo_history").unwrap();
 }
 
