@@ -125,7 +125,6 @@ impl Interpreter {
 
     fn error(&mut self, line: u64, kind: ErrorKind, why: &str) -> PiccoloError {
         PiccoloError::new(kind, why, line)
-        //format!("Error, line {}: {:?} - {}", line, kind, why)
     }
 }
 
@@ -380,8 +379,6 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_new(&mut self, e: &expr::New) -> Self::Output {
-        use std::rc::Rc;
-        use std::cell::RefCell;
         use std::collections::HashMap;
 
         if let Some(Value::Data(data)) = self.env.get(&e.name.lexeme) {
@@ -405,31 +402,6 @@ impl expr::ExprVisitor for Interpreter {
                 }
             }
             Ok(Value::Instance(data::Instance::new(&data, fields)))
-            //let fields = HashMap::new();
-            //for &(name, value) in &e.args {
-            //    if data.is_public(&name) {
-            //        fields.insert(name.clone(), Field {
-            //            public: true,
-            //            value: self.evaluate(&value)?,
-            //        });
-            //    } else {
-            //        return Err(self.error(e.name.line, ErrorKind::NoSuchField, &format!("Field {} is private or does not exist", name)))
-            //    }
-            //}
-            //for &(name, value) in &data.fields {
-            //    if !value.public {
-            //        fields.insert(name.clone(), value.clone());
-            //    }
-            //}
-            //let mut vars = HashMap::new();
-            //for &(ref name, ref expr) in &e.args {
-            //    vars.insert(name.clone(), self.evaluate(expr)?);
-            //}
-            //Ok(Value::Instance(data::Instance {
-            //    inner: Rc::new(RefCell::new(data::InstanceInner {
-            //        vars, data: Rc::new(data),
-            //    }))
-            //}))
         } else {
             Err(self.error(e.name.line, ErrorKind::NonData, "Tried to create data from non-data"))
         }
