@@ -243,6 +243,25 @@ impl Parser {
     fn data(&mut self) -> Option<stmt::Stmt> {
         let name = self.consume(token::TokenKind::Ident, Some("Data needs name"))?;
         self.consume(token::TokenKind::Is, None)?;
+
+        let mut fields = Vec::new();
+        while !self.check(token::TokenKind::Fn)
+            && !self.check(token::TokenKind::End)
+            && !self.is_at_end()
+        {
+            let public = if self.matches(&[token::TokenKind::Pub]) {
+                true
+            } else {
+                false
+            };
+
+            let name = self.consume(token::TokenKind::Ident, Some("Field must have name"))?;
+            self.consume(token::TokenKind::Assign, None)?;
+            let value = self.expression()?;
+
+            fields.push((public, name, value));
+        }
+
         let mut methods = Vec::new();
         while !self.check(token::TokenKind::End) && !self.is_at_end() {
             self.consume(token::TokenKind::Fn, Some("Expected method to have name"))?;
@@ -250,9 +269,10 @@ impl Parser {
                 methods.push(func);
             } else { panic!("rust broke") }
         }
+
         self.consume(token::TokenKind::End, Some("Unterminated data"))?;
         Some(stmt::Stmt::Data(stmt::Data {
-            name, methods,
+            name, methods, fields
         }))
     }
 

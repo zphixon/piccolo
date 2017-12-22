@@ -365,7 +365,7 @@ impl expr::ExprVisitor for Interpreter {
         let mut func = match callee {
             Value::Func(f) => f,
             v => {
-                return Err(self.error(e.paren.line, ErrorKind::NonFunction, &format!("attempt to call non-function {:?}", v)));
+                return Err(self.error(e.paren.line, ErrorKind::NonFunction, &format!("Attempt to call non-function {:?}", v)));
             }
         };
 
@@ -373,22 +373,90 @@ impl expr::ExprVisitor for Interpreter {
         let args = args?;
 
         if !func.arity.compatible(e.arity) {
-            return Err(self.error(e.paren.line, ErrorKind::IncorrectArity, &format!("expected {} args, got {}", func.arity.to_number(), args.len())));
+            return Err(self.error(e.paren.line, ErrorKind::IncorrectArity, &format!("Expected {} args, got {}", func.arity.to_number(), args.len())));
         }
 
         func.call(&mut *self, args)
     }
 
     fn visit_new(&mut self, e: &expr::New) -> Self::Output {
-        Err(self.error(e.name.line, ErrorKind::Unimplemented, "not yet implemented"))
+        use std::rc::Rc;
+        use std::cell::RefCell;
+        use std::collections::HashMap;
+
+        if let Some(Value::Data(data)) = self.env.get(&e.name.lexeme) {
+            let mut fields: HashMap<String, data::Field> = HashMap::new();
+            for (name, value) in &data.fields {
+                fields.insert(name.clone(), value.clone());
+            }
+            for &(ref name, ref value) in &e.args {
+                let f = fields.get(name).cloned();
+                if let Some(ref field) = f {
+                    if field.public {
+                        fields.insert(name.clone(), data::Field {
+                            public: true,
+                            value: self.evaluate(&value)?,
+                        });
+                    } else {
+                        return Err(self.error(e.name.line, ErrorKind::NoSuchField, &format!("Field {} is private", name)))
+                    }
+                } else {
+                    return Err(self.error(e.name.line, ErrorKind::NoSuchField, &format!("Field {} does not exist", name)))
+                }
+            }
+            Ok(Value::Instance(data::Instance::new(&data, fields)))
+            //let fields = HashMap::new();
+            //for &(name, value) in &e.args {
+            //    if data.is_public(&name) {
+            //        fields.insert(name.clone(), Field {
+            //            public: true,
+            //            value: self.evaluate(&value)?,
+            //        });
+            //    } else {
+            //        return Err(self.error(e.name.line, ErrorKind::NoSuchField, &format!("Field {} is private or does not exist", name)))
+            //    }
+            //}
+            //for &(name, value) in &data.fields {
+            //    if !value.public {
+            //        fields.insert(name.clone(), value.clone());
+            //    }
+            //}
+            //let mut vars = HashMap::new();
+            //for &(ref name, ref expr) in &e.args {
+            //    vars.insert(name.clone(), self.evaluate(expr)?);
+            //}
+            //Ok(Value::Instance(data::Instance {
+            //    inner: Rc::new(RefCell::new(data::InstanceInner {
+            //        vars, data: Rc::new(data),
+            //    }))
+            //}))
+        } else {
+            Err(self.error(e.name.line, ErrorKind::NonData, "Tried to create data from non-data"))
+        }
     }
 
     fn visit_get(&mut self, e: &expr::Get) -> Self::Output {
-        Err(self.error(e.name.line, ErrorKind::Unimplemented, "not yet implemented"))
+        let value = self.evaluate(&*e.object)?;
+        if let Value::Instance(ref value) = value {
+            if let Some(value) = value.get(&e.name.lexeme) {
+                Ok(value)
+            } else {
+                Err(self.error(e.name.line, ErrorKind::NoSuchField, &format!("No field named {}", e.name.lexeme)))
+            }
+        } else {
+            Err(self.error(e.name.line, ErrorKind::NonInstance, "Non-instance does not have fields"))
+        }
     }
 
     fn visit_set(&mut self, e: &expr::Set) -> Self::Output {
-        Err(self.error(e.name.line, ErrorKind::Unimplemented, "not yet implemented"))
+        let value = self.evaluate(&*e.object)?;
+        if let Value::Instance(ref instance) = value {
+            let value = self.evaluate(&*e.value)?;
+            instance.set(&e.name.lexeme, value.clone());
+            Ok(value)
+        } else {
+            Err(self.error(e.name.line, ErrorKind::NonInstance, "Non-instance does not have fields"))
+        }
     }
 }
 
@@ -471,7 +539,23 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_data(&mut self, s: &stmt::Data) -> Self::Output {
-        Err(self.error(s.name.line, ErrorKind::Unimplemented, "not yet implemented"))
+        let mut fields = std::collections::HashMap::new();
+        for &(public, ref name, ref value) in &s.fields {
+            fields.insert(name.lexeme.clone(), data::Field {
+                public, value: self.evaluate(&value)?,
+            });
+        }
+
+        for func in &s.methods {
+            fields.insert(func.name.lexeme.clone(), data::Field {
+                public: true, // TODO
+                value: Value::Func(func::Func::new(func.arity, func.clone())),
+            });
+        }
+
+        let data = data::Data::new(&s.name.lexeme, fields);
+        self.env.set(&s.name.lexeme, Value::Data(data));
+        Ok(None)
     }
 }
 

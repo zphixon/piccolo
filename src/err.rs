@@ -52,6 +52,8 @@ pub enum ErrorKind {
     IncorrectArity,
     NonFunction,
     NonInstance,
+    NonData,
+    NoSuchField,
     Unimplemented,
     NonIterator,
 }
