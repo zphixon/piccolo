@@ -69,6 +69,14 @@ impl Env {
             .expect("empty env");
     }
 
+    pub fn set_local(&self, name: &str, value: value::Value) {
+        let mut inner = self.inner.borrow_mut();
+
+        inner.inner.iter_mut().rev().nth(0)
+            .map(|m| m.insert(name.to_owned(), value))
+            .expect("empty env");
+    }
+
     pub fn get(&self, name: &str) -> Option<value::Value> {
         for scope in self.inner.borrow().inner.iter().rev() {
             if scope.contains_key(name) {

@@ -46,14 +46,21 @@ impl Func {
     pub fn new(arity: Arity, decl: stmt::Func) -> Self {
         Func {
             arity,
-            kind: FuncKind::Normal(NormalFunc { decl }),
+            kind: FuncKind::Normal(NormalFunc { decl, method: false }),
+        }
+    }
+
+    pub fn new_method(arity: Arity, decl: stmt::Func) -> Self {
+        Func {
+            arity,
+            kind: FuncKind::Normal(NormalFunc { decl, method: true }),
         }
     }
 
     pub fn new_native(arity: Arity, native: NativeFunc) -> Self {
         Func {
             arity,
-            kind: FuncKind::Native(native)
+            kind: FuncKind::Native(native),
         }
     }
 
@@ -70,18 +77,31 @@ impl Func {
             _ => false,
         }
     }
+
+    pub fn is_method(&self) -> bool {
+        match self.kind {
+            FuncKind::Normal(ref n) => n.method,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct NormalFunc {
     pub decl: stmt::Func,
+    pub method: bool,
 }
 
 impl NormalFunc {
     pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, err::PiccoloError> {
         interp.env.push();
+
+        //if self.method {
+        //    interp.env.set("me", )
+        //}
+
         for (i, arg) in args.iter().enumerate() {
-            interp.env.set(&self.decl.args[i].lexeme, arg.clone());
+            interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
         }
 
         let result = interp.interpret(&self.decl.body);

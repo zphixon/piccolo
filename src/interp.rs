@@ -375,6 +375,10 @@ impl expr::ExprVisitor for Interpreter {
             return Err(self.error(e.paren.line, ErrorKind::IncorrectArity, &format!("Expected {} args, got {}", func.arity.to_number(), args.len())));
         }
 
+        //if func.is_method() {
+        //    args.insert(0, );
+        //}
+
         func.call(&mut *self, args)
     }
 
@@ -521,7 +525,7 @@ impl stmt::StmtVisitor for Interpreter {
         for func in &s.methods {
             fields.insert(func.name.lexeme.clone(), data::Field {
                 public: true, // TODO
-                value: Value::Func(func::Func::new(func.arity, func.clone())),
+                value: Value::Func(func::Func::new_method(func.arity, func.clone())),
             });
         }
 

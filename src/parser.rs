@@ -8,6 +8,7 @@ pub struct Parser {
     err: Vec<PiccoloError>,
     current: usize,
     tokens: Vec<token::Token>,
+    in_data: bool,
 }
 
 impl Parser {
@@ -17,6 +18,7 @@ impl Parser {
             err: Vec::new(),
             current: 0,
             tokens,
+            in_data: false,
         }
     }
 
@@ -181,6 +183,11 @@ impl Parser {
 
         let mut args = Vec::new();
         let mut multi = false;
+        let method = self.in_data;
+
+        if self.in_data {
+            args.push(self.consume(token::TokenKind::Me, Some("Methods must have self parameter `me`"))?);
+        }
 
         if !self.check(token::TokenKind::RParen) {
             'outer: while {
@@ -215,7 +222,7 @@ impl Parser {
         };
 
         Some(stmt::Stmt::Func(stmt::Func {
-            arity, name, args, body,
+            arity, name, args, body, method
         }))
     }
 
@@ -241,6 +248,7 @@ impl Parser {
     }
 
     fn data(&mut self) -> Option<stmt::Stmt> {
+        self.in_data = true;
         let name = self.consume(token::TokenKind::Ident, Some("Data needs name"))?;
         self.consume(token::TokenKind::Is, None)?;
 
@@ -271,6 +279,7 @@ impl Parser {
         }
 
         self.consume(token::TokenKind::End, Some("Unterminated data"))?;
+        self.in_data = false;
         Some(stmt::Stmt::Data(stmt::Data {
             name, methods, fields
         }))

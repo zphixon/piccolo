@@ -92,6 +92,7 @@ pub struct Func {
     pub args: Vec<token::Token>,
     pub arity: func::Arity,
     pub body: Vec<Stmt>,
+    pub method: bool,
 }
 
 impl StmtAccept for Func {
