@@ -99,7 +99,7 @@ impl NormalFunc {
         let inst = interp.env.latest_me();
         if self.method {
             inst.all_public();
-            interp.env.set("me", value::Value::Instance(inst.clone()));
+            interp.env.set_local("me", value::Value::Instance(inst.clone()));
         }
 
         for (i, arg) in args.iter().enumerate() {

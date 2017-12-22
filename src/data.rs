@@ -48,7 +48,7 @@ pub struct InstanceInner {
     pub vars: HashMap<String, Field>,
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone)]
 pub struct Instance {
     pub inner: Rc<RefCell<InstanceInner>>,
 }
@@ -106,6 +106,12 @@ impl Instance {
                 value, public, normal,
             });
         }
+    }
+}
+
+impl fmt::Debug for Instance {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", value::Value::Instance(self.clone()))
     }
 }
 

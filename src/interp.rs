@@ -68,7 +68,7 @@ impl Interpreter {
                 Value::Array(_) => Ok("array".into()),
                 Value::Func(_) => Ok("fn".into()),
                 Value::Data(_) => Ok("data".into()),
-                Value::Instance(_) => Ok("instance".into()),
+                Value::Instance(ref i) => Ok(i.inner.borrow().data.name.clone().into()),
                 Value::Nil => Ok("nil".into()),
             }
         });
@@ -375,11 +375,13 @@ impl expr::ExprVisitor for Interpreter {
             return Err(self.error(e.paren.line, ErrorKind::IncorrectArity, &format!("Expected {} args, got {}", func.arity.to_number(), args.len())));
         }
 
-        //if func.is_method() {
-        //    args.insert(0, );
-        //}
+        let result = func.call(&mut *self, args);
 
-        func.call(&mut *self, args)
+        if func.is_method() {
+            self.env.pop_me();
+        }
+
+        result
     }
 
     fn visit_new(&mut self, e: &expr::New) -> Self::Output {

@@ -50,7 +50,14 @@ impl Env {
 
     pub fn push_me(&self, me: data::Instance) {
         let mut inner = self.inner.borrow_mut();
-        inner.me.push(me);
+        if !inner.me.contains(&me) {
+            inner.me.push(me);
+        }
+    }
+
+    pub fn pop_me(&self) {
+        let mut inner = self.inner.borrow_mut();
+        inner.me.pop().expect("empty me");
     }
 
     pub fn latest_me(&self) -> data::Instance {
@@ -107,7 +114,10 @@ impl Env {
 
 impl std::fmt::Display for Env {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let mut s = String::from("env:\n");
+        let mut s = String::from("env:\n  me:\n");
+        for inst in self.inner.borrow().me.iter() {
+            s.push_str(&format!("    {:?}\n", inst));
+        }
         for (n, ctx) in self.inner.borrow().inner.iter().rev().enumerate() {
             s.push_str(&format!("  layer {}\n", n));
             for (k, v) in ctx.iter() {
