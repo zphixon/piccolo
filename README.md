@@ -21,6 +21,8 @@ embedding in Rust projects.
         
 ### Outstanding
 
+* [ ] document/polish API
+    * [ ] annotate heavily
 * [ ] varargs for normal functions
 * [ ] array indexing
 * [ ] public/private methods
