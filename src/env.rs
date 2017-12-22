@@ -91,7 +91,7 @@ impl std::fmt::Display for Env {
         for (n, ctx) in self.inner.borrow().inner.iter().rev().enumerate() {
             s.push_str(&format!("  layer {}\n", n));
             for (k, v) in ctx.iter() {
-                s.push_str(&format!("    {} = {}\n", k, v));
+                s.push_str(&format!("    {} = {:?}\n", k, v));
             }
         }
         write!(f, "{}", s)
