@@ -30,6 +30,7 @@ use std::cell::RefCell;
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct EnvInner {
     pub inner: Vec<HashMap<String, value::Value>>,
+    pub me: Vec<data::Instance>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -41,9 +42,20 @@ impl Env {
     pub fn new() -> Self {
         let inner = Rc::new(RefCell::new(EnvInner {
             inner: vec![HashMap::new()],
+            me: Vec::new()
         }));
 
         Env { inner }
+    }
+
+    pub fn push_me(&self, me: data::Instance) {
+        let mut inner = self.inner.borrow_mut();
+        inner.me.push(me);
+    }
+
+    pub fn latest_me(&self) -> data::Instance {
+        let inner = self.inner.borrow();
+        inner.me[inner.me.len() - 1].clone()
     }
 
     pub fn push(&self) {

@@ -395,6 +395,7 @@ impl expr::ExprVisitor for Interpreter {
                 if let Some(ref field) = f {
                     if field.public {
                         fields.insert(name.clone(), data::Field {
+                            normal: true,
                             public: true,
                             value: self.evaluate(&value)?,
                         });
@@ -413,9 +414,10 @@ impl expr::ExprVisitor for Interpreter {
 
     fn visit_get(&mut self, e: &expr::Get) -> Self::Output {
         let value = self.evaluate(&*e.object)?;
-        if let Value::Instance(ref value) = value {
-            if let Some(value) = value.get(&e.name.lexeme) {
-                Ok(value)
+        if let Value::Instance(ref inst) = value {
+            if let Some(field) = inst.get(&e.name.lexeme) {
+                self.env.push_me(inst.clone());
+                Ok(field)
             } else {
                 Err(self.error(e.name.line, ErrorKind::NoSuchField, &format!("No field named {}", e.name.lexeme)))
             }
@@ -518,12 +520,14 @@ impl stmt::StmtVisitor for Interpreter {
         let mut fields = std::collections::HashMap::new();
         for &(public, ref name, ref value) in &s.fields {
             fields.insert(name.lexeme.clone(), data::Field {
+                normal: public,
                 public, value: self.evaluate(&value)?,
             });
         }
 
         for func in &s.methods {
             fields.insert(func.name.lexeme.clone(), data::Field {
+                normal: true, // TODO
                 public: true, // TODO
                 value: Value::Func(func::Func::new_method(func.arity, func.clone())),
             });

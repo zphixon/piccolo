@@ -96,15 +96,18 @@ impl NormalFunc {
     pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, err::PiccoloError> {
         interp.env.push();
 
-        //if self.method {
-        //    interp.env.set("me", )
-        //}
+        let inst = interp.env.latest_me();
+        if self.method {
+            inst.all_public();
+            interp.env.set("me", value::Value::Instance(inst.clone()));
+        }
 
         for (i, arg) in args.iter().enumerate() {
             interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
         }
 
         let result = interp.interpret(&self.decl.body);
+        inst.reset();
         interp.env.pop();
 
         result.map(|opt| match opt {

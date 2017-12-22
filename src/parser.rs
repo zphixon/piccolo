@@ -185,9 +185,9 @@ impl Parser {
         let mut multi = false;
         let method = self.in_data;
 
-        if self.in_data {
-            args.push(self.consume(token::TokenKind::Me, Some("Methods must have self parameter `me`"))?);
-        }
+        //if self.in_data {
+        //    args.push(self.consume(token::TokenKind::Me, Some("Methods must have self parameter `me`"))?);
+        //}
 
         if !self.check(token::TokenKind::RParen) {
             'outer: while {
@@ -540,6 +540,7 @@ impl Parser {
 
             token::TokenKind::New => self.new_expr(),
 
+            token::TokenKind::Me => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
             token::TokenKind::Ident => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
 
             _ => {

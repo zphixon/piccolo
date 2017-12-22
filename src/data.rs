@@ -9,6 +9,7 @@ use std::fmt;
 #[derive(PartialEq, Clone)]
 pub struct Field {
     pub public: bool,
+    pub normal: bool,
     pub value: value::Value,
 }
 
@@ -62,6 +63,20 @@ impl Instance {
         }
     }
 
+    pub fn all_public(&self) {
+        let mut inner = self.inner.borrow_mut();
+        for (_, var) in inner.vars.iter_mut() {
+            var.public = true;
+        }
+    }
+
+    pub fn reset(&self) {
+        let mut inner = self.inner.borrow_mut();
+        for (_, var) in inner.vars.iter_mut() {
+            var.public = var.normal;
+        }
+    }
+
     // TODO: move this to Result
     pub fn get(&self, name: &str) -> Option<value::Value> {
         if self.inner.borrow().vars.contains_key(name) {
@@ -81,8 +96,14 @@ impl Instance {
     pub fn set(&self, name: &str, value: value::Value) {
         let exists = {self.inner.borrow().vars.get(name).is_some()};
         if exists {
+            let (public, normal) = {
+                let inner = self.inner.borrow();
+                let var = inner.vars.get(name).unwrap();
+                (var.public, var.normal)
+            };
+
             self.inner.borrow_mut().vars.insert(name.to_owned(), Field {
-                value, public: true,
+                value, public, normal,
             });
         }
     }
