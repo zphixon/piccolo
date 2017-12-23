@@ -28,6 +28,14 @@ pub fn parse_file(filename: &str) -> Result<Vec<token::Token>, String> {
     }
 }
 
+pub fn new_native_func(arity: func::Arity, func: func::NativeFuncType) -> value::Value {
+    value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func)))
+}
+
+pub fn new_native_method(arity: func::Arity, func: func::NativeFuncType) -> value::Value {
+    value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func).method()))
+}
+
 #[derive(Copy, Clone)]
 pub struct AstPrinter;
 

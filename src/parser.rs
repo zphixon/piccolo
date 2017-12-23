@@ -76,8 +76,15 @@ impl Parser {
                         value,
                     }))
                 }
+                expr::Expr::Index(i) => {
+                    Some(expr::Expr::Set(expr::Set {
+                        object: Box::new(expr::Expr::Index(i.clone())),
+                        name: equals,
+                        value
+                    }))
+                }
                 _ => {
-                    self.error(err::ErrorKind::SyntaxError, equals.line, &format!("Expected variable name, got {:?}", equals), None);
+                    self.error(err::ErrorKind::SyntaxError, equals.line, &format!("Expected variable name, got {:?}", expr.clone()), None);
                     None
                 }
             }

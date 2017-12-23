@@ -104,6 +104,119 @@ impl Interpreter {
             }
         });
 
+        let mut fields = std::collections::HashMap::new();
+
+        fields.insert("arr".into(), data::Field {
+            public: false, normal: false, value: Value::Array(vec![])
+        });
+
+        fields.insert("push".into(), data::Field {
+            public: true, normal: true, value: new_native_method(func::Arity::Some(1), |i: &mut Interpreter, args: &[Value]| {
+                if let Value::Instance(me) = i.env.get("me").expect("me does not exist") {
+                    match me.get("arr").expect("vec has no arr") {
+                        Value::Array(ref mut a) => {
+                            a.push(args[0].clone());
+                            me.set("arr", Value::Array(a.clone()));
+                            Ok(Value::Nil)
+                        }
+                        _ => panic!("arr is not array")
+                    }
+                } else {
+                    panic!("me is not instance")
+                }
+            }),
+        });
+
+        fields.insert("pop".into(), data::Field {
+            public: true, normal: true, value: new_native_method(func::Arity::None, |i: &mut Interpreter, args: &[Value]| {
+                if let Value::Instance(me) = i.env.get("me").expect("me does not exist") {
+                    match me.get("arr").expect("vec has no arr") {
+                        Value::Array(ref mut a) => {
+                            if let Some(p) = a.pop() {
+                                me.set("arr", Value::Array(a.clone()));
+                                Ok(p)
+                            } else {
+                                Err(PiccoloError::new(ErrorKind::IndexError, "Vec is empty", 0))
+                            }
+                        }
+                        _ => panic!("arr is not array")
+                    }
+                } else {
+                    panic!("me is not instance")
+                }
+            }),
+        });
+
+        fields.insert("len".into(), data::Field {
+            public: true, normal: true, value: new_native_method(func::Arity::None, |i: &mut Interpreter, args: &[Value]| {
+                if let Value::Instance(me) = i.env.get("me").expect("me does not exist") {
+                    match me.get("arr").expect("vec has no arr") {
+                        Value::Array(ref mut a) => {
+                            Ok(Value::Integer(a.len() as i64))
+                        }
+                        _ => panic!("arr is not array")
+                    }
+                } else {
+                    panic!("me is not instance")
+                }
+            }),
+        });
+
+        fields.insert("set".into(), data::Field {
+            public: true, normal: true, value: new_native_method(func::Arity::Some(2), |i: &mut Interpreter, args: &[Value]| {
+                if let Value::Instance(me) = i.env.get("me").expect("me does not exist") {
+                    match me.get("arr").expect("vec has no arr") {
+                        Value::Array(ref mut a) => {
+                            if let Value::Integer(i) = args[0] {
+                                if (i as usize) < a.len() {
+                                    a[i as usize] = args[1].clone();
+                                    Ok(Value::Nil)
+                                } else if (i as usize) == a.len() {
+                                    a.push(args[1].clone());
+                                    me.set("arr", Value::Array(a.clone()));
+                                    Ok(Value::Nil)
+                                } else {
+                                    Err(PiccoloError::new(ErrorKind::IndexError, "index out of bounds", 0))
+                                }
+                            } else {
+                                Err(PiccoloError::new(ErrorKind::IndexError, "cannot index with non-integer", 0))
+                            }
+                        }
+                        _ => panic!("arr is not array")
+                    }
+                } else {
+                    panic!("me is not instance")
+                }
+            }),
+        });
+
+        fields.insert("get".into(), data::Field {
+            public: true, normal: true, value: new_native_method(func::Arity::Some(1), |i: &mut Interpreter, args: &[Value]| {
+                if let Value::Instance(me) = i.env.get("me").expect("me does not exist") {
+                    match me.get("arr").expect("vec has no arr") {
+                        Value::Array(ref mut a) => {
+                            if let Value::Integer(i) = args[0] {
+                                if (i as usize) < a.len() {
+                                    Ok(a[i as usize].clone())
+                                } else {
+                                    Err(PiccoloError::new(ErrorKind::IndexError, "index out of bounds", 0))
+                                }
+                            } else {
+                                Err(PiccoloError::new(ErrorKind::IndexError, "cannot index with non-integer", 0))
+                            }
+                        }
+                        _ => panic!("arr is not array")
+                    }
+                } else {
+                    panic!("me is not instance")
+                }
+            }),
+        });
+
+        env.set("vec", Value::Data(data::Data {
+            name: String::from("vec"), fields
+        }));
+
         Interpreter { env }
     }
 
@@ -438,14 +551,46 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_set(&mut self, e: &expr::Set) -> Self::Output {
-        let value = self.evaluate(&*e.object)?;
-        if let Value::Instance(ref instance) = value {
-            let value = self.evaluate(&*e.value)?;
-            instance.set(&e.name.lexeme, value.clone());
-            Ok(value)
-        } else {
-            Err(self.error(e.name.line, ErrorKind::NonInstance, "Non-instance does not have fields"))
+        match &*e.object {
+            &expr::Expr::Index(ref expr) => {
+                let i = self.evaluate(&*expr.i)?;
+                match i {
+                    Value::Integer(idx) => {
+                        panic!("{:?}", expr);
+                    },
+                    idx => Err(self.error(expr.rb.line, ErrorKind::IndexError, &format!("Cannot index with non-integer {:?}", idx)))
+                }
+            },
+            _ => {
+                let value = self.evaluate(&*e.object)?;
+                if let Value::Instance(ref instance) = value {
+                    let value = self.evaluate(&*e.value)?;
+                    instance.set(&e.name.lexeme, value.clone());
+                    Ok(value)
+                } else {
+                    Err(self.error(e.name.line, ErrorKind::NonInstance, "Non-instance does not have fields"))
+                }
+            }
         }
+        //let value = self.evaluate(&*e.object)?;
+        //match value {
+        //    Value::Instace(ref instance) => {
+        //        let value = self.evaluate(&*e.value)?;
+        //        instance.set(&e.name.lexeme, value.clone());
+        //        Ok(value)
+        //    },
+        //    Value::Array(ref mut r) => {
+        //        println
+        //    }
+        //}
+        //println!("{:?}", e);
+        //if let Value::Instance(ref instance) = value {
+        //    let value = self.evaluate(&*e.value)?;
+        //    instance.set(&e.name.lexeme, value.clone());
+        //    Ok(value)
+        //} else {
+        //    Err(self.error(e.name.line, ErrorKind::NonInstance, "Non-instance does not have fields"))
+        //}
     }
 
     fn visit_index(&mut self, e: &expr::Index) -> Self::Output {

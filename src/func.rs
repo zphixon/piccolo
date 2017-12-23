@@ -81,7 +81,7 @@ impl Func {
     pub fn is_method(&self) -> bool {
         match self.kind {
             FuncKind::Normal(ref n) => n.method,
-            _ => false,
+            FuncKind::Native(ref n) => n.method,
         }
     }
 }
@@ -128,18 +128,45 @@ pub type NativeFuncType = fn(&mut interp::Interpreter, &[value::Value]) -> Resul
 #[derive(Clone)]
 pub struct NativeFunc {
     pub inner: NativeFuncType,
+    pub method: bool,
 }
 
 impl NativeFunc {
     pub fn new(inner: NativeFuncType) -> Self {
         NativeFunc {
             inner,
+            method: false,
+        }
+    }
+
+    pub fn method(self) -> Self {
+        NativeFunc {
+            method: true,
+            ..self
         }
     }
 
     fn call(&self, mut interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
+        interp.env.push();
+
+        let inst = interp.env.latest_me();
+        if self.method {
+            let inst = inst.as_ref().unwrap();
+            inst.all_public();
+            interp.env.set_local("me", value::Value::Instance(inst.clone()));
+        }
+
         let inner = self.inner;
-        inner(&mut interp, args)
+        let result = inner(&mut interp, args);
+
+        if self.method {
+            let inst = inst.as_ref().unwrap();
+            inst.reset();
+        }
+
+        interp.env.pop();
+
+        result
     }
 }
 
