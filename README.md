@@ -6,8 +6,6 @@ embedding in Rust projects.
 
 ## TODO
 
-### Done
-
 * [X] lexer
 * [X] parser
 * [X] support for most stuff
