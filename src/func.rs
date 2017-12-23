@@ -98,6 +98,7 @@ impl NormalFunc {
 
         let inst = interp.env.latest_me();
         if self.method {
+            let inst = inst.as_ref().unwrap();
             inst.all_public();
             interp.env.set_local("me", value::Value::Instance(inst.clone()));
         }
@@ -107,7 +108,12 @@ impl NormalFunc {
         }
 
         let result = interp.interpret(&self.decl.body);
-        inst.reset();
+
+        if self.method {
+            let inst = inst.as_ref().unwrap();
+            inst.reset();
+        }
+
         interp.env.pop();
 
         result.map(|opt| match opt {

@@ -60,9 +60,13 @@ impl Env {
         inner.me.pop().expect("empty me");
     }
 
-    pub fn latest_me(&self) -> data::Instance {
+    pub fn latest_me(&self) -> Option<data::Instance> {
         let inner = self.inner.borrow();
-        inner.me[inner.me.len() - 1].clone()
+        if inner.me.is_empty() {
+            None
+        } else {
+            Some(inner.me[inner.me.len() - 1].clone())
+        }
     }
 
     pub fn push(&self) {
