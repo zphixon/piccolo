@@ -16,7 +16,8 @@ embedding in Rust projects.
     * [X] data
         * [X] methods
         * [X] private/public instance variables
-* [X] array indexing
+* [ ] lua-style userdata
+* [ ] array indexing
 * [ ] document/polish API
     * [ ] annotate heavily
 * [ ] varargs for normal functions
