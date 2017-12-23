@@ -198,6 +198,7 @@ impl expr::ExprVisitor for AstPrinter {
         e.0.lexeme.clone()
     }
 
+    #[allow(map_clone)]
     fn visit_call(&mut self, e: &expr::Call) -> String {
         let args: Vec<&expr::Expr> = e.args.iter().map(|x| x).collect();
         let mut name = String::from("call ");

@@ -50,10 +50,8 @@ fn main() {
 
                                 if v.is_err() {
                                     println!("{}", v.err().unwrap());
-                                } else {
-                                    if let Some(mut ret) = v.unwrap() {
-                                        println!("{:?}", ret);
-                                    }
+                                } else if let Some(mut ret) = v.unwrap() {
+                                    println!("{:?}", ret);
                                 }
                             }
                         } else {

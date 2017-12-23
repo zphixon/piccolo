@@ -248,11 +248,7 @@ impl Parser {
             && !self.check(token::TokenKind::End)
             && !self.is_at_end()
         {
-            let public = if self.matches(&[token::TokenKind::Pub]) {
-                true
-            } else {
-                false
-            };
+            let public = self.matches(&[token::TokenKind::Pub]);
             let name = self.consume(token::TokenKind::Ident, Some("Field must have name"))?;
             self.consume(token::TokenKind::Assign, None)?;
             let value = self.expression()?;
@@ -275,6 +271,7 @@ impl Parser {
         }))
     }
 
+    #[allow(wrong_self_convention)]
     fn is_block(&mut self) -> Option<Vec<stmt::Stmt>> {
         self.consume(token::TokenKind::Is, Some("fn, data start with keyword `is`"))?;
 
@@ -470,7 +467,7 @@ impl Parser {
         let mut args = Vec::new();
 
         if !self.check(token::TokenKind::RParen) {
-            'outer: while {
+            while {
                 if args.len() >= 64 {
                     let l = self.previous().line;
                     self.error(err::ErrorKind::SyntaxError, l,
@@ -530,8 +527,8 @@ impl Parser {
 
             token::TokenKind::New => self.new_expr(),
 
-            token::TokenKind::Me => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
-            token::TokenKind::Ident => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
+            token::TokenKind::Me | token::TokenKind::Ident
+                => Some(expr::Expr::Variable(expr::Variable(self.previous()))),
 
             _ => {
                 self.error(err::ErrorKind::SyntaxError, t.line, &format!("Found {:?}, expected expression", t.lexeme), None);
@@ -543,7 +540,7 @@ impl Parser {
     fn new_expr(&mut self) -> Option<expr::Expr> {
         let name = self.consume(token::TokenKind::Ident, Some("Instance must have name"))?;
         let mut args = Vec::new();
-        if let Some(_) = self.consume(token::TokenKind::LParen, None) {
+        if self.consume(token::TokenKind::LParen, None).is_some() {
             loop {
                 let inst = self.consume(token::TokenKind::Ident, Some("Data must have name"))?.lexeme;
                 self.consume(token::TokenKind::Assign, None)?;

@@ -119,7 +119,7 @@ impl Env {
 impl std::fmt::Display for Env {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut s = String::from("env:\n  me:\n");
-        for inst in self.inner.borrow().me.iter() {
+        for inst in &self.inner.borrow().me {
             s.push_str(&format!("    {:?}\n", inst));
         }
         for (n, ctx) in self.inner.borrow().inner.iter().rev().enumerate() {

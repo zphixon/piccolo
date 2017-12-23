@@ -17,12 +17,13 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
+    #![allow(new_without_default_derive)]
     pub fn new() -> Self {
         let env = env::Env::new();
 
         env.new_native_func("clock", func::Arity::None, |_, _| {
             let ts = time::now().to_timespec();
-            Ok((ts.sec * 1_000 + ts.nsec as i64 / 1_000_000).into())
+            Ok((ts.sec * 1_000 + i64::from(ts.nsec) / 1_000_000).into())
         });
 
         env.new_native_func("prln", func::Arity::Multi, |_, args| {
@@ -164,7 +165,7 @@ impl expr::ExprVisitor for Interpreter {
                     _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to add {:?} to {:?}", lhs, rhs)))
                 },
                 Value::String(ref mut l) => match rhs {
-                    Value::String(ref mut r) => Value::String({l.push_str(&r); l.clone()}),
+                    Value::String(ref mut r) => Value::String({l.push_str(r); l.clone()}),
                     r => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to add {:?} to {:?}", l, r)))
                 },
                 _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to add {:?} to {:?}", lhs, rhs)))
@@ -375,7 +376,7 @@ impl expr::ExprVisitor for Interpreter {
             return Err(self.error(e.paren.line, ErrorKind::IncorrectArity, &format!("Expected {} args, got {}", func.arity.to_number(), args.len())));
         }
 
-        let result = func.call(&mut *self, args);
+        let result = func.call(&mut *self, &args);
 
         if func.is_method() {
             self.env.pop_me();
@@ -399,7 +400,7 @@ impl expr::ExprVisitor for Interpreter {
                         fields.insert(name.clone(), data::Field {
                             normal: true,
                             public: true,
-                            value: self.evaluate(&value)?,
+                            value: self.evaluate(value)?,
                         });
                     } else {
                         return Err(self.error(e.name.line, ErrorKind::NoSuchField, &format!("Field {} is private", name)))
@@ -464,7 +465,7 @@ impl stmt::StmtVisitor for Interpreter {
         let result = if is_truthy(&cond) {
             self.execute_list(&s.then)?
         } else if let Some(ref else_) = s.else_ {
-            self.execute_list(&else_)?
+            self.execute_list(else_)?
         } else {
             None
         };
@@ -523,7 +524,7 @@ impl stmt::StmtVisitor for Interpreter {
         for &(public, ref name, ref value) in &s.fields {
             fields.insert(name.lexeme.clone(), data::Field {
                 normal: public,
-                public, value: self.evaluate(&value)?,
+                public, value: self.evaluate(value)?,
             });
         }
 

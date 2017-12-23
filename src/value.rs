@@ -128,7 +128,7 @@ impl fmt::Debug for Value {
                 match v.kind {
                     func::FuncKind::Native(_) => write!(f, "(native fn)"),
                     func::FuncKind::Normal(ref n) => {
-                        let mut s = format!("(fn");
+                        let mut s = String::from("(fn");
                         for arg in &n.decl.args {
                             s.push_str(&format!(" {}", arg.lexeme));
                         }

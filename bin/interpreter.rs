@@ -82,7 +82,7 @@ gp.sing()
             //println!("parse err!\n{}", p.err().unwrap());
         } else {
             println!("ast:");
-            println!("{}", piccolo::AstPrinter.print(&p.as_ref().unwrap()));
+            println!("{}", piccolo::AstPrinter.print(p.as_ref().unwrap()));
             //println!("statements:");
             //for stmt in p.clone().unwrap() {
             //    println!("{:?}", stmt);

@@ -34,7 +34,7 @@ impl Data {
     }
 
     pub fn is_public(&self, name: &str) -> bool {
-        if let Some(ref f) = self.fields.get(name) {
+        if let Some(f) = self.fields.get(name) {
             f.public
         } else {
             false
@@ -65,14 +65,14 @@ impl Instance {
 
     pub fn all_public(&self) {
         let mut inner = self.inner.borrow_mut();
-        for (_, var) in inner.vars.iter_mut() {
+        for var in inner.vars.values_mut() {
             var.public = true;
         }
     }
 
     pub fn reset(&self) {
         let mut inner = self.inner.borrow_mut();
-        for (_, var) in inner.vars.iter_mut() {
+        for var in inner.vars.values_mut() {
             var.public = var.normal;
         }
     }
@@ -81,7 +81,7 @@ impl Instance {
     pub fn get(&self, name: &str) -> Option<value::Value> {
         if self.inner.borrow().vars.contains_key(name) {
             let field = self.inner.borrow();
-            let field = field.vars.get(name).unwrap();
+            let field = &field.vars[name];
 
             if field.public {
                 Some(field.value.clone())
@@ -98,7 +98,7 @@ impl Instance {
         if exists {
             let (public, normal) = {
                 let inner = self.inner.borrow();
-                let var = inner.vars.get(name).unwrap();
+                let var = &inner.vars[name];
                 (var.public, var.normal)
             };
 

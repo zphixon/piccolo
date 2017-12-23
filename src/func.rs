@@ -64,7 +64,7 @@ impl Func {
         }
     }
 
-    pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, err::PiccoloError> {
+    pub fn call(&mut self, interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
         match self.kind {
             FuncKind::Normal(ref mut f) => f.call(interp, args),
             FuncKind::Native(ref mut f) => f.call(interp, args),
@@ -93,7 +93,7 @@ pub struct NormalFunc {
 }
 
 impl NormalFunc {
-    pub fn call(&mut self, interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, err::PiccoloError> {
+    pub fn call(&mut self, interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
         interp.env.push();
 
         let inst = interp.env.latest_me();
@@ -123,7 +123,7 @@ impl NormalFunc {
     }
 }
 
-pub type NativeFuncType = fn(&mut interp::Interpreter, Vec<value::Value>) -> Result<value::Value, err::PiccoloError>;
+pub type NativeFuncType = fn(&mut interp::Interpreter, &[value::Value]) -> Result<value::Value, err::PiccoloError>;
 
 #[derive(Clone)]
 pub struct NativeFunc {
@@ -137,7 +137,7 @@ impl NativeFunc {
         }
     }
 
-    fn call(&self, mut interp: &mut interp::Interpreter, args: Vec<value::Value>) -> Result<value::Value, err::PiccoloError> {
+    fn call(&self, mut interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
         let inner = self.inner;
         inner(&mut interp, args)
     }
