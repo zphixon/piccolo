@@ -56,5 +56,6 @@ pub enum ErrorKind {
     NoSuchField,
     Unimplemented,
     NonIterator,
+    IndexError,
 }
 

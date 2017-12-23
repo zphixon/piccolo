@@ -60,6 +60,14 @@ impl Interpreter {
             }
         });
 
+        env.new_native_func("len", func::Arity::Some(1), |_, args| {
+            match args[0] {
+                Value::Array(ref v) => Ok(Value::Integer(v.len() as i64)),
+                Value::String(ref v) => Ok(Value::Integer(v.len() as i64)),
+                _ => Ok(Value::Integer(0)),
+            }
+        });
+
         env.new_native_func("type", func::Arity::Some(1), |_, args| {
             match args[0] {
                 Value::String(_) => Ok("string".into()),
@@ -437,6 +445,24 @@ impl expr::ExprVisitor for Interpreter {
             Ok(value)
         } else {
             Err(self.error(e.name.line, ErrorKind::NonInstance, "Non-instance does not have fields"))
+        }
+    }
+
+    fn visit_index(&mut self, e: &expr::Index) -> Self::Output {
+        let object = self.evaluate(&*e.object)?;
+        let i = self.evaluate(&*e.i)?;
+        match i {
+            Value::Integer(i) => match object {
+                Value::Array(ref a) => {
+                    if (i as usize) < a.len() {
+                        Ok(a[i as usize].clone())
+                    } else {
+                        Err(self.error(e.rb.line, ErrorKind::IndexError, &format!("Index out-of-bounds: {}", i)))
+                    }
+                },
+                v => Err(self.error(e.rb.line, ErrorKind::IndexError, &format!("Cannot index non-array {:?}", v)))
+            },
+            i => Err(self.error(e.rb.line, ErrorKind::IndexError, &format!("Cannot index with non-integer {:?}", i)))
         }
     }
 }

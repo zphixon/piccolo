@@ -440,7 +440,21 @@ impl Parser {
                 rhs
             }))
         } else {
-            self.call()
+            self.index()
+        }
+    }
+
+    fn index(&mut self) -> Option<expr::Expr> {
+        let expr = self.call()?;
+
+        if self.matches(&[token::TokenKind::LBracket]) {
+            let i = self.expression()?;
+            let rb = self.consume(token::TokenKind::RBracket, None)?;
+            Some(expr::Expr::Index(expr::Index {
+                i: Box::new(i), object: Box::new(expr), rb
+            }))
+        } else {
+            Some(expr)
         }
     }
 

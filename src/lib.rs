@@ -224,5 +224,10 @@ impl expr::ExprVisitor for AstPrinter {
         name.push_str(&e.name.lexeme);
         self.parenthesize(&name, &[&*e.object])
     }
+
+    fn visit_index(&mut self, e: &expr::Index) -> String {
+        let name = format!("index {:?}", e.i);
+        self.parenthesize(&name, &[&*e.object])
+    }
 }
 
