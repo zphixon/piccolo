@@ -1,7 +1,10 @@
 
+#![allow(unknown_lints)]
+
 extern crate piccolo;
 
 #[test]
+#[allow(approx_constant)]
 fn scan_correctly() {
     use piccolo::scanner::Scanner;
     use piccolo::token::TokenKind;
@@ -26,8 +29,7 @@ fn test_file() {
 
 #[test]
 fn equal_truthy() {
-    use piccolo::interp::{is_equal, is_truthy};
-    use piccolo::value::Value;
+    use piccolo::value::{Value, is_equal, is_truthy};
     assert!(is_equal(&Value::Nil, &Value::Nil));
     assert!(!is_truthy(&Value::Nil));
     assert!(is_equal(&Value::String("a".into()), &Value::String("a".into())));
@@ -61,8 +63,8 @@ fn list_progs() {
         (true,  "a = 0\nb = 1\n\nwhile a < 10000 do\n  prln(a)\n  tmp = a\n  a = b\n  b = tmp + b\nend\n"),
         (true,  "b = 6\nb b b b b"),
         (true,  "prln(clock())\n"),
-        (true,  "fn something(x, y) do\n  prln(x * y)\nend\n\nsomething(3, 4)\n"),
-        (true,  "fn fibonacci(n) do\n  if n <= 1 do\n    retn n\n  end\n  retn fibonacci(n - 2) + fibonacci(n - 1)\nend\n\nassert(fibonacci(9) == 34)\n"),
+        (true,  "fn something(x, y) is\n  prln(x * y)\nend\n\nsomething(3, 4)\n"),
+        (true,  "fn fibonacci(n) is\n  if n <= 1 do\n    retn n\n  end\n  retn fibonacci(n - 2) + fibonacci(n - 1)\nend\n\nassert(fibonacci(9) == 34)\n"),
     ];
 
     for (should_pass, prog) in progs {
@@ -89,7 +91,10 @@ fn list_progs() {
 
             if p.is_err() {
                 if should_pass {
-                    panic!("parse err!\n{}", p.err().unwrap());
+                    for err in p.err().unwrap() {
+                        eprintln!("{}", err);
+                    }
+                    panic!("parse err");
                 }
             } else {
                 println!("ast:");
