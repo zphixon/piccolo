@@ -18,13 +18,10 @@ embedding in Rust projects.
     * [X] data
         * [X] methods
         * [X] private/public instance variables
-        
-### Outstanding
-
+* [X] array indexing
 * [ ] document/polish API
     * [ ] annotate heavily
 * [ ] varargs for normal functions
-* [ ] array indexing
 * [ ] public/private methods
 * [ ] modules
     * [ ] io (prln, pr, input)
