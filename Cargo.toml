@@ -14,10 +14,15 @@ rustyline = "1.0"
 rustyline = "1.0"
 
 [[example]]
-name = "interpreter"
-path = "bin/interpreter.rs"
+name = "debug"
+path = "bin/debug.rs"
 
 [[example]]
 name = "repl"
 path = "bin/repl.rs"
+
+[[example]]
+name = "interpreter"
+path = "bin/interpreter.rs"
+
 

@@ -23,11 +23,24 @@ impl PiccoloError {
             extra: Some(extra.to_owned())
         }
     }
+
+    // HACK
+    // TODO - fix
+    pub fn hack(msg: &str) -> Self {
+        PiccoloError {
+            kind: ErrorKind::Hack,
+            line: 0,
+            msg: msg.to_owned(),
+            extra: None
+        }
+    }
 }
 
 use ::std::fmt;
 impl fmt::Display for PiccoloError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.kind == ErrorKind::Hack { return write!(f, "{}", self.msg) }
+
         let extra = if self.extra.is_some() {
             format!("\n{}", self.extra.as_ref().unwrap())
         } else {
@@ -38,8 +51,9 @@ impl fmt::Display for PiccoloError {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum ErrorKind {
+    Hack,
     SyntaxError,
     UnknownFormatCode,
     UnterminatedString,

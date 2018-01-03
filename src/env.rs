@@ -88,6 +88,15 @@ impl Env {
         None
     }
 
+    pub fn get_mut(&mut self, name: &str) -> Option<&mut value::Value> {
+        for scope in self.inner.iter_mut().rev() {
+            if scope.contains_key(name) {
+                return scope.get_mut(name)
+            }
+        }
+        None
+    }
+
     pub fn set_local(&mut self, name: &str, value: value::Value)  {
         self.inner.iter_mut().rev().nth(0)
             .map(|m| m.insert(name.to_owned(), value))

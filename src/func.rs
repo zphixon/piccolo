@@ -112,6 +112,7 @@ impl NormalFunc {
         if self.method {
             let inst = inst.as_ref().unwrap();
             inst.reset();
+            interp.env.pop_me();
         }
 
         interp.env.pop();

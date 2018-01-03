@@ -13,6 +13,16 @@ pub struct Field {
     pub value: value::Value,
 }
 
+impl Field {
+    pub fn new(value: value::Value) -> Self {
+        Field {
+            public: true,
+            normal: true,
+            value
+        }
+    }
+}
+
 impl fmt::Debug for Field {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.value)

@@ -12,6 +12,7 @@ pub mod value;
 pub mod env;
 pub mod func;
 pub mod data;
+pub mod stdlib;
 
 use scanner::Scanner;
 
@@ -26,6 +27,17 @@ pub fn parse_file(filename: &str) -> Result<Vec<token::Token>, String> {
     } else {
         Err("could not read file".into())
     }
+}
+
+pub fn evaluate(data: &str) -> Result<value::Value, Vec<err::PiccoloError>> {
+    let s = scanner::Scanner::new(data.into())
+        .scan_tokens()
+        .map_err(|e| vec![err::PiccoloError::hack(&e)])?;
+    let p = parser::Parser::new(s).parse()?;
+    interp::Interpreter::new()
+        .interpret(&p)
+        .map(|o| o.unwrap_or(value::Value::Nil))
+        .map_err(|e| vec![e])
 }
 
 pub fn new_native_func(arity: func::Arity, func: func::NativeFuncType) -> value::Value {
