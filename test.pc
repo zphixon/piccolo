@@ -72,3 +72,5 @@ for item in arr do
     end
 end
 
+sys.show_env()
+
