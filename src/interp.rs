@@ -19,7 +19,7 @@ pub struct Interpreter {
 impl Interpreter {
     #![allow(new_without_default_derive)]
     pub fn new() -> Self {
-        let env = env::Env::new();
+        let mut env = env::Env::new();
 
         env.new_native_func("clock", func::Arity::None, |_, _| {
             let ts = time::now().to_timespec();
