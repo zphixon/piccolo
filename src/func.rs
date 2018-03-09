@@ -1,5 +1,6 @@
 
 use ::*;
+use env::Scope;
 
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum Arity {
@@ -34,6 +35,7 @@ impl Arity {
 pub struct Func {
     pub kind: FuncKind,
     pub arity: Arity,
+    pub scope: Scope,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -47,6 +49,7 @@ impl Func {
         Func {
             arity,
             kind: FuncKind::Normal(NormalFunc { decl, method: false }),
+            scope: Scope::new(),
         }
     }
 
@@ -54,6 +57,7 @@ impl Func {
         Func {
             arity,
             kind: FuncKind::Normal(NormalFunc { decl, method: true }),
+            scope: Scope::new(),
         }
     }
 
@@ -61,6 +65,7 @@ impl Func {
         Func {
             arity,
             kind: FuncKind::Native(native),
+            scope: Scope::new(),
         }
     }
 
@@ -122,22 +127,22 @@ impl NormalFunc {
         //interp.env.pop();
 
         //interp.env.push();
-        let result = if let Some(value::Value::Instance(inst)) = interp.env.get("me") {
-            inst.all_public();
-            interp.env.delete("me").unwrap();
-            interp.env.set_local("me", value::Value::Instance(inst.clone()));
+        //let result = if let Some(value::Value::Instance(inst)) = interp.env.get("me") {
+        //    inst.all_public();
+        //    interp.env.delete("me").unwrap();
+        //    interp.env.set_local("me", value::Value::Instance(inst.clone()));
+        //    for (i, arg) in args.iter().enumerate() {
+        //        interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
+        //    }
+        //    let result = interp.interpret(&self.decl.body);
+        //    inst.reset();
+        //    result
+        //} else {
             for (i, arg) in args.iter().enumerate() {
                 interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
             }
             let result = interp.interpret(&self.decl.body);
-            inst.reset();
-            result
-        } else {
-            for (i, arg) in args.iter().enumerate() {
-                interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
-            }
-            interp.interpret(&self.decl.body)
-        };
+        //};
         //interp.env.pop();
 
         result.map(|opt| match opt {
@@ -171,19 +176,19 @@ impl NativeFunc {
     }
 
     fn call(&self, mut interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
-        interp.env.push();
-        let result = if let Some(value::Value::Instance(inst)) = interp.env.get("me") {
-            inst.all_public();
-            interp.env.set_local("me", value::Value::Instance(inst.clone()));
+        //interp.env.push();
+        //let result = if let Some(value::Value::Instance(inst)) = interp.env.get("me") {
+        //    inst.all_public();
+        //    interp.env.set_local("me", value::Value::Instance(inst.clone()));
             let inner = self.inner;
             let result = inner(&mut interp, args);
-            inst.reset();
-            result
-        } else {
-            let inner = self.inner;
-            inner(&mut interp, args)
-        };
-        interp.env.pop();
+        //    inst.reset();
+        //    result
+        //} else {
+        //    let inner = self.inner;
+        //    inner(&mut interp, args)
+        //};
+        //interp.env.pop();
         result
         //interp.env.push();
 

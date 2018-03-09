@@ -343,7 +343,7 @@ impl expr::ExprVisitor for Interpreter {
         let value = self.evaluate(&*e.object)?;
         if let Value::Instance(ref inst) = value {
             if let Some(field) = inst.get(&e.name.lexeme) {
-                self.env.set_local("me", Value::Instance(inst.clone()));
+                //self.env.set_local("me", Value::Instance(inst.clone()));
                 //self.env.push_me(inst.clone());
                 Ok(field)
             } else {
