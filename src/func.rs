@@ -84,6 +84,8 @@ impl Func {
             FuncKind::Native(ref n) => n.method,
         }
     }
+
+    //pub fn bind(&mut self, )
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -94,28 +96,49 @@ pub struct NormalFunc {
 
 impl NormalFunc {
     pub fn call(&mut self, interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
-        interp.env.push();
+        //interp.env.push();
 
-        let inst = interp.env.latest_me();
-        if self.method {
-            let inst = inst.as_ref().unwrap();
+        ////let inst = interp.env.latest_me();
+        //let inst = interp.env.get("me");
+        //if self.method {
+        //    let inst = inst.as_ref().unwrap();
+        //    inst.all_public();
+        //    interp.env.set_local("me", value::Value::new(value::ValueKind::Instance(inst.clone())));
+        //}
+
+        //for (i, arg) in args.iter().enumerate() {
+        //    interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
+        //}
+
+        //let result = interp.interpret(&self.decl.body);
+
+        //if self.method {
+        //    let inst = inst.as_ref().unwrap();
+        //    inst.reset();
+        //    //interp.env.pop_me();
+        //    interp.env.pop();
+        //}
+
+        //interp.env.pop();
+
+        //interp.env.push();
+        let result = if let Some(value::Value::Instance(inst)) = interp.env.get("me") {
             inst.all_public();
+            interp.env.delete("me").unwrap();
             interp.env.set_local("me", value::Value::Instance(inst.clone()));
-        }
-
-        for (i, arg) in args.iter().enumerate() {
-            interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
-        }
-
-        let result = interp.interpret(&self.decl.body);
-
-        if self.method {
-            let inst = inst.as_ref().unwrap();
+            for (i, arg) in args.iter().enumerate() {
+                interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
+            }
+            let result = interp.interpret(&self.decl.body);
             inst.reset();
-            interp.env.pop_me();
-        }
-
-        interp.env.pop();
+            result
+        } else {
+            for (i, arg) in args.iter().enumerate() {
+                interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
+            }
+            interp.interpret(&self.decl.body)
+        };
+        //interp.env.pop();
 
         result.map(|opt| match opt {
             Some(v) => v,
@@ -149,26 +172,41 @@ impl NativeFunc {
 
     fn call(&self, mut interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
         interp.env.push();
-
-        let inst = interp.env.latest_me();
-        if self.method {
-            let inst = inst.as_ref().unwrap();
+        let result = if let Some(value::Value::Instance(inst)) = interp.env.get("me") {
             inst.all_public();
             interp.env.set_local("me", value::Value::Instance(inst.clone()));
-        }
-
-        let inner = self.inner;
-        let result = inner(&mut interp, args);
-
-        if self.method {
-            let inst = inst.as_ref().unwrap();
+            let inner = self.inner;
+            let result = inner(&mut interp, args);
             inst.reset();
-            //interp.env.pop_me();
-        }
-
+            result
+        } else {
+            let inner = self.inner;
+            inner(&mut interp, args)
+        };
         interp.env.pop();
-
         result
+        //interp.env.push();
+
+        ////let inst = interp.env.latest_me();
+        //let inst = interp.env.get("me");
+        //if self.method {
+        //    let inst = inst.as_ref().unwrap().kind;
+        //    inst.all_public();
+        //    interp.env.set_local("me", value::ValueKind::Instance(inst.clone()));
+        //}
+
+        //let inner = self.inner;
+        //let result = inner(&mut interp, args);
+
+        //if self.method {
+        //    let inst = inst.as_ref().unwrap();
+        //    inst.reset();
+        //    //interp.env.pop_me();
+        //}
+
+        //interp.env.pop();
+
+        //result
     }
 }
 

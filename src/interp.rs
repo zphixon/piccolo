@@ -9,7 +9,7 @@ use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
 
 pub struct Interpreter {
-    pub env: env::Env,
+    pub env: env::Scope,
 }
 
 impl Interpreter {
@@ -283,6 +283,8 @@ impl expr::ExprVisitor for Interpreter {
     fn visit_call(&mut self, e: &expr::Call) -> Self::Output {
         let callee = self.evaluate(&e.callee)?;
 
+        self.env.push();
+
         let mut func = match callee {
             Value::Func(f) => f,
             v => {
@@ -299,9 +301,10 @@ impl expr::ExprVisitor for Interpreter {
 
         let result = func.call(&mut *self, &args);
 
-        if func.is_method() {
-            self.env.pop_me();
-        }
+        self.env.pop();
+        //if func.is_method() {
+        //    self.env.pop_me();
+        //}
 
         result
     }
@@ -340,7 +343,8 @@ impl expr::ExprVisitor for Interpreter {
         let value = self.evaluate(&*e.object)?;
         if let Value::Instance(ref inst) = value {
             if let Some(field) = inst.get(&e.name.lexeme) {
-                self.env.push_me(inst.clone());
+                self.env.set_local("me", Value::Instance(inst.clone()));
+                //self.env.push_me(inst.clone());
                 Ok(field)
             } else {
                 Err(self.error(e.name.line, ErrorKind::NoSuchField, &format!("No field named {}", e.name.lexeme)))

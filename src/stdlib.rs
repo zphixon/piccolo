@@ -19,8 +19,8 @@ fn new_native_func(arity: func::Arity, func: func::NativeFuncType) -> data::Fiel
     }
 }
 
-pub fn create_stdlib() -> env::Env {
-    let mut env = env::Env::new();
+pub fn create_stdlib() -> env::Scope {
+    let mut env = env::Scope::new();
 
     let module = data::Data::new("mod", HashMap::new());
 
