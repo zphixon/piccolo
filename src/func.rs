@@ -104,7 +104,6 @@ pub struct NormalFunc {
 impl NormalFunc {
     pub fn bind(self, inst: data::Instance) -> NormalFunc {
         let mut scope = env::Scope::new();
-        //inst.all_public(); // panic
         scope.set("me", value::Value::Instance(inst));
         NormalFunc {
             scope, ..self
@@ -112,55 +111,16 @@ impl NormalFunc {
     }
 
     pub fn call(&mut self, interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
-        //interp.env.push();
-
-        ////let inst = interp.env.latest_me();
-        //let inst = interp.env.get("me");
-        //if self.method {
-        //    let inst = inst.as_ref().unwrap();
-        //    inst.all_public();
-        //    interp.env.set_local("me", value::Value::new(value::ValueKind::Instance(inst.clone())));
-        //}
-
-        //for (i, arg) in args.iter().enumerate() {
-        //    interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
-        //}
-
-        //let result = interp.interpret(&self.decl.body);
-
-        //if self.method {
-        //    let inst = inst.as_ref().unwrap();
-        //    inst.reset();
-        //    //interp.env.pop_me();
-        //    interp.env.pop();
-        //}
-
-        //interp.env.pop();
-
-        //interp.env.push();
-        //let result = if let Some(value::Value::Instance(inst)) = interp.env.get("me") {
-        //    inst.all_public();
-        //    interp.env.delete("me").unwrap();
-        //    interp.env.set_local("me", value::Value::Instance(inst.clone()));
-        //    for (i, arg) in args.iter().enumerate() {
-        //        interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
-        //    }
-        //    let result = interp.interpret(&self.decl.body);
-        //    inst.reset();
-        //    result
-        //} else {
-
-        // TODO - figure out if we're in a method and allow access to
-        //        private variables if we are
         interp.env.push();
+
         for (i, arg) in args.iter().enumerate() {
             interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
         }
+
         let mut e = interp.env.append(&self.scope);
         let result = interp.interpret_with(&self.decl.body, &mut e);
+
         interp.env.pop();
-        //};
-        //interp.env.pop();
 
         result.map(|opt| match opt {
             Some(v) => v,
@@ -193,42 +153,9 @@ impl NativeFunc {
     }
 
     fn call(&self, mut interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
-        //interp.env.push();
-        //let result = if let Some(value::Value::Instance(inst)) = interp.env.get("me") {
-        //    inst.all_public();
-        //    interp.env.set_local("me", value::Value::Instance(inst.clone()));
-            let inner = self.inner;
-            let result = inner(&mut interp, args);
-        //    inst.reset();
-        //    result
-        //} else {
-        //    let inner = self.inner;
-        //    inner(&mut interp, args)
-        //};
-        //interp.env.pop();
+        let inner = self.inner;
+        let result = inner(&mut interp, args);
         result
-        //interp.env.push();
-
-        ////let inst = interp.env.latest_me();
-        //let inst = interp.env.get("me");
-        //if self.method {
-        //    let inst = inst.as_ref().unwrap().kind;
-        //    inst.all_public();
-        //    interp.env.set_local("me", value::ValueKind::Instance(inst.clone()));
-        //}
-
-        //let inner = self.inner;
-        //let result = inner(&mut interp, args);
-
-        //if self.method {
-        //    let inst = inst.as_ref().unwrap();
-        //    inst.reset();
-        //    //interp.env.pop_me();
-        //}
-
-        //interp.env.pop();
-
-        //result
     }
 }
 

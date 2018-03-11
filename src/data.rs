@@ -54,8 +54,6 @@ impl Data {
     }
 
     pub fn get_method(&self, inst: Instance, name: &str) -> Option<value::Value> {
-        //inst.all_public(); // panic
-        //inst.reset();
         self.methods.get(name).cloned().map(|ok| match ok.value {
             value::Value::Func(f) => value::Value::Func(f.bind(inst)),
             _ => panic!("non-fn method")
@@ -115,7 +113,6 @@ impl Instance {
             }
         } else {
             let c = self.clone();
-            //c.all_public(); // no panic, but it doesn't stay private afterward
             self.inner.borrow().data.get_method(c, name)
         }
     }
