@@ -35,7 +35,6 @@ impl Arity {
 pub struct Func {
     pub kind: FuncKind,
     pub arity: Arity,
-    pub scope: Scope,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -48,16 +47,14 @@ impl Func {
     pub fn new(arity: Arity, decl: stmt::Func) -> Self {
         Func {
             arity,
-            kind: FuncKind::Normal(NormalFunc { decl, method: false }),
-            scope: Scope::new(),
+            kind: FuncKind::Normal(NormalFunc { decl, method: false, scope: Scope::new() }),
         }
     }
 
     pub fn new_method(arity: Arity, decl: stmt::Func) -> Self {
         Func {
             arity,
-            kind: FuncKind::Normal(NormalFunc { decl, method: true }),
-            scope: Scope::new(),
+            kind: FuncKind::Normal(NormalFunc { decl, method: true, scope: Scope::new() }),
         }
     }
 
@@ -65,7 +62,6 @@ impl Func {
         Func {
             arity,
             kind: FuncKind::Native(native),
-            scope: Scope::new(),
         }
     }
 
@@ -90,16 +86,31 @@ impl Func {
         }
     }
 
-    //pub fn bind(&mut self, )
+    pub fn bind(self, inst: data::Instance) -> Func {
+        match self.kind {
+            FuncKind::Normal(n) => Func { kind: FuncKind::Normal(n.bind(inst)), ..self },
+            _ => panic!("bind on native func")
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct NormalFunc {
     pub decl: stmt::Func,
     pub method: bool,
+    pub scope: Scope,
 }
 
 impl NormalFunc {
+    pub fn bind(self, inst: data::Instance) -> NormalFunc {
+        let mut scope = env::Scope::new();
+        //inst.all_public(); // panic
+        scope.set("me", value::Value::Instance(inst));
+        NormalFunc {
+            scope, ..self
+        }
+    }
+
     pub fn call(&mut self, interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
         //interp.env.push();
 
@@ -138,10 +149,16 @@ impl NormalFunc {
         //    inst.reset();
         //    result
         //} else {
-            for (i, arg) in args.iter().enumerate() {
-                interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
-            }
-            let result = interp.interpret(&self.decl.body);
+
+        // TODO - figure out if we're in a method and allow access to
+        //        private variables if we are
+        interp.env.push();
+        for (i, arg) in args.iter().enumerate() {
+            interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
+        }
+        let mut e = interp.env.append(&self.scope);
+        let result = interp.interpret_with(&self.decl.body, &mut e);
+        interp.env.pop();
         //};
         //interp.env.pop();
 

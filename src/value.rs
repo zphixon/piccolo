@@ -102,8 +102,8 @@ impl fmt::Display for Value {
                     write!(f, "fn")
                 }
             },
-            Value::Data(ref _v) => write!(f, "todo: data"),
-            Value::Instance(ref _v) => write!(f, "todo: instance"),
+            Value::Data(ref _v) => write!(f, "{:?}", _v),
+            Value::Instance(ref _v) => write!(f, "{:?}", _v),
             Value::Nil => write!(f, "nil"),
         }
     }

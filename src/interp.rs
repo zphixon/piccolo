@@ -30,6 +30,13 @@ impl Interpreter {
         Ok(None)
     }
 
+    pub fn interpret_with(&mut self, stmts: &[stmt::Stmt], mut env: &mut env::Scope) -> Result<Option<Value>, PiccoloError> {
+        std::mem::swap(&mut self.env, &mut env);
+        let res = self.interpret(stmts);
+        std::mem::swap(&mut self.env, &mut env);
+        res
+    }
+
     pub fn execute_list(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Value>, PiccoloError> {
         self.env.push();
         let result = self.interpret(stmts);
@@ -283,7 +290,7 @@ impl expr::ExprVisitor for Interpreter {
     fn visit_call(&mut self, e: &expr::Call) -> Self::Output {
         let callee = self.evaluate(&e.callee)?;
 
-        self.env.push();
+        //self.env.push();
 
         let mut func = match callee {
             Value::Func(f) => f,
@@ -301,7 +308,7 @@ impl expr::ExprVisitor for Interpreter {
 
         let result = func.call(&mut *self, &args);
 
-        self.env.pop();
+        //self.env.pop();
         //if func.is_method() {
         //    self.env.pop_me();
         //}
@@ -340,9 +347,13 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_get(&mut self, e: &expr::Get) -> Self::Output {
+        let me = match *e.object {
+            expr::Expr::Variable(expr::Variable(ref v)) => v.lexeme == "me",
+            _ => false
+        };
         let value = self.evaluate(&*e.object)?;
         if let Value::Instance(ref inst) = value {
-            if let Some(field) = inst.get(&e.name.lexeme) {
+            if let Some(field) = inst.get(&e.name.lexeme, me) {
                 //self.env.set_local("me", Value::Instance(inst.clone()));
                 //self.env.push_me(inst.clone());
                 Ok(field)
@@ -369,8 +380,8 @@ impl expr::ExprVisitor for Interpreter {
                 let value = self.evaluate(&*e.object)?;
                 if let Value::Instance(ref instance) = value {
                     let value = self.evaluate(&*e.value)?;
-                    instance.set(&e.name.lexeme, value.clone());
-                    Ok(value)
+                    instance.set(&e.name.lexeme, value.clone()).map(|_| value).map_err(|_| self.error(e.name.line, ErrorKind::NoSuchField, &format!("No such field named {}", e.name.lexeme)))
+                    //Ok(value)
                 } else {
                     Err(self.error(e.name.line, ErrorKind::NonInstance, "Non-instance does not have fields"))
                 }
@@ -496,6 +507,7 @@ impl stmt::StmtVisitor for Interpreter {
 
     fn visit_data(&mut self, s: &stmt::Data) -> Self::Output {
         let mut fields = std::collections::HashMap::new();
+        let mut methods = std::collections::HashMap::new();
         for &(public, ref name, ref value) in &s.fields {
             fields.insert(name.lexeme.clone(), data::Field {
                 normal: public,
@@ -504,14 +516,14 @@ impl stmt::StmtVisitor for Interpreter {
         }
 
         for func in &s.methods {
-            fields.insert(func.name.lexeme.clone(), data::Field {
+            methods.insert(func.name.lexeme.clone(), data::Field {
                 normal: true, // TODO
                 public: true, // TODO
                 value: Value::Func(func::Func::new_method(func.arity, func.clone())),
             });
         }
 
-        let data = data::Data::new(&s.name.lexeme, fields);
+        let data = data::Data::new(&s.name.lexeme, fields, methods);
         self.env.set(&s.name.lexeme, Value::Data(data));
         Ok(None)
     }

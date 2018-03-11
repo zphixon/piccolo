@@ -47,7 +47,8 @@ impl Scope {
     pub fn append(&self, other: &Scope) -> Scope {
         let mut this = self.0.clone();
         let mut a = other.0.clone();
-        this.append(&mut a);
+        //this.prepend(&mut a);
+        for item in a { this.push_front(item); }
         Scope(this)
     }
 
