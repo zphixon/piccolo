@@ -1,10 +1,9 @@
-
 extern crate backtrace;
 
 use ::*;
 use expr::ExprAccept;
 use stmt::StmtAccept;
-use value::{Value, is_equal, is_truthy};
+use value::{is_equal, is_truthy, Value};
 use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
 
@@ -16,21 +15,25 @@ impl Interpreter {
     #![allow(new_without_default_derive)]
     pub fn new() -> Self {
         Interpreter {
-            env: stdlib::create_stdlib()
+            env: stdlib::create_stdlib(),
         }
     }
 
     pub fn interpret(&mut self, stmts: &[stmt::Stmt]) -> Result<Option<Value>, PiccoloError> {
         for stmt in stmts {
             if let Some(v) = self.execute(stmt)? {
-                return Ok(Some(v))
+                return Ok(Some(v));
             }
         }
 
         Ok(None)
     }
 
-    pub fn interpret_with(&mut self, stmts: &[stmt::Stmt], mut env: &mut env::Scope) -> Result<Option<Value>, PiccoloError> {
+    pub fn interpret_with(
+        &mut self,
+        stmts: &[stmt::Stmt],
+        mut env: &mut env::Scope,
+    ) -> Result<Option<Value>, PiccoloError> {
         std::mem::swap(&mut self.env, &mut env);
         let res = self.interpret(stmts);
         std::mem::swap(&mut self.env, &mut env);
@@ -69,132 +72,301 @@ impl expr::ExprVisitor for Interpreter {
                 Value::Float(l) => match rhs {
                     Value::Float(r) => Value::Float(l - r),
                     Value::Integer(r) => Value::Float(l - r as f64),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to subtract {:?} from {:?}", rhs, lhs)))
-
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to subtract {:?} from {:?}", rhs, lhs),
+                        ))
+                    }
                 },
                 Value::Integer(l) => match rhs {
                     Value::Float(r) => Value::Float(l as f64 - r),
                     Value::Integer(r) => Value::Integer(l - r),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to subtract {:?} from {:?}", rhs, lhs)))
-
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to subtract {:?} from {:?}", rhs, lhs),
+                        ))
+                    }
                 },
-                _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to subtract {:?} from {:?}", rhs, lhs)))
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to subtract {:?} from {:?}", rhs, lhs),
+                    ))
+                }
             },
 
             TokenKind::Plus => match lhs {
                 Value::Float(l) => match rhs {
                     Value::Float(r) => Value::Float(l + r),
                     Value::Integer(r) => Value::Float(l + r as f64),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to add {:?} to {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to add {:?} to {:?}", lhs, rhs),
+                        ))
+                    }
                 },
                 Value::Integer(l) => match rhs {
                     Value::Float(r) => Value::Float(l as f64 + r),
                     Value::Integer(r) => Value::Integer(l + r),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to add {:?} to {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to add {:?} to {:?}", lhs, rhs),
+                        ))
+                    }
                 },
                 Value::String(ref mut l) => match rhs {
-                    Value::String(ref mut r) => Value::String({l.push_str(r); l.clone()}),
-                    r => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to add {:?} to {:?}", l, r)))
+                    Value::String(ref mut r) => Value::String({
+                        l.push_str(r);
+                        l.clone()
+                    }),
+                    r => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to add {:?} to {:?}", l, r),
+                        ))
+                    }
                 },
-                _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to add {:?} to {:?}", lhs, rhs)))
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to add {:?} to {:?}", lhs, rhs),
+                    ))
+                }
             },
 
             TokenKind::Divide => match lhs {
                 Value::Float(l) => match rhs {
                     Value::Float(r) => Value::Float(l / r),
                     Value::Integer(r) => Value::Float(l / r as f64),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to divide {:?} by {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to divide {:?} by {:?}", lhs, rhs),
+                        ))
+                    }
                 },
                 Value::Integer(l) => match rhs {
                     Value::Float(r) => Value::Float(l as f64 / r),
                     Value::Integer(r) => Value::Integer(l / r),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to divide {:?} by {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to divide {:?} by {:?}", lhs, rhs),
+                        ))
+                    }
                 },
-                _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to divide {:?} by {:?}", lhs, rhs)))
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to divide {:?} by {:?}", lhs, rhs),
+                    ))
+                }
             },
 
             TokenKind::Star => match lhs {
                 Value::Float(l) => match rhs {
                     Value::Float(r) => Value::Float(l * r),
                     Value::Integer(r) => Value::Float(l * r as f64),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to multiply {:?} by {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to multiply {:?} by {:?}", lhs, rhs),
+                        ))
+                    }
                 },
                 Value::Integer(l) => match rhs {
                     Value::Float(r) => Value::Float(l as f64 * r),
                     Value::Integer(r) => Value::Integer(l * r),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to multiply {:?} by {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to multiply {:?} by {:?}", lhs, rhs),
+                        ))
+                    }
                 },
-                _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to multiply {:?} by {:?}", lhs, rhs)))
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to multiply {:?} by {:?}", lhs, rhs),
+                    ))
+                }
             },
 
             TokenKind::Mod => match lhs {
                 Value::Float(l) => match rhs {
                     Value::Float(r) => Value::Float(l % r),
                     Value::Integer(r) => Value::Float(l % r as f64),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to modulo {:?} by {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to modulo {:?} by {:?}", lhs, rhs),
+                        ))
+                    }
                 },
                 Value::Integer(l) => match rhs {
                     Value::Float(r) => Value::Float(l as f64 % r),
                     Value::Integer(r) => Value::Integer(l % r),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to modulo {:?} by {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to modulo {:?} by {:?}", lhs, rhs),
+                        ))
+                    }
                 },
-                _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to modulo {:?} by {:?}", lhs, rhs)))
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to modulo {:?} by {:?}", lhs, rhs),
+                    ))
+                }
             },
 
             TokenKind::GreaterThan => match lhs {
                 Value::Float(l) => match rhs {
                     Value::Float(r) => Value::Bool(l > r),
                     Value::Integer(r) => Value::Bool(l > r as f64),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                        ))
+                    }
                 },
                 Value::Integer(l) => match rhs {
                     Value::Float(r) => Value::Bool(l as f64 > r),
                     Value::Integer(r) => Value::Bool(l > r),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                    ))
                 }
-                _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
             },
 
             TokenKind::LessThan => match lhs {
                 Value::Float(l) => match rhs {
                     Value::Float(r) => Value::Bool(l < r),
                     Value::Integer(r) => Value::Bool(l < r as f64),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                        ))
+                    }
                 },
                 Value::Integer(l) => match rhs {
                     Value::Float(r) => Value::Bool((l as f64) < r),
                     Value::Integer(r) => Value::Bool(l < r),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                    ))
                 }
-                _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
             },
 
             TokenKind::GreaterThanEquals => match lhs {
                 Value::Float(l) => match rhs {
                     Value::Float(r) => Value::Bool(l >= r),
                     Value::Integer(r) => Value::Bool(l >= r as f64),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                        ))
+                    }
                 },
                 Value::Integer(l) => match rhs {
                     Value::Float(r) => Value::Bool(l as f64 >= r),
                     Value::Integer(r) => Value::Bool(l >= r),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                    ))
                 }
-                _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
             },
 
             TokenKind::LessThanEquals => match lhs {
                 Value::Float(l) => match rhs {
                     Value::Float(r) => Value::Bool(l <= r),
                     Value::Integer(r) => Value::Bool(l <= r as f64),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                        ))
+                    }
                 },
                 Value::Integer(l) => match rhs {
                     Value::Float(r) => Value::Bool(l as f64 <= r),
                     Value::Integer(r) => Value::Bool(l <= r),
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to compare {:?} to {:?}", lhs, rhs),
+                    ))
                 }
-                _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to compare {:?} to {:?}", lhs, rhs)))
             },
 
             TokenKind::Equals => Value::Bool(is_equal(&lhs, &rhs)),
@@ -202,25 +374,45 @@ impl expr::ExprVisitor for Interpreter {
 
             TokenKind::ERange => match lhs {
                 Value::Integer(l) => match rhs {
-                    Value::Integer(r) => {
-                        Value::Array((l..r).map(|n| n.into()).collect())
-                    },
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to create range {:?}..{:?}", lhs, rhs)))
+                    Value::Integer(r) => Value::Array((l..r).map(|n| n.into()).collect()),
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to create range {:?}..{:?}", lhs, rhs),
+                        ))
+                    }
                 },
-                _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to create range {:?}..{:?}", lhs, rhs)))
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to create range {:?}..{:?}", lhs, rhs),
+                    ))
+                }
             },
 
             TokenKind::IRange => match lhs {
                 Value::Integer(l) => match rhs {
-                    Value::Integer(r) => {
-                        Value::Array((l..r + 1).map(|n| n.into()).collect())
-                    },
-                    _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to create range {:?}...{:?}", lhs, rhs)))
+                    Value::Integer(r) => Value::Array((l..r + 1).map(|n| n.into()).collect()),
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to create range {:?}...{:?}", lhs, rhs),
+                        ))
+                    }
                 },
-                _ => return Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to create range {:?}...{:?}", lhs, rhs)))
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to create range {:?}...{:?}", lhs, rhs),
+                    ))
+                }
             },
 
-            v => panic!("unreachable: {:?} {}", v, e.op.line)
+            v => panic!("unreachable: {:?} {}", v, e.op.line),
         })
     }
 
@@ -231,13 +423,21 @@ impl expr::ExprVisitor for Interpreter {
             TokenKind::Minus => match rhs {
                 Value::Integer(ref n) => Ok((-n).into()),
                 Value::Float(ref n) => Ok((-n).into()),
-                v => Err(self.error(e.op.line, ErrorKind::MathError, &format!("Tried to negate non-bool/number {:?}", v)))
+                v => Err(self.error(
+                    e.op.line,
+                    ErrorKind::MathError,
+                    &format!("Tried to negate non-bool/number {:?}", v),
+                )),
             },
             TokenKind::Not => {
                 let b: bool = is_truthy(&rhs);
                 Ok(Value::Bool(!b))
-            },
-            _ => Err(self.error(e.op.line, ErrorKind::MathError, &format!("Not a unary operator: \"{}\"", e.op.lexeme)))
+            }
+            _ => Err(self.error(
+                e.op.line,
+                ErrorKind::MathError,
+                &format!("Not a unary operator: \"{}\"", e.op.lexeme),
+            )),
         }
     }
 
@@ -254,8 +454,8 @@ impl expr::ExprVisitor for Interpreter {
                     new.push(new_item);
                 }
                 Ok(Value::Array(new))
-            },
-            l => Ok(std::mem::replace(&mut l.clone(), expr::Literal::Nil).into())
+            }
+            l => Ok(std::mem::replace(&mut l.clone(), expr::Literal::Nil).into()),
         }
     }
 
@@ -263,7 +463,11 @@ impl expr::ExprVisitor for Interpreter {
         if let Some(v) = self.env.get(&e.0.lexeme) {
             Ok(v)
         } else {
-            Err(self.error(e.0.line, ErrorKind::UndefinedVariable, &format!("{} is undefined", e.0.lexeme)))
+            Err(self.error(
+                e.0.line,
+                ErrorKind::UndefinedVariable,
+                &format!("{} is undefined", e.0.lexeme),
+            ))
         }
     }
 
@@ -278,10 +482,10 @@ impl expr::ExprVisitor for Interpreter {
 
         if e.op.kind == token::TokenKind::Or {
             if is_truthy(&lhs) {
-                return Ok(lhs)
+                return Ok(lhs);
             }
         } else if !is_truthy(&lhs) {
-            return Ok(lhs)
+            return Ok(lhs);
         }
 
         self.evaluate(&e.rhs)
@@ -293,15 +497,28 @@ impl expr::ExprVisitor for Interpreter {
         let mut func = match callee {
             Value::Func(f) => f,
             v => {
-                return Err(self.error(e.paren.line, ErrorKind::NonFunction, &format!("Attempt to call non-function {:?}", v)));
+                return Err(self.error(
+                    e.paren.line,
+                    ErrorKind::NonFunction,
+                    &format!("Attempt to call non-function {:?}", v),
+                ));
             }
         };
 
-        let args: Result<Vec<Value>, PiccoloError> = e.args.iter().map(|arg| self.evaluate(arg)).collect();
+        let args: Result<Vec<Value>, PiccoloError> =
+            e.args.iter().map(|arg| self.evaluate(arg)).collect();
         let args = args?;
 
         if !func.arity.compatible(e.arity) {
-            return Err(self.error(e.paren.line, ErrorKind::IncorrectArity, &format!("Expected {} args, got {}", func.arity.to_number(), args.len())));
+            return Err(self.error(
+                e.paren.line,
+                ErrorKind::IncorrectArity,
+                &format!(
+                    "Expected {} args, got {}",
+                    func.arity.to_number(),
+                    args.len()
+                ),
+            ));
         }
 
         let result = func.call(&mut *self, &args);
@@ -321,38 +538,61 @@ impl expr::ExprVisitor for Interpreter {
                 let f = fields.get(name).cloned();
                 if let Some(ref field) = f {
                     if field.public {
-                        fields.insert(name.clone(), data::Field {
-                            normal: true,
-                            public: true,
-                            value: self.evaluate(value)?,
-                        });
+                        fields.insert(
+                            name.clone(),
+                            data::Field {
+                                normal: true,
+                                public: true,
+                                value: self.evaluate(value)?,
+                            },
+                        );
                     } else {
-                        return Err(self.error(e.name.line, ErrorKind::NoSuchField, &format!("Field {} is private", name)))
+                        return Err(self.error(
+                            e.name.line,
+                            ErrorKind::NoSuchField,
+                            &format!("Field {} is private", name),
+                        ));
                     }
                 } else {
-                    return Err(self.error(e.name.line, ErrorKind::NoSuchField, &format!("Field {} does not exist", name)))
+                    return Err(self.error(
+                        e.name.line,
+                        ErrorKind::NoSuchField,
+                        &format!("Field {} does not exist", name),
+                    ));
                 }
             }
             Ok(Value::Instance(data::Instance::new(&data, fields)))
         } else {
-            Err(self.error(e.name.line, ErrorKind::NonData, "Tried to create data from non-data"))
+            Err(self.error(
+                e.name.line,
+                ErrorKind::NonData,
+                "Tried to create data from non-data",
+            ))
         }
     }
 
     fn visit_get(&mut self, e: &expr::Get) -> Self::Output {
         let me = match *e.object {
             expr::Expr::Variable(expr::Variable(ref v)) => v.lexeme == "me",
-            _ => false
+            _ => false,
         };
         let value = self.evaluate(&*e.object)?;
         if let Value::Instance(ref inst) = value {
             if let Some(field) = inst.get(&e.name.lexeme, me) {
                 Ok(field)
             } else {
-                Err(self.error(e.name.line, ErrorKind::NoSuchField, &format!("No field named {}", e.name.lexeme)))
+                Err(self.error(
+                    e.name.line,
+                    ErrorKind::NoSuchField,
+                    &format!("No field named {}", e.name.lexeme),
+                ))
             }
         } else {
-            Err(self.error(e.name.line, ErrorKind::NonInstance, "Non-instance does not have fields"))
+            Err(self.error(
+                e.name.line,
+                ErrorKind::NonInstance,
+                "Non-instance does not have fields",
+            ))
         }
     }
 
@@ -363,18 +603,35 @@ impl expr::ExprVisitor for Interpreter {
                 match i {
                     Value::Integer(idx) => {
                         panic!("{:?}", expr);
-                    },
-                    idx => Err(self.error(expr.rb.line, ErrorKind::IndexError, &format!("Cannot index with non-integer {:?}", idx)))
+                    }
+                    idx => Err(self.error(
+                        expr.rb.line,
+                        ErrorKind::IndexError,
+                        &format!("Cannot index with non-integer {:?}", idx),
+                    )),
                 }
-            },
+            }
             _ => {
                 let value = self.evaluate(&*e.object)?;
                 if let Value::Instance(ref instance) = value {
                     let value = self.evaluate(&*e.value)?;
-                    instance.set(&e.name.lexeme, value.clone()).map(|_| value).map_err(|_| self.error(e.name.line, ErrorKind::NoSuchField, &format!("No such field named {}", e.name.lexeme)))
-                    //Ok(value)
+                    instance
+                        .set(&e.name.lexeme, value.clone())
+                        .map(|_| value)
+                        .map_err(|_| {
+                            self.error(
+                                e.name.line,
+                                ErrorKind::NoSuchField,
+                                &format!("No such field named {}", e.name.lexeme),
+                            )
+                        })
+                //Ok(value)
                 } else {
-                    Err(self.error(e.name.line, ErrorKind::NonInstance, "Non-instance does not have fields"))
+                    Err(self.error(
+                        e.name.line,
+                        ErrorKind::NonInstance,
+                        "Non-instance does not have fields",
+                    ))
                 }
             }
         }
@@ -408,12 +665,24 @@ impl expr::ExprVisitor for Interpreter {
                     if (i as usize) < a.len() {
                         Ok(a[i as usize].clone())
                     } else {
-                        Err(self.error(e.rb.line, ErrorKind::IndexError, &format!("Index out-of-bounds: {}", i)))
+                        Err(self.error(
+                            e.rb.line,
+                            ErrorKind::IndexError,
+                            &format!("Index out-of-bounds: {}", i),
+                        ))
                     }
-                },
-                v => Err(self.error(e.rb.line, ErrorKind::IndexError, &format!("Cannot index non-array {:?}", v)))
+                }
+                v => Err(self.error(
+                    e.rb.line,
+                    ErrorKind::IndexError,
+                    &format!("Cannot index non-array {:?}", v),
+                )),
             },
-            i => Err(self.error(e.rb.line, ErrorKind::IndexError, &format!("Cannot index with non-integer {:?}", i)))
+            i => Err(self.error(
+                e.rb.line,
+                ErrorKind::IndexError,
+                &format!("Cannot index with non-integer {:?}", i),
+            )),
         }
     }
 }
@@ -454,7 +723,7 @@ impl stmt::StmtVisitor for Interpreter {
         let mut cond = self.evaluate(&s.cond)?;
         while is_truthy(&cond) {
             if let Some(v) = self.execute_list(&s.body)? {
-                return Ok(Some(v))
+                return Ok(Some(v));
             }
             cond = self.evaluate(&s.cond)?;
         }
@@ -465,16 +734,20 @@ impl stmt::StmtVisitor for Interpreter {
         let iter = self.evaluate(&s.iter)?;
         self.env.push();
         match iter {
-            Value::Array(ref a) => {
-                for item in a {
-                    self.env.set(&s.name.lexeme, item.clone());
-                    if let Some(r) = self.interpret(&s.body)? {
-                        self.env.pop();
-                        return Ok(Some(r))
-                    }
+            Value::Array(ref a) => for item in a {
+                self.env.set(&s.name.lexeme, item.clone());
+                if let Some(r) = self.interpret(&s.body)? {
+                    self.env.pop();
+                    return Ok(Some(r));
                 }
+            },
+            _ => {
+                return Err(self.error(
+                    s.name.line,
+                    ErrorKind::NonIterator,
+                    &format!("Cannot be iterated over: {:?}", iter),
+                ))
             }
-            _ => return Err(self.error(s.name.line, ErrorKind::NonIterator, &format!("Cannot be iterated over: {:?}", iter))),
         }
         self.env.pop();
         Ok(None)
@@ -500,18 +773,25 @@ impl stmt::StmtVisitor for Interpreter {
         let mut fields = std::collections::HashMap::new();
         let mut methods = std::collections::HashMap::new();
         for &(public, ref name, ref value) in &s.fields {
-            fields.insert(name.lexeme.clone(), data::Field {
-                normal: public,
-                public, value: self.evaluate(value)?,
-            });
+            fields.insert(
+                name.lexeme.clone(),
+                data::Field {
+                    normal: public,
+                    public,
+                    value: self.evaluate(value)?,
+                },
+            );
         }
 
         for func in &s.methods {
-            methods.insert(func.name.lexeme.clone(), data::Field {
-                normal: true, // TODO
-                public: true, // TODO
-                value: Value::Func(func::Func::new_method(func.arity, func.clone())),
-            });
+            methods.insert(
+                func.name.lexeme.clone(),
+                data::Field {
+                    normal: true, // TODO
+                    public: true, // TODO
+                    value: Value::Func(func::Func::new_method(func.arity, func.clone())),
+                },
+            );
         }
 
         let data = data::Data::new(&s.name.lexeme, fields, methods);
@@ -519,4 +799,3 @@ impl stmt::StmtVisitor for Interpreter {
         Ok(None)
     }
 }
-

@@ -1,4 +1,3 @@
-
 use ::*;
 use env::Scope;
 
@@ -17,8 +16,8 @@ impl Arity {
             Arity::Some(own) => match other {
                 Arity::Some(n) => n == own,
                 Arity::None => false,
-                Arity::Multi => panic!("parsed a call with varargs")
-            }
+                Arity::Multi => panic!("parsed a call with varargs"),
+            },
         }
     }
 
@@ -47,14 +46,22 @@ impl Func {
     pub fn new(arity: Arity, decl: stmt::Func) -> Self {
         Func {
             arity,
-            kind: FuncKind::Normal(NormalFunc { decl, method: false, scope: Scope::new() }),
+            kind: FuncKind::Normal(NormalFunc {
+                decl,
+                method: false,
+                scope: Scope::new(),
+            }),
         }
     }
 
     pub fn new_method(arity: Arity, decl: stmt::Func) -> Self {
         Func {
             arity,
-            kind: FuncKind::Normal(NormalFunc { decl, method: true, scope: Scope::new() }),
+            kind: FuncKind::Normal(NormalFunc {
+                decl,
+                method: true,
+                scope: Scope::new(),
+            }),
         }
     }
 
@@ -65,7 +72,11 @@ impl Func {
         }
     }
 
-    pub fn call(&mut self, interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
+    pub fn call(
+        &mut self,
+        interp: &mut interp::Interpreter,
+        args: &[value::Value],
+    ) -> Result<value::Value, err::PiccoloError> {
         match self.kind {
             FuncKind::Normal(ref mut f) => f.call(interp, args),
             FuncKind::Native(ref mut f) => f.call(interp, args),
@@ -88,8 +99,11 @@ impl Func {
 
     pub fn bind(self, inst: data::Instance) -> Func {
         match self.kind {
-            FuncKind::Normal(n) => Func { kind: FuncKind::Normal(n.bind(inst)), ..self },
-            _ => panic!("bind on native func")
+            FuncKind::Normal(n) => Func {
+                kind: FuncKind::Normal(n.bind(inst)),
+                ..self
+            },
+            _ => panic!("bind on native func"),
         }
     }
 }
@@ -105,12 +119,14 @@ impl NormalFunc {
     pub fn bind(self, inst: data::Instance) -> NormalFunc {
         let mut scope = env::Scope::new();
         scope.set("me", value::Value::Instance(inst));
-        NormalFunc {
-            scope, ..self
-        }
+        NormalFunc { scope, ..self }
     }
 
-    pub fn call(&mut self, interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
+    pub fn call(
+        &mut self,
+        interp: &mut interp::Interpreter,
+        args: &[value::Value],
+    ) -> Result<value::Value, err::PiccoloError> {
         interp.env.push();
 
         for (i, arg) in args.iter().enumerate() {
@@ -129,7 +145,8 @@ impl NormalFunc {
     }
 }
 
-pub type NativeFuncType = fn(&mut interp::Interpreter, &[value::Value]) -> Result<value::Value, err::PiccoloError>;
+pub type NativeFuncType =
+    fn(&mut interp::Interpreter, &[value::Value]) -> Result<value::Value, err::PiccoloError>;
 
 #[derive(Clone)]
 pub struct NativeFunc {
@@ -152,7 +169,11 @@ impl NativeFunc {
         }
     }
 
-    fn call(&self, mut interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
+    fn call(
+        &self,
+        mut interp: &mut interp::Interpreter,
+        args: &[value::Value],
+    ) -> Result<value::Value, err::PiccoloError> {
         let inner = self.inner;
         let result = inner(&mut interp, args);
         result
@@ -166,6 +187,7 @@ impl std::fmt::Debug for NativeFunc {
 }
 
 impl std::cmp::PartialEq for NativeFunc {
-    fn eq(&self, _other: &NativeFunc) -> bool { false }
+    fn eq(&self, _other: &NativeFunc) -> bool {
+        false
+    }
 }
-

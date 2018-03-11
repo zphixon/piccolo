@@ -1,27 +1,26 @@
-
 use token::{Token, TokenKind};
 
 fn keywords(s: &str) -> Option<TokenKind> {
     match s {
-        "do" =>    Some(TokenKind::Do),
-        "end" =>   Some(TokenKind::End),
-        "fn" =>    Some(TokenKind::Fn),
-        "if" =>    Some(TokenKind::If),
-        "else" =>  Some(TokenKind::Else),
+        "do" => Some(TokenKind::Do),
+        "end" => Some(TokenKind::End),
+        "fn" => Some(TokenKind::Fn),
+        "if" => Some(TokenKind::If),
+        "else" => Some(TokenKind::Else),
         "while" => Some(TokenKind::While),
-        "for" =>   Some(TokenKind::For),
-        "in" =>    Some(TokenKind::In),
-        "data" =>  Some(TokenKind::Data),
-        "is" =>    Some(TokenKind::Is),
-        "pub" =>   Some(TokenKind::Pub),
-        "me" =>    Some(TokenKind::Me),
-        "new" =>   Some(TokenKind::New),
-        "err" =>   Some(TokenKind::Err),
-        "retn" =>  Some(TokenKind::Retn),
-        "true" =>  Some(TokenKind::True),
+        "for" => Some(TokenKind::For),
+        "in" => Some(TokenKind::In),
+        "data" => Some(TokenKind::Data),
+        "is" => Some(TokenKind::Is),
+        "pub" => Some(TokenKind::Pub),
+        "me" => Some(TokenKind::Me),
+        "new" => Some(TokenKind::New),
+        "err" => Some(TokenKind::Err),
+        "retn" => Some(TokenKind::Retn),
+        "true" => Some(TokenKind::True),
         "false" => Some(TokenKind::False),
-        "nil" =>   Some(TokenKind::Nil),
-        _ => None
+        "nil" => Some(TokenKind::Nil),
+        _ => None,
     }
 }
 
@@ -55,7 +54,8 @@ impl Scanner {
             }
         }
 
-        self.tokens.push(Token::new(TokenKind::Eof, "".into(), self.line));
+        self.tokens
+            .push(Token::new(TokenKind::Eof, "".into(), self.line));
 
         if !err.is_empty() {
             Err(err)
@@ -67,11 +67,9 @@ impl Scanner {
     fn scan_token(&mut self) -> Result<(), String> {
         let mut err = Ok(());
         match self.advance() {
-            b'#' => {
-                while self.peek() != b'\n' && !self.is_at_end() {
-                    self.advance();
-                }
-            }
+            b'#' => while self.peek() != b'\n' && !self.is_at_end() {
+                self.advance();
+            },
 
             b'\n' => {
                 self.add_token(TokenKind::Newline);
@@ -206,24 +204,24 @@ impl Scanner {
                 match self.advance() {
                     b'n' => {
                         value.push('\n');
-                    },
+                    }
                     b'r' => {
                         value.push('\r');
                     }
                     b'\\' => {
                         value.push('\\');
-                    },
+                    }
                     b'"' => {
                         value.push('"');
-                    },
+                    }
                     b'\n' => {
                         self.advance();
                         while self.peek() == b' ' || self.peek() == b'\t' {
                             self.advance();
                         }
                         self.reverse();
-                    },
-                    c => return Err(format!("{} unknown format code: {}", self.line, c as char))
+                    }
+                    c => return Err(format!("{} unknown format code: {}", self.line, c as char)),
                 }
             } else {
                 value.push(self.advance() as char);
@@ -231,7 +229,10 @@ impl Scanner {
         }
 
         if self.is_at_end() {
-            Err(format!("{} Unterminated string starting at {}", self.line, line_start))
+            Err(format!(
+                "{} Unterminated string starting at {}",
+                self.line, line_start
+            ))
         } else {
             self.advance();
             self.add_token_string(TokenKind::String, value);
@@ -252,7 +253,7 @@ impl Scanner {
             }
 
             if !range {
-                return self.float()
+                return self.float();
             }
         }
 
@@ -330,12 +331,9 @@ fn is_digit(c: u8) -> bool {
 }
 
 fn is_alpha(c: u8) -> bool {
-    b'A' <= c && c <= b'Z'
-        || b'a' <= c && c <= b'z'
-        || c == b'_'
+    b'A' <= c && c <= b'Z' || b'a' <= c && c <= b'z' || c == b'_'
 }
 
 fn is_alphanumeric(c: u8) -> bool {
     is_digit(c) || is_alpha(c)
 }
-

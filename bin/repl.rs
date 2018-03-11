@@ -1,4 +1,3 @@
-
 extern crate piccolo;
 extern crate rustyline;
 
@@ -29,18 +28,23 @@ fn main() {
                         for err in p.err().unwrap() {
                             println!("{}", err);
                         }
-                        //println!("{}", p.err().unwrap());
+                    //println!("{}", p.err().unwrap());
                     } else {
                         let p = p.unwrap();
-                        if p.is_empty() { continue }
+                        if p.is_empty() {
+                            continue;
+                        }
 
                         if p.len() == 1 {
-                            if let piccolo::stmt::Stmt::StmtExpr(piccolo::stmt::StmtExpr(ref stmt)) = p[0] {
+                            if let piccolo::stmt::Stmt::StmtExpr(piccolo::stmt::StmtExpr(
+                                ref stmt,
+                            )) = p[0]
+                            {
                                 let mut v = interp.evaluate(stmt);
 
                                 if v.is_err() {
                                     println!("{}", v.err().unwrap());
-                                    continue
+                                    continue;
                                 } else {
                                     let val = &mut v.unwrap();
                                     println!("{:?}", val);
@@ -63,24 +67,21 @@ fn main() {
                         }
                     }
                 }
-            },
+            }
 
-            Err(ReadlineError::Interrupted) => {
-                break
-            },
+            Err(ReadlineError::Interrupted) => break,
 
             Err(ReadlineError::Eof) => {
                 println!("bye!");
-                break
-            },
+                break;
+            }
 
             Err(e) => {
                 println!("err: {:?}", e);
-                break
+                break;
             }
         }
     }
 
     rl.save_history(".piccolo_history").unwrap();
 }
-

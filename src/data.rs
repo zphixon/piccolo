@@ -1,4 +1,3 @@
-
 use ::*;
 
 use std::rc::Rc;
@@ -18,7 +17,7 @@ impl Field {
         Field {
             public: true,
             normal: true,
-            value
+            value,
         }
     }
 }
@@ -37,7 +36,11 @@ pub struct Data {
 }
 
 impl Data {
-    pub fn new(name: &str, fields: HashMap<String, Field>, methods: HashMap<String, Field>) -> Self {
+    pub fn new(
+        name: &str,
+        fields: HashMap<String, Field>,
+        methods: HashMap<String, Field>,
+    ) -> Self {
         Data {
             name: name.to_owned(),
             fields,
@@ -56,7 +59,7 @@ impl Data {
     pub fn get_method(&self, inst: Instance, name: &str) -> Option<value::Value> {
         self.methods.get(name).cloned().map(|ok| match ok.value {
             value::Value::Func(f) => value::Value::Func(f.bind(inst)),
-            _ => panic!("non-fn method")
+            _ => panic!("non-fn method"),
         })
     }
 }
@@ -78,7 +81,7 @@ impl Instance {
             inner: Rc::new(RefCell::new(InstanceInner {
                 data: Rc::new(data.clone()),
                 vars,
-            }))
+            })),
         }
     }
 
@@ -103,11 +106,11 @@ impl Instance {
             let field = &field.vars[name];
 
             if !as_me {
-            if field.public {
-                Some(field.value.clone())
-            } else {
-                None
-            }
+                if field.public {
+                    Some(field.value.clone())
+                } else {
+                    None
+                }
             } else {
                 Some(field.value.clone())
             }
@@ -118,7 +121,7 @@ impl Instance {
     }
 
     pub fn set(&self, name: &str, value: value::Value) -> Result<(), ()> {
-        let exists = {self.inner.borrow().vars.get(name).is_some()};
+        let exists = { self.inner.borrow().vars.get(name).is_some() };
         if exists {
             let (public, normal) = {
                 let inner = self.inner.borrow();
@@ -126,9 +129,14 @@ impl Instance {
                 (var.public, var.normal)
             };
 
-            self.inner.borrow_mut().vars.insert(name.to_owned(), Field {
-                value, public, normal,
-            });
+            self.inner.borrow_mut().vars.insert(
+                name.to_owned(),
+                Field {
+                    value,
+                    public,
+                    normal,
+                },
+            );
 
             Ok(())
         } else {
@@ -142,4 +150,3 @@ impl fmt::Debug for Instance {
         write!(f, "{:?}", value::Value::Instance(self.clone()))
     }
 }
-

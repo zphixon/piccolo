@@ -1,4 +1,3 @@
-
 //backtrace::trace(|frame| {
 //    backtrace::resolve(frame.ip(), |symbol| {
 //        print!("{:?}: ", frame.ip());
@@ -48,7 +47,9 @@ impl Scope {
         let mut this = self.0.clone();
         let mut a = other.0.clone();
         //this.prepend(&mut a);
-        for item in a { this.push_front(item); }
+        for item in a {
+            this.push_front(item);
+        }
         Scope(this)
     }
 
@@ -56,17 +57,21 @@ impl Scope {
         for scope in self.0.iter_mut().skip(1) {
             if scope.contains_key(name) {
                 scope.insert(name.to_owned(), value);
-                return
+                return;
             }
         }
 
-        self.0.iter_mut().nth(0)
+        self.0
+            .iter_mut()
+            .nth(0)
             .map(|m| m.insert(name.to_owned(), value))
             .expect("scope empty");
     }
 
     pub fn set_local(&mut self, name: &str, value: value::Value) {
-        self.0.iter_mut().nth(0)
+        self.0
+            .iter_mut()
+            .nth(0)
             .map(|m| m.insert(name.to_owned(), value))
             .expect("scope empty");
     }
@@ -74,7 +79,7 @@ impl Scope {
     pub fn get(&self, name: &str) -> Option<value::Value> {
         for scope in self.0.iter() {
             if scope.contains_key(name) {
-                return scope.get(name).cloned()
+                return scope.get(name).cloned();
             }
         }
 
@@ -102,7 +107,10 @@ impl Scope {
     }
 
     pub fn new_native_func(&mut self, name: &str, arity: func::Arity, func: func::NativeFuncType) {
-        self.set(name, value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func))));
+        self.set(
+            name,
+            value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func))),
+        );
     }
 }
 
@@ -118,4 +126,3 @@ impl std::fmt::Display for Scope {
         write!(f, "{}", s)
     }
 }
-

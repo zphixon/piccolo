@@ -1,4 +1,3 @@
-
 use ::*;
 
 pub trait StmtAccept {
@@ -117,7 +116,7 @@ impl StmtAccept for Retn {
 pub struct Data {
     pub name: token::Token,
     pub methods: Vec<Func>,
-    pub fields: Vec<(bool, token::Token, expr::Expr)>
+    pub fields: Vec<(bool, token::Token, expr::Expr)>,
 }
 
 impl StmtAccept for Data {
@@ -154,4 +153,3 @@ impl StmtAccept for Stmt {
         }
     }
 }
-

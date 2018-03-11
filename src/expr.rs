@@ -1,4 +1,3 @@
-
 use ::*;
 
 pub trait ExprAccept {
@@ -228,4 +227,3 @@ impl fmt::Display for Expr {
         write!(f, "{}", AstPrinter.print_expr(self))
     }
 }
-

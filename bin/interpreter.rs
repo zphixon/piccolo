@@ -1,4 +1,3 @@
-
 extern crate piccolo;
 
 use std::fs::File;
@@ -10,15 +9,12 @@ fn main() {
         let mut data = String::new();
         file.read_to_string(&mut data).unwrap();
         match piccolo::evaluate(&data) {
-            Ok(_) => {},
-            Err(e) => {
-                for err in e {
-                    eprintln!("{}", err);
-                }
-            }
+            Ok(_) => {}
+            Err(e) => for err in e {
+                eprintln!("{}", err);
+            },
         }
     } else {
         eprintln!("Could not read file");
     }
 }
-

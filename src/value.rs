@@ -1,4 +1,3 @@
-
 use std::fmt;
 
 use ::*;
@@ -101,7 +100,7 @@ impl fmt::Display for Value {
                 } else {
                     write!(f, "fn")
                 }
-            },
+            }
             Value::Data(ref _v) => write!(f, "{:?}", _v),
             Value::Instance(ref _v) => write!(f, "{:?}", _v),
             Value::Nil => write!(f, "nil"),
@@ -123,7 +122,7 @@ impl fmt::Debug for Value {
                 }
                 s.push_str(")");
                 write!(f, "{}", s)
-            },
+            }
             Value::Func(ref v) => {
                 match v.kind {
                     func::FuncKind::Native(_) => write!(f, "(native fn)"),
@@ -146,20 +145,18 @@ impl fmt::Debug for Value {
                 //    s.push_str(")");
                 //    write!(f, "{}", s)
                 //}
-            },
-            Value::Data(ref v) => {
-                write!(f, "(data {})", v.name)
-            },
+            }
+            Value::Data(ref v) => write!(f, "(data {})", v.name),
             Value::Instance(ref v) => {
                 let mut s = format!("(instance of {}", v.inner.borrow().data.name);
                 for (k, v) in &v.inner.borrow().vars {
-                    s.push_str(if v.public {" (pub "} else {" ("});
+                    s.push_str(if v.public { " (pub " } else { " (" });
                     s.push_str(&format!("{} = {:?})", k, v));
                 }
                 s.push_str(")");
                 write!(f, "{}", s)
-            },
-            Value::Nil => write!(f, "(nil)")
+            }
+            Value::Nil => write!(f, "(nil)"),
         }
     }
 }
@@ -181,4 +178,3 @@ pub fn is_equal(lhs: &Value, rhs: &Value) -> bool {
         lhs == rhs
     }
 }
-

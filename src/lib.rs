@@ -1,4 +1,3 @@
-
 #![allow(unknown_lints)]
 
 pub mod parser;
@@ -45,7 +44,10 @@ pub fn new_native_func(arity: func::Arity, func: func::NativeFuncType) -> value:
 }
 
 pub fn new_native_method(arity: func::Arity, func: func::NativeFuncType) -> value::Value {
-    value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func).method()))
+    value::Value::Func(func::Func::new_native(
+        arity,
+        func::NativeFunc::new(func).method(),
+    ))
 }
 
 #[derive(Copy, Clone)]
@@ -80,7 +82,12 @@ impl AstPrinter {
         s
     }
 
-    fn parenthesize_list(&mut self, name: &str, expr: Option<&expr::Expr>, stmts: &[stmt::Stmt]) -> String {
+    fn parenthesize_list(
+        &mut self,
+        name: &str,
+        expr: Option<&expr::Expr>,
+        stmts: &[stmt::Stmt],
+    ) -> String {
         let mut s = String::from("(");
         s.push_str(name);
         if expr.is_some() {
@@ -95,7 +102,12 @@ impl AstPrinter {
         s
     }
 
-    fn parenthesize_lists(&mut self, name: &str, e: Option<&expr::Expr>, stmts: &[&[stmt::Stmt]]) -> String {
+    fn parenthesize_lists(
+        &mut self,
+        name: &str,
+        e: Option<&expr::Expr>,
+        stmts: &[&[stmt::Stmt]],
+    ) -> String {
         let mut s = String::from("(");
         s.push_str(name);
         if e.is_some() {
@@ -137,7 +149,11 @@ impl stmt::StmtVisitor for AstPrinter {
         if s.else_.is_none() {
             self.parenthesize_list("if", Some(&s.cond), &s.then)
         } else {
-            self.parenthesize_lists("if-else", Some(&s.cond), &[&s.then, &s.clone().else_.unwrap()])
+            self.parenthesize_lists(
+                "if-else",
+                Some(&s.cond),
+                &[&s.then, &s.clone().else_.unwrap()],
+            )
         }
     }
 
@@ -174,7 +190,14 @@ impl stmt::StmtVisitor for AstPrinter {
     }
 
     fn visit_retn(&mut self, s: &stmt::Retn) -> String {
-        self.parenthesize("retn", &[s.value.as_ref().unwrap_or(&expr::Expr::Literal(expr::Literal::Nil))])
+        self.parenthesize(
+            "retn",
+            &[
+                s.value
+                    .as_ref()
+                    .unwrap_or(&expr::Expr::Literal(expr::Literal::Nil)),
+            ],
+        )
     }
 
     fn visit_data(&mut self, _s: &stmt::Data) -> String {
@@ -202,7 +225,7 @@ impl expr::ExprVisitor for AstPrinter {
     fn visit_literal(&mut self, e: &expr::Literal) -> String {
         match e {
             &expr::Literal::Nil => "nil".into(),
-            expr => format!("{:?}", expr)
+            expr => format!("{:?}", expr),
         }
     }
 
@@ -250,4 +273,3 @@ impl expr::ExprVisitor for AstPrinter {
         self.parenthesize(&name, &[&*e.object])
     }
 }
-

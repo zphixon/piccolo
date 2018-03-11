@@ -1,25 +1,24 @@
-
 // oatmeal
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     // keywords
-    Do,       // do
-    End,      // end
-    Fn,       // fn
-    If,       // if
-    Else,     // else
-    While,    // while
-    For,      // for
-    In,       // in
-    Data,     // data
-    Is,       // is
-    Pub,      // pub
-    Me,       // me
-    New,      // new
-    Err,      // err
-    Retn,     // retn
-    Nil,      // nil
+    Do,    // do
+    End,   // end
+    Fn,    // fn
+    If,    // if
+    Else,  // else
+    While, // while
+    For,   // for
+    In,    // in
+    Data,  // data
+    Is,    // is
+    Pub,   // pub
+    Me,    // me
+    New,   // new
+    Err,   // err
+    Retn,  // retn
+    Nil,   // nil
 
     // syntax
     LBracket, // [
@@ -34,23 +33,23 @@ pub enum TokenKind {
     Newline,  // \n
 
     // operators
-    Not,                 // !
-    Plus,                // +
-    Minus,               // -
-    Star,                // *
-    Divide,              // /
-    Mod,                 // %
-    And,                 // &&
-    Or,                  // ||
-    BAnd,                // &
-    BOr,                 // |
-    BXor,                // ^
-    Equals,              // ==
-    NotEquals,           // !=
-    LessThan,            // <
-    GreaterThan,         // >
-    LessThanEquals,      // <=
-    GreaterThanEquals,   // >=
+    Not,               // !
+    Plus,              // +
+    Minus,             // -
+    Star,              // *
+    Divide,            // /
+    Mod,               // %
+    And,               // &&
+    Or,                // ||
+    BAnd,              // &
+    BOr,               // |
+    BXor,              // ^
+    Equals,            // ==
+    NotEquals,         // !=
+    LessThan,          // <
+    GreaterThan,       // >
+    LessThanEquals,    // <=
+    GreaterThanEquals, // >=
 
     // other syntax elements
     Ident,
@@ -72,11 +71,6 @@ pub struct Token {
 
 impl Token {
     pub fn new(kind: TokenKind, lexeme: String, line: u64) -> Self {
-        Token {
-            kind,
-            lexeme,
-            line,
-        }
+        Token { kind, lexeme, line }
     }
 }
-

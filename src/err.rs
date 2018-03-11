@@ -1,16 +1,16 @@
-
 #[derive(Debug)]
 pub struct PiccoloError {
     kind: ErrorKind,
     msg: String,
     line: u64,
-    extra: Option<String>
+    extra: Option<String>,
 }
 
 impl PiccoloError {
     pub fn new(kind: ErrorKind, msg: &str, line: u64) -> Self {
         PiccoloError {
-            kind, line,
+            kind,
+            line,
             msg: msg.to_owned(),
             extra: None,
         }
@@ -18,9 +18,10 @@ impl PiccoloError {
 
     pub fn with_info(kind: ErrorKind, msg: &str, line: u64, extra: &str) -> Self {
         PiccoloError {
-            kind, line,
+            kind,
+            line,
             msg: msg.to_owned(),
-            extra: Some(extra.to_owned())
+            extra: Some(extra.to_owned()),
         }
     }
 
@@ -31,15 +32,17 @@ impl PiccoloError {
             kind: ErrorKind::Hack,
             line: 0,
             msg: msg.to_owned(),
-            extra: None
+            extra: None,
         }
     }
 }
 
-use ::std::fmt;
+use std::fmt;
 impl fmt::Display for PiccoloError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.kind == ErrorKind::Hack { return write!(f, "{}", self.msg) }
+        if self.kind == ErrorKind::Hack {
+            return write!(f, "{}", self.msg);
+        }
 
         let extra = if self.extra.is_some() {
             format!("\n{}", self.extra.as_ref().unwrap())
@@ -47,7 +50,11 @@ impl fmt::Display for PiccoloError {
             String::new()
         };
 
-        write!(f, "Error, line {}: {:?} - {}{}", self.line, self.kind, self.msg, extra)
+        write!(
+            f,
+            "Error, line {}: {:?} - {}{}",
+            self.line, self.kind, self.msg, extra
+        )
     }
 }
 
@@ -72,4 +79,3 @@ pub enum ErrorKind {
     NonIterator,
     IndexError,
 }
-

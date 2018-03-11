@@ -1,4 +1,3 @@
-
 #![allow(unknown_lints)]
 
 extern crate piccolo;
@@ -9,17 +8,68 @@ fn scan_correctly() {
     use piccolo::scanner::Scanner;
     use piccolo::token::TokenKind;
     use piccolo::token::TokenKind::*;
-    let tk: Vec<TokenKind> = Scanner::new("do end fn if else while for in data is pub me new err retn \
-                           [ ] ( ) , . .. ... = \n ! + - * / % && || & | ^ == != < > \
-                           <= >= ident \"string\" 3.14 23".into()).scan_tokens().unwrap()
-               .iter().map(|t| t.kind).collect();
-    assert_eq!(tk, vec![
-        Do, End, Fn, If, Else, While, For, In, Data, Is, Pub, Me, New, Err, Retn,
-        LBracket, RBracket, LParen, RParen, Comma, Dot, ERange, IRange, Assign,
-        Newline, Not, Plus, Minus, Star, Divide, Mod, And, Or, BAnd, BOr, BXor,
-        Equals, NotEquals, LessThan, GreaterThan, LessThanEquals, GreaterThanEquals,
-        Ident, String, Double(3.14), Integer(23), Eof
-    ]);
+    let tk: Vec<TokenKind> = Scanner::new(
+        "do end fn if else while for in data is pub me new err retn \
+         [ ] ( ) , . .. ... = \n ! + - * / % && || & | ^ == != < > \
+         <= >= ident \"string\" 3.14 23"
+            .into(),
+    ).scan_tokens()
+        .unwrap()
+        .iter()
+        .map(|t| t.kind)
+        .collect();
+    assert_eq!(
+        tk,
+        vec![
+            Do,
+            End,
+            Fn,
+            If,
+            Else,
+            While,
+            For,
+            In,
+            Data,
+            Is,
+            Pub,
+            Me,
+            New,
+            Err,
+            Retn,
+            LBracket,
+            RBracket,
+            LParen,
+            RParen,
+            Comma,
+            Dot,
+            ERange,
+            IRange,
+            Assign,
+            Newline,
+            Not,
+            Plus,
+            Minus,
+            Star,
+            Divide,
+            Mod,
+            And,
+            Or,
+            BAnd,
+            BOr,
+            BXor,
+            Equals,
+            NotEquals,
+            LessThan,
+            GreaterThan,
+            LessThanEquals,
+            GreaterThanEquals,
+            Ident,
+            String,
+            Double(3.14),
+            Integer(23),
+            Eof,
+        ]
+    );
 }
 
 #[test]
@@ -29,11 +79,17 @@ fn test_file() {
 
 #[test]
 fn equal_truthy() {
-    use piccolo::value::{Value, is_equal, is_truthy};
+    use piccolo::value::{is_equal, is_truthy, Value};
     assert!(is_equal(&Value::Nil, &Value::Nil));
     assert!(!is_truthy(&Value::Nil));
-    assert!(is_equal(&Value::String("a".into()), &Value::String("a".into())));
-    assert!(!is_equal(&Value::String("a".into()), &Value::String("b".into())));
+    assert!(is_equal(
+        &Value::String("a".into()),
+        &Value::String("a".into())
+    ));
+    assert!(!is_equal(
+        &Value::String("a".into()),
+        &Value::String("b".into())
+    ));
     assert!(!is_equal(&Value::Float(3.0), &Value::Integer(3)));
     assert!(is_equal(&Value::Integer(3), &Value::Integer(3)));
     assert!(is_truthy(&Value::String("".into())));
@@ -117,4 +173,3 @@ fn list_progs() {
         }
     }
 }
-
