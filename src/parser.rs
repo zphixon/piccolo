@@ -211,7 +211,7 @@ impl Parser {
                     return None;
                 }
 
-                if self.lookahead(1).kind == token::TokenKind::IRange {
+                if !self.is_at_end() && self.lookahead(1).kind == token::TokenKind::IRange {
                     let name = self.consume(token::TokenKind::Ident, Some("Varags needs name"))?;
                     self.consume(token::TokenKind::IRange, None)?;
                     args.push(name);
@@ -564,6 +564,15 @@ impl Parser {
 
     fn primary(&mut self) -> Option<expr::Expr> {
         let t = self.advance();
+        //if self.is_at_end() {
+        //    self.error(
+        //        ErrorKind::SyntaxError,
+        //        t.line,
+        //        "Expected expression, found EOF",
+        //        None,
+        //    );
+        //    return None;
+        //}
 
         match t.kind {
             token::TokenKind::True => Some(expr::Expr::Literal(expr::Literal::Bool(true))),
@@ -576,12 +585,30 @@ impl Parser {
             }
 
             token::TokenKind::LParen => {
+                if self.is_at_end() {
+                    self.error(
+                        ErrorKind::SyntaxError,
+                        t.line,
+                        &format!("Expected expression, found {:?}", t.kind),
+                        None,
+                    );
+                    return None;
+                }
                 let expr = self.expression()?;
                 self.consume(token::TokenKind::RParen, None)?;
                 Some(expr.clone())
             }
 
             token::TokenKind::LBracket => {
+                if self.is_at_end() {
+                    self.error(
+                        ErrorKind::SyntaxError,
+                        t.line,
+                        &format!("Expected expression, found {:?}", t.kind),
+                        None,
+                    );
+                    return None;
+                }
                 let mut inner = Vec::new();
                 while !self.matches(&[token::TokenKind::RBracket]) {
                     inner.push(self.expression()?);
@@ -643,7 +670,7 @@ impl Parser {
             self.error(
                 err::ErrorKind::UnexpectedToken,
                 t.line,
-                &format!("Found {:?}, expected {:?}", t, t.kind),
+                &format!("Found {:?}, expected {:?}", t.kind, tk),
                 extra,
             );
             None
