@@ -602,7 +602,22 @@ impl expr::ExprVisitor for Interpreter {
                 let i = self.evaluate(&*expr.i)?;
                 match i {
                     Value::Integer(idx) => {
-                        panic!("{:?}", expr);
+                        //let value = self.evaluate(&*e.object)?;
+                        //panic!("{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}", e, value, i, idx, e.object, expr);
+                        if let expr::Expr::Variable(var) = *expr.object.clone() {
+                            let name = var.0.lexeme.clone();
+                            println!("{}", name);
+                            if let Value::Array(mut arr) = self.env.get(&name).expect("todo") {
+                                println!("{:?}", arr);
+                                let value = self.evaluate(&*e.value)?;
+                                println!("{:?}", value);
+                                arr[idx as usize] = value.clone();
+                                println!("{:?}", arr);
+                                self.env.set(&name, Value::Array(arr));
+                                println!("{:?}", self.env.get(&name));
+                                Ok(value)
+                            } else {panic!("varis not arr: {:?}", self.env.get(&name).expect("todo"));}
+                        } else { panic!("var is not var: {:?}", *expr.object); }
                     }
                     idx => Err(self.error(
                         expr.rb.line,
