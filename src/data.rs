@@ -49,6 +49,7 @@ impl Data {
     }
 
     pub fn is_public(&self, name: &str) -> bool {
+        //self.
         if let Some(f) = self.fields.get(name) {
             f.public
         } else {

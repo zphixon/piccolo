@@ -1,11 +1,19 @@
 extern crate backtrace;
 
-use ::*;
+//use super::*;
 use expr::ExprAccept;
 use stmt::StmtAccept;
 use value::{is_equal, is_truthy, Value};
 use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
+use stmt;
+use stdlib;
+use env;
+use token;
+use expr;
+use func;
+use data;
+use std;
 
 pub struct Interpreter {
     pub env: env::Scope,
