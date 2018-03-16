@@ -248,6 +248,96 @@ impl expr::ExprVisitor for Interpreter {
                 }
             },
 
+            TokenKind::BOr => match lhs {
+                Value::Integer(l) => match rhs {
+                    Value::Integer(r) => Value::Integer(l | r),
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to bitwise or {:?} | {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                Value::Bool(l) => match rhs {
+                    Value::Bool(r) => Value::Bool(l | r),
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to bitwise or {:?} | {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to bitwise or {:?} | {:?}", lhs, rhs),
+                    ))
+                }
+            },
+
+            TokenKind::BXor => match lhs {
+                Value::Integer(l) => match rhs {
+                    Value::Integer(r) => Value::Integer(l ^ r),
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to bitwise xor {:?} ^ {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                Value::Bool(l) => match rhs {
+                    Value::Bool(r) => Value::Bool(l ^ r),
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to bitwise xor {:?} ^ {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to bitwise xor {:?} ^ {:?}", lhs, rhs),
+                    ))
+                }
+            },
+
+            TokenKind::BAnd => match lhs {
+                Value::Integer(l) => match rhs {
+                    Value::Integer(r) => Value::Integer(l & r),
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to bitwise and {:?} & {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                Value::Bool(l) => match rhs {
+                    Value::Bool(r) => Value::Bool(l & r),
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to bitwise and {:?} & {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(self.error(
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to bitwise and {:?} & {:?}", lhs, rhs),
+                    ))
+                }
+            },
+
             TokenKind::GreaterThan => match lhs {
                 Value::Float(l) => match rhs {
                     Value::Float(r) => Value::Bool(l > r),
@@ -375,6 +465,46 @@ impl expr::ExprVisitor for Interpreter {
                     ))
                 }
             },
+
+            TokenKind::BitLeft => match lhs {
+                Value::Integer(l) => match rhs {
+                    Value::Integer(r) => Value::Integer(l << r),
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to bitshift left {:?} << {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(self.error(
+                         e.op.line,
+                         ErrorKind::MathError,
+                         &format!("Tried to bitshift left {:?} << {:?}", lhs, rhs),
+                    ))
+                }
+            }
+
+            TokenKind::BitRight => match lhs {
+                Value::Integer(l) => match rhs {
+                    Value::Integer(r) => Value::Integer(l >> r),
+                    _ => {
+                        return Err(self.error(
+                            e.op.line,
+                            ErrorKind::MathError,
+                            &format!("Tried to bitshift right {:?} >> {:?}", lhs, rhs),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(self.error(
+                         e.op.line,
+                         ErrorKind::MathError,
+                         &format!("Tried to bitshift right {:?} >> {:?}", lhs, rhs),
+                    ))
+                }
+            }
 
             TokenKind::Equals => Value::Bool(is_equal(&lhs, &rhs)),
             TokenKind::NotEquals => Value::Bool(!is_equal(&lhs, &rhs)),

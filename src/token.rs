@@ -49,6 +49,8 @@ pub enum TokenKind {
     GreaterThan,       // >
     LessThanEquals,    // <=
     GreaterThanEquals, // >=
+    BitLeft,           // <<
+    BitRight,          // >>
 
     // other syntax elements
     Ident,

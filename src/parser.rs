@@ -342,8 +342,25 @@ impl Parser {
         self.or()
     }
 
+    fn or(&mut self) -> Option<expr::Expr> {
+        let expr = self.and()?;
+        let mut r = Some(expr.clone());
+
+        while self.matches(&[token::TokenKind::Or]) {
+            let op = self.previous();
+            let right = self.or()?;
+            r = Some(expr::Expr::Logical(expr::Logical {
+                lhs: Box::new(expr.clone()),
+                op,
+                rhs: Box::new(right),
+            }));
+        }
+
+        r
+    }
+
     fn and(&mut self) -> Option<expr::Expr> {
-        let expr = self.equality()?;
+        let expr = self.bit_or()?;
         let mut r = Some(expr.clone()); // TODO: figure out error handling
 
         while self.matches(&[token::TokenKind::And]) {
@@ -359,14 +376,48 @@ impl Parser {
         r
     }
 
-    fn or(&mut self) -> Option<expr::Expr> {
-        let expr = self.and()?;
+    fn bit_or(&mut self) -> Option<expr::Expr> {
+        let expr = self.bit_xor()?;
         let mut r = Some(expr.clone());
 
-        while self.matches(&[token::TokenKind::Or]) {
+        while self.matches(&[token::TokenKind::BOr]) {
             let op = self.previous();
-            let right = self.equality()?;
-            r = Some(expr::Expr::Logical(expr::Logical {
+            let right = self.or()?;
+            r = Some(expr::Expr::Binary(expr::Binary {
+                lhs: Box::new(expr.clone()),
+                op,
+                rhs: Box::new(right),
+            }));
+        }
+
+        r
+    }
+
+    fn bit_xor(&mut self) -> Option<expr::Expr> {
+        let expr = self.bit_and()?;
+        let mut r = Some(expr.clone());
+
+        while self.matches(&[token::TokenKind::BXor]) {
+            let op = self.previous();
+            let right = self.or()?;
+            r = Some(expr::Expr::Binary(expr::Binary {
+                lhs: Box::new(expr.clone()),
+                op,
+                rhs: Box::new(right),
+            }));
+        }
+
+        r
+    }
+
+    fn bit_and(&mut self) -> Option<expr::Expr> {
+        let expr = self.equality()?;
+        let mut r = Some(expr.clone());
+
+        while self.matches(&[token::TokenKind::BAnd]) {
+            let op = self.previous();
+            let right = self.or()?;
+            r = Some(expr::Expr::Binary(expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
                 rhs: Box::new(right),
@@ -416,7 +467,7 @@ impl Parser {
     }
 
     fn range(&mut self) -> Option<expr::Expr> {
-        let mut expr = self.addition()?;
+        let mut expr = self.bitshift()?;
 
         while self.matches(&[token::TokenKind::IRange, token::TokenKind::ERange]) {
             if self.lookahead(1).kind == token::TokenKind::IRange
@@ -433,7 +484,7 @@ impl Parser {
             }
 
             let op = self.previous();
-            let right = self.addition()?;
+            let right = self.bitshift()?;
             expr = expr::Expr::Binary(expr::Binary {
                 lhs: Box::new(expr.clone()),
                 op,
@@ -442,6 +493,23 @@ impl Parser {
         }
 
         Some(expr)
+    }
+
+    fn bitshift(&mut self) -> Option<expr::Expr> {
+        let expr = self.addition()?;
+        let mut r = Some(expr.clone());
+
+        while self.matches(&[token::TokenKind::BitRight, token::TokenKind::BitLeft]) {
+            let op = self.previous();
+            let right = self.addition()?;
+            r = Some(expr::Expr::Binary(expr::Binary {
+                lhs: Box::new(expr.clone()),
+                op,
+                rhs: Box::new(right),
+            }));
+        }
+
+        r
     }
 
     fn addition(&mut self) -> Option<expr::Expr> {

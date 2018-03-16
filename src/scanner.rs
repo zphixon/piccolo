@@ -143,6 +143,9 @@ impl Scanner {
                 if self.peek() == b'=' {
                     self.advance();
                     self.add_token(TokenKind::GreaterThanEquals);
+                } else if self.peek() == b'>' {
+                    self.advance();
+                    self.add_token(TokenKind::BitRight);
                 } else {
                     self.add_token(TokenKind::GreaterThan);
                 }
@@ -152,6 +155,9 @@ impl Scanner {
                 if self.peek() == b'=' {
                     self.advance();
                     self.add_token(TokenKind::LessThanEquals);
+                } else if self.peek() == b'<' {
+                    self.advance();
+                    self.add_token(TokenKind::BitLeft);
                 } else {
                     self.add_token(TokenKind::LessThan);
                 }
