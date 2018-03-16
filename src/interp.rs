@@ -479,12 +479,12 @@ impl expr::ExprVisitor for Interpreter {
                 },
                 _ => {
                     return Err(self.error(
-                         e.op.line,
-                         ErrorKind::MathError,
-                         &format!("Tried to bitshift left {:?} << {:?}", lhs, rhs),
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to bitshift left {:?} << {:?}", lhs, rhs),
                     ))
                 }
-            }
+            },
 
             TokenKind::BitRight => match lhs {
                 Value::Integer(l) => match rhs {
@@ -499,12 +499,12 @@ impl expr::ExprVisitor for Interpreter {
                 },
                 _ => {
                     return Err(self.error(
-                         e.op.line,
-                         ErrorKind::MathError,
-                         &format!("Tried to bitshift right {:?} >> {:?}", lhs, rhs),
+                        e.op.line,
+                        ErrorKind::MathError,
+                        &format!("Tried to bitshift right {:?} >> {:?}", lhs, rhs),
                     ))
                 }
-            }
+            },
 
             TokenKind::Equals => Value::Bool(is_equal(&lhs, &rhs)),
             TokenKind::NotEquals => Value::Bool(!is_equal(&lhs, &rhs)),
@@ -674,12 +674,12 @@ impl expr::ExprVisitor for Interpreter {
             for &(ref name, ref value) in &e.args {
                 let f = fields.get(name).cloned();
                 if let Some(ref field) = f {
-                        fields.insert(
-                            name.clone(),
-                            data::Field {
-                                value: self.evaluate(value)?,
-                            },
-                        );
+                    fields.insert(
+                        name.clone(),
+                        data::Field {
+                            value: self.evaluate(value)?,
+                        },
+                    );
                 } else {
                     return Err(self.error(
                         e.name.line,
@@ -744,8 +744,12 @@ impl expr::ExprVisitor for Interpreter {
                                 self.env.set(&name, Value::Array(arr));
                                 println!("{:?}", self.env.get(&name));
                                 Ok(value)
-                            } else {panic!("varis not arr: {:?}", self.env.get(&name).expect("todo"));}
-                        } else { panic!("var is not var: {:?}", *expr.object); }
+                            } else {
+                                panic!("varis not arr: {:?}", self.env.get(&name).expect("todo"));
+                            }
+                        } else {
+                            panic!("var is not var: {:?}", *expr.object);
+                        }
                     }
                     idx => Err(self.error(
                         expr.rb.line,

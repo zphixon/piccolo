@@ -12,9 +12,7 @@ pub struct Field {
 
 impl Field {
     pub fn new(value: value::Value) -> Self {
-        Field {
-            value,
-        }
+        Field { value }
     }
 }
 
@@ -85,7 +83,10 @@ impl Instance {
     }
 
     pub fn set(&self, name: &str, value: value::Value) {
-        self.inner.borrow_mut().vars.insert(name.to_owned(), Field { value });
+        self.inner
+            .borrow_mut()
+            .vars
+            .insert(name.to_owned(), Field { value });
     }
 }
 
