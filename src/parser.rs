@@ -277,12 +277,12 @@ impl Parser {
         while !self.check(token::TokenKind::Fn) && !self.check(token::TokenKind::End)
             && !self.is_at_end()
         {
-            let public = self.matches(&[token::TokenKind::Pub]);
+            //let public = self.matches(&[token::TokenKind::Pub]);
             let name = self.consume(token::TokenKind::Ident, Some("Field must have name"))?;
             self.consume(token::TokenKind::Assign, None)?;
             let value = self.expression()?;
 
-            fields.push((public, name, value));
+            fields.push((name, value));
         }
 
         let mut methods = Vec::new();

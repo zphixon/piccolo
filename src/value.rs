@@ -150,7 +150,8 @@ impl fmt::Debug for Value {
             Value::Instance(ref v) => {
                 let mut s = format!("(instance of {}", v.inner.borrow().data.name);
                 for (k, v) in &v.inner.borrow().vars {
-                    s.push_str(if v.public { " (pub " } else { " (" });
+                    //s.push_str(if v.public { " (pub " } else { " (" });
+                    s.push_str(" (");
                     s.push_str(&format!("{} = {:?})", k, v));
                 }
                 s.push_str(")");

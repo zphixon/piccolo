@@ -12,8 +12,8 @@ use std::collections::HashMap;
 
 fn new_native_func(arity: func::Arity, func: func::NativeFuncType) -> data::Field {
     data::Field {
-        public: true,
-        normal: true,
+        //public: true,
+        //normal: true,
         value: value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func))),
     }
 }

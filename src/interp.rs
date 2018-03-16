@@ -545,22 +545,22 @@ impl expr::ExprVisitor for Interpreter {
             for &(ref name, ref value) in &e.args {
                 let f = fields.get(name).cloned();
                 if let Some(ref field) = f {
-                    if field.public {
+                    //if field.public {
                         fields.insert(
                             name.clone(),
                             data::Field {
-                                normal: true,
-                                public: true,
+                                //normal: true,
+                                //public: true,
                                 value: self.evaluate(value)?,
                             },
                         );
-                    } else {
-                        return Err(self.error(
-                            e.name.line,
-                            ErrorKind::NoSuchField,
-                            &format!("Field {} is private", name),
-                        ));
-                    }
+                    //} else {
+                    //    return Err(self.error(
+                    //        e.name.line,
+                    //        ErrorKind::NoSuchField,
+                    //        &format!("Field {} is private", name),
+                    //    ));
+                    //}
                 } else {
                     return Err(self.error(
                         e.name.line,
@@ -612,6 +612,7 @@ impl expr::ExprVisitor for Interpreter {
                     Value::Integer(idx) => {
                         //let value = self.evaluate(&*e.object)?;
                         //panic!("{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}", e, value, i, idx, e.object, expr);
+                        //println!("{:?}", self.evaluate(&*expr.object));
                         if let expr::Expr::Variable(var) = *expr.object.clone() {
                             let name = var.0.lexeme.clone();
                             println!("{}", name);
@@ -638,17 +639,16 @@ impl expr::ExprVisitor for Interpreter {
                 let value = self.evaluate(&*e.object)?;
                 if let Value::Instance(ref instance) = value {
                     let value = self.evaluate(&*e.value)?;
-                    instance
-                        .set(&e.name.lexeme, value.clone())
-                        .map(|_| value)
-                        .map_err(|_| {
-                            self.error(
-                                e.name.line,
-                                ErrorKind::NoSuchField,
-                                &format!("No such field named {}", e.name.lexeme),
-                            )
-                        })
-                //Ok(value)
+                    instance.set(&e.name.lexeme, value.clone());
+                        //.map(|_| value)
+                        //.map_err(|_| {
+                        //    self.error(
+                        //        e.name.line,
+                        //        ErrorKind::NoSuchField,
+                        //        &format!("No such field named {}", e.name.lexeme),
+                        //    )
+                        //})
+                    Ok(value)
                 } else {
                     Err(self.error(
                         e.name.line,
@@ -795,12 +795,12 @@ impl stmt::StmtVisitor for Interpreter {
     fn visit_data(&mut self, s: &stmt::Data) -> Self::Output {
         let mut fields = std::collections::HashMap::new();
         let mut methods = std::collections::HashMap::new();
-        for &(public, ref name, ref value) in &s.fields {
+        for &(ref name, ref value) in &s.fields {
             fields.insert(
                 name.lexeme.clone(),
                 data::Field {
-                    normal: public,
-                    public,
+                    //normal: public,
+                    //public,
                     value: self.evaluate(value)?,
                 },
             );
@@ -810,8 +810,8 @@ impl stmt::StmtVisitor for Interpreter {
             methods.insert(
                 func.name.lexeme.clone(),
                 data::Field {
-                    normal: true, // TODO
-                    public: true, // TODO
+                    //normal: true, // TODO
+                    //public: true, // TODO
                     value: Value::Func(func::Func::new_method(func.arity, func.clone())),
                 },
             );
