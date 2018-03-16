@@ -1,8 +1,8 @@
 
 # piccolo
 
-Piccolo is a ~~small, light, high-pitched scripting language intended for
-embedding in Rust projects.~~ stupid toy language :)
+Piccolo is a small, light, high-pitched scripting language (eventually)
+intended for embedding in Rust projects.
 
 ## TODO
 
@@ -15,17 +15,13 @@ embedding in Rust projects.~~ stupid toy language :)
         * [X] native functions
     * [X] data
         * [X] methods
-        * [X] private/public instance variables
-* [X] modules
-    * [X] io (prln, pr, input)
-    * [X] sys (clock, exit)
-    * [X] array
-    * [X] debug (show_env, assert, panic)
+        * [X] instance variables
+* [ ] module system
+    * [X] builtin (sys, io, string, ...)
+    * [ ] functions (require, export)
 * [ ] lua-style userdata
 * [ ] array indexing
 * [ ] document/polish API
     * [ ] annotate heavily
 * [ ] varargs for normal functions
-* [ ] public/private methods
-* [ ] user-defined modules
 
