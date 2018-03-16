@@ -277,7 +277,6 @@ impl Parser {
         while !self.check(token::TokenKind::Fn) && !self.check(token::TokenKind::End)
             && !self.is_at_end()
         {
-            //let public = self.matches(&[token::TokenKind::Pub]);
             let name = self.consume(token::TokenKind::Ident, Some("Field must have name"))?;
             self.consume(token::TokenKind::Assign, None)?;
             let value = self.expression()?;
@@ -564,15 +563,6 @@ impl Parser {
 
     fn primary(&mut self) -> Option<expr::Expr> {
         let t = self.advance();
-        //if self.is_at_end() {
-        //    self.error(
-        //        ErrorKind::SyntaxError,
-        //        t.line,
-        //        "Expected expression, found EOF",
-        //        None,
-        //    );
-        //    return None;
-        //}
 
         match t.kind {
             token::TokenKind::True => Some(expr::Expr::Literal(expr::Literal::Bool(true))),

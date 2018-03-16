@@ -135,22 +135,11 @@ impl fmt::Debug for Value {
                         write!(f, "{}", s)
                     }
                 }
-                //if v.is_native() {
-                //    write!(f, "(native fn {})", v.name)
-                //} else {
-                //    let mut s = format!("(fn {}", v.name);
-                //    for arg in &v.args().as_ref().unwrap().args {
-                //        s.push_str(&format!(" {}", arg.lexeme))
-                //    }
-                //    s.push_str(")");
-                //    write!(f, "{}", s)
-                //}
             }
             Value::Data(ref v) => write!(f, "(data {})", v.name),
             Value::Instance(ref v) => {
                 let mut s = format!("(instance of {}", v.inner.borrow().data.name);
                 for (k, v) in &v.inner.borrow().vars {
-                    //s.push_str(if v.public { " (pub " } else { " (" });
                     s.push_str(" (");
                     s.push_str(&format!("{} = {:?})", k, v));
                 }

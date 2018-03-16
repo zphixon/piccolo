@@ -12,7 +12,6 @@ fn keywords(s: &str) -> Option<TokenKind> {
         "in" => Some(TokenKind::In),
         "data" => Some(TokenKind::Data),
         "is" => Some(TokenKind::Is),
-        //"pub" => Some(TokenKind::Pub),
         "me" => Some(TokenKind::Me),
         "new" => Some(TokenKind::New),
         "err" => Some(TokenKind::Err),

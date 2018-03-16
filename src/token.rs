@@ -13,7 +13,6 @@ pub enum TokenKind {
     In,    // in
     Data,  // data
     Is,    // is
-    //Pub,   // pub
     Me,    // me
     New,   // new
     Err,   // err

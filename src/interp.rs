@@ -1,6 +1,5 @@
 extern crate backtrace;
 
-//use super::*;
 use expr::ExprAccept;
 use stmt::StmtAccept;
 use value::{is_equal, is_truthy, Value};
@@ -545,22 +544,12 @@ impl expr::ExprVisitor for Interpreter {
             for &(ref name, ref value) in &e.args {
                 let f = fields.get(name).cloned();
                 if let Some(ref field) = f {
-                    //if field.public {
                         fields.insert(
                             name.clone(),
                             data::Field {
-                                //normal: true,
-                                //public: true,
                                 value: self.evaluate(value)?,
                             },
                         );
-                    //} else {
-                    //    return Err(self.error(
-                    //        e.name.line,
-                    //        ErrorKind::NoSuchField,
-                    //        &format!("Field {} is private", name),
-                    //    ));
-                    //}
                 } else {
                     return Err(self.error(
                         e.name.line,
@@ -640,14 +629,6 @@ impl expr::ExprVisitor for Interpreter {
                 if let Value::Instance(ref instance) = value {
                     let value = self.evaluate(&*e.value)?;
                     instance.set(&e.name.lexeme, value.clone());
-                        //.map(|_| value)
-                        //.map_err(|_| {
-                        //    self.error(
-                        //        e.name.line,
-                        //        ErrorKind::NoSuchField,
-                        //        &format!("No such field named {}", e.name.lexeme),
-                        //    )
-                        //})
                     Ok(value)
                 } else {
                     Err(self.error(
@@ -799,8 +780,6 @@ impl stmt::StmtVisitor for Interpreter {
             fields.insert(
                 name.lexeme.clone(),
                 data::Field {
-                    //normal: public,
-                    //public,
                     value: self.evaluate(value)?,
                 },
             );
@@ -810,8 +789,6 @@ impl stmt::StmtVisitor for Interpreter {
             methods.insert(
                 func.name.lexeme.clone(),
                 data::Field {
-                    //normal: true, // TODO
-                    //public: true, // TODO
                     value: Value::Func(func::Func::new_method(func.arity, func.clone())),
                 },
             );

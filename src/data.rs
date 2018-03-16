@@ -7,16 +7,12 @@ use std::fmt;
 
 #[derive(PartialEq, Clone)]
 pub struct Field {
-    //pub public: bool,
-    //pub normal: bool,
     pub value: value::Value,
 }
 
 impl Field {
     pub fn new(value: value::Value) -> Self {
         Field {
-            //public: true,
-            //normal: true,
             value,
         }
     }
@@ -48,15 +44,6 @@ impl Data {
         }
     }
 
-    //pub fn is_public(&self, name: &str) -> bool {
-    //    //self.
-    //    if let Some(f) = self.fields.get(name) {
-    //        f.public
-    //    } else {
-    //        false
-    //    }
-    //}
-
     pub fn get_method(&self, inst: Instance, name: &str) -> Option<value::Value> {
         self.methods.get(name).cloned().map(|ok| match ok.value {
             value::Value::Func(f) => value::Value::Func(f.bind(inst)),
@@ -86,35 +73,11 @@ impl Instance {
         }
     }
 
-    //pub fn all_public(&self) {
-    //    let mut inner = self.inner.borrow_mut();
-    //    for var in inner.vars.values_mut() {
-    //        var.public = true;
-    //    }
-    //}
-
-    //pub fn reset(&self) {
-    //    let mut inner = self.inner.borrow_mut();
-    //    for var in inner.vars.values_mut() {
-    //        var.public = var.normal;
-    //    }
-    //}
-
-    // TODO: move this to Result
     pub fn get(&self, name: &str, as_me: bool) -> Option<value::Value> {
         if self.inner.borrow().vars.contains_key(name) {
             let field = self.inner.borrow();
             let field = &field.vars[name];
-
-            //if !as_me {
-                //if field.public {
-                    Some(field.value.clone())
-                //} else {
-                //    None
-                //}
-            //} else {
-            //    Some(field.value.clone())
-            //}
+            Some(field.value.clone())
         } else {
             let c = self.clone();
             self.inner.borrow().data.get_method(c, name)
@@ -122,29 +85,7 @@ impl Instance {
     }
 
     pub fn set(&self, name: &str, value: value::Value) {
-        //let exists = { self.inner.borrow().vars.get(name).is_some() };
         self.inner.borrow_mut().vars.insert(name.to_owned(), Field { value });
-        //Ok(())
-        //if exists {
-        //    let (public, normal) = {
-        //        let inner = self.inner.borrow();
-        //        let var = &inner.vars[name];
-        //        (var.public, var.normal)
-        //    };
-
-        //    self.inner.borrow_mut().vars.insert(
-        //        name.to_owned(),
-        //        Field {
-        //            value,
-        //            public,
-        //            normal,
-        //        },
-        //    );
-
-        //    Ok(())
-        //} else {
-        //    Err(())
-        //}
     }
 }
 
