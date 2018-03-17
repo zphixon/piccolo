@@ -12,6 +12,7 @@ pub mod env;
 pub mod func;
 pub mod data;
 pub mod stdlib;
+pub mod foreign;
 
 use scanner::Scanner;
 

@@ -28,6 +28,7 @@ pub enum Value {
     Func(func::Func),
     Data(data::Data),
     Instance(data::Instance),
+    //Foreign(Box<foreign::Foreign>),
     Nil,
 }
 
@@ -101,8 +102,9 @@ impl fmt::Display for Value {
                     write!(f, "fn")
                 }
             }
-            Value::Data(ref _v) => write!(f, "{:?}", _v),
-            Value::Instance(ref _v) => write!(f, "{:?}", _v),
+            Value::Data(ref v) => write!(f, "{:?}", v),
+            Value::Instance(ref v) => write!(f, "{:?}", v),
+            //Value::Foreign(ref v) => write!(f, "foreign {}", v.get_name()),
             Value::Nil => write!(f, "nil"),
         }
     }
@@ -143,7 +145,8 @@ impl fmt::Debug for Value {
                 }
                 s.push_str(")");
                 write!(f, "{}", s)
-            }
+            },
+            //Value::Foreign(ref v) => write!(f, "(foreign {})", v.get_name()),
             Value::Nil => write!(f, "(nil)"),
         }
     }

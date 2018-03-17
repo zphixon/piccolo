@@ -267,6 +267,7 @@ pub fn create_stdlib() -> env::Scope {
         Value::Func(_) => Ok("fn".into()),
         Value::Data(_) => Ok("data".into()),
         Value::Instance(ref i) => Ok(i.inner.borrow().data.name.clone().into()),
+        //Value::Foreign(ref f) => Ok(f.get_name().into()),
         Value::Nil => Ok("nil".into()),
     });
 
