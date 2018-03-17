@@ -18,7 +18,7 @@ pub fn parse_into_value(into: String) -> Value {
     Value::String(into)
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(Clone)]
 pub enum Value {
     String(String),
     Bool(bool),
@@ -28,7 +28,7 @@ pub enum Value {
     Func(func::Func),
     Data(data::Data),
     Instance(data::Instance),
-    //Foreign(Box<foreign::Foreign>),
+    Foreign(Box<foreign::Foreign>),
     Nil,
 }
 
@@ -104,7 +104,7 @@ impl fmt::Display for Value {
             }
             Value::Data(ref v) => write!(f, "{:?}", v),
             Value::Instance(ref v) => write!(f, "{:?}", v),
-            //Value::Foreign(ref v) => write!(f, "foreign {}", v.get_name()),
+            Value::Foreign(ref v) => write!(f, "foreign {}", v.get_name()),
             Value::Nil => write!(f, "nil"),
         }
     }
@@ -146,8 +146,57 @@ impl fmt::Debug for Value {
                 s.push_str(")");
                 write!(f, "{}", s)
             },
-            //Value::Foreign(ref v) => write!(f, "(foreign {})", v.get_name()),
+            Value::Foreign(ref v) => write!(f, "(foreign {})", v.get_name()),
             Value::Nil => write!(f, "(nil)"),
+        }
+    }
+}
+
+impl PartialEq for Value {
+    fn eq(&self, rhs: &Value) -> bool {
+        match *self {
+            Value::Bool(l) => match *rhs {
+                Value::Bool(r) => r == l,
+                _ => false,
+            },
+            Value::String(ref l) => match *rhs {
+                Value::String(ref r) => r == l,
+                _ => false,
+            },
+            Value::Float(l) => match *rhs {
+                Value::Float(r) => l == r,
+                Value::Integer(r) => l == r as f64,
+                _ => false,
+            },
+            Value::Integer(l) => match *rhs {
+                Value::Integer(r) => l == r,
+                Value::Float(r) => l as f64 == r,
+                _ => false,
+            },
+            Value::Array(ref l) => match *rhs {
+                Value::Array(ref r) => l == r,
+                _ => false,
+            },
+            Value::Func(ref l) => match *rhs {
+                Value::Func(ref r) => l == r,
+                _ => false,
+            },
+            Value::Data(ref l) => match *rhs {
+                Value::Data(ref r) => l == r,
+                _ => false,
+            },
+            Value::Instance(ref l) => match *rhs {
+                Value::Instance(ref r) => l == r,
+                _ => false,
+            },
+            Value::Foreign(ref l) => match *rhs {
+                Value::Foreign(ref r) => l == r,
+                _ => false,
+            },
+            Value::Nil => match *rhs {
+                Value::Nil => true,
+                _ => false,
+            },
         }
     }
 }
