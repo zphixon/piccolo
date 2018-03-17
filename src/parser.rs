@@ -692,7 +692,10 @@ impl Parser {
                 let mut args = Vec::new();
                 let mut multi = false;
                 let method = self.in_data;
-                self.consume(token::TokenKind::LParen, Some("Lambda functions do not have names"))?;
+                self.consume(
+                    token::TokenKind::LParen,
+                    Some("Lambda functions do not have names"),
+                )?;
                 if !self.check(token::TokenKind::RParen) {
                     'outer: while {
                         if args.len() >= 64 {
@@ -706,14 +709,18 @@ impl Parser {
                         }
 
                         if !self.is_at_end() && self.lookahead(1).kind == token::TokenKind::IRange {
-                            let name = self.consume(token::TokenKind::Ident, Some("Varags needs name"))?;
+                            let name =
+                                self.consume(token::TokenKind::Ident, Some("Varags needs name"))?;
                             self.consume(token::TokenKind::IRange, None)?;
                             args.push(name);
                             multi = true;
                             break 'outer;
                         }
 
-                        args.push(self.consume(token::TokenKind::Ident, Some("Arg must have name"))?);
+                        args.push(self.consume(
+                            token::TokenKind::Ident,
+                            Some("Arg must have name"),
+                        )?);
                         self.matches(&[token::TokenKind::Comma])
                     } {}
                 }
@@ -736,7 +743,7 @@ impl Parser {
                     body,
                     method,
                 }))
-            },
+            }
 
             _ => {
                 self.error(

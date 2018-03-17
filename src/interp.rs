@@ -755,14 +755,16 @@ impl expr::ExprVisitor for Interpreter {
                 let value = self.evaluate(&*e.object)?;
                 if let Value::Instance(ref instance) = value {
                     let value = self.evaluate(&*e.value)?;
-                    instance.set(&e.name.lexeme, value.clone())
+                    instance
+                        .set(&e.name.lexeme, value.clone())
                         .map(|_| value)
-                        .map_err(|_| self.error(
-                            e.name.line,
-                            ErrorKind::NoSuchField,
-                            &format!("No field named {}", e.name.lexeme),
-                        ))
-                    //Ok(value)
+                        .map_err(|_| {
+                            self.error(
+                                e.name.line,
+                                ErrorKind::NoSuchField,
+                                &format!("No field named {}", e.name.lexeme),
+                            )
+                        })
                 } else {
                     Err(self.error(
                         e.name.line,
@@ -824,13 +826,16 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_func(&mut self, e: &expr::Func) -> Self::Output {
-        Ok(Value::Func(func::Func::new(e.arity, stmt::Func {
-            name: e.name.clone(),
-            args: e.args.clone(),
-            arity: e.arity,
-            body: e.body.clone(),
-            method: e.method,
-        })))
+        Ok(Value::Func(func::Func::new(
+            e.arity,
+            stmt::Func {
+                name: e.name.clone(),
+                args: e.args.clone(),
+                arity: e.arity,
+                body: e.body.clone(),
+                method: e.method,
+            },
+        )))
     }
 }
 
