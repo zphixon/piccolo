@@ -688,6 +688,56 @@ impl Parser {
                 Some(expr::Expr::Variable(expr::Variable(self.previous())))
             }
 
+            token::TokenKind::Fn => {
+                let mut args = Vec::new();
+                let mut multi = false;
+                let method = self.in_data;
+                self.consume(token::TokenKind::LParen, Some("Lambda functions do not have names"))?;
+                if !self.check(token::TokenKind::RParen) {
+                    'outer: while {
+                        if args.len() >= 64 {
+                            self.error(
+                                err::ErrorKind::SyntaxError,
+                                t.line,
+                                "Cannot have more than 64 parameters",
+                                Some("(do you *really* need that many anyway?)"),
+                            );
+                            return None;
+                        }
+
+                        if !self.is_at_end() && self.lookahead(1).kind == token::TokenKind::IRange {
+                            let name = self.consume(token::TokenKind::Ident, Some("Varags needs name"))?;
+                            self.consume(token::TokenKind::IRange, None)?;
+                            args.push(name);
+                            multi = true;
+                            break 'outer;
+                        }
+
+                        args.push(self.consume(token::TokenKind::Ident, Some("Arg must have name"))?);
+                        self.matches(&[token::TokenKind::Comma])
+                    } {}
+                }
+                self.consume(token::TokenKind::RParen, Some("Unterminated args list"))?;
+
+                let body = self.is_block()?;
+
+                let arity = if multi {
+                    func::Arity::Multi
+                } else if args.is_empty() {
+                    func::Arity::None
+                } else {
+                    func::Arity::Some(args.len())
+                };
+
+                Some(expr::Expr::Func(expr::Func {
+                    arity,
+                    name: t,
+                    args,
+                    body,
+                    method,
+                }))
+            },
+
             _ => {
                 self.error(
                     err::ErrorKind::SyntaxError,

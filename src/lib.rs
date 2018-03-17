@@ -272,4 +272,19 @@ impl expr::ExprVisitor for AstPrinter {
         let name = format!("index {:?}", e.i);
         self.parenthesize(&name, &[&*e.object])
     }
+
+    fn visit_func(&mut self, s: &expr::Func) -> String {
+        let mut name = String::from("fn ");
+        //name.push_str(&s.name.lexeme);
+        name.push_str(" (");
+        for (n, arg) in s.args.iter().enumerate() {
+            if n + 1 != s.args.len() {
+                name.push_str(&format!("{} ", arg.lexeme));
+            } else {
+                name.push_str(&format!("{}", arg.lexeme));
+            }
+        }
+        name.push_str(")");
+        self.parenthesize_list(&name, None, &s.body)
+    }
 }

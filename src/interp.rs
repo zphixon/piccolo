@@ -6,14 +6,6 @@ use stmt::StmtAccept;
 use value::{is_equal, is_truthy, Value};
 use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
-//use stmt;
-//use stdlib;
-//use env;
-//use token;
-//use expr;
-//use func;
-//use data;
-//use std;
 
 pub struct Interpreter {
     pub env: env::Scope,
@@ -823,6 +815,16 @@ impl expr::ExprVisitor for Interpreter {
                 &format!("Cannot index with non-integer {:?}", i),
             )),
         }
+    }
+
+    fn visit_func(&mut self, e: &expr::Func) -> Self::Output {
+        Ok(Value::Func(func::Func::new(e.arity, stmt::Func {
+            name: e.name.clone(),
+            args: e.args.clone(),
+            arity: e.arity,
+            body: e.body.clone(),
+            method: e.method,
+        })))
     }
 }
 

@@ -19,6 +19,7 @@ pub trait ExprVisitor {
     fn visit_get(&mut self, e: &Get) -> Self::Output;
     fn visit_set(&mut self, e: &Set) -> Self::Output;
     fn visit_index(&mut self, e: &Index) -> Self::Output;
+    fn visit_func(&mut self, e: &Func) -> Self::Output;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -188,6 +189,21 @@ impl ExprAccept for Index {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Func {
+    pub name: token::Token,
+    pub args: Vec<token::Token>,
+    pub arity: func::Arity,
+    pub body: Vec<stmt::Stmt>,
+    pub method: bool,
+}
+
+impl ExprAccept for Func {
+    fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
+        v.visit_func(self)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Binary(Binary),
     Unary(Unary),
@@ -201,6 +217,7 @@ pub enum Expr {
     Get(Get),
     Set(Set),
     Index(Index),
+    Func(Func),
 }
 
 impl ExprAccept for Expr {
@@ -218,6 +235,7 @@ impl ExprAccept for Expr {
             Expr::Get(ref e) => e.accept(v),
             Expr::Set(ref e) => e.accept(v),
             Expr::Index(ref e) => e.accept(v),
+            Expr::Func(ref e) => e.accept(v),
         }
     }
 }
