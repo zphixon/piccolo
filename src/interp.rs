@@ -755,8 +755,14 @@ impl expr::ExprVisitor for Interpreter {
                 let value = self.evaluate(&*e.object)?;
                 if let Value::Instance(ref instance) = value {
                     let value = self.evaluate(&*e.value)?;
-                    instance.set(&e.name.lexeme, value.clone());
-                    Ok(value)
+                    instance.set(&e.name.lexeme, value.clone())
+                        .map(|_| value)
+                        .map_err(|_| self.error(
+                            e.name.line,
+                            ErrorKind::NoSuchField,
+                            &format!("No field named {}", e.name.lexeme),
+                        ))
+                    //Ok(value)
                 } else {
                     Err(self.error(
                         e.name.line,

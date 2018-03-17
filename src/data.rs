@@ -83,11 +83,16 @@ impl Instance {
         }
     }
 
-    pub fn set(&self, name: &str, value: value::Value) {
-        self.inner
-            .borrow_mut()
-            .vars
-            .insert(name.to_owned(), Field { value });
+    pub fn set(&self, name: &str, value: value::Value) -> Result<(), ()> {
+        if self.inner.borrow().vars.contains_key(name) {
+            self.inner
+                .borrow_mut()
+                .vars
+                .insert(name.to_owned(), Field { value });
+            Ok(())
+        } else {
+            Err(())
+        }
     }
 }
 
