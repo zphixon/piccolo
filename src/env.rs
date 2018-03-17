@@ -21,7 +21,7 @@
 
 extern crate backtrace;
 
-use ::*;
+use super::*;
 
 use std::collections::{HashMap, LinkedList};
 

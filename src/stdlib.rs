@@ -1,7 +1,7 @@
 extern crate rustyline;
 extern crate time;
 
-use ::*;
+use super::*;
 use value::{is_equal, is_truthy, Value};
 use interp::Interpreter;
 use err::{ErrorKind, PiccoloError};

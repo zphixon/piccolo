@@ -1,18 +1,19 @@
 extern crate backtrace;
 
+use super::*;
 use expr::ExprAccept;
 use stmt::StmtAccept;
 use value::{is_equal, is_truthy, Value};
 use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
-use stmt;
-use stdlib;
-use env;
-use token;
-use expr;
-use func;
-use data;
-use std;
+//use stmt;
+//use stdlib;
+//use env;
+//use token;
+//use expr;
+//use func;
+//use data;
+//use std;
 
 pub struct Interpreter {
     pub env: env::Scope,
@@ -699,13 +700,13 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_get(&mut self, e: &expr::Get) -> Self::Output {
-        let me = match *e.object {
-            expr::Expr::Variable(expr::Variable(ref v)) => v.lexeme == "me",
-            _ => false,
-        };
+        //let me = match *e.object {
+        //    expr::Expr::Variable(expr::Variable(ref v)) => v.lexeme == "me",
+        //    _ => false,
+        //};
         let value = self.evaluate(&*e.object)?;
         if let Value::Instance(ref inst) = value {
-            if let Some(field) = inst.get(&e.name.lexeme, me) {
+            if let Some(field) = inst.get(&e.name.lexeme) {
                 Ok(field)
             } else {
                 Err(self.error(

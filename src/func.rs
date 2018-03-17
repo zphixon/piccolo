@@ -1,4 +1,4 @@
-use ::*;
+use super::*;
 use env::Scope;
 
 #[derive(Clone, PartialEq, Debug, Copy)]

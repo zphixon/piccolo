@@ -1,6 +1,6 @@
 use std::fmt;
 
-use ::*;
+use super::*;
 
 pub fn parse_into_value(into: String) -> Value {
     if let Ok(b) = into.parse::<bool>() {

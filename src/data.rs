@@ -1,4 +1,5 @@
-use ::*;
+//use ::*;
+use super::*;
 
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -71,7 +72,7 @@ impl Instance {
         }
     }
 
-    pub fn get(&self, name: &str, as_me: bool) -> Option<value::Value> {
+    pub fn get(&self, name: &str) -> Option<value::Value> {
         if self.inner.borrow().vars.contains_key(name) {
             let field = self.inner.borrow();
             let field = &field.vars[name];

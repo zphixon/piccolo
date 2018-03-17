@@ -1,4 +1,4 @@
-use ::*;
+use super::*;
 
 pub trait StmtAccept {
     fn accept<T: StmtVisitor>(&self, visitor: &mut T) -> T::Output;
