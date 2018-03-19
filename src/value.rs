@@ -1,7 +1,8 @@
 use std::fmt;
+use std::cmp::Ordering;
+use std::rc::Rc;
 
 use super::*;
-use std::cmp::Ordering;
 use foreign::Foreign;
 
 pub fn parse_into_value(into: String) -> Value {
@@ -30,7 +31,7 @@ pub enum Value {
     Func(func::Func),
     Data(data::Data),
     Instance(data::Instance),
-    Foreign(Box<Foreign>),
+    Foreign(Rc<Foreign>),
     Nil,
 }
 

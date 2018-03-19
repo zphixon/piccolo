@@ -1,4 +1,3 @@
-//#![feature(get_type_id)]
 #![recursion_limit="128"]
 extern crate proc_macro;
 extern crate syn;
@@ -29,9 +28,7 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
         },
         _ => { vec![] }
     };
-    let values = names.clone();
-    let pls = names.clone();
-    let halp = names.clone();
+    let names2 = names.clone();
 
     quote! {
         impl Foreign for #name {
@@ -39,16 +36,10 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
                 stringify!(#name)
             }
 
-            fn box_clone(&self) -> Box<Foreign> {
-                Box::new(#name {
-                    #(#names: self.#values.clone()),*
-                })
-            }
-
             fn compare(&self, rhs: &Foreign) -> Option<::std::cmp::Ordering> {
                 if rhs.is::<#name>() {
                     let rhs = rhs.downcast_ref::<#name>().unwrap();
-                    if #(self.#pls == rhs.#halp)&&* {
+                    if #(self.#names == rhs.#names2)&&* {
                         return Some(::std::cmp::Ordering::Equal)
                     }
                 }
