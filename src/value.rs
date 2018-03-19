@@ -1,6 +1,10 @@
 use std::fmt;
 
 use super::*;
+use std::any::Any;
+use std::rc;
+use std::cmp::Ordering;
+use foreign::{Foreign };
 
 pub fn parse_into_value(into: String) -> Value {
     if let Ok(b) = into.parse::<bool>() {
@@ -28,8 +32,77 @@ pub enum Value {
     Func(func::Func),
     Data(data::Data),
     Instance(data::Instance),
-    Foreign(Box<foreign::Foreign>),
+    Foreign(rc::Rc<Foreign>),
     Nil,
+}
+
+impl Value {
+    fn compare(&self, rhs: &Value) -> Option<Ordering> {
+        match *self {
+            Value::Bool(l) => match *rhs {
+                Value::Bool(r) => l.partial_cmp(&r),
+                _ => None,
+            },
+            Value::String(ref l) => match *rhs {
+                Value::String(ref r) => l.partial_cmp(&r),
+                _ => None,
+            },
+            Value::Float(l) => match *rhs {
+                Value::Float(r) => l.partial_cmp(&r),
+                Value::Integer(r) => l.partial_cmp(&(r as f64)),
+                _ => None,
+            },
+            Value::Integer(l) => match *rhs {
+                Value::Integer(r) => l.partial_cmp(&r),
+                Value::Float(r) => (l as f64).partial_cmp(&r),
+                _ => None,
+            },
+            Value::Array(ref l) => match *rhs {
+                Value::Array(ref r) => {
+                    if l.len() != r.len() {
+                        None
+                    } else {
+                        let mut equal = Some(Ordering::Equal);
+                        for (i, left) in l.iter().enumerate() {
+                            if left.compare(&r[i]) == Some(Ordering::Equal) {
+                                equal = None;
+                            }
+                        }
+                        equal
+                    }
+                },
+                _ => None,
+            },
+            Value::Func(ref l) => match *rhs {
+                Value::Func(ref r) => if l == r { Some(Ordering::Equal) } else { None },
+                _ => None,
+            },
+            Value::Data(ref l) => match *rhs {
+                Value::Data(ref r) => if l == r { Some(Ordering::Equal) } else { None },
+                _ => None,
+            },
+            Value::Instance(ref l) => match *rhs {
+                Value::Instance(ref r) => if l == r { Some(Ordering::Equal) } else { None },
+                _ => None,
+            },
+            Value::Foreign(ref l) => match *rhs {
+                //Value::Foreign(ref r) => {
+                //    //l.compare(Box::new(r)),
+                //    //r.downcast_ref::<Value>()
+                //    //r.as_foreign().com
+                //    //l.as_foreign().unwrap().compare(Box::new(r.as_foreign().unwrap()))
+                //    //None
+                //    l.compare(&**r)
+                //}
+                Value::Foreign(ref r) => l.compare(&**r),
+                _ => None,
+            },
+            Value::Nil => match *rhs {
+                Value::Nil => Some(Ordering::Equal),
+                _ => None,
+            },
+        }
+    }
 }
 
 impl<'a> From<&'a Value> for Value {
@@ -154,50 +227,7 @@ impl fmt::Debug for Value {
 
 impl PartialEq for Value {
     fn eq(&self, rhs: &Value) -> bool {
-        match *self {
-            Value::Bool(l) => match *rhs {
-                Value::Bool(r) => r == l,
-                _ => false,
-            },
-            Value::String(ref l) => match *rhs {
-                Value::String(ref r) => r == l,
-                _ => false,
-            },
-            Value::Float(l) => match *rhs {
-                Value::Float(r) => l == r,
-                Value::Integer(r) => l == r as f64,
-                _ => false,
-            },
-            Value::Integer(l) => match *rhs {
-                Value::Integer(r) => l == r,
-                Value::Float(r) => l as f64 == r,
-                _ => false,
-            },
-            Value::Array(ref l) => match *rhs {
-                Value::Array(ref r) => l == r,
-                _ => false,
-            },
-            Value::Func(ref l) => match *rhs {
-                Value::Func(ref r) => l == r,
-                _ => false,
-            },
-            Value::Data(ref l) => match *rhs {
-                Value::Data(ref r) => l == r,
-                _ => false,
-            },
-            Value::Instance(ref l) => match *rhs {
-                Value::Instance(ref r) => l == r,
-                _ => false,
-            },
-            Value::Foreign(ref l) => match *rhs {
-                Value::Foreign(ref r) => l == r,
-                _ => false,
-            },
-            Value::Nil => match *rhs {
-                Value::Nil => true,
-                _ => false,
-            },
-        }
+        self.compare(&rhs) == Some(Ordering::Equal)
     }
 }
 
@@ -209,12 +239,3 @@ pub fn is_truthy(e: &Value) -> bool {
     }
 }
 
-pub fn is_equal(lhs: &Value, rhs: &Value) -> bool {
-    if lhs == &Value::Nil && rhs == &Value::Nil {
-        true
-    } else if lhs == &Value::Nil || rhs == &Value::Nil {
-        false
-    } else {
-        lhs == rhs
-    }
-}

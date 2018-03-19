@@ -2,9 +2,10 @@ extern crate rustyline;
 extern crate time;
 
 use super::*;
-use value::{is_equal, is_truthy, Value};
+use value::{is_truthy, Value};
 use interp::Interpreter;
 use err::{ErrorKind, PiccoloError};
+use foreign::{Foreign, Something};
 
 use self::rustyline::Editor;
 
@@ -269,6 +270,13 @@ pub fn create_stdlib() -> env::Scope {
         Value::Instance(ref i) => Ok(i.inner.borrow().data.name.clone().into()),
         Value::Foreign(ref f) => Ok(f.get_name().into()),
         Value::Nil => Ok("nil".into()),
+    });
+
+    env.new_native_func("inject_foreign", func::Arity::None, |_, _| {
+        Ok(Value::Foreign(::std::rc::Rc::new(Something {
+            num: 3,
+            s: "hello!".into(),
+        })))
     });
 
     env

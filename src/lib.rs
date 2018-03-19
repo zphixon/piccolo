@@ -1,4 +1,8 @@
+#![feature(get_type_id)]
 #![allow(unknown_lints)]
+
+#[macro_use]
+extern crate piccolo_derive;
 
 pub mod parser;
 pub mod token;

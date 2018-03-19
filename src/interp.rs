@@ -3,7 +3,8 @@ extern crate backtrace;
 use super::*;
 use expr::ExprAccept;
 use stmt::StmtAccept;
-use value::{is_equal, is_truthy, Value};
+use value::{is_truthy, Value};
+//use value::Value;
 use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
 
@@ -499,8 +500,8 @@ impl expr::ExprVisitor for Interpreter {
                 }
             },
 
-            TokenKind::Equals => Value::Bool(is_equal(&lhs, &rhs)),
-            TokenKind::NotEquals => Value::Bool(!is_equal(&lhs, &rhs)),
+            TokenKind::Equals => Value::Bool(lhs == rhs),
+            TokenKind::NotEquals => Value::Bool(lhs == rhs),
 
             TokenKind::ERange => match lhs {
                 Value::Integer(l) => match rhs {
