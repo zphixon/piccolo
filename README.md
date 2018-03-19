@@ -4,6 +4,8 @@
 Piccolo is a small, light, high-pitched scripting language (eventually)
 intended for embedding in Rust projects.
 
+*currently requires nightly: waiting for [Any::type_id](https://github.com/rust-lang/rust/issues/27745)*
+
 ## TODO
 
 * [X] lexer
