@@ -1,4 +1,4 @@
-#![feature(get_type_id)]
+//#![feature(get_type_id)]
 #![recursion_limit="128"]
 extern crate proc_macro;
 extern crate syn;
@@ -6,25 +6,12 @@ extern crate syn;
 extern crate quote;
 
 use proc_macro::TokenStream;
-use syn::{Body, VariantData, Variant};
+use syn::{Body, VariantData};
 
 #[proc_macro_derive(Foreign)]
 pub fn foreign(input: TokenStream) -> TokenStream {
     let s = input.to_string();
     let ast = syn::parse_derive_input(&s).unwrap();
-//    match &ast.body {
-//        &Body::Struct(ref v) => {
-//            match v {
-//                &VariantData::Struct(ref fields) => {
-//                    for item in fields {
-//                        println!("{:?}", item);
-//                    }
-//                },
-//                _ => {}
-//            }
-//        },
-//        _ => {}
-//    }
     let gen = impl_foreign(&ast);
     gen.parse().unwrap()
 }
@@ -59,40 +46,13 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
             }
 
             fn compare(&self, rhs: &Foreign) -> Option<::std::cmp::Ordering> {
-                //println!("{}", rhs.is::<#name>());
-                //println!("{:?}, {:?}", ::std::any::TypeId::of::<#name>(), rhs.get_type_id());
-                //panic!("wat");
                 if rhs.is::<#name>() {
                     let rhs = rhs.downcast_ref::<#name>().unwrap();
                     if #(self.#pls == rhs.#halp)&&* {
                         return Some(::std::cmp::Ordering::Equal)
                     }
                 }
-                //if rhs.is::<#name>() {
-                    //rhs.downcast_ref::<#name>().unwrap();
-                //}
-                //Any::downcast_ref::<#name>(&rhs).unwrap();
                 None
-                //match rhs.downcast_ref::<Value>() {
-                //    _ => panic!("o hec")
-                //}
-                //match *rhs {
-                //    Value::Foreign(ref f) => {
-                //        //println!("{:?}", f.num);
-                //        Any::downcast_ref::<#name>(f).unwrap();
-                //        None
-                //    },
-                //    _ => None,
-                //}
-                //match rhs  {
-                //    let eq = #(self.#pls == rhs.#halp)&&*;
-                //    if eq {
-                //        Some(::std::cmp::Ordering::Equal)
-                //    } else {
-                //        None
-                //    }
-                //}
-                //None
             }
         }
     }

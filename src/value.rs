@@ -1,10 +1,8 @@
 use std::fmt;
 
 use super::*;
-use std::any::Any;
-use std::rc;
 use std::cmp::Ordering;
-use foreign::{Foreign };
+use foreign::Foreign;
 
 pub fn parse_into_value(into: String) -> Value {
     if let Ok(b) = into.parse::<bool>() {
@@ -86,14 +84,6 @@ impl Value {
                 _ => None,
             },
             Value::Foreign(ref l) => match *rhs {
-                //Value::Foreign(ref r) => {
-                //    //l.compare(Box::new(r)),
-                //    //r.downcast_ref::<Value>()
-                //    //r.as_foreign().com
-                //    //l.as_foreign().unwrap().compare(Box::new(r.as_foreign().unwrap()))
-                //    //None
-                //    l.compare(&**r)
-                //}
                 Value::Foreign(ref r) => l.compare(&**r),
                 _ => None,
             },

@@ -667,7 +667,7 @@ impl expr::ExprVisitor for Interpreter {
             }
             for &(ref name, ref value) in &e.args {
                 let f = fields.get(name).cloned();
-                if let Some(ref field) = f {
+                if let Some(_) = f {
                     fields.insert(
                         name.clone(),
                         data::Field {
