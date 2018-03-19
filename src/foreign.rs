@@ -1,4 +1,3 @@
-
 use std::any::{Any, TypeId};
 use std::cmp;
 
@@ -44,4 +43,3 @@ impl Clone for Box<Foreign> {
 pub struct Test {
     inner: String,
 }
-

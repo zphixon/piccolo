@@ -68,19 +68,31 @@ impl Value {
                         }
                         equal
                     }
-                },
+                }
                 _ => None,
             },
             Value::Func(ref l) => match *rhs {
-                Value::Func(ref r) => if l == r { Some(Ordering::Equal) } else { None },
+                Value::Func(ref r) => if l == r {
+                    Some(Ordering::Equal)
+                } else {
+                    None
+                },
                 _ => None,
             },
             Value::Data(ref l) => match *rhs {
-                Value::Data(ref r) => if l == r { Some(Ordering::Equal) } else { None },
+                Value::Data(ref r) => if l == r {
+                    Some(Ordering::Equal)
+                } else {
+                    None
+                },
                 _ => None,
             },
             Value::Instance(ref l) => match *rhs {
-                Value::Instance(ref r) => if l == r { Some(Ordering::Equal) } else { None },
+                Value::Instance(ref r) => if l == r {
+                    Some(Ordering::Equal)
+                } else {
+                    None
+                },
                 _ => None,
             },
             Value::Foreign(ref l) => match *rhs {
@@ -208,7 +220,7 @@ impl fmt::Debug for Value {
                 }
                 s.push_str(")");
                 write!(f, "{}", s)
-            },
+            }
             Value::Foreign(ref v) => write!(f, "(foreign {})", v.get_name()),
             Value::Nil => write!(f, "(nil)"),
         }
@@ -228,4 +240,3 @@ pub fn is_truthy(e: &Value) -> bool {
         _ => true,
     }
 }
-
