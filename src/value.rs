@@ -32,7 +32,7 @@ pub enum Value {
     Func(func::Func),
     Data(data::Data),
     Instance(data::Instance),
-    Foreign(rc::Rc<Foreign>),
+    Foreign(Box<Foreign>),
     Nil,
 }
 

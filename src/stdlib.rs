@@ -273,7 +273,7 @@ pub fn create_stdlib() -> env::Scope {
     });
 
     env.new_native_func("inject_foreign", func::Arity::None, |_, _| {
-        Ok(Value::Foreign(::std::rc::Rc::new(Something {
+        Ok(Value::Foreign(Box::new(Something {
             num: 3,
             s: "hello!".into(),
         })))
