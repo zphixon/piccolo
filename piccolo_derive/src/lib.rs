@@ -29,6 +29,13 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
         _ => { vec![] }
     };
     let names2 = names.clone();
+    let names3 = names.clone();
+    let names4 = names.clone();
+    let names5 = names.clone();
+    let names6 = names.clone();
+    let names7 = names.clone();
+    let names8 = names.clone();
+    let names9 = names.clone();
 
     quote! {
         impl Foreign for #name {
@@ -36,10 +43,34 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
                 stringify!(#name)
             }
 
-            fn compare(&self, rhs: &Foreign) -> Option<::std::cmp::Ordering> {
+            //fn box_clone(&self) -> Box<Foreign> {
+            //    Box::new(#name {
+            //        #(#names: self.#names2.clone()),*
+            //    })
+            //}
+
+            fn get(&self, name: &str) -> Option<::value::Value> {
+                #(if name == stringify!(#names5) {
+                    return Some(self.#names6.clone().into_inner().into())
+                })*
+                None
+            }
+
+            fn set(&mut self, name: &str, value: ::value::Value) -> Result<(), ()> {
+                //print!("set {} to {:?}", name, value);
+                #(if name == stringify!(#names7) {
+                    //println!(" from {:?}", self.#names9);
+                    self.#names8.replace(value.into());
+                    return Ok(())
+                })*
+                Err(())
+            }
+
+            fn compare(&self, rhs: &ForeignOuter) -> Option<::std::cmp::Ordering> {
+                let rhs = rhs.inner.borrow();
                 if rhs.is::<#name>() {
                     let rhs = rhs.downcast_ref::<#name>().unwrap();
-                    if #(self.#names == rhs.#names2)&&* {
+                    if #(self.#names3 == rhs.#names4)&&* {
                         return Some(::std::cmp::Ordering::Equal)
                     }
                 }

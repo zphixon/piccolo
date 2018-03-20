@@ -1,6 +1,7 @@
 extern crate piccolo;
 
-use piccolo::foreign::{Foreign, Something};
+use piccolo::foreign::{Foreign, Test};
+
 fn main() {
     let code =
         //"32 + -4.5 - 3 == 72 * 3 && 4 != 5";
@@ -59,12 +60,12 @@ fn main() {
     //gp.sing()
     //"#;
 
-    println!("{:?}", "a".partial_cmp("b"));
-    let x = Box::new(Something {
-        num: 3,
-        s: "hi".into(),
-    });
-    y(x);
+    //let x = Box::new(Someg)
+    //println!("{:?}", "a".partial_cmp("b"));
+    //let x = ::std::rc::Rc::new(Test {
+    //    inner: "hi".into(),
+    //});
+    //y(x);
     //<Box<Something> as Box<Foreign>>::clone(x);
     //Box::new(x).<Box<piccolo::foreign::Something> as Box<Foreign>>::clone();
 
@@ -114,9 +115,4 @@ fn main() {
             }
         }
     }
-}
-
-fn y(z: Box<Foreign>) {
-    z.clone();
-    z.compare(&piccolo::value::Value::Foreign(z.clone()));
 }

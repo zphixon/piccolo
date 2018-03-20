@@ -4,10 +4,13 @@ extern crate time;
 use super::*;
 use value::{is_truthy, Value};
 use err::{ErrorKind, PiccoloError};
+use foreign::{Foreign, ForeignOuter};
 
 use self::rustyline::Editor;
 
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 fn new_native_func(arity: func::Arity, func: func::NativeFuncType) -> data::Field {
     data::Field {
@@ -268,6 +271,12 @@ pub fn create_stdlib() -> env::Scope {
         Value::Instance(ref i) => Ok(i.inner.borrow().data.name.clone().into()),
         Value::Foreign(ref f) => Ok(f.get_name().into()),
         Value::Nil => Ok("nil".into()),
+    });
+
+    env.new_native_func("foreign", func::Arity::None, |_, _| {
+        Ok(Value::Foreign(ForeignOuter::new(::foreign::Test {
+            inner: RefCell::new("oh snaparoon".into()),
+        })))
     });
 
     env

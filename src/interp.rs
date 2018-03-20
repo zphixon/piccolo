@@ -8,6 +8,9 @@ use value::{is_truthy, Value};
 use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
 
+use std::borrow::BorrowMut;
+use std::rc::Rc;
+
 pub struct Interpreter {
     pub env: env::Scope,
 }
@@ -698,18 +701,30 @@ impl expr::ExprVisitor for Interpreter {
         //    _ => false,
         //};
         let value = self.evaluate(&*e.object)?;
-        if let Value::Instance(ref inst) = value {
-            if let Some(field) = inst.get(&e.name.lexeme) {
-                Ok(field)
-            } else {
-                Err(self.error(
-                    e.name.line,
-                    ErrorKind::NoSuchField,
-                    &format!("No field named {}", e.name.lexeme),
-                ))
-            }
-        } else {
-            Err(self.error(
+        match value {
+            Value::Instance(ref inst) => {
+                if let Some(field) = inst.get(&e.name.lexeme) {
+                    Ok(field)
+                } else {
+                    Err(self.error(
+                        e.name.line,
+                        ErrorKind::NoSuchField,
+                        &format!("No field named {}", e.name.lexeme),
+                    ))
+                }
+            },
+            Value::Foreign(ref foreign) => {
+                if let Some(field) = foreign.get(&e.name.lexeme) {
+                    Ok(field)
+                } else {
+                    Err(self.error(
+                        e.name.line,
+                        ErrorKind::NoSuchField,
+                        &format!("No field named {}", e.name.lexeme),
+                    ))
+                }
+            },
+            _ => Err(self.error(
                 e.name.line,
                 ErrorKind::NonInstance,
                 "Non-instance does not have fields",
@@ -753,21 +768,38 @@ impl expr::ExprVisitor for Interpreter {
                 }
             }
             _ => {
-                let value = self.evaluate(&*e.object)?;
-                if let Value::Instance(ref instance) = value {
-                    let value = self.evaluate(&*e.value)?;
-                    instance
-                        .set(&e.name.lexeme, value.clone())
-                        .map(|_| value)
-                        .map_err(|_| {
-                            self.error(
-                                e.name.line,
-                                ErrorKind::NoSuchField,
-                                &format!("No field named {}", e.name.lexeme),
-                            )
-                        })
-                } else {
-                    Err(self.error(
+                let mut value = self.evaluate(&*e.object)?;
+                match value {
+                    Value::Instance(ref instance) => {
+                        let value = self.evaluate(&*e.value)?;
+                        instance
+                            .set(&e.name.lexeme, value.clone())
+                            .map(|_| value)
+                            .map_err(|_| {
+                                self.error(
+                                    e.name.line,
+                                    ErrorKind::NoSuchField,
+                                    &format!("No field named {}", e.name.lexeme),
+                                )
+                            })
+                    },
+                    Value::Foreign(ref mut foreign) => {
+                        let mut value = self.evaluate(&*e.value)?;
+                        //let mut foreign = foreign.clone();
+                        //Rc::get_mut(foreign).unwrap()
+                        foreign
+                            .set(&e.name.lexeme, value.clone())
+                            .map(|_| value)
+                            .map_err(|_| {
+                                self.error(
+                                    e.name.line,
+                                    ErrorKind::NoSuchField,
+                                    &format!("No field named {}", e.name.lexeme),
+                                )
+                            })
+                        //panic!("neat");
+                    },
+                    _ => Err(self.error(
                         e.name.line,
                         ErrorKind::NonInstance,
                         "Non-instance does not have fields",

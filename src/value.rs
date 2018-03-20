@@ -1,9 +1,10 @@
 use std::fmt;
 use std::cmp::Ordering;
 use std::rc::Rc;
+use std::cell::RefCell;
 
 use super::*;
-use foreign::Foreign;
+use foreign::{Foreign, ForeignOuter};
 
 pub fn parse_into_value(into: String) -> Value {
     if let Ok(b) = into.parse::<bool>() {
@@ -31,7 +32,7 @@ pub enum Value {
     Func(func::Func),
     Data(data::Data),
     Instance(data::Instance),
-    Foreign(Rc<Foreign>),
+    Foreign(ForeignOuter),
     Nil,
 }
 
@@ -97,7 +98,7 @@ impl Value {
                 _ => None,
             },
             Value::Foreign(ref l) => match *rhs {
-                Value::Foreign(ref r) => l.compare(&**r),
+                Value::Foreign(ref r) => l.compare(&r),
                 _ => None,
             },
             Value::Nil => match *rhs {
@@ -123,6 +124,15 @@ impl<'a> From<&'a str> for Value {
 impl From<String> for Value {
     fn from(s: String) -> Self {
         Value::String(s)
+    }
+}
+
+impl Into<String> for Value {
+    fn into(self) -> String {
+        match self {
+            Value::String(s) => s,
+            _ => panic!("could not cast to string")
+        }
     }
 }
 
@@ -230,7 +240,7 @@ impl fmt::Debug for Value {
 
 impl PartialEq for Value {
     fn eq(&self, rhs: &Value) -> bool {
-        self.compare(&rhs) == Some(Ordering::Equal)
+        self.compare(rhs) == Some(Ordering::Equal)
     }
 }
 
