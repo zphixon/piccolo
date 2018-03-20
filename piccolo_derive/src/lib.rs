@@ -51,7 +51,7 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
 
             fn get(&self, name: &str) -> Option<::value::Value> {
                 #(if name == stringify!(#names5) {
-                    return Some(self.#names6.clone().into_inner().into())
+                    return Some(self.#names6.clone().into())
                 })*
                 None
             }
@@ -60,7 +60,8 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
                 //print!("set {} to {:?}", name, value);
                 #(if name == stringify!(#names7) {
                     //println!(" from {:?}", self.#names9);
-                    self.#names8.replace(value.into());
+                    //self.#names8.replace(value.into());
+                    self.#names8 = value.into();
                     return Ok(())
                 })*
                 Err(())

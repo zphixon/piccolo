@@ -275,7 +275,7 @@ pub fn create_stdlib() -> env::Scope {
 
     env.new_native_func("foreign", func::Arity::None, |_, _| {
         Ok(Value::Foreign(ForeignOuter::new(::foreign::Test {
-            inner: RefCell::new("oh snaparoon".into()),
+            inner: "neat".into(), //RefCell::new("oh snaparoon".into()),
         })))
     });
 

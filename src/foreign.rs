@@ -83,5 +83,5 @@ impl Foreign {
 
 #[derive(Foreign, Debug)]
 pub struct Test {
-    pub inner: RefCell<String>,
+    pub inner: String,
 }
