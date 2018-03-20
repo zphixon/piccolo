@@ -787,6 +787,7 @@ impl expr::ExprVisitor for Interpreter {
                         let mut value = self.evaluate(&*e.value)?;
                         //let mut foreign = foreign.clone();
                         //Rc::get_mut(foreign).unwrap()
+                        let name = value.name();
                         foreign
                             .set(&e.name.lexeme, value.clone())
                             .map(|_| value)
@@ -794,7 +795,7 @@ impl expr::ExprVisitor for Interpreter {
                                 self.error(
                                     e.name.line,
                                     ErrorKind::NoSuchField,
-                                    &format!("No field named {}", e.name.lexeme),
+                                    &format!("No field `{}` with type {}", e.name.lexeme, name),
                                 )
                             })
                         //panic!("neat");

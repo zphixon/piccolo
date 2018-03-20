@@ -109,54 +109,9 @@ impl Value {
     }
 }
 
-impl<'a> From<&'a Value> for Value {
-    fn from(v: &'a Value) -> Self {
-        v.clone()
-    }
-}
-
 impl<'a> From<&'a str> for Value {
     fn from(v: &'a str) -> Self {
         Value::String(v.to_owned())
-    }
-}
-
-impl From<String> for Value {
-    fn from(s: String) -> Self {
-        Value::String(s)
-    }
-}
-
-impl Into<String> for Value {
-    fn into(self) -> String {
-        match self {
-            Value::String(s) => s,
-            _ => panic!("could not cast to string")
-        }
-    }
-}
-
-impl From<bool> for Value {
-    fn from(b: bool) -> Self {
-        Value::Bool(b)
-    }
-}
-
-impl From<i64> for Value {
-    fn from(i: i64) -> Self {
-        Value::Integer(i)
-    }
-}
-
-impl From<f64> for Value {
-    fn from(f: f64) -> Self {
-        Value::Float(f)
-    }
-}
-
-impl From<Vec<Value>> for Value {
-    fn from(f: Vec<Value>) -> Self {
-        Value::Array(f)
     }
 }
 
@@ -169,6 +124,75 @@ impl From<expr::Literal> for Value {
             expr::Literal::String(v) => Value::String(v),
             expr::Literal::Array(_) => panic!("unreachable: .into() on literal array"),
             expr::Literal::Nil => Value::Nil,
+        }
+    }
+}
+
+pub trait TryInto<T> {
+    type Error;
+    fn try_into(self) -> Result<T, Self::Error>;
+}
+
+pub trait TryFrom<T>: Sized {
+    type Error;
+    fn try_from(value: T) -> Result<Self, Self::Error>;
+}
+
+macro_rules! impl_conv {
+    ($ty:ty, $name:ident) => {
+        impl TryFrom<$ty> for Value {
+            type Error = ();
+            fn try_from(t: $ty) -> Result<Self, Self::Error> {
+                Ok(Value::$name(t))
+            }
+        }
+
+        impl TryInto<$ty> for Value {
+            type Error = String;
+            fn try_into(self) -> Result<$ty, Self::Error> {
+                match self {
+                    Value::$name(t) => Ok(t),
+                    _ => Err(format!("could not cast {:?} to {}", self, stringify!($ty)))
+                }
+            }
+        }
+
+        impl From<$ty> for Value {
+            fn from(t: $ty) -> Self {
+                Value::$name(t)
+            }
+        }
+
+        impl Into<$ty> for Value {
+            fn into(self) -> $ty {
+                match self {
+                    Value::$name(t) => t,
+                    _ => panic!("could not cast {:?} to {}", self, stringify!($ty))
+                }
+            }
+        }
+    }
+}
+
+impl_conv!{ bool, Bool }
+impl_conv!{ i64, Integer }
+impl_conv!{ f64, Float }
+impl_conv!{ String, String }
+impl_conv!{ Vec<Value>, Array }
+
+impl Value {
+    pub fn name(&self) -> &'static str {
+        match *self {
+            Value::Bool(_) => "bool",
+            Value::String(_) => "string",
+            Value::Float(_) => "float",
+            Value::Integer(_) => "integer",
+            Value::Array(_) => "array",
+            Value::Func(_) => "func",
+            Value::Data(_) => "data",
+            Value::Instance(_) => "instance",
+            Value::Foreign(_) => "foreign",
+            Value::Nil => "nil",
         }
     }
 }

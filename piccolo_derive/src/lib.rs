@@ -61,7 +61,8 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
                 #(if name == stringify!(#names7) {
                     //println!(" from {:?}", self.#names9);
                     //self.#names8.replace(value.into());
-                    self.#names8 = value.into();
+                    use ::value::TryInto;
+                    self.#names8 = value.try_into().map_err(|_| ())?;
                     return Ok(())
                 })*
                 Err(())
@@ -76,6 +77,12 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
                     }
                 }
                 None
+            }
+        }
+
+        impl Into<::value::Value> for #name {
+            fn into(self) -> ::value::Value {
+                ::value::Value::Foreign(::foreign::ForeignOuter::new(self))
             }
         }
     }
