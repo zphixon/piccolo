@@ -11,7 +11,7 @@ pub struct ForeignOuter {
 impl ForeignOuter {
     pub fn new<T: Foreign>(inner: T) -> Self {
         ForeignOuter {
-            inner: Rc::new(RefCell::new(inner))
+            inner: Rc::new(RefCell::new(inner)),
         }
     }
     pub fn get_name(&self) -> &'static str {
@@ -75,4 +75,3 @@ impl Foreign {
 pub struct Test {
     pub inner: String,
 }
-

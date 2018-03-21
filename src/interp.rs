@@ -709,7 +709,7 @@ impl expr::ExprVisitor for Interpreter {
                         &format!("No field named {}", e.name.lexeme),
                     ))
                 }
-            },
+            }
             Value::Foreign(ref foreign) => {
                 if let Some(field) = foreign.get(&e.name.lexeme) {
                     Ok(field)
@@ -720,12 +720,12 @@ impl expr::ExprVisitor for Interpreter {
                         &format!("No field named {}", e.name.lexeme),
                     ))
                 }
-            },
+            }
             _ => Err(self.error(
                 e.name.line,
                 ErrorKind::NonInstance,
                 "Non-instance does not have fields",
-            ))
+            )),
         }
     }
 
@@ -779,7 +779,7 @@ impl expr::ExprVisitor for Interpreter {
                                     &format!("No field named {}", e.name.lexeme),
                                 )
                             })
-                    },
+                    }
                     Value::Foreign(ref mut foreign) => {
                         let mut value = self.evaluate(&*e.value)?;
                         //let mut foreign = foreign.clone();
@@ -796,12 +796,12 @@ impl expr::ExprVisitor for Interpreter {
                                 )
                             })
                         //panic!("neat");
-                    },
+                    }
                     _ => Err(self.error(
                         e.name.line,
                         ErrorKind::NonInstance,
                         "Non-instance does not have fields",
-                    ))
+                    )),
                 }
             }
         }
