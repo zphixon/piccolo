@@ -1,10 +1,8 @@
 use std::fmt;
 use std::cmp::Ordering;
-use std::rc::Rc;
-use std::cell::RefCell;
 
 use super::*;
-use foreign::{Foreign, ForeignOuter};
+use foreign::ForeignOuter;
 
 pub fn parse_into_value(into: String) -> Value {
     if let Ok(b) = into.parse::<bool>() {

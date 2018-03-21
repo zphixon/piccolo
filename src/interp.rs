@@ -8,9 +8,6 @@ use value::{is_truthy, Value};
 use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
 
-use std::borrow::BorrowMut;
-use std::rc::Rc;
-
 pub struct Interpreter {
     pub env: env::Scope,
 }

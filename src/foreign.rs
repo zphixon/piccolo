@@ -17,9 +17,6 @@ impl ForeignOuter {
     pub fn get_name(&self) -> &'static str {
         self.inner.borrow().get_name()
     }
-    //pub fn box_clone(&self) -> Box<Foreign> {
-    //    self.inner.borrow().box_clone()
-    //}
     pub fn compare(&self, rhs: &ForeignOuter) -> Option<cmp::Ordering> {
         self.inner.borrow().compare(rhs)
     }
@@ -40,17 +37,10 @@ pub struct TraitObject {
 
 pub trait Foreign: Any + ::std::fmt::Debug {
     fn get_name(&self) -> &'static str;
-    //fn box_clone(&self) -> Box<Foreign>;
     fn compare(&self, rhs: &ForeignOuter) -> Option<cmp::Ordering>;
     fn get(&self, name: &str) -> Option<::value::Value>;
     fn set(&mut self, name: &str, value: ::value::Value) -> Result<(), ()>;
 }
-
-//impl Clone for Box<Foreign> {
-//    fn clone(&self) -> Box<Foreign> {
-//        self.box_clone()
-//    }
-//}
 
 // put it in a separate block because reasons
 impl Foreign {
@@ -85,3 +75,4 @@ impl Foreign {
 pub struct Test {
     pub inner: String,
 }
+

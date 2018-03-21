@@ -28,26 +28,18 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
         },
         _ => { vec![] }
     };
-    let names2 = names.clone();
     let names3 = names.clone();
     let names4 = names.clone();
     let names5 = names.clone();
     let names6 = names.clone();
     let names7 = names.clone();
     let names8 = names.clone();
-    let names9 = names.clone();
 
     quote! {
         impl Foreign for #name {
             fn get_name(&self) -> &'static str {
                 stringify!(#name)
             }
-
-            //fn box_clone(&self) -> Box<Foreign> {
-            //    Box::new(#name {
-            //        #(#names: self.#names2.clone()),*
-            //    })
-            //}
 
             fn get(&self, name: &str) -> Option<::value::Value> {
                 #(if name == stringify!(#names5) {
@@ -57,10 +49,7 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
             }
 
             fn set(&mut self, name: &str, value: ::value::Value) -> Result<(), ()> {
-                //print!("set {} to {:?}", name, value);
                 #(if name == stringify!(#names7) {
-                    //println!(" from {:?}", self.#names9);
-                    //self.#names8.replace(value.into());
                     use ::value::TryInto;
                     self.#names8 = value.try_into().map_err(|_| ())?;
                     return Ok(())

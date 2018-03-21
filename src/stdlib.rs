@@ -4,18 +4,14 @@ extern crate time;
 use super::*;
 use value::{is_truthy, Value};
 use err::{ErrorKind, PiccoloError};
-use foreign::{Foreign, ForeignOuter};
+use foreign::ForeignOuter;
 
 use self::rustyline::Editor;
 
 use std::collections::HashMap;
-use std::rc::Rc;
-use std::cell::RefCell;
 
 fn new_native_func(arity: func::Arity, func: func::NativeFuncType) -> data::Field {
     data::Field {
-        //public: true,
-        //normal: true,
         value: value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func))),
     }
 }
