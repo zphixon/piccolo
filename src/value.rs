@@ -212,7 +212,7 @@ impl fmt::Display for Value {
             }
             Value::Data(ref v) => write!(f, "{:?}", v),
             Value::Instance(ref v) => write!(f, "{:?}", v),
-            Value::Foreign(ref v) => write!(f, "foreign {}", v.get_name()),
+            Value::Foreign(ref v) => write!(f, "foreign {:?}", v),
             Value::Nil => write!(f, "nil"),
         }
     }
@@ -254,7 +254,7 @@ impl fmt::Debug for Value {
                 s.push_str(")");
                 write!(f, "{}", s)
             }
-            Value::Foreign(ref v) => write!(f, "(foreign {})", v.get_name()),
+            Value::Foreign(ref v) => write!(f, "(foreign {:?})", v),
             Value::Nil => write!(f, "(nil)"),
         }
     }

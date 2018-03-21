@@ -30,7 +30,8 @@ fn main() {
         //"if true do\n  prln(\"crepe\")\nend";
         //"for num in 1..999 do\n  if 79 % num == 32 do\n    panic(\"it's 32: \" + str(num))\n  end\nend";
         //"z = [1, 2, 3]\nprln(z[1])\nz[0] = \"yes\"\nprln(z)";
-        "";
+        //"";
+        "x = arr()\nio.prln(x[0])\nx[0] = 7\nio.prln(x[0])\n";
     //"data has_arr is\n  pub arr = [1, 2, 3]\nend\n\nx = new has_arr\n\nx.arr[2] = 9\n";
     //"x = [1, 2, 3]\nx[0] = 99\nio.prln(x)\n";
     //        r#"data counter is

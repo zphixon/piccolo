@@ -735,27 +735,41 @@ impl expr::ExprVisitor for Interpreter {
                 let i = self.evaluate(&*expr.i)?;
                 match i {
                     Value::Integer(idx) => {
+                        let obj = self.evaluate(&*expr.object)?;
+                        match obj {
+                            Value::Foreign(mut f) => {
+                                f.set(&format!("{}", idx), self.evaluate(&*e.value)?)
+                                    .expect("this shouldn't happen");
+                            }
+                            _ => panic!("this shouldn't happen")
+                        }
+                        //println!("{:?}", obj);
+                        //println!("{:?}", expr);
+                        //let value = self.evaluate(&*e.object)?;
+                        //println!("{:?}", value);
+                        Ok(Value::Nil)
+                        //if e.
                         //let value = self.evaluate(&*e.object)?;
                         //panic!("{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}", e, value, i, idx, e.object, expr);
                         //println!("{:?}", self.evaluate(&*expr.object));
-                        if let expr::Expr::Variable(var) = *expr.object.clone() {
-                            let name = var.0.lexeme.clone();
-                            println!("{}", name);
-                            if let Value::Array(mut arr) = self.env.get(&name).expect("todo") {
-                                println!("{:?}", arr);
-                                let value = self.evaluate(&*e.value)?;
-                                println!("{:?}", value);
-                                arr[idx as usize] = value.clone();
-                                println!("{:?}", arr);
-                                self.env.set(&name, Value::Array(arr));
-                                println!("{:?}", self.env.get(&name));
-                                Ok(value)
-                            } else {
-                                panic!("varis not arr: {:?}", self.env.get(&name).expect("todo"));
-                            }
-                        } else {
-                            panic!("var is not var: {:?}", *expr.object);
-                        }
+                        //if let expr::Expr::Variable(var) = *expr.object.clone() {
+                        //    let name = var.0.lexeme.clone();
+                        //    println!("{}", name);
+                        //    if let Value::Array(mut arr) = self.env.get(&name).expect("todo") {
+                        //        println!("{:?}", arr);
+                        //        let value = self.evaluate(&*e.value)?;
+                        //        println!("{:?}", value);
+                        //        arr[idx as usize] = value.clone();
+                        //        println!("{:?}", arr);
+                        //        self.env.set(&name, Value::Array(arr));
+                        //        println!("{:?}", self.env.get(&name));
+                        //        Ok(value)
+                        //    } else {
+                        //        panic!("varis not arr: {:?}", self.env.get(&name).expect("todo"));
+                        //    }
+                        //} else {
+                        //    panic!("var is not var: {:?}", *expr.object);
+                        //}
                     }
                     idx => Err(self.error(
                         expr.rb.line,
@@ -831,17 +845,36 @@ impl expr::ExprVisitor for Interpreter {
         let i = self.evaluate(&*e.i)?;
         match i {
             Value::Integer(i) => match object {
-                Value::Array(ref a) => {
-                    if (i as usize) < a.len() {
-                        Ok(a[i as usize].clone())
+                Value::Foreign(f) => {
+                    if f.is::<::foreign::Array>() {
+                        if let Some(v) = f.get(&format!("{}", i)) {
+                            Ok(v)
+                        } else {
+                            Err(self.error(
+                                e.rb.line,
+                                ErrorKind::IndexError,
+                                &format!("Index out-of-bounds: {}", i),
+                            ))
+                        }
                     } else {
                         Err(self.error(
                             e.rb.line,
                             ErrorKind::IndexError,
-                            &format!("Index out-of-bounds: {}", i),
+                            &format!("Cannot index non-array {:?}", f.get_name()),
                         ))
                     }
                 }
+                //Value::Array(ref a) => {
+                //    if (i as usize) < a.len() {
+                //        Ok(a[i as usize].clone())
+                //    } else {
+                //        Err(self.error(
+                //            e.rb.line,
+                //            ErrorKind::IndexError,
+                //            &format!("Index out-of-bounds: {}", i),
+                //        ))
+                //    }
+                //}
                 v => Err(self.error(
                     e.rb.line,
                     ErrorKind::IndexError,

@@ -275,5 +275,11 @@ pub fn create_stdlib() -> env::Scope {
         })))
     });
 
+    env.new_native_func("arr", func::Arity::None, |_, _| {
+        Ok(Value::Foreign(ForeignOuter::new(::foreign::Array {
+            inner: vec!["oh snappe".into(), 32.into()]
+        })))
+    });
+
     env
 }
