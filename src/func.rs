@@ -1,6 +1,9 @@
 use super::*;
 use env::Scope;
 
+use std::rc::Rc;
+use std::cell::RefCell;
+
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum Arity {
     None,
@@ -49,7 +52,7 @@ impl Func {
             kind: FuncKind::Normal(NormalFunc {
                 decl,
                 method: false,
-                scope: Scope::new(),
+                scope: Rc::new(RefCell::new(Scope::new())),
             }),
         }
     }
@@ -60,8 +63,19 @@ impl Func {
             kind: FuncKind::Normal(NormalFunc {
                 decl,
                 method: true,
-                scope: Scope::new(),
+                scope: Rc::new(RefCell::new(Scope::new())),
             }),
+        }
+    }
+
+    pub fn new_with_scope(arity: Arity, decl: stmt::Func, scope: Rc<RefCell<Scope>>) -> Self {
+        Func {
+            arity,
+            kind: FuncKind::Normal(NormalFunc {
+                decl,
+                method: false,
+                scope,
+            })
         }
     }
 
@@ -112,14 +126,15 @@ impl Func {
 pub struct NormalFunc {
     pub decl: stmt::Func,
     pub method: bool,
-    pub scope: Scope,
+    pub scope: Rc<RefCell<Scope>>,
 }
 
 impl NormalFunc {
     pub fn bind(self, inst: data::Instance) -> NormalFunc {
-        let mut scope = env::Scope::new();
-        scope.set("me", value::Value::Instance(inst));
-        NormalFunc { scope, ..self }
+        //let mut scope = Rc::new(RefCell::new(env::Scope::new()));
+        self.scope.borrow_mut().set("me", value::Value::Instance(inst));
+        self
+        //NormalFunc { scope, ..self }
     }
 
     pub fn call(
@@ -127,16 +142,26 @@ impl NormalFunc {
         interp: &mut interp::Interpreter,
         args: &[value::Value],
     ) -> Result<value::Value, err::PiccoloError> {
+        //println!("what?");
         interp.env.push();
 
         for (i, arg) in args.iter().enumerate() {
             interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
         }
 
-        let mut e = interp.env.append(&self.scope);
-        let result = interp.interpret_with(&self.decl.body, &mut e);
+        let result = interp.interpret_with(&self.decl.body, &mut self.scope.borrow_mut());
+
+        //println!("{}", self.scope);
+        //let result = interp.interpret_with(&self.decl.body, &mut self.scope.borrow_mut());
+        //println!("{}", self.scope);
+        //let mut e = interp.env.append(&self.scope);
+        //let result = interp.interpret(&self.decl.body);
+        //let result = interp.interpret_with(&self.decl.body, &mut e);
+        //println!("{}\n{}", self.scope, e);
+        //self.scope = e;
 
         interp.env.pop();
+        //println!("{}", self.scope);
 
         result.map(|opt| match opt {
             Some(v) => v,

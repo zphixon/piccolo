@@ -106,8 +106,32 @@ pub fn create_stdlib() -> env::Scope {
 
     sys_vars.insert(
         "show_env".into(),
-        new_native_func(func::Arity::None, |i, _| {
-            println!("{}", i.env);
+        new_native_func(func::Arity::Multi, |i, args| {
+            //println!("{}", i.env);
+            if args.len() > 0 {
+                match &args[0] {
+                    &Value::Func(ref f) => {
+                        match f.kind {
+                            func::FuncKind::Normal(ref n) => {
+                                println!("{}", n.scope.borrow());
+                            }
+                            _ => return Err(PiccoloError::new(
+                                ErrorKind::NonFunction,
+                                "Native function does not have scope",
+                                0,
+                            ))
+                        }
+                        //println!("{}", f.scope())
+                    },
+                    v => return Err(PiccoloError::new(
+                        ErrorKind::NonFunction,
+                        &format!("Non-function does not have scope: {:?}", v),
+                        0,
+                    )),
+                }
+            } else {
+                println!("{}", i.env);
+            }
             Ok(Value::Nil)
         }),
     );

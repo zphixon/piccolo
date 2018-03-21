@@ -8,6 +8,9 @@ use value::{is_truthy, Value};
 use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
 
+use std::rc::Rc;
+use std::cell::RefCell;
+
 pub struct Interpreter {
     pub env: env::Scope,
 }
@@ -35,9 +38,15 @@ impl Interpreter {
         stmts: &[stmt::Stmt],
         mut env: &mut env::Scope,
     ) -> Result<Option<Value>, PiccoloError> {
-        std::mem::swap(&mut self.env, &mut env);
+        //let previous = self.env.clone();
+        //self.env = self.env.append(env);
+        //std::mem::swap(&mut self.env, &mut env);
+        self.env.append(env.clone());
         let res = self.interpret(stmts);
-        std::mem::swap(&mut self.env, &mut env);
+        *env = self.env.split();
+        //*env = self.env.split();
+        //self.env = previous;
+        //std::mem::swap(&mut self.env, &mut env);
         res
     }
 
@@ -653,6 +662,7 @@ impl expr::ExprVisitor for Interpreter {
         }
 
         let result = func.call(&mut *self, &args);
+        //println!("{}", func.scope());
 
         result
     }
@@ -890,7 +900,7 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_func(&mut self, e: &expr::Func) -> Self::Output {
-        Ok(Value::Func(func::Func::new(
+        Ok(Value::Func(func::Func::new_with_scope(
             e.arity,
             stmt::Func {
                 name: e.name.clone(),
@@ -899,6 +909,7 @@ impl expr::ExprVisitor for Interpreter {
                 body: e.body.clone(),
                 method: e.method,
             },
+            Rc::new(RefCell::new(self.env.clone())),
         )))
     }
 }
@@ -970,7 +981,8 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_func(&mut self, s: &stmt::Func) -> Self::Output {
-        let func = Value::Func(func::Func::new(s.arity, s.clone()));
+        //let func = Value::Func(func::Func::new(s.arity, s.clone()));
+        let func = Value::Func(func::Func::new_with_scope(s.arity, s.clone(), Rc::new(RefCell::new(self.env.clone()))));
         self.env.set(&s.name.lexeme, func);
         Ok(None)
     }

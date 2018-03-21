@@ -2,10 +2,23 @@ use std::any::{Any, TypeId};
 use std::cmp;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ForeignOuter {
     pub inner: Rc<RefCell<Foreign>>,
+}
+
+impl fmt::Debug for ForeignOuter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "(foreign {:?})", self.inner.borrow())
+    }
+}
+
+impl fmt::Display for ForeignOuter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.inner.borrow())
+    }
 }
 
 impl ForeignOuter {
@@ -38,7 +51,7 @@ pub struct TraitObject {
     pub vtable: *mut (),
 }
 
-pub trait Foreign: Any + ::std::fmt::Debug {
+pub trait Foreign: Any + fmt::Display + fmt::Debug {
     fn get_name(&self) -> &'static str;
 
     fn compare(&self, _rhs: &ForeignOuter) -> Option<cmp::Ordering> {
@@ -88,9 +101,34 @@ pub struct Test {
     pub inner: String,
 }
 
-#[derive(Debug)]
+impl fmt::Display for Test {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}
+
 pub struct Array {
     pub inner: Vec<::value::Value>,
+}
+
+impl fmt::Display for Array {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = String::from("[");
+        if self.inner.len() > 0 {
+            for i in 0..self.inner.len() - 1 {
+                s.push_str(&format!("{}, ", self.inner[i].clone()));
+            }
+            s.push_str(&format!("{}", self.inner[self.inner.len() - 1].clone()));
+        }
+        s.push_str("]");
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Debug for Array {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
 }
 
 impl Foreign for Array {
