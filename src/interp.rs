@@ -640,7 +640,7 @@ impl expr::ExprVisitor for Interpreter {
                 let args: Result<Vec<Value>, PiccoloError> =
                     e.args.iter().map(|arg| self.evaluate(arg)).collect();
                 let args = args?;
-                return f.call(&mut *self, &args);
+                return f.call(&mut *self, &args).map_err(|err| err.line(e.paren.line));
             }
             v => {
                 return Err(self.error(
@@ -748,51 +748,63 @@ impl expr::ExprVisitor for Interpreter {
     fn visit_set(&mut self, e: &expr::Set) -> Self::Output {
         match &*e.object {
             &expr::Expr::Index(ref expr) => {
-                let i = self.evaluate(&*expr.i)?;
-                match i {
-                    Value::Integer(idx) => {
-                        let obj = self.evaluate(&*expr.object)?;
-                        match obj {
-                            Value::Foreign(mut f) => {
-                                f.set(&format!("{}", idx), self.evaluate(&*e.value)?)
-                                    .expect("this shouldn't happen");
-                            }
-                            _ => panic!("this shouldn't happen")
-                        }
-                        //println!("{:?}", obj);
-                        //println!("{:?}", expr);
-                        //let value = self.evaluate(&*e.object)?;
-                        //println!("{:?}", value);
-                        Ok(Value::Nil)
-                        //if e.
-                        //let value = self.evaluate(&*e.object)?;
-                        //panic!("{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}", e, value, i, idx, e.object, expr);
-                        //println!("{:?}", self.evaluate(&*expr.object));
-                        //if let expr::Expr::Variable(var) = *expr.object.clone() {
-                        //    let name = var.0.lexeme.clone();
-                        //    println!("{}", name);
-                        //    if let Value::Array(mut arr) = self.env.get(&name).expect("todo") {
-                        //        println!("{:?}", arr);
-                        //        let value = self.evaluate(&*e.value)?;
-                        //        println!("{:?}", value);
-                        //        arr[idx as usize] = value.clone();
-                        //        println!("{:?}", arr);
-                        //        self.env.set(&name, Value::Array(arr));
-                        //        println!("{:?}", self.env.get(&name));
-                        //        Ok(value)
-                        //    } else {
-                        //        panic!("varis not arr: {:?}", self.env.get(&name).expect("todo"));
-                        //    }
-                        //} else {
-                        //    panic!("var is not var: {:?}", *expr.object);
-                        //}
+                let idx = self.evaluate(&*expr.i)?;
+                let obj = self.evaluate(&*expr.object)?;
+                match obj {
+                    Value::Foreign(mut f) => {
+                        f.set(&format!("{}", idx), self.evaluate(&*e.value)?)
+                            .map_err(|err| err.line(e.name.line))
                     }
-                    idx => Err(self.error(
-                        expr.rb.line,
-                        ErrorKind::IndexError,
-                        &format!("Cannot index with non-integer {:?}", idx),
-                    )),
+                    v => Err(self.error(
+                            e.name.line,
+                            ErrorKind::IndexError,
+                            &format!("Cannot index non-array {:?}", v),
+                        ))
                 }
+                //match i {
+                //    Value::Integer(idx) => {
+                //        let obj = self.evaluate(&*expr.object)?;
+                //        match obj {
+                //            Value::Foreign(mut f) => {
+                //                f.set(&format!("{}", idx), self.evaluate(&*e.value)?)
+                //                    .expect("this shouldn't happen");
+                //            }
+                //            _ => panic!("this shouldn't happen")
+                //        }
+                //        //println!("{:?}", obj);
+                //        //println!("{:?}", expr);
+                //        //let value = self.evaluate(&*e.object)?;
+                //        //println!("{:?}", value);
+                //        Ok(Value::Nil)
+                //        //if e.
+                //        //let value = self.evaluate(&*e.object)?;
+                //        //panic!("{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}", e, value, i, idx, e.object, expr);
+                //        //println!("{:?}", self.evaluate(&*expr.object));
+                //        //if let expr::Expr::Variable(var) = *expr.object.clone() {
+                //        //    let name = var.0.lexeme.clone();
+                //        //    println!("{}", name);
+                //        //    if let Value::Array(mut arr) = self.env.get(&name).expect("todo") {
+                //        //        println!("{:?}", arr);
+                //        //        let value = self.evaluate(&*e.value)?;
+                //        //        println!("{:?}", value);
+                //        //        arr[idx as usize] = value.clone();
+                //        //        println!("{:?}", arr);
+                //        //        self.env.set(&name, Value::Array(arr));
+                //        //        println!("{:?}", self.env.get(&name));
+                //        //        Ok(value)
+                //        //    } else {
+                //        //        panic!("varis not arr: {:?}", self.env.get(&name).expect("todo"));
+                //        //    }
+                //        //} else {
+                //        //    panic!("var is not var: {:?}", *expr.object);
+                //        //}
+                //    }
+                //    idx => Err(self.error(
+                //        expr.rb.line,
+                //        ErrorKind::IndexError,
+                //        &format!("Cannot index with non-integer {:?}", idx),
+                //    )),
+                //}
             }
             _ => {
                 let mut value = self.evaluate(&*e.object)?;
@@ -817,14 +829,8 @@ impl expr::ExprVisitor for Interpreter {
                         let name = value.name();
                         foreign
                             .set(&e.name.lexeme, value.clone())
-                            .map(|_| value)
-                            .map_err(|_| {
-                                self.error(
-                                    e.name.line,
-                                    ErrorKind::NoSuchField,
-                                    &format!("No field `{}` with type {}", e.name.lexeme, name),
-                                )
-                            })
+                            //.map(|_| value)
+                            .map_err(|err| err.line(e.name.line))
                         //panic!("neat");
                     }
                     _ => Err(self.error(

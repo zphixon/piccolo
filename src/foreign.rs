@@ -38,7 +38,7 @@ impl ForeignOuter {
     pub fn get(&self, name: &str) -> Option<::value::Value> {
         self.inner.borrow().get(name)
     }
-    pub fn set(&mut self, name: &str, value: ::value::Value) -> Result<(), ()> {
+    pub fn set(&mut self, name: &str, value: ::value::Value) -> Result<value::Value, err::PiccoloError> {
         self.inner.borrow_mut().set(name, value)
     }
     pub fn is<T: Foreign>(&self) -> bool {
@@ -71,8 +71,12 @@ pub trait Foreign: Any + fmt::Display + fmt::Debug {
         None
     }
 
-    fn set(&mut self, _name: &str, _value: ::value::Value) -> Result<(), ()> {
-        Err(())
+    fn set(&mut self, name: &str, _value: ::value::Value) -> Result<value::Value, err::PiccoloError> {
+        Err(err::PiccoloError::new(
+            err::ErrorKind::NoSuchField,
+            &format!("No field named {} on {}", name, self.get_name()),
+            0
+        ))
     }
 
     fn call(
@@ -206,15 +210,28 @@ impl Foreign for Array {
         }
     }
 
-    fn set(&mut self, i: &str, value: ::value::Value) -> Result<(), ()> {
-        i.parse::<usize>()
-            .map(|i| {
-                if i >= self.inner.len() {
-                    self.inner.resize(i + 1, ::value::Value::Nil);
-                }
-                self.inner[i] = value;
-            })
-            .map_err(|_| ())
+    fn set(&mut self, i: &str, value: ::value::Value) -> Result<value::Value, err::PiccoloError> {
+        if let Ok(i) = i.parse::<usize>() {
+            if i == self.inner.len() {
+                self.inner.resize(i + 1, value::Value::Nil);
+            }
+            if i < self.inner.len() {
+                self.inner[i] = value.clone();
+                Ok(value)
+            } else {
+                Err(err::PiccoloError::new(
+                    err::ErrorKind::IndexError,
+                    &format!("Index was {} but length was {}", i, self.inner.len()),
+                    0
+                ))
+            }
+        } else {
+            Err(err::PiccoloError::new(
+                err::ErrorKind::IndexError,
+                &format!("Could not index with non-integer {}", i),
+                0
+            ))
+        }
     }
 }
 

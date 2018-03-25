@@ -48,13 +48,17 @@ fn impl_foreign(ast: &syn::DeriveInput) -> quote::Tokens {
                 None
             }
 
-            fn set(&mut self, name: &str, value: ::value::Value) -> Result<(), ()> {
+            fn set(&mut self, name: &str, value: ::value::Value) -> Result<::value::Value, ::err::PiccoloError> {
                 #(if name == stringify!(#names7) {
                     use ::value::TryInto;
-                    self.#names8 = value.try_into().map_err(|_| ())?;
-                    return Ok(())
+                    self.#names8 = value.clone().try_into()?;
+                    return Ok(value)
                 })*
-                Err(())
+                Err(::err::PiccoloError::new(
+                    ::err::ErrorKind::NoSuchField,
+                    &format!("No such field {} on {}", name, stringify!(#name)),
+                    0
+                ))
             }
 
             fn compare(&self, rhs: &ForeignOuter) -> Option<::std::cmp::Ordering> {

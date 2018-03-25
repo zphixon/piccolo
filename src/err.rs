@@ -25,6 +25,13 @@ impl PiccoloError {
         }
     }
 
+    pub fn line(mut self, line: u64) -> Self {
+        PiccoloError {
+            line,
+            ..self
+        }
+    }
+
     // HACK
     // TODO - fix
     pub fn hack(msg: &str) -> Self {
@@ -78,4 +85,5 @@ pub enum ErrorKind {
     Unimplemented,
     NonIterator,
     IndexError,
+    CastError,
 }

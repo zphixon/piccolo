@@ -146,11 +146,15 @@ macro_rules! impl_conv {
         }
 
         impl TryInto<$ty> for Value {
-            type Error = String;
+            type Error = err::PiccoloError;
             fn try_into(self) -> Result<$ty, Self::Error> {
                 match self {
                     Value::$name(t) => Ok(t),
-                    _ => Err(format!("could not cast {:?} to {}", self, stringify!($ty)))
+                    _ => Err(err::PiccoloError::new(
+                             err::ErrorKind::CastError,
+                             &format!("could not cast {:?} to {}", self, stringify!($ty)),
+                             0
+                         ))
                 }
             }
         }
