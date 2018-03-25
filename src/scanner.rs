@@ -206,6 +206,9 @@ impl Scanner {
 
             if self.peek() == b'\\' {
                 self.advance();
+                if self.is_at_end() {
+                    return Err(format!("{} - Expected format code, found Eof", self.line));
+                }
                 match self.advance() {
                     b'n' => {
                         value.push('\n');
