@@ -10,7 +10,6 @@ backtrace = "0.3"
 time = "0.1"
 rustyline = "1.0"
 piccolo_derive = { path = "../piccolo/piccolo_derive" }
-mopa = "0.2.2"
 
 [dev-dependencies]
 rustyline = "1.0"
