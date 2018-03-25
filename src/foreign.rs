@@ -4,6 +4,8 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::fmt;
 
+use super::*;
+
 #[derive(Clone)]
 pub struct ForeignOuter {
     pub inner: Rc<RefCell<Foreign>>,
@@ -42,6 +44,13 @@ impl ForeignOuter {
     pub fn is<T: Foreign>(&self) -> bool {
         self.inner.borrow().is::<T>()
     }
+    pub fn call(
+        &mut self,
+        interp: &mut interp::Interpreter,
+        args: &[value::Value]
+    ) -> Result<value::Value, err::PiccoloError> {
+        self.inner.borrow_mut().call(interp, args)
+    }
 }
 
 // cheating
@@ -64,6 +73,18 @@ pub trait Foreign: Any + fmt::Display + fmt::Debug {
 
     fn set(&mut self, _name: &str, _value: ::value::Value) -> Result<(), ()> {
         Err(())
+    }
+
+    fn call(
+        &mut self,
+        _interp: &mut interp::Interpreter,
+        _args: &[value::Value],
+    ) -> Result<value::Value, err::PiccoloError> {
+        Err(err::PiccoloError::new(
+            err::ErrorKind::NonFunction,
+            "Cannot call non-function",
+            0,
+        ))
     }
 }
 
@@ -93,6 +114,32 @@ impl Foreign {
         } else {
             None
         }
+    }
+}
+
+pub struct ForeignFunc {
+    pub inner: fn(&mut interp::Interpreter, &[value::Value]) -> Result<value::Value, err::PiccoloError>,
+}
+
+impl Foreign for ForeignFunc {
+    fn get_name(&self) -> &'static str {
+        "fn"
+    }
+
+    fn call(&mut self, interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
+        (self.inner)(interp, args)
+    }
+}
+
+impl fmt::Debug for ForeignFunc {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "fn")
+    }
+}
+
+impl fmt::Display for ForeignFunc {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "fn")
     }
 }
 

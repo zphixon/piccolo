@@ -36,7 +36,7 @@ impl Interpreter {
     pub fn interpret_with(
         &mut self,
         stmts: &[stmt::Stmt],
-        mut env: &mut env::Scope,
+        env: &mut env::Scope,
     ) -> Result<Option<Value>, PiccoloError> {
         //let previous = self.env.clone();
         //self.env = self.env.append(env);
@@ -636,6 +636,12 @@ impl expr::ExprVisitor for Interpreter {
 
         let mut func = match callee {
             Value::Func(f) => f,
+            Value::Foreign(mut f) => {
+                let args: Result<Vec<Value>, PiccoloError> =
+                    e.args.iter().map(|arg| self.evaluate(arg)).collect();
+                let args = args?;
+                return f.call(&mut *self, &args);
+            }
             v => {
                 return Err(self.error(
                     e.paren.line,

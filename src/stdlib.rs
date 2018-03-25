@@ -305,5 +305,13 @@ pub fn create_stdlib() -> env::Scope {
         })))
     });
 
+    env.new_native_func("ff", func::Arity::None, |_, _| {
+        Ok(Value::Foreign(ForeignOuter::new(::foreign::ForeignFunc {
+            inner: |_, a| {
+                Ok(format!("wow! {:?}", a).into())
+            }
+        })))
+    });
+
     env
 }
