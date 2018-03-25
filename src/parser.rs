@@ -1,5 +1,5 @@
-use err::{ErrorKind, PiccoloError};
 use super::*;
+use err::{ErrorKind, PiccoloError};
 
 #[derive(Debug)]
 pub struct Parser {

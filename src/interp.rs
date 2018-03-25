@@ -8,8 +8,8 @@ use value::{is_truthy, Value};
 use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct Interpreter {
     pub env: env::Scope,
@@ -640,7 +640,8 @@ impl expr::ExprVisitor for Interpreter {
                 let args: Result<Vec<Value>, PiccoloError> =
                     e.args.iter().map(|arg| self.evaluate(arg)).collect();
                 let args = args?;
-                return f.call(&mut *self, &args).map_err(|err| err.line(e.paren.line));
+                return f.call(&mut *self, &args)
+                    .map_err(|err| err.line(e.paren.line));
             }
             v => {
                 return Err(self.error(
@@ -751,15 +752,13 @@ impl expr::ExprVisitor for Interpreter {
                 let idx = self.evaluate(&*expr.i)?;
                 let obj = self.evaluate(&*expr.object)?;
                 match obj {
-                    Value::Foreign(mut f) => {
-                        f.set(&format!("{}", idx), self.evaluate(&*e.value)?)
-                            .map_err(|err| err.line(e.name.line))
-                    }
+                    Value::Foreign(mut f) => f.set(&format!("{}", idx), self.evaluate(&*e.value)?)
+                        .map_err(|err| err.line(e.name.line)),
                     v => Err(self.error(
-                            e.name.line,
-                            ErrorKind::IndexError,
-                            &format!("Cannot index non-array {:?}", v),
-                        ))
+                        e.name.line,
+                        ErrorKind::IndexError,
+                        &format!("Cannot index non-array {:?}", v),
+                    )),
                 }
                 //match i {
                 //    Value::Integer(idx) => {
@@ -994,7 +993,11 @@ impl stmt::StmtVisitor for Interpreter {
 
     fn visit_func(&mut self, s: &stmt::Func) -> Self::Output {
         //let func = Value::Func(func::Func::new(s.arity, s.clone()));
-        let func = Value::Func(func::Func::new_with_scope(s.arity, s.clone(), Rc::new(RefCell::new(self.env.clone()))));
+        let func = Value::Func(func::Func::new_with_scope(
+            s.arity,
+            s.clone(),
+            Rc::new(RefCell::new(self.env.clone())),
+        ));
         self.env.set(&s.name.lexeme, func);
         Ok(None)
     }

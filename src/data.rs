@@ -1,10 +1,10 @@
 //use ::*;
 use super::*;
 
-use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
 
 #[derive(PartialEq, Clone)]
 pub struct Field {

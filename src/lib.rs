@@ -4,19 +4,19 @@
 #[macro_use]
 extern crate piccolo_derive;
 
-pub mod parser;
-pub mod token;
-pub mod scanner;
-pub mod expr;
-pub mod stmt;
-pub mod err;
-pub mod interp;
-pub mod value;
-pub mod env;
-pub mod func;
 pub mod data;
-pub mod stdlib;
+pub mod env;
+pub mod err;
+pub mod expr;
 pub mod foreign;
+pub mod func;
+pub mod interp;
+pub mod parser;
+pub mod scanner;
+pub mod stdlib;
+pub mod stmt;
+pub mod token;
+pub mod value;
 
 use scanner::Scanner;
 
@@ -130,8 +130,8 @@ impl AstPrinter {
     }
 }
 
-use stmt::StmtAccept;
 use expr::ExprAccept;
+use stmt::StmtAccept;
 
 impl stmt::StmtVisitor for AstPrinter {
     type Output = String;

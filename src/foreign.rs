@@ -1,8 +1,8 @@
 use std::any::{Any, TypeId};
-use std::cmp;
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::cmp;
 use std::fmt;
+use std::rc::Rc;
 
 use super::*;
 
@@ -38,7 +38,11 @@ impl ForeignOuter {
     pub fn get(&self, name: &str) -> Option<::value::Value> {
         self.inner.borrow().get(name)
     }
-    pub fn set(&mut self, name: &str, value: ::value::Value) -> Result<value::Value, err::PiccoloError> {
+    pub fn set(
+        &mut self,
+        name: &str,
+        value: ::value::Value,
+    ) -> Result<value::Value, err::PiccoloError> {
         self.inner.borrow_mut().set(name, value)
     }
     pub fn is<T: Foreign>(&self) -> bool {
@@ -47,7 +51,7 @@ impl ForeignOuter {
     pub fn call(
         &mut self,
         interp: &mut interp::Interpreter,
-        args: &[value::Value]
+        args: &[value::Value],
     ) -> Result<value::Value, err::PiccoloError> {
         self.inner.borrow_mut().call(interp, args)
     }
@@ -71,11 +75,15 @@ pub trait Foreign: Any + fmt::Display + fmt::Debug {
         None
     }
 
-    fn set(&mut self, name: &str, _value: ::value::Value) -> Result<value::Value, err::PiccoloError> {
+    fn set(
+        &mut self,
+        name: &str,
+        _value: ::value::Value,
+    ) -> Result<value::Value, err::PiccoloError> {
         Err(err::PiccoloError::new(
             err::ErrorKind::NoSuchField,
             &format!("No field named {} on {}", name, self.get_name()),
-            0
+            0,
         ))
     }
 
@@ -122,7 +130,8 @@ impl Foreign {
 }
 
 pub struct ForeignFunc {
-    pub inner: fn(&mut interp::Interpreter, &[value::Value]) -> Result<value::Value, err::PiccoloError>,
+    pub inner:
+        fn(&mut interp::Interpreter, &[value::Value]) -> Result<value::Value, err::PiccoloError>,
 }
 
 impl Foreign for ForeignFunc {
@@ -130,7 +139,11 @@ impl Foreign for ForeignFunc {
         "fn"
     }
 
-    fn call(&mut self, interp: &mut interp::Interpreter, args: &[value::Value]) -> Result<value::Value, err::PiccoloError> {
+    fn call(
+        &mut self,
+        interp: &mut interp::Interpreter,
+        args: &[value::Value],
+    ) -> Result<value::Value, err::PiccoloError> {
         (self.inner)(interp, args)
     }
 }
@@ -192,7 +205,7 @@ impl Foreign for Array {
         if rhs.is::<Array>() {
             let rhs = rhs.downcast_ref::<Array>().unwrap();
             if self.inner == rhs.inner {
-                return Some(::std::cmp::Ordering::Equal)
+                return Some(::std::cmp::Ordering::Equal);
             }
         }
         None
@@ -222,16 +235,15 @@ impl Foreign for Array {
                 Err(err::PiccoloError::new(
                     err::ErrorKind::IndexError,
                     &format!("Index was {} but length was {}", i, self.inner.len()),
-                    0
+                    0,
                 ))
             }
         } else {
             Err(err::PiccoloError::new(
                 err::ErrorKind::IndexError,
                 &format!("Could not index with non-integer {}", i),
-                0
+                0,
             ))
         }
     }
 }
-

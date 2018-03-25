@@ -1,8 +1,8 @@
 use super::*;
 use env::Scope;
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum Arity {
@@ -75,7 +75,7 @@ impl Func {
                 decl,
                 method: false,
                 scope,
-            })
+            }),
         }
     }
 
@@ -132,7 +132,9 @@ pub struct NormalFunc {
 impl NormalFunc {
     pub fn bind(self, inst: data::Instance) -> NormalFunc {
         //let mut scope = Rc::new(RefCell::new(env::Scope::new()));
-        self.scope.borrow_mut().set("me", value::Value::Instance(inst));
+        self.scope
+            .borrow_mut()
+            .set("me", value::Value::Instance(inst));
         self
         //NormalFunc { scope, ..self }
     }

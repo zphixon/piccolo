@@ -2,9 +2,9 @@ extern crate rustyline;
 extern crate time;
 
 use super::*;
-use value::{is_truthy, Value};
 use err::{ErrorKind, PiccoloError};
 use foreign::ForeignOuter;
+use value::{is_truthy, Value};
 
 use self::rustyline::Editor;
 
@@ -115,19 +115,23 @@ pub fn create_stdlib() -> env::Scope {
                             func::FuncKind::Normal(ref n) => {
                                 println!("{}", n.scope.borrow());
                             }
-                            _ => return Err(PiccoloError::new(
-                                ErrorKind::NonFunction,
-                                "Native function does not have scope",
-                                0,
-                            ))
+                            _ => {
+                                return Err(PiccoloError::new(
+                                    ErrorKind::NonFunction,
+                                    "Native function does not have scope",
+                                    0,
+                                ))
+                            }
                         }
                         //println!("{}", f.scope())
-                    },
-                    v => return Err(PiccoloError::new(
-                        ErrorKind::NonFunction,
-                        &format!("Non-function does not have scope: {:?}", v),
-                        0,
-                    )),
+                    }
+                    v => {
+                        return Err(PiccoloError::new(
+                            ErrorKind::NonFunction,
+                            &format!("Non-function does not have scope: {:?}", v),
+                            0,
+                        ))
+                    }
                 }
             } else {
                 println!("{}", i.env);
@@ -301,7 +305,7 @@ pub fn create_stdlib() -> env::Scope {
 
     env.new_native_func("arr", func::Arity::None, |_, _| {
         Ok(Value::Foreign(ForeignOuter::new(::foreign::Array {
-            inner: vec!["oh snappe".into(), 32.into()]
+            inner: vec!["oh snappe".into(), 32.into()],
         })))
     });
 
@@ -313,7 +317,7 @@ pub fn create_stdlib() -> env::Scope {
                 } else {
                     Ok(format!("wow! {:?}", a).into())
                 }
-            }
+            },
         })))
     });
 

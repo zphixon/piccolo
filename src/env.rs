@@ -44,32 +44,32 @@ impl Scope {
         inner.push_front(HashMap::new());
         Scope {
             inner,
-            split: Vec::new()
+            split: Vec::new(),
         }
     }
 
     pub fn push(&mut self) {
         //println!("what?");
-//backtrace::trace(|frame| {
-//    backtrace::resolve(frame.ip(), |symbol| {
-//        print!("{:?}: ", frame.ip());
-//        if let Some(ln) = symbol.lineno() {
-//            print!("{} ", ln);
-//        }
-//        if let Some(name) = symbol.name() {
-//            print!("{}", name);
-//        } else {
-//            print!("anon");
-//        }
-//        print!(" in ");
-//        if let Some(filename) = symbol.filename() {
-//            println!("{}", filename.display());
-//        } else {
-//            println!("anon");
-//        }
-//    });
-//    true
-//});
+        //backtrace::trace(|frame| {
+        //    backtrace::resolve(frame.ip(), |symbol| {
+        //        print!("{:?}: ", frame.ip());
+        //        if let Some(ln) = symbol.lineno() {
+        //            print!("{} ", ln);
+        //        }
+        //        if let Some(name) = symbol.name() {
+        //            print!("{}", name);
+        //        } else {
+        //            print!("anon");
+        //        }
+        //        print!(" in ");
+        //        if let Some(filename) = symbol.filename() {
+        //            println!("{}", filename.display());
+        //        } else {
+        //            println!("anon");
+        //        }
+        //    });
+        //    true
+        //});
         self.inner.push_back(HashMap::new());
     }
 
@@ -98,7 +98,7 @@ impl Scope {
         let at = self.split.pop().unwrap();
         Scope {
             inner: self.inner.split_off(at),
-            split: Vec::new()
+            split: Vec::new(),
         }
     }
 
@@ -182,4 +182,3 @@ impl std::fmt::Display for Scope {
         write!(f, "{}", s)
     }
 }
-

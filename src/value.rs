@@ -1,5 +1,5 @@
-use std::fmt;
 use std::cmp::Ordering;
+use std::fmt;
 
 use super::*;
 use foreign::ForeignOuter;
@@ -137,7 +137,7 @@ pub trait TryFrom<T>: Sized {
 }
 
 macro_rules! impl_conv {
-    ($ty:ty, $name:ident) => {
+    ($ty: ty, $name: ident) => {
         impl TryFrom<$ty> for Value {
             type Error = ();
             fn try_from(t: $ty) -> Result<Self, Self::Error> {
@@ -151,10 +151,10 @@ macro_rules! impl_conv {
                 match self {
                     Value::$name(t) => Ok(t),
                     _ => Err(err::PiccoloError::new(
-                             err::ErrorKind::CastError,
-                             &format!("could not cast {:?} to {}", self, stringify!($ty)),
-                             0
-                         ))
+                        err::ErrorKind::CastError,
+                        &format!("could not cast {:?} to {}", self, stringify!($ty)),
+                        0,
+                    )),
                 }
             }
         }
@@ -169,11 +169,11 @@ macro_rules! impl_conv {
             fn into(self) -> $ty {
                 match self {
                     Value::$name(t) => t,
-                    _ => panic!("could not cast {:?} to {}", self, stringify!($ty))
+                    _ => panic!("could not cast {:?} to {}", self, stringify!($ty)),
                 }
             }
         }
-    }
+    };
 }
 
 impl_conv!{ bool, Bool }

@@ -26,10 +26,7 @@ impl PiccoloError {
     }
 
     pub fn line(mut self, line: u64) -> Self {
-        PiccoloError {
-            line,
-            ..self
-        }
+        PiccoloError { line, ..self }
     }
 
     // HACK
