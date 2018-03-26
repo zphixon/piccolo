@@ -90,6 +90,12 @@ impl Instance {
                 .vars
                 .insert(name.to_owned(), Field { value });
             Ok(())
+        } else if self.inner.borrow().data.methods.contains_key(name) {
+            self.inner
+                .borrow_mut()
+                .vars
+                .insert(name.to_owned(), Field { value });
+            Ok(())
         } else {
             Err(())
         }
