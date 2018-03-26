@@ -9,7 +9,7 @@ fn scan_correctly() {
     use piccolo::token::TokenKind;
     use piccolo::token::TokenKind::*;
     let tk: Vec<TokenKind> = Scanner::new(
-        "do end fn if else while for in data is pub me new err retn \
+        "do end fn if else while for in data is me new err retn \
          [ ] ( ) , . .. ... = \n ! + - * / % && || & | ^ == != < > \
          <= >= ident \"string\" 3.14 23"
             .into(),
@@ -31,7 +31,6 @@ fn scan_correctly() {
             In,
             Data,
             Is,
-            Pub,
             Me,
             New,
             Err,
@@ -75,24 +74,6 @@ fn scan_correctly() {
 #[test]
 fn test_file() {
     println!("{:?}", piccolo::parse_file("test.pc").unwrap());
-}
-
-#[test]
-fn equal_truthy() {
-    use piccolo::value::{is_equal, is_truthy, Value};
-    assert!(is_equal(&Value::Nil, &Value::Nil));
-    assert!(!is_truthy(&Value::Nil));
-    assert!(is_equal(
-        &Value::String("a".into()),
-        &Value::String("a".into())
-    ));
-    assert!(!is_equal(
-        &Value::String("a".into()),
-        &Value::String("b".into())
-    ));
-    assert!(!is_equal(&Value::Float(3.0), &Value::Integer(3)));
-    assert!(is_equal(&Value::Integer(3), &Value::Integer(3)));
-    assert!(is_truthy(&Value::String("".into())));
 }
 
 #[test]
