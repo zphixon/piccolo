@@ -178,7 +178,7 @@ pub struct Array {
 impl fmt::Display for Array {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut s = String::from("[");
-        if self.inner.len() > 0 {
+        if !self.inner.is_empty() {
             for i in 0..self.inner.len() - 1 {
                 s.push_str(&format!("{}, ", self.inner[i].clone()));
             }

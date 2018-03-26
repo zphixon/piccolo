@@ -25,7 +25,7 @@ impl PiccoloError {
         }
     }
 
-    pub fn line(mut self, line: u64) -> Self {
+    pub fn line(self, line: u64) -> Self {
         PiccoloError { line, ..self }
     }
 

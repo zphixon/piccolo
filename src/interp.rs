@@ -509,8 +509,7 @@ impl expr::ExprVisitor for Interpreter {
                 }
             },
 
-            TokenKind::Equals => Value::Bool(lhs == rhs),
-            TokenKind::NotEquals => Value::Bool(lhs == rhs),
+            TokenKind::Equals | TokenKind::NotEquals => Value::Bool(lhs == rhs),
 
             TokenKind::ERange => match lhs {
                 Value::Integer(l) => match rhs {
@@ -668,10 +667,11 @@ impl expr::ExprVisitor for Interpreter {
             ));
         }
 
-        let result = func.call(&mut *self, &args);
+        //let result = func.call(&mut *self, &args);
         //println!("{}", func.scope());
 
-        result
+        //result
+        func.call(&mut *self, &args)
     }
 
     fn visit_new(&mut self, e: &expr::New) -> Self::Output {
@@ -684,7 +684,7 @@ impl expr::ExprVisitor for Interpreter {
             }
             for &(ref name, ref value) in &e.args {
                 let f = fields.get(name).cloned();
-                if let Some(_) = f {
+                if f.is_some() {
                     fields.insert(
                         name.clone(),
                         data::Field {
@@ -825,7 +825,7 @@ impl expr::ExprVisitor for Interpreter {
                         let mut value = self.evaluate(&*e.value)?;
                         //let mut foreign = foreign.clone();
                         //Rc::get_mut(foreign).unwrap()
-                        let name = value.name();
+                        //let name = value.name();
                         foreign
                             .set(&e.name.lexeme, value.clone())
                             //.map(|_| value)

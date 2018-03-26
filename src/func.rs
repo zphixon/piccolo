@@ -202,8 +202,7 @@ impl NativeFunc {
         args: &[value::Value],
     ) -> Result<value::Value, err::PiccoloError> {
         let inner = self.inner;
-        let result = inner(&mut interp, args);
-        result
+        inner(&mut interp, args)
     }
 }
 

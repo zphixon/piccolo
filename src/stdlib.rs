@@ -108,7 +108,7 @@ pub fn create_stdlib() -> env::Scope {
         "show_env".into(),
         new_native_func(func::Arity::Multi, |i, args| {
             //println!("{}", i.env);
-            if args.len() > 0 {
+            if args.is_empty() {
                 match &args[0] {
                     &Value::Func(ref f) => {
                         match f.kind {

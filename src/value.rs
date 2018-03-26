@@ -42,7 +42,7 @@ impl Value {
                 _ => None,
             },
             Value::String(ref l) => match *rhs {
-                Value::String(ref r) => l.partial_cmp(&r),
+                Value::String(ref r) => l.partial_cmp(r),
                 _ => None,
             },
             Value::Float(l) => match *rhs {
@@ -96,7 +96,7 @@ impl Value {
                 _ => None,
             },
             Value::Foreign(ref l) => match *rhs {
-                Value::Foreign(ref r) => l.compare(&r),
+                Value::Foreign(ref r) => l.compare(r),
                 _ => None,
             },
             Value::Nil => match *rhs {
