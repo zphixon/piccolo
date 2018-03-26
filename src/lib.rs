@@ -44,16 +44,19 @@ pub fn evaluate(data: &str) -> Result<value::Value, Vec<err::PiccoloError>> {
         .map_err(|e| vec![e])
 }
 
-pub fn new_native_func(arity: func::Arity, func: func::NativeFuncType) -> value::Value {
-    value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func)))
+pub fn new_native_func(_arity: func::Arity, func: func::NativeFuncType) -> value::Value {
+    value::Value::Foreign(foreign::ForeignOuter::new(func::ForeignFunc {
+        inner: func,
+    }))
+    //value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func)))
 }
 
-pub fn new_native_method(arity: func::Arity, func: func::NativeFuncType) -> value::Value {
-    value::Value::Func(func::Func::new_native(
-        arity,
-        func::NativeFunc::new(func).method(),
-    ))
-}
+//pub fn new_native_method(arity: func::Arity, func: func::NativeFuncType) -> value::Value {
+//    value::Value::Func(func::Func::new_native(
+//        arity,
+//        func::NativeFunc::new(func).method(),
+//    ))
+//}
 
 #[derive(Copy, Clone)]
 pub struct AstPrinter;

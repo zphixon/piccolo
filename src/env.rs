@@ -158,10 +158,13 @@ impl Scope {
         None
     }
 
-    pub fn new_native_func(&mut self, name: &str, arity: func::Arity, func: func::NativeFuncType) {
+    pub fn new_native_func(&mut self, name: &str, _arity: func::Arity, func: func::NativeFuncType) {
         self.set(
             name,
-            value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func))),
+            value::Value::Foreign(foreign::ForeignOuter::new(func::ForeignFunc {
+                inner: func
+            }))
+            //value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func))),
         );
     }
 }

@@ -12,7 +12,10 @@ use std::collections::HashMap;
 
 fn new_native_func(arity: func::Arity, func: func::NativeFuncType) -> data::Field {
     data::Field {
-        value: value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func))),
+        value: value::Value::Foreign(foreign::ForeignOuter::new(func::ForeignFunc {
+            inner: func
+        }))
+        //value: value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func))),
     }
 }
 
@@ -108,21 +111,22 @@ pub fn create_stdlib() -> env::Scope {
         "show_env".into(),
         new_native_func(func::Arity::Multi, |i, args| {
             //println!("{}", i.env);
-            if args.is_empty() {
+            if !args.is_empty() {
                 match &args[0] {
                     &Value::Func(ref f) => {
-                        match f.kind {
-                            func::FuncKind::Normal(ref n) => {
-                                println!("{}", n.scope.borrow());
-                            }
-                            _ => {
-                                return Err(PiccoloError::new(
-                                    ErrorKind::NonFunction,
-                                    "Native function does not have scope",
-                                    0,
-                                ))
-                            }
-                        }
+                        println!("{}", f.scope.borrow());
+                        //match f.kind {
+                        //    func::FuncKind::Normal(ref n) => {
+                        //        println!("{}", n.scope.borrow());
+                        //    }
+                        //    _ => {
+                        //        return Err(PiccoloError::new(
+                        //            ErrorKind::NonFunction,
+                        //            "Native function does not have scope",
+                        //            0,
+                        //        ))
+                        //    }
+                        //}
                         //println!("{}", f.scope())
                     }
                     v => {
@@ -134,7 +138,7 @@ pub fn create_stdlib() -> env::Scope {
                     }
                 }
             } else {
-                println!("{}", i.env);
+                println!("{}", i.env.clone());
             }
             Ok(Value::Nil)
         }),
@@ -310,7 +314,7 @@ pub fn create_stdlib() -> env::Scope {
     });
 
     env.new_native_func("ff", func::Arity::None, |_, _| {
-        Ok(Value::Foreign(ForeignOuter::new(::foreign::ForeignFunc {
+        Ok(Value::Foreign(ForeignOuter::new(::func::ForeignFunc {
             inner: |_, a| {
                 if a.len() >= 1 && a[0] == Value::Nil {
                     Err(PiccoloError::new(ErrorKind::IndexError, "reeee", 0))

@@ -29,15 +29,19 @@ impl ForeignOuter {
             inner: Rc::new(RefCell::new(inner)),
         }
     }
+
     pub fn get_name(&self) -> &'static str {
         self.inner.borrow().get_name()
     }
+
     pub fn compare(&self, rhs: &ForeignOuter) -> Option<cmp::Ordering> {
         self.inner.borrow().compare(rhs)
     }
+
     pub fn get(&self, name: &str) -> Option<::value::Value> {
         self.inner.borrow().get(name)
     }
+
     pub fn set(
         &mut self,
         name: &str,
@@ -45,15 +49,17 @@ impl ForeignOuter {
     ) -> Result<value::Value, err::PiccoloError> {
         self.inner.borrow_mut().set(name, value)
     }
+
     pub fn is<T: Foreign>(&self) -> bool {
         self.inner.borrow().is::<T>()
     }
+
     pub fn call(
-        &mut self,
+        &self,
         interp: &mut interp::Interpreter,
         args: &[value::Value],
     ) -> Result<value::Value, err::PiccoloError> {
-        self.inner.borrow_mut().call(interp, args)
+        self.inner.borrow().call(interp, args)
     }
 }
 
@@ -88,7 +94,7 @@ pub trait Foreign: Any + fmt::Display + fmt::Debug {
     }
 
     fn call(
-        &mut self,
+        &self,
         _interp: &mut interp::Interpreter,
         _args: &[value::Value],
     ) -> Result<value::Value, err::PiccoloError> {
@@ -126,37 +132,6 @@ impl Foreign {
         } else {
             None
         }
-    }
-}
-
-pub struct ForeignFunc {
-    pub inner:
-        fn(&mut interp::Interpreter, &[value::Value]) -> Result<value::Value, err::PiccoloError>,
-}
-
-impl Foreign for ForeignFunc {
-    fn get_name(&self) -> &'static str {
-        "fn"
-    }
-
-    fn call(
-        &mut self,
-        interp: &mut interp::Interpreter,
-        args: &[value::Value],
-    ) -> Result<value::Value, err::PiccoloError> {
-        (self.inner)(interp, args)
-    }
-}
-
-impl fmt::Debug for ForeignFunc {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "fn")
-    }
-}
-
-impl fmt::Display for ForeignFunc {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "fn")
     }
 }
 
