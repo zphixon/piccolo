@@ -207,13 +207,7 @@ impl fmt::Display for Value {
             Value::Float(v) => write!(f, "{}", v),
             Value::Integer(v) => write!(f, "{}", v),
             Value::Array(ref v) => write!(f, "{:?}", v),
-            Value::Func(ref v) => {
-                //if v.is_native() {
-                //    write!(f, "native fn")
-                //} else {
-                    write!(f, "fn")
-                //}
-            }
+            Value::Func(ref v) => write!(f, "fn"),
             Value::Data(ref v) => write!(f, "{:?}", v),
             Value::Instance(ref v) => write!(f, "{:?}", v),
             Value::Foreign(ref v) => write!(f, "{}", v),
@@ -237,16 +231,13 @@ impl fmt::Debug for Value {
                 s.push_str(")");
                 write!(f, "{}", s)
             }
-            Value::Func(ref v) => {//match v.kind {
-                //func::FuncKind::Native(_) => write!(f, "(native fn)"),
-                //func::FuncKind::Normal(ref n) => {
+            Value::Func(ref v) => {
                     let mut s = String::from("(fn");
                     for arg in &v.decl.args {
                         s.push_str(&format!(" {}", arg.lexeme));
                     }
                     s.push_str(")");
                     write!(f, "{}", s)
-                //}
             },
             Value::Data(ref v) => write!(f, "(data {})", v.name),
             Value::Instance(ref v) => {

@@ -195,10 +195,6 @@ impl Parser {
         let mut multi = false;
         let method = self.in_data;
 
-        //if self.in_data {
-        //    args.push(self.consume(token::TokenKind::Me, Some("Methods must have self parameter `me`"))?);
-        //}
-
         if !self.check(token::TokenKind::RParen) {
             'outer: while {
                 if args.len() >= 64 {

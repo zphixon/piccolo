@@ -36,95 +36,6 @@ impl Arity {
     }
 }
 
-//#[derive(Clone, PartialEq, Debug)]
-//pub struct Func {
-//    pub kind: FuncKind,
-//    pub arity: Arity,
-//}
-//
-//#[derive(Clone, PartialEq, Debug)]
-//pub enum FuncKind {
-//    Native(NativeFunc),
-//    Normal(NormalFunc),
-//}
-//
-//impl Func {
-//    pub fn new(arity: Arity, decl: stmt::Func) -> Self {
-//        Func {
-//            arity,
-//            kind: FuncKind::Normal(NormalFunc {
-//                decl,
-//                method: false,
-//                scope: Rc::new(RefCell::new(Scope::new())),
-//            }),
-//        }
-//    }
-//
-//    pub fn new_method(arity: Arity, decl: stmt::Func) -> Self {
-//        Func {
-//            arity,
-//            kind: FuncKind::Normal(NormalFunc {
-//                decl,
-//                method: true,
-//                scope: Rc::new(RefCell::new(Scope::new())),
-//            }),
-//        }
-//    }
-//
-//    pub fn new_with_scope(arity: Arity, decl: stmt::Func, scope: Rc<RefCell<Scope>>) -> Self {
-//        Func {
-//            arity,
-//            kind: FuncKind::Normal(NormalFunc {
-//                decl,
-//                method: false,
-//                scope,
-//            }),
-//        }
-//    }
-//
-//    pub fn new_native(arity: Arity, native: NativeFunc) -> Self {
-//        Func {
-//            arity,
-//            kind: FuncKind::Native(native),
-//        }
-//    }
-//
-//    pub fn call(
-//        &mut self,
-//        interp: &mut interp::Interpreter,
-//        args: &[value::Value],
-//    ) -> Result<value::Value, err::PiccoloError> {
-//        match self.kind {
-//            FuncKind::Normal(ref mut f) => f.call(interp, args),
-//            FuncKind::Native(ref mut f) => f.call(interp, args),
-//        }
-//    }
-//
-//    pub fn is_native(&self) -> bool {
-//        match self.kind {
-//            FuncKind::Native(_) => true,
-//            _ => false,
-//        }
-//    }
-//
-//    pub fn is_method(&self) -> bool {
-//        match self.kind {
-//            FuncKind::Normal(ref n) => n.method,
-//            FuncKind::Native(ref n) => n.method,
-//        }
-//    }
-//
-//    pub fn bind(self, inst: data::Instance) -> Func {
-//        match self.kind {
-//            FuncKind::Normal(n) => Func {
-//                kind: FuncKind::Normal(n.bind(inst)),
-//                ..self
-//            },
-//            _ => panic!("bind on native func"),
-//        }
-//    }
-//}
-
 #[derive(Clone, PartialEq, Debug)]
 pub struct Func {
     pub decl: stmt::Func,
@@ -162,12 +73,10 @@ impl Func {
     }
 
     pub fn bind(self, inst: data::Instance) -> Func {
-        //let mut scope = Rc::new(RefCell::new(env::Scope::new()));
         self.scope
             .borrow_mut()
             .set("me", value::Value::Instance(inst));
         self
-        //NormalFunc { scope, ..self }
     }
 
     pub fn call(
@@ -175,7 +84,6 @@ impl Func {
         interp: &mut interp::Interpreter,
         args: &[value::Value],
     ) -> Result<value::Value, err::PiccoloError> {
-        //println!("what?");
         interp.env.push();
 
         for (i, arg) in args.iter().enumerate() {
@@ -184,17 +92,7 @@ impl Func {
 
         let result = interp.interpret_with(&self.decl.body, &mut self.scope.borrow_mut());
 
-        //println!("{}", self.scope);
-        //let result = interp.interpret_with(&self.decl.body, &mut self.scope.borrow_mut());
-        //println!("{}", self.scope);
-        //let mut e = interp.env.append(&self.scope);
-        //let result = interp.interpret(&self.decl.body);
-        //let result = interp.interpret_with(&self.decl.body, &mut e);
-        //println!("{}\n{}", self.scope, e);
-        //self.scope = e;
-
         interp.env.pop();
-        //println!("{}", self.scope);
 
         result.map(|opt| match opt {
             Some(v) => v,
@@ -236,47 +134,3 @@ impl fmt::Display for ForeignFunc {
     }
 }
 
-
-//
-//#[derive(Clone)]
-//pub struct NativeFunc {
-//    pub inner: NativeFuncType,
-//    //pub method: bool,
-//}
-//
-//impl NativeFunc {
-//    pub fn new(inner: NativeFuncType) -> Self {
-//        NativeFunc {
-//            inner,
-//            method: false,
-//        }
-//    }
-//
-//    //pub fn method(self) -> Self {
-//    //    NativeFunc {
-//    //        method: true,
-//    //        ..self
-//    //    }
-//    //}
-//
-//    fn call(
-//        &self,
-//        mut interp: &mut interp::Interpreter,
-//        args: &[value::Value],
-//    ) -> Result<value::Value, err::PiccoloError> {
-//        let inner = self.inner;
-//        inner(&mut interp, args)
-//    }
-//}
-//
-//impl std::fmt::Debug for NativeFunc {
-//    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-//        write!(f, "native func")
-//    }
-//}
-//
-//impl std::cmp::PartialEq for NativeFunc {
-//    fn eq(&self, _other: &NativeFunc) -> bool {
-//        false
-//    }
-//}

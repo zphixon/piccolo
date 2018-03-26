@@ -48,15 +48,7 @@ pub fn new_native_func(_arity: func::Arity, func: func::NativeFuncType) -> value
     value::Value::Foreign(foreign::ForeignOuter::new(func::ForeignFunc {
         inner: func,
     }))
-    //value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func)))
 }
-
-//pub fn new_native_method(arity: func::Arity, func: func::NativeFuncType) -> value::Value {
-//    value::Value::Func(func::Func::new_native(
-//        arity,
-//        func::NativeFunc::new(func).method(),
-//    ))
-//}
 
 #[derive(Copy, Clone)]
 pub struct AstPrinter;
@@ -283,7 +275,6 @@ impl expr::ExprVisitor for AstPrinter {
 
     fn visit_func(&mut self, s: &expr::Func) -> String {
         let mut name = String::from("fn ");
-        //name.push_str(&s.name.lexeme);
         name.push_str(" (");
         for (n, arg) in s.args.iter().enumerate() {
             if n + 1 != s.args.len() {

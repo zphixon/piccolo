@@ -15,7 +15,6 @@ fn new_native_func(arity: func::Arity, func: func::NativeFuncType) -> data::Fiel
         value: value::Value::Foreign(foreign::ForeignOuter::new(func::ForeignFunc {
             inner: func
         }))
-        //value: value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func))),
     }
 }
 
@@ -110,24 +109,10 @@ pub fn create_stdlib() -> env::Scope {
     sys_vars.insert(
         "show_env".into(),
         new_native_func(func::Arity::Multi, |i, args| {
-            //println!("{}", i.env);
             if !args.is_empty() {
                 match &args[0] {
                     &Value::Func(ref f) => {
                         println!("{}", f.scope.borrow());
-                        //match f.kind {
-                        //    func::FuncKind::Normal(ref n) => {
-                        //        println!("{}", n.scope.borrow());
-                        //    }
-                        //    _ => {
-                        //        return Err(PiccoloError::new(
-                        //            ErrorKind::NonFunction,
-                        //            "Native function does not have scope",
-                        //            0,
-                        //        ))
-                        //    }
-                        //}
-                        //println!("{}", f.scope())
                     }
                     v => {
                         return Err(PiccoloError::new(
@@ -303,7 +288,7 @@ pub fn create_stdlib() -> env::Scope {
 
     env.new_native_func("foreign", func::Arity::None, |_, _| {
         Ok(Value::Foreign(ForeignOuter::new(::foreign::Test {
-            inner: "neat".into(), //RefCell::new("oh snaparoon".into()),
+            inner: "neat".into(),
         })))
     });
 

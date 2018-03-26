@@ -19,7 +19,7 @@
 //    true
 //});
 
-extern crate backtrace;
+//extern crate backtrace;
 
 use super::*;
 
@@ -30,13 +30,6 @@ pub struct Scope {
     inner: LinkedList<HashMap<String, value::Value>>,
     split: Vec<usize>,
 }
-//pub struct Scope(LinkedList<HashMap<String, value::Value>>);
-
-//impl Clone for Scope {
-//    fn clone(&self) -> Self {
-//        Scope(self.0.clone())
-//    }
-//}
 
 impl Scope {
     pub fn new() -> Self {
@@ -49,27 +42,6 @@ impl Scope {
     }
 
     pub fn push(&mut self) {
-        //println!("what?");
-        //backtrace::trace(|frame| {
-        //    backtrace::resolve(frame.ip(), |symbol| {
-        //        print!("{:?}: ", frame.ip());
-        //        if let Some(ln) = symbol.lineno() {
-        //            print!("{} ", ln);
-        //        }
-        //        if let Some(name) = symbol.name() {
-        //            print!("{}", name);
-        //        } else {
-        //            print!("anon");
-        //        }
-        //        print!(" in ");
-        //        if let Some(filename) = symbol.filename() {
-        //            println!("{}", filename.display());
-        //        } else {
-        //            println!("anon");
-        //        }
-        //    });
-        //    true
-        //});
         self.inner.push_back(HashMap::new());
     }
 
@@ -77,21 +49,11 @@ impl Scope {
         self.inner.pop_back().unwrap();
     }
 
-    // i count
-    // io sys type len
     pub fn append(&mut self, mut other: Scope) -> Scope {
         let len = self.inner.len();
         self.inner.append(&mut other.inner);
         self.split.push(len);
         self.clone()
-        //let mut this = self.0.clone();
-        //let a = other.0.clone();
-        ////this.prepend(&mut a);
-        //for item in a {
-        //    //println!("{:?}", item);
-        //    this.push_front(item);
-        //}
-        //Scope(this)
     }
 
     pub fn split(&mut self) -> Scope {
@@ -103,7 +65,6 @@ impl Scope {
     }
 
     pub fn set(&mut self, name: &str, value: value::Value) {
-        //println!("set {} to {:?}", name, value);
         for scope in self.inner.iter_mut().rev().skip(1) {
             if scope.contains_key(name) {
                 scope.insert(name.to_owned(), value);
@@ -164,7 +125,6 @@ impl Scope {
             value::Value::Foreign(foreign::ForeignOuter::new(func::ForeignFunc {
                 inner: func
             }))
-            //value::Value::Func(func::Func::new_native(arity, func::NativeFunc::new(func))),
         );
     }
 }

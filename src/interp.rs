@@ -4,7 +4,6 @@ use super::*;
 use expr::ExprAccept;
 use stmt::StmtAccept;
 use value::{is_truthy, Value};
-//use value::Value;
 use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
 
@@ -38,15 +37,9 @@ impl Interpreter {
         stmts: &[stmt::Stmt],
         env: &mut env::Scope,
     ) -> Result<Option<Value>, PiccoloError> {
-        //let previous = self.env.clone();
-        //self.env = self.env.append(env);
-        //std::mem::swap(&mut self.env, &mut env);
         self.env.append(env.clone());
         let res = self.interpret(stmts);
         *env = self.env.split();
-        //*env = self.env.split();
-        //self.env = previous;
-        //std::mem::swap(&mut self.env, &mut env);
         res
     }
 
@@ -667,10 +660,6 @@ impl expr::ExprVisitor for Interpreter {
             ));
         }
 
-        //let result = func.call(&mut *self, &args);
-        //println!("{}", func.scope());
-
-        //result
         func.call(&mut *self, &args)
     }
 
@@ -710,10 +699,6 @@ impl expr::ExprVisitor for Interpreter {
     }
 
     fn visit_get(&mut self, e: &expr::Get) -> Self::Output {
-        //let me = match *e.object {
-        //    expr::Expr::Variable(expr::Variable(ref v)) => v.lexeme == "me",
-        //    _ => false,
-        //};
         let value = self.evaluate(&*e.object)?;
         match value {
             Value::Instance(ref inst) => {
@@ -760,50 +745,6 @@ impl expr::ExprVisitor for Interpreter {
                         &format!("Cannot index non-array {:?}", v),
                     )),
                 }
-                //match i {
-                //    Value::Integer(idx) => {
-                //        let obj = self.evaluate(&*expr.object)?;
-                //        match obj {
-                //            Value::Foreign(mut f) => {
-                //                f.set(&format!("{}", idx), self.evaluate(&*e.value)?)
-                //                    .expect("this shouldn't happen");
-                //            }
-                //            _ => panic!("this shouldn't happen")
-                //        }
-                //        //println!("{:?}", obj);
-                //        //println!("{:?}", expr);
-                //        //let value = self.evaluate(&*e.object)?;
-                //        //println!("{:?}", value);
-                //        Ok(Value::Nil)
-                //        //if e.
-                //        //let value = self.evaluate(&*e.object)?;
-                //        //panic!("{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}", e, value, i, idx, e.object, expr);
-                //        //println!("{:?}", self.evaluate(&*expr.object));
-                //        //if let expr::Expr::Variable(var) = *expr.object.clone() {
-                //        //    let name = var.0.lexeme.clone();
-                //        //    println!("{}", name);
-                //        //    if let Value::Array(mut arr) = self.env.get(&name).expect("todo") {
-                //        //        println!("{:?}", arr);
-                //        //        let value = self.evaluate(&*e.value)?;
-                //        //        println!("{:?}", value);
-                //        //        arr[idx as usize] = value.clone();
-                //        //        println!("{:?}", arr);
-                //        //        self.env.set(&name, Value::Array(arr));
-                //        //        println!("{:?}", self.env.get(&name));
-                //        //        Ok(value)
-                //        //    } else {
-                //        //        panic!("varis not arr: {:?}", self.env.get(&name).expect("todo"));
-                //        //    }
-                //        //} else {
-                //        //    panic!("var is not var: {:?}", *expr.object);
-                //        //}
-                //    }
-                //    idx => Err(self.error(
-                //        expr.rb.line,
-                //        ErrorKind::IndexError,
-                //        &format!("Cannot index with non-integer {:?}", idx),
-                //    )),
-                //}
             }
             _ => {
                 let mut value = self.evaluate(&*e.object)?;
@@ -823,14 +764,9 @@ impl expr::ExprVisitor for Interpreter {
                     }
                     Value::Foreign(ref mut foreign) => {
                         let mut value = self.evaluate(&*e.value)?;
-                        //let mut foreign = foreign.clone();
-                        //Rc::get_mut(foreign).unwrap()
-                        //let name = value.name();
                         foreign
                             .set(&e.name.lexeme, value.clone())
-                            //.map(|_| value)
                             .map_err(|err| err.line(e.name.line))
-                        //panic!("neat");
                     }
                     _ => Err(self.error(
                         e.name.line,
@@ -840,25 +776,6 @@ impl expr::ExprVisitor for Interpreter {
                 }
             }
         }
-        //let value = self.evaluate(&*e.object)?;
-        //match value {
-        //    Value::Instace(ref instance) => {
-        //        let value = self.evaluate(&*e.value)?;
-        //        instance.set(&e.name.lexeme, value.clone());
-        //        Ok(value)
-        //    },
-        //    Value::Array(ref mut r) => {
-        //        println
-        //    }
-        //}
-        //println!("{:?}", e);
-        //if let Value::Instance(ref instance) = value {
-        //    let value = self.evaluate(&*e.value)?;
-        //    instance.set(&e.name.lexeme, value.clone());
-        //    Ok(value)
-        //} else {
-        //    Err(self.error(e.name.line, ErrorKind::NonInstance, "Non-instance does not have fields"))
-        //}
     }
 
     fn visit_index(&mut self, e: &expr::Index) -> Self::Output {
@@ -885,17 +802,6 @@ impl expr::ExprVisitor for Interpreter {
                         ))
                     }
                 }
-                //Value::Array(ref a) => {
-                //    if (i as usize) < a.len() {
-                //        Ok(a[i as usize].clone())
-                //    } else {
-                //        Err(self.error(
-                //            e.rb.line,
-                //            ErrorKind::IndexError,
-                //            &format!("Index out-of-bounds: {}", i),
-                //        ))
-                //    }
-                //}
                 v => Err(self.error(
                     e.rb.line,
                     ErrorKind::IndexError,
@@ -992,7 +898,6 @@ impl stmt::StmtVisitor for Interpreter {
     }
 
     fn visit_func(&mut self, s: &stmt::Func) -> Self::Output {
-        //let func = Value::Func(func::Func::new(s.arity, s.clone()));
         let func = Value::Func(func::Func::new_with_scope(
             s.arity,
             s.clone(),
