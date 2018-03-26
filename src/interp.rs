@@ -826,7 +826,8 @@ impl expr::ExprVisitor for Interpreter {
                 body: e.body.clone(),
                 method: e.method,
             },
-            Rc::new(RefCell::new(self.env.clone())),
+            self.env.clone()
+            //Rc::new(RefCell::new(self.env.clone())),
         )))
     }
 }
@@ -901,7 +902,8 @@ impl stmt::StmtVisitor for Interpreter {
         let func = Value::Func(func::Func::new_with_scope(
             s.arity,
             s.clone(),
-            Rc::new(RefCell::new(self.env.clone())),
+            self.env.clone(),
+            //Rc::new(RefCell::new(self.env.clone())),
         ));
         self.env.set(&s.name.lexeme, func);
         Ok(None)

@@ -40,7 +40,8 @@ impl Arity {
 pub struct Func {
     pub decl: stmt::Func,
     pub method: bool,
-    pub scope: Rc<RefCell<Scope>>,
+    //pub scope: Rc<RefCell<Scope>>,
+    pub scope: Scope,
     pub arity: Arity,
 }
 
@@ -50,7 +51,8 @@ impl Func {
             arity,
             decl,
             method: false,
-            scope: Rc::new(RefCell::new(Scope::new())),
+            scope: Scope::new(),
+            //scope: Rc::new(RefCell::new(Scope::new())),
         }
     }
 
@@ -59,11 +61,12 @@ impl Func {
             arity,
             decl,
             method: true,
-            scope: Rc::new(RefCell::new(Scope::new())),
+            scope: Scope::new(),
+            //scope: Rc::new(RefCell::new(Scope::new())),
         }
     }
 
-    pub fn new_with_scope(arity: Arity, decl: stmt::Func, scope: Rc<RefCell<Scope>>) -> Self {
+    pub fn new_with_scope(arity: Arity, decl: stmt::Func, scope: Scope) -> Self {
         Func {
             arity,
             decl,
@@ -72,9 +75,9 @@ impl Func {
         }
     }
 
-    pub fn bind(self, inst: data::Instance) -> Func {
+    pub fn bind(mut self, inst: data::Instance) -> Func {
         self.scope
-            .borrow_mut()
+            //.borrow_mut()
             .set("me", value::Value::Instance(inst));
         self
     }
@@ -90,7 +93,12 @@ impl Func {
             interp.env.set_local(&self.decl.args[i].lexeme, arg.clone());
         }
 
-        let result = interp.interpret_with(&self.decl.body, &mut self.scope.borrow_mut());
+        //let mut prev = ::std::mem::replace(&mut self.scope, Scope::new());
+        //let result = interp.interpret_with(&self.decl.body, &mut prev);
+        //::std::mem::replace(&mut self.scope, prev);
+        //let scope = Rc::make_mut(&mut self.scope);
+        //let result = interp.interpret_with(&self.decl.body, &mut scope.borrow_mut());
+        let result = interp.interpret_with(&self.decl.body, &mut self.scope);
 
         interp.env.pop();
 

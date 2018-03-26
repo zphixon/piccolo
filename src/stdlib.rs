@@ -112,7 +112,7 @@ pub fn create_stdlib() -> env::Scope {
             if !args.is_empty() {
                 match &args[0] {
                     &Value::Func(ref f) => {
-                        println!("{}", f.scope.borrow());
+                        println!("{}", f.scope);
                     }
                     v => {
                         return Err(PiccoloError::new(
