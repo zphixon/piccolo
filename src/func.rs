@@ -133,4 +133,3 @@ impl fmt::Display for ForeignFunc {
         write!(f, "fn")
     }
 }
-

@@ -232,13 +232,13 @@ impl fmt::Debug for Value {
                 write!(f, "{}", s)
             }
             Value::Func(ref v) => {
-                    let mut s = String::from("(fn");
-                    for arg in &v.decl.args {
-                        s.push_str(&format!(" {}", arg.lexeme));
-                    }
-                    s.push_str(")");
-                    write!(f, "{}", s)
-            },
+                let mut s = String::from("(fn");
+                for arg in &v.decl.args {
+                    s.push_str(&format!(" {}", arg.lexeme));
+                }
+                s.push_str(")");
+                write!(f, "{}", s)
+            }
             Value::Data(ref v) => write!(f, "(data {})", v.name),
             Value::Instance(ref v) => {
                 let mut s = format!("(instance of {}", v.inner.borrow().data.name);

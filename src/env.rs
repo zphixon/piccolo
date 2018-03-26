@@ -123,8 +123,8 @@ impl Scope {
         self.set(
             name,
             value::Value::Foreign(foreign::ForeignOuter::new(func::ForeignFunc {
-                inner: func
-            }))
+                inner: func,
+            })),
         );
     }
 }

@@ -13,8 +13,8 @@ use std::collections::HashMap;
 fn new_native_func(arity: func::Arity, func: func::NativeFuncType) -> data::Field {
     data::Field {
         value: value::Value::Foreign(foreign::ForeignOuter::new(func::ForeignFunc {
-            inner: func
-        }))
+            inner: func,
+        })),
     }
 }
 

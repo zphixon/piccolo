@@ -1,11 +1,11 @@
 extern crate backtrace;
 
 use super::*;
+use err::{ErrorKind, PiccoloError};
 use expr::ExprAccept;
 use stmt::StmtAccept;
-use value::{is_truthy, Value};
-use err::{ErrorKind, PiccoloError};
 use token::TokenKind;
+use value::{is_truthy, Value};
 
 use std::cell::RefCell;
 use std::rc::Rc;
