@@ -13,7 +13,7 @@ pub struct ForeignOuter {
 
 impl fmt::Debug for ForeignOuter {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "(foreign {:?})", self.inner.borrow())
+        write!(f, "{:?}", self.inner.borrow())
     }
 }
 
@@ -166,7 +166,15 @@ impl fmt::Display for Array {
 
 impl fmt::Debug for Array {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self.inner)
+        let mut s = String::from("(arr ");
+        if !self.inner.is_empty() {
+            for i in 0..self.inner.len() - 1 {
+                s.push_str(&format!("{:?} ", self.inner[i].clone()));
+            }
+            s.push_str(&format!("{:?}", self.inner[self.inner.len() - 1].clone()));
+        }
+        s.push_str(")");
+        write!(f, "{}", s)
     }
 }
 
