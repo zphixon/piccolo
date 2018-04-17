@@ -10,8 +10,8 @@ fn thing(arg_juan, arg_deux) is
 end
 
 data foobar is
-    pub a = true
-    pub b = "perhaps?"
+    a = true
+    b = "perhaps?"
     c = 23
 
     fn shout_b() is
@@ -53,8 +53,10 @@ j.set_c(55)
 io.prln(q.compare_c(j))
 
 arr = [1, 2, 3, 4, "five"]
+io.prln()
+io.prln(arr[0]!=1)
 if arr[0] != 1 do
-    panic("array machine broke")
+    sys.panic("array machine broke")
 end
 
 for item in arr do

@@ -502,7 +502,8 @@ impl expr::ExprVisitor for Interpreter {
                 }
             },
 
-            TokenKind::Equals | TokenKind::NotEquals => Value::Bool(lhs == rhs),
+            TokenKind::Equals => Value::Bool(lhs == rhs),
+            TokenKind::NotEquals => Value::Bool(lhs != rhs),
 
             TokenKind::ERange => match lhs {
                 Value::Integer(l) => match rhs {
@@ -585,7 +586,9 @@ impl expr::ExprVisitor for Interpreter {
                     let new_item = self.evaluate(item)?;
                     new.push(new_item);
                 }
-                Ok(Value::Array(new))
+                Ok(Value::Foreign(foreign::ForeignOuter::new(foreign::Array {
+                    inner: new
+                })))
             }
             l => Ok(std::mem::replace(&mut l.clone(), expr::Literal::Nil).into()),
         }
@@ -886,6 +889,19 @@ impl stmt::StmtVisitor for Interpreter {
                     return Ok(Some(r));
                 }
             },
+            Value::Foreign(ref a) => {
+                if a.is::<foreign::Array>() {
+                    let inner = a.inner.borrow();
+                    let arr = inner.downcast_ref::<foreign::Array>().unwrap();
+                    for item in arr.inner.iter() {
+                        self.env.set(&s.name.lexeme, item.clone());
+                        if let Some(r) = self.interpret(&s.body)? {
+                            self.env.pop();
+                            return Ok(Some(r));
+                        }
+                    }
+                }
+            }
             _ => {
                 return Err(self.error(
                     s.name.line,
