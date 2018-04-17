@@ -26,7 +26,7 @@ pub enum Value {
     Bool(bool),
     Integer(i64),
     Float(f64),
-    Array(Vec<Value>),
+    //Array(Vec<Value>),
     Func(func::Func),
     Data(data::Data),
     Instance(data::Instance),
@@ -55,22 +55,22 @@ impl Value {
                 Value::Float(r) => (l as f64).partial_cmp(&r),
                 _ => None,
             },
-            Value::Array(ref l) => match *rhs {
-                Value::Array(ref r) => {
-                    if l.len() != r.len() {
-                        None
-                    } else {
-                        let mut equal = Some(Ordering::Equal);
-                        for (i, left) in l.iter().enumerate() {
-                            if left.compare(&r[i]) == Some(Ordering::Equal) {
-                                equal = None;
-                            }
-                        }
-                        equal
-                    }
-                }
-                _ => None,
-            },
+            //Value::Array(ref l) => match *rhs {
+            //    Value::Array(ref r) => {
+            //        if l.len() != r.len() {
+            //            None
+            //        } else {
+            //            let mut equal = Some(Ordering::Equal);
+            //            for (i, left) in l.iter().enumerate() {
+            //                if left.compare(&r[i]) == Some(Ordering::Equal) {
+            //                    equal = None;
+            //                }
+            //            }
+            //            equal
+            //        }
+            //    }
+            //    _ => None,
+            //},
             Value::Func(ref l) => match *rhs {
                 Value::Func(ref r) => if l == r {
                     Some(Ordering::Equal)
@@ -180,7 +180,7 @@ impl_conv!{ bool, Bool }
 impl_conv!{ i64, Integer }
 impl_conv!{ f64, Float }
 impl_conv!{ String, String }
-impl_conv!{ Vec<Value>, Array }
+//impl_conv!{ Vec<Value>, Array }
 
 impl Value {
     pub fn name(&self) -> &'static str {
@@ -189,11 +189,11 @@ impl Value {
             Value::String(_) => "string",
             Value::Float(_) => "float",
             Value::Integer(_) => "integer",
-            Value::Array(_) => "array",
+            //Value::Array(_) => "array",
             Value::Func(_) => "func",
             Value::Data(_) => "data",
             Value::Instance(_) => "instance",
-            Value::Foreign(_) => "foreign",
+            Value::Foreign(ref f) => f.get_name(),
             Value::Nil => "nil",
         }
     }
@@ -206,7 +206,7 @@ impl fmt::Display for Value {
             Value::String(ref v) => write!(f, "{}", v),
             Value::Float(v) => write!(f, "{}", v),
             Value::Integer(v) => write!(f, "{}", v),
-            Value::Array(ref v) => write!(f, "{:?}", v),
+            //Value::Array(ref v) => write!(f, "{:?}", v),
             Value::Func(ref v) => write!(f, "fn"),
             Value::Data(ref v) => write!(f, "{:?}", v),
             Value::Instance(ref v) => write!(f, "{:?}", v),
@@ -223,14 +223,14 @@ impl fmt::Debug for Value {
             Value::String(ref v) => write!(f, "(string \"{}\")", v),
             Value::Float(v) => write!(f, "(float {})", v),
             Value::Integer(v) => write!(f, "(int {})", v),
-            Value::Array(ref v) => {
-                let mut s = String::from("(arr");
-                for item in v {
-                    s.push_str(&format!(" {:?}", item));
-                }
-                s.push_str(")");
-                write!(f, "{}", s)
-            }
+            //Value::Array(ref v) => {
+            //    let mut s = String::from("(arr");
+            //    for item in v {
+            //        s.push_str(&format!(" {:?}", item));
+            //    }
+            //    s.push_str(")");
+            //    write!(f, "{}", s)
+            //}
             Value::Func(ref v) => {
                 let mut s = String::from("(fn");
                 for arg in &v.decl.args {

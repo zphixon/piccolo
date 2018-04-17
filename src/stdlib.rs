@@ -148,11 +148,27 @@ pub fn create_stdlib() -> env::Scope {
     arr_vars.insert(
         "push".into(),
         new_native_func(func::Arity::Some(2), |_, args| match args[0] {
-            Value::Array(ref a) => {
-                let mut na = a.clone();
-                na.push(args[1].clone());
-                Ok(Value::Array(na))
+            Value::Foreign(ref f) => {
+                if f.is::<foreign::Array>() {
+                    let inner = f.inner.borrow();
+                    let mut arr = inner.downcast_ref::<foreign::Array>().unwrap().inner.clone();
+                    arr.push(args[1].clone());
+                    Ok(Value::Foreign(foreign::ForeignOuter::new(foreign::Array {
+                        inner: arr,
+                    })))
+                } else {
+                    Err(PiccoloError::new(
+                        ErrorKind::IndexError,
+                        "Cannot push onto a non-array",
+                        0,
+                    ))
+                }
             }
+            //Value::Array(ref a) => {
+            //    let mut na = a.clone();
+            //    na.push(args[1].clone());
+            //    Ok(Value::Array(na))
+            //}
             _ => Err(PiccoloError::new(
                 ErrorKind::IndexError,
                 "Cannot push onto a non-array",
@@ -164,14 +180,36 @@ pub fn create_stdlib() -> env::Scope {
     arr_vars.insert(
         "pop".into(),
         new_native_func(func::Arity::Some(1), |_, args| match args[0] {
-            Value::Array(ref a) => {
-                let mut na = a.clone();
-                if let Some(v) = na.pop() {
-                    Ok(Value::Array(vec![v, Value::Array(na)]))
+            Value::Foreign(ref f) => {
+                if f.is::<foreign::Array>() {
+                    let inner = f.inner.borrow();
+                    let mut arr = inner.downcast_ref::<foreign::Array>().unwrap().inner.clone();
+                    if let Some(v) = arr.pop() {
+                        Ok(v)
+                    } else {
+                        Ok(Value::Nil)
+                    }
+                    //arr.inner.pop(args[1].clone());
+                    //Ok()
+                    //Ok(Value::Foreign(foreign::ForeignOuter::new(foreign::Array {
+                    //    inner: arr.inner,
+                    //})))
                 } else {
-                    Ok(Value::Nil)
+                    Err(PiccoloError::new(
+                        ErrorKind::IndexError,
+                        "Cannot pop from a non-array",
+                        0,
+                    ))
                 }
             }
+            //Value::Array(ref a) => {
+            //    let mut na = a.clone();
+            //    if let Some(v) = na.pop() {
+            //        Ok(Value::Array(vec![v, Value::Array(na)]))
+            //    } else {
+            //        Ok(Value::Nil)
+            //    }
+            //}
             _ => Err(PiccoloError::new(
                 ErrorKind::IndexError,
                 "Cannot pop from a non-array",
@@ -183,61 +221,71 @@ pub fn create_stdlib() -> env::Scope {
     arr_vars.insert(
         "insert".into(),
         new_native_func(func::Arity::Some(3), |_, args| match args[0] {
-            Value::Array(ref a) => match args[2] {
-                Value::Integer(n) => {
-                    if (n as usize) < a.len() {
-                        let mut na = a.clone();
-                        na.insert(n as usize, args[1].clone());
-                        Ok(Value::Array(na))
-                    } else if (n as usize) == a.len() {
-                        let mut na = a.clone();
-                        na.push(args[1].clone());
-                        Ok(Value::Array(na))
-                    } else {
-                        Err(PiccoloError::new(
+            Value::Foreign(ref f) => {
+                if f.is::<foreign::Array>() {
+                    let inner = f.inner.borrow();
+                    let mut arr = inner.downcast_ref::<foreign::Array>().unwrap().inner.clone();
+                    let mut a = arr;
+                    match args[2] {
+                        Value::Integer(n) => {
+                            if (n as usize) < a.len() {
+                                let mut na = a.clone();
+                                na.insert(n as usize, args[1].clone());
+                                Ok(Value::Foreign(foreign::ForeignOuter::new(foreign::Array {
+                                    inner: na
+                                })))
+                            } else if (n as usize) == a.len() {
+                                let mut na = a.clone();
+                                na.push(args[1].clone());
+                                Ok(Value::Foreign(foreign::ForeignOuter::new(foreign::Array {
+                                    inner: na
+                                })))
+                            } else {
+                                Err(PiccoloError::new(
+                                    ErrorKind::IndexError,
+                                    "Index out of bounds",
+                                    0,
+                                ))
+                            }
+                        }
+                        _ => Err(PiccoloError::new(
                             ErrorKind::IndexError,
-                            "Index out of bounds",
+                            "Cannot index with non-integer",
                             0,
-                        ))
+                        )),
                     }
+                } else {
+                    Err(PiccoloError::new(
+                        ErrorKind::IndexError,
+                        "Cannot index with non-integer",
+                        0,
+                    ))
                 }
-                _ => Err(PiccoloError::new(
-                    ErrorKind::IndexError,
-                    "Cannot index with non-integer",
-                    0,
-                )),
-            },
-            _ => Err(PiccoloError::new(
-                ErrorKind::IndexError,
-                "Cannot insert into a non-array",
-                0,
-            )),
-        }),
-    );
-
-    arr_vars.insert(
-        "set".into(),
-        new_native_func(func::Arity::Some(3), |_, args| match args[0] {
-            Value::Array(ref a) => match args[2] {
-                Value::Integer(n) => {
-                    if (n as usize) < a.len() {
-                        let mut na = a.clone();
-                        na[n as usize] = args[1].clone();
-                        Ok(Value::Array(na))
-                    } else {
-                        Err(PiccoloError::new(
-                            ErrorKind::IndexError,
-                            "Index out of bounds",
-                            0,
-                        ))
-                    }
-                }
-                _ => Err(PiccoloError::new(
-                    ErrorKind::IndexError,
-                    "Cannot index with non-integer",
-                    0,
-                )),
-            },
+            }
+            //Value::Array(ref a) => match args[2] {
+            //    Value::Integer(n) => {
+            //        if (n as usize) < a.len() {
+            //            let mut na = a.clone();
+            //            na.insert(n as usize, args[1].clone());
+            //            Ok(Value::Array(na))
+            //        } else if (n as usize) == a.len() {
+            //            let mut na = a.clone();
+            //            na.push(args[1].clone());
+            //            Ok(Value::Array(na))
+            //        } else {
+            //            Err(PiccoloError::new(
+            //                ErrorKind::IndexError,
+            //                "Index out of bounds",
+            //                0,
+            //            ))
+            //        }
+            //    }
+            //    _ => Err(PiccoloError::new(
+            //        ErrorKind::IndexError,
+            //        "Cannot index with non-integer",
+            //        0,
+            //    )),
+            //},
             _ => Err(PiccoloError::new(
                 ErrorKind::IndexError,
                 "Cannot insert into a non-array",
@@ -268,7 +316,15 @@ pub fn create_stdlib() -> env::Scope {
     });
 
     env.new_native_func("len", func::Arity::Some(1), |_, args| match args[0] {
-        Value::Array(ref v) => Ok(Value::Integer(v.len() as i64)),
+        Value::Foreign(ref f) => {
+            if f.is::<foreign::Array>() {
+                let inner = f.inner.borrow();
+                let mut arr = inner.downcast_ref::<foreign::Array>().unwrap();
+                Ok(Value::Integer(arr.inner.len() as i64))
+            } else {
+                Ok(Value::Integer(0))
+            }
+        }
         Value::String(ref v) => Ok(Value::Integer(v.len() as i64)),
         _ => Ok(Value::Integer(0)),
     });
@@ -278,7 +334,7 @@ pub fn create_stdlib() -> env::Scope {
         Value::Bool(_) => Ok("bool".into()),
         Value::Integer(_) => Ok("int".into()),
         Value::Float(_) => Ok("float".into()),
-        Value::Array(_) => Ok("array".into()),
+        //Value::Array(_) => Ok("array".into()),
         Value::Func(_) => Ok("fn".into()),
         Value::Data(_) => Ok("data".into()),
         Value::Instance(ref i) => Ok(i.inner.borrow().data.name.clone().into()),

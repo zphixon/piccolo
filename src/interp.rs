@@ -507,7 +507,9 @@ impl expr::ExprVisitor for Interpreter {
 
             TokenKind::ERange => match lhs {
                 Value::Integer(l) => match rhs {
-                    Value::Integer(r) => Value::Array((l..r).map(|n| n.into()).collect()),
+                    Value::Integer(r) => Value::Foreign(foreign::ForeignOuter::new(foreign::Array {
+                        inner: (l..r).map(|n| n.into()).collect()
+                    })),
                     _ => {
                         return Err(self.error(
                             e.op.line,
@@ -527,7 +529,9 @@ impl expr::ExprVisitor for Interpreter {
 
             TokenKind::IRange => match lhs {
                 Value::Integer(l) => match rhs {
-                    Value::Integer(r) => Value::Array((l..r + 1).map(|n| n.into()).collect()),
+                    Value::Integer(r) => Value::Foreign(foreign::ForeignOuter::new(foreign::Array {
+                        inner: (l..r + 1).map(|n| n.into()).collect()
+                    })),
                     _ => {
                         return Err(self.error(
                             e.op.line,
@@ -882,13 +886,13 @@ impl stmt::StmtVisitor for Interpreter {
         let iter = self.evaluate(&s.iter)?;
         self.env.push();
         match iter {
-            Value::Array(ref a) => for item in a {
-                self.env.set(&s.name.lexeme, item.clone());
-                if let Some(r) = self.interpret(&s.body)? {
-                    self.env.pop();
-                    return Ok(Some(r));
-                }
-            },
+            //Value::Array(ref a) => for item in a {
+            //    self.env.set(&s.name.lexeme, item.clone());
+            //    if let Some(r) = self.interpret(&s.body)? {
+            //        self.env.pop();
+            //        return Ok(Some(r));
+            //    }
+            //},
             Value::Foreign(ref a) => {
                 if a.is::<foreign::Array>() {
                     let inner = a.inner.borrow();
