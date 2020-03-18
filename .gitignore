@@ -1,6 +1,2 @@
-/tool/
-/target/
-**/*.rs.bk
-Cargo.lock
-/.piccolo_history
-/src/old_interp.rs
+target/
+.idea/

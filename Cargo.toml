@@ -1,29 +1,9 @@
-
 [package]
 name = "piccolo"
 version = "0.1.0"
-authors = ["Zack <zackh@firemail.cc>"]
-license = "MIT"
+authors = ["Zack <zphixon@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-backtrace = "0.3"
-time = "0.1"
-rustyline = "1.0"
-piccolo_derive = { path = "../piccolo/piccolo_derive" }
-
-[dev-dependencies]
-rustyline = "1.0"
-
-[[example]]
-name = "debug"
-path = "bin/debug.rs"
-
-[[example]]
-name = "repl"
-path = "bin/repl.rs"
-
-[[example]]
-name = "interpreter"
-path = "bin/interpreter.rs"
-
-
