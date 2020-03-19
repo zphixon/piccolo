@@ -1,9 +1,15 @@
 [package]
 name = "piccolo"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Zack <zphixon@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+pc-debug = []
+
 [dependencies]
+num_enum = "0.4.3"
+anyhow = "1.0.27"
