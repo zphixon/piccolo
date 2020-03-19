@@ -13,3 +13,5 @@ pc-debug = []
 [dependencies]
 num_enum = "0.4.3"
 anyhow = "1.0.27"
+rustyline = "6.0.0"
+thiserror = "1.0.11"

@@ -8,10 +8,3 @@ impl Display for Value {
         write!(f, "{}", self.0)
     }
 }
-
-impl std::ops::Neg for Value {
-    type Output = Self;
-    fn neg(self) -> Self::Output {
-        Value(-self.0)
-    }
-}

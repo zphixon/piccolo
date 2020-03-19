@@ -20,13 +20,13 @@ impl Machine {
 
     pub fn interpret(&mut self) -> anyhow::Result<()> {
         loop {
-            // if debug
             #[cfg(feature = "pc-debug")]
             {
                 print!("┌─ {:?}\n└─ ", self.stack);
                 self.chunk.disassemble_instruction(self.ip);
             }
 
+            let line = self.chunk.get_line_from_index(self.ip);
             let inst = self.chunk.data[self.ip];
             self.ip += 1;
 
@@ -37,35 +37,34 @@ impl Machine {
                     return Ok(());
                 },
                 Opcode::Constant => {
-                    // TODO: remove unnecessary clone
                     let c = self.chunk.constants[self.chunk.data[self.ip] as usize].clone();
                     self.ip += 1;
 
                     self.stack.push(c);
                 },
                 Opcode::Negate => {
-                    let v = self.stack.pop().unwrap();
+                    let v = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
                     self.stack.push(Value(-v.0));
                 },
                 Opcode::Add => {
-                    let rhs = self.stack.pop().unwrap().0;
-                    let lhs = self.stack.pop().unwrap().0;
-                    self.stack.push(Value(lhs + rhs));
+                    let rhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    let lhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    self.stack.push(Value(lhs.0 + rhs.0));
                 },
                 Opcode::Subtract => {
-                    let rhs = self.stack.pop().unwrap().0;
-                    let lhs = self.stack.pop().unwrap().0;
-                    self.stack.push(Value(lhs - rhs));
+                    let rhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    let lhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    self.stack.push(Value(lhs.0 - rhs.0));
                 },
                 Opcode::Multiply => {
-                    let rhs = self.stack.pop().unwrap().0;
-                    let lhs = self.stack.pop().unwrap().0;
-                    self.stack.push(Value(lhs * rhs));
+                    let rhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    let lhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    self.stack.push(Value(lhs.0 * rhs.0));
                 },
                 Opcode::Divide => {
-                    let rhs = self.stack.pop().unwrap().0;
-                    let lhs = self.stack.pop().unwrap().0;
-                    self.stack.push(Value(lhs / rhs));
+                    let rhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    let lhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    self.stack.push(Value(lhs.0 / rhs.0));
                 },
             }
         }
