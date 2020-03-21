@@ -25,6 +25,7 @@ fn main() -> piccolo::Result<()> {
         let args: Vec<String> = args.collect();
         if !args.iter().any(|a| &*a == "pingus") {
             let contents = std::fs::read_to_string(&args[1]).expect("filename doesn't exist");
+            piccolo::interpret(&contents)?;
         } else {
             let mut c = Chunk::default();
 

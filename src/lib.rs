@@ -8,8 +8,14 @@ pub mod value;
 pub mod machine;
 pub mod error;
 pub mod op;
+pub mod compiler;
+pub mod scanner;
 
 pub use anyhow::Result;
+
+pub fn interpret(src: &str) -> Result<()> {
+    compiler::compile(scanner::Scanner::new(src).scan_tokens()?)
+}
 
 #[cfg(test)]
 mod tests {
