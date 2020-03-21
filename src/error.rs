@@ -3,7 +3,11 @@ use std::fmt::{Display, Formatter};
 use crate::op::Opcode;
 
 #[derive(Error, Debug)]
-pub enum InterpretError {
+pub enum PiccoloError {
+    #[error("Unidentified tokens:\n{tokens}")]
+    UnidentifiedToken {
+        tokens: String,
+    },
     #[error("Compile error at line {line}")]
     CompileError {
         line: usize,
@@ -17,18 +21,4 @@ pub enum InterpretError {
         line: usize,
         op: Opcode,
     },
-}
-
-impl InterpretError {
-    pub fn compile_error(line: usize) -> InterpretError {
-        InterpretError::CompileError { line }
-    }
-
-    pub fn runtime_error(line: usize) -> InterpretError {
-        InterpretError::RuntimeError { line }
-    }
-
-    pub fn stack_underflow(line: usize, op: Opcode) -> InterpretError {
-        InterpretError::StackUnderflow { line, op }
-    }
 }

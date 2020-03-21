@@ -1,5 +1,5 @@
 use crate::chunk::Chunk;
-use crate::error::InterpretError;
+use crate::error::PiccoloError;
 use crate::value::Value;
 use crate::op::Opcode;
 
@@ -18,8 +18,10 @@ impl Machine {
         }
     }
 
-    pub fn interpret(&mut self) -> anyhow::Result<()> {
+    pub fn interpret(&mut self) -> crate::Result<()> {
         loop {
+            use PiccoloError::StackUnderflow;
+
             #[cfg(feature = "pc-debug")]
             {
                 print!("┌─ {:?}\n└─ ", self.stack);
@@ -43,27 +45,27 @@ impl Machine {
                     self.stack.push(c);
                 },
                 Opcode::Negate => {
-                    let v = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    let v = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value(-v.0));
                 },
                 Opcode::Add => {
-                    let rhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
-                    let lhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value(lhs.0 + rhs.0));
                 },
                 Opcode::Subtract => {
-                    let rhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
-                    let lhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value(lhs.0 - rhs.0));
                 },
                 Opcode::Multiply => {
-                    let rhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
-                    let lhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value(lhs.0 * rhs.0));
                 },
                 Opcode::Divide => {
-                    let rhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
-                    let lhs = self.stack.pop().ok_or(InterpretError::stack_underflow(line, op))?;
+                    let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value(lhs.0 / rhs.0));
                 },
             }
