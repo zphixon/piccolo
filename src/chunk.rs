@@ -25,7 +25,12 @@ impl Chunk {
 
     pub fn constant(&mut self, value: Value) -> usize {
         self.constants.push(value);
-        self.constants.len() - 1
+        let idx = self.constants.len() - 1;
+        if idx > std::u8::MAX as usize {
+            panic!("bounds check on constants - idx as u8 will fail");
+        } else {
+            idx
+        }
     }
 
     pub fn disassemble(&self, name: &str) {
@@ -48,6 +53,7 @@ impl Chunk {
                 },
                 op
             );
+
             offset = match op {
                 Opcode::Return => offset + 1,
                 Opcode::Constant => {
