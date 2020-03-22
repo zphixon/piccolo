@@ -74,9 +74,21 @@ impl<'a> Token<'a> {
     pub fn new(kind: TokenKind, lexeme: &'a str, line: usize) -> Self {
         Token { kind, lexeme, line }
     }
+
+    pub fn kind(&self) -> &TokenKind {
+        &self.kind
+    }
+
+    pub fn line(&self) -> usize {
+        self.line
+    }
+
+    pub fn lexeme(&self) -> &str {
+        self.lexeme
+    }
 }
 
-pub(crate) fn print_tokens(tokens: Vec<Token>) {
+pub fn print_tokens(tokens: Vec<Token>) {
     let mut previous_line = 0;
     for token in tokens.iter() {
         println!(
@@ -465,8 +477,8 @@ fn is_whitespace(c: u8) -> bool {
         || c == 0x0C // form feed
         || c == 0x0D // carriage return
         || c == 0x20 // space
-    //  || c == 0x85 // next line      !! represented in utf-8 as C2 85
-    //  || c == 0xA0 // no-break space !! represented in utf-8 as C2 A0
+                     //  || c == 0x85 // next line      !! represented in utf-8 as C2 85
+                     //  || c == 0xA0 // no-break space !! represented in utf-8 as C2 A0
 }
 
 pub fn is_non_identifier(c: u8) -> bool {
