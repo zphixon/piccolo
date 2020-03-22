@@ -1,5 +1,4 @@
 
-use crate::anyhow::Error;
 use crate::error::PiccoloError;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -141,28 +140,30 @@ impl<'a> Scanner<'a> {
     }
 
     pub fn scan_tokens(mut self) -> crate::Result<Vec<Token<'a>>> {
-        let mut err = String::new();
+        let mut errors = Vec::new();
 
         while !self.is_at_end() {
             self.start = self.current;
             if let Err(e) = self.scan_token() {
-                err.push_str(&e);
-                err.push('\n');
+                errors.push(e);
             }
         }
 
         self.tokens
             .push(Token::new(TokenKind::Eof, "".into(), self.line));
 
-        if !err.is_empty() {
-            Err(PiccoloError::UnidentifiedToken { tokens: err }.into())
+        if !errors.is_empty() {
+            let mut err_string = String::new();
+            for error in errors {
+                err_string.push_str(&format!("{}\n", error));
+            }
+            Err(PiccoloError::Lots { err: err_string }.into())
         } else {
             Ok(self.tokens)
         }
     }
 
-    fn scan_token(&mut self) -> Result<(), String> {
-        let mut err = Ok(());
+    fn scan_token(&mut self) -> crate::Result<()> {
         match self.advance() {
             b'#' => while self.peek() != b'\n' && !self.is_at_end() {
                 self.advance();
@@ -262,37 +263,38 @@ impl<'a> Scanner<'a> {
             }
 
             b'"' => {
-                if let Err(e) = self.string() {
-                    err = Err(format!("{}: Bad string: {}", self.line, e));
-                }
+                self.string()?;
             }
 
             c => {
                 if is_digit(c) {
-                    err = self.number();
+                    self.number()?;
                 } else {
-                    self.identifier_or_keyword();
+                    self.identifier_or_keyword()?;
                 }
             }
         }
-        err
+        Ok(())
     }
 
-    fn identifier_or_keyword(&mut self) {
+    fn identifier_or_keyword(&mut self) -> crate::Result<()> {
         while !is_non_identifier(self.peek()) {
             self.advance();
         }
 
-        let value = String::from_utf8(self.source[self.start..self.current].to_vec()).unwrap();
+        let value = String::from_utf8(self.source[self.start..self.current].to_vec())
+            .map_err(|e| { PiccoloError::InvalidUTF8 { line: self.line } })?;
 
         if let Some(tk) = into_keyword(&value) {
             self.add_token(tk);
         } else {
             self.add_token(TokenKind::Identifier);
         }
+
+        Ok(())
     }
 
-    fn string(&mut self) -> Result<(), String> {
+    fn string(&mut self) -> crate::Result<()> {
         let mut value = Vec::new();
         let line_start = self.line;
         while self.peek() != b'"' && !self.is_at_end() {
@@ -303,7 +305,7 @@ impl<'a> Scanner<'a> {
             if self.peek() == b'\\' {
                 self.advance();
                 if self.is_at_end() {
-                    return Err(format!("{} - Expected format code, found Eof", self.line));
+                    return Err(PiccoloError::UnterminatedString { line: line_start }.into());
                 }
                 match self.advance() {
                     b'n' => {
@@ -325,7 +327,7 @@ impl<'a> Scanner<'a> {
                         }
                         self.reverse();
                     }
-                    c => return Err(format!("{} unknown format code: {}", self.line, c as char)),
+                    c => return Err(PiccoloError::UnknownFormatCode { line: line_start, code: c as char }.into()),
                 }
             } else {
                 value.push(self.advance());
@@ -333,10 +335,7 @@ impl<'a> Scanner<'a> {
         }
 
         if self.is_at_end() {
-            Err(format!(
-                "{} Unterminated string starting at {}",
-                self.line, line_start
-            ))
+            Err(PiccoloError::UnterminatedString { line: line_start }.into())
         } else {
             self.advance();
             self.add_token(TokenKind::String(String::from_utf8(value).expect("invalid utf-8 sequence")));
@@ -344,7 +343,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn number(&mut self) -> Result<(), String> {
+    fn number(&mut self) -> crate::Result<()> {
         while is_digit(self.peek()) {
             self.advance();
         }
@@ -361,16 +360,17 @@ impl<'a> Scanner<'a> {
             }
         }
 
-        let value = String::from_utf8(self.source[self.start..self.current].to_vec()).unwrap();
+        let value = String::from_utf8(self.source[self.start..self.current].to_vec())
+            .map_err(|_| PiccoloError::InvalidUTF8 { line: self.line })?;
         if let Ok(i) = value.parse::<i64>() {
             self.add_token(TokenKind::Integer(i));
             Ok(())
         } else {
-            Err("could not parse number".into())
+            Err(PiccoloError::InvalidNumberLiteral { line: self.line, literal: value }.into())
         }
     }
 
-    fn float(&mut self) -> Result<(), String> {
+    fn float(&mut self) -> crate::Result<()> {
         while is_digit(self.peek()) {
             self.advance();
         }
@@ -381,12 +381,13 @@ impl<'a> Scanner<'a> {
             }
         }
 
-        let value = String::from_utf8(self.source[self.start..self.current].to_vec()).unwrap();
+        let value = String::from_utf8(self.source[self.start..self.current].to_vec())
+            .map_err(|_| PiccoloError::InvalidUTF8 { line: self.line })?;
         if let Ok(f) = value.parse::<f64>() {
             self.add_token(TokenKind::Double(f));
             Ok(())
         } else {
-            Err("could not parse number".into())
+            Err(PiccoloError::InvalidNumberLiteral { line: self.line, literal: value }.into())
         }
     }
 
@@ -427,14 +428,6 @@ impl<'a> Scanner<'a> {
 
 fn is_digit(c: u8) -> bool {
     b'0' <= c && c <= b'9'
-}
-
-fn is_alpha(c: u8) -> bool {
-    b'A' <= c && c <= b'Z' || b'a' <= c && c <= b'z' || c == b'_'
-}
-
-fn is_alphanumeric(c: u8) -> bool {
-    is_digit(c) || is_alpha(c)
 }
 
 fn is_whitespace(c: u8) -> bool {

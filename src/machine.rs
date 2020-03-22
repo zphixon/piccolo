@@ -10,7 +10,7 @@ pub struct Machine {
 }
 
 impl Machine {
-    pub fn new(mut chunk: Chunk) -> Self {
+    pub fn new(chunk: Chunk) -> Self {
         Machine {
             chunk,
             ip: 0,
