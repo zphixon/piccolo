@@ -1,12 +1,11 @@
 use thiserror::Error;
-use std::fmt::{Display, Formatter};
 use crate::op::Opcode;
 
 #[derive(Error, Debug)]
 pub enum PiccoloError {
-    #[error("Unidentified tokens:\n{tokens}")]
-    UnidentifiedToken {
-        tokens: String,
+    #[error("Multiple errors...{err}")]
+    Lots {
+        err: String,
     },
     #[error("Compile error at line {line}")]
     CompileError {
@@ -21,4 +20,22 @@ pub enum PiccoloError {
         line: usize,
         op: Opcode,
     },
+    #[error("Invalid UTF8 on line {line}")]
+    InvalidUTF8 {
+        line: usize,
+    },
+    #[error("Unterminated string starting on line {line}")]
+    UnterminatedString {
+        line: usize,
+    },
+    #[error("Unknown format code '{code}' in string starting on line {line}")]
+    UnknownFormatCode {
+        code: char,
+        line: usize,
+    },
+    #[error("Invalid number literal {literal} on line {line}")]
+    InvalidNumberLiteral {
+        line: usize,
+        literal: String,
+    }
 }
