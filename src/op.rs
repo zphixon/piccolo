@@ -1,4 +1,3 @@
-
 macro_rules! opcodes {
     ($name:ident => $($op:ident = $num:expr),*,) => {
         #[derive(Debug, PartialEq, Clone, Copy)]
