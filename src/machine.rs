@@ -35,7 +35,7 @@ impl Machine {
             let op = inst.into();
             match op {
                 Opcode::Return => {
-                    println!("{}", self.stack.pop().expect(&format!("empty stack: {}", self.chunk.get_line_from_index(self.ip-1))));
+                    println!("{}", self.stack.pop().unwrap_or_else(|| panic!("empty stack: {}", self.chunk.get_line_from_index(self.ip-1))));
                     return Ok(());
                 },
                 Opcode::Constant => {

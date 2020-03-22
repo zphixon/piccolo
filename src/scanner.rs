@@ -149,8 +149,7 @@ impl<'a> Scanner<'a> {
             }
         }
 
-        self.tokens
-            .push(Token::new(TokenKind::Eof, "".into(), self.line));
+        self.tokens.push(Token::new(TokenKind::Eof, "", self.line));
 
         if !errors.is_empty() {
             let mut err_string = String::new();
