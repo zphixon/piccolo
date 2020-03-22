@@ -471,6 +471,7 @@ fn is_whitespace(c: u8) -> bool {
 
 pub fn is_non_identifier(c: u8) -> bool {
     is_whitespace(c)
+        || c == 0x00
         || c == b'#'
         || c == b'['
         || c == b']'
