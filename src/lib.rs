@@ -1,7 +1,6 @@
 extern crate anyhow;
 extern crate num_enum;
 extern crate thiserror;
-extern crate static_assertions;
 
 pub mod chunk;
 pub mod compiler;
@@ -15,11 +14,6 @@ mod rules;
 pub use anyhow::Result;
 
 pub fn interpret(src: &str) -> Result<()> {
-    #[cfg(feature = "pc-debug")]
-    {
-        assert_eq!(51, rules::RULES.len());
-    }
-
     use chunk::Chunk;
     use compiler::Compiler;
     use machine::Machine;
