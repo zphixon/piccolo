@@ -16,12 +16,6 @@ fn main() -> piccolo::Result<()> {
         loop {
             match rl.readline("-- ") {
                 Ok(mut line) => {
-                    #[cfg(target_os = "windows")]
-                    {
-                        // FIXME: powershell hack, still doesn't work in cmd.exe
-                        line.push_str("\n"); // and the prompt doesn't show up in clion
-                    }
-
                     if let Err(e) = piccolo::interpret(&line) {
                         println!("{}", e);
                     }
