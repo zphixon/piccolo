@@ -1,4 +1,3 @@
-
 use crate::error::PiccoloError;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -21,16 +20,16 @@ pub enum TokenKind {
     Nil,   // nil
 
     // syntax
-    LeftBracket,      // [
-    RightBracket,     // ]
-    LeftParen,        // (
-    RightParen,       // )
-    Comma,            // ,
-    Period,           // .
-    ExclusiveRange,   // ..
-    InclusiveRange,   // ...
-    Assign,           // =
-    Newline,          // \n
+    LeftBracket,    // [
+    RightBracket,   // ]
+    LeftParen,      // (
+    RightParen,     // )
+    Comma,          // ,
+    Period,         // .
+    ExclusiveRange, // ..
+    InclusiveRange, // ...
+    Assign,         // =
+    Newline,        // \n
 
     // operators
     Not,               // !
@@ -77,13 +76,14 @@ impl<'a> Token<'a> {
     }
 }
 
-pub (crate) fn print_tokens(tokens: Vec<Token>) {
+pub(crate) fn print_tokens(tokens: Vec<Token>) {
     let mut previous_line = 0;
     for token in tokens.iter() {
         println!(
             "{} {:?}{}",
             if token.line != previous_line {
-                previous_line = token.line; format!("{:>4}", token.line)
+                previous_line = token.line;
+                format!("{:>4}", token.line)
             } else {
                 "   |".into()
             },
@@ -156,7 +156,11 @@ impl<'a> Scanner<'a> {
             for error in errors.iter() {
                 err_string.push_str(&format!("\n{}", error));
             }
-            Err(PiccoloError::Lots { num: errors.len(), err: err_string }.into())
+            Err(PiccoloError::Lots {
+                num: errors.len(),
+                err: err_string,
+            }
+            .into())
         } else {
             Ok(self.tokens)
         }
@@ -164,9 +168,11 @@ impl<'a> Scanner<'a> {
 
     fn scan_token(&mut self) -> crate::Result<()> {
         match self.advance() {
-            b'#' => while self.peek() != b'\n' && !self.is_at_end() {
-                self.advance();
-            },
+            b'#' => {
+                while self.peek() != b'\n' && !self.is_at_end() {
+                    self.advance();
+                }
+            }
 
             b'\n' => {
                 self.add_token(TokenKind::Newline);
@@ -329,7 +335,13 @@ impl<'a> Scanner<'a> {
                         }
                         self.reverse();
                     }
-                    c => return Err(PiccoloError::UnknownFormatCode { line: line_start, code: c as char }.into()),
+                    c => {
+                        return Err(PiccoloError::UnknownFormatCode {
+                            line: line_start,
+                            code: c as char,
+                        }
+                        .into())
+                    }
                 }
             } else {
                 value.push(self.advance());
@@ -340,7 +352,9 @@ impl<'a> Scanner<'a> {
             Err(PiccoloError::UnterminatedString { line: line_start }.into())
         } else {
             self.advance();
-            self.add_token(TokenKind::String(String::from_utf8(value).expect("invalid utf-8 sequence")));
+            self.add_token(TokenKind::String(
+                String::from_utf8(value).expect("invalid utf-8 sequence"),
+            ));
             Ok(())
         }
     }
@@ -368,7 +382,11 @@ impl<'a> Scanner<'a> {
             self.add_token(TokenKind::Integer(i));
             Ok(())
         } else {
-            Err(PiccoloError::InvalidNumberLiteral { line: self.line, literal: value }.into())
+            Err(PiccoloError::InvalidNumberLiteral {
+                line: self.line,
+                literal: value,
+            }
+            .into())
         }
     }
 
@@ -389,12 +407,20 @@ impl<'a> Scanner<'a> {
             self.add_token(TokenKind::Double(f));
             Ok(())
         } else {
-            Err(PiccoloError::InvalidNumberLiteral { line: self.line, literal: value }.into())
+            Err(PiccoloError::InvalidNumberLiteral {
+                line: self.line,
+                literal: value,
+            }
+            .into())
         }
     }
 
     fn add_token(&mut self, kind: TokenKind) {
-        self.tokens.push(Token::new(kind, std::str::from_utf8(&self.source[self.start..self.current]).unwrap(), self.line));
+        self.tokens.push(Token::new(
+            kind,
+            std::str::from_utf8(&self.source[self.start..self.current]).unwrap(),
+            self.line,
+        ));
     }
 
     fn is_at_end(&self) -> bool {
@@ -433,36 +459,36 @@ fn is_digit(c: u8) -> bool {
 }
 
 fn is_whitespace(c: u8) -> bool {
-    c == 0x09    // tab
-    || c == 0x0A // line feed
-    || c == 0x0B // line tab
-    || c == 0x0C // form feed
-    || c == 0x0D // carriage return
-    || c == 0x20 // space
+    c == 0x09        // tab
+        || c == 0x0A // line feed
+        || c == 0x0B // line tab
+        || c == 0x0C // form feed
+        || c == 0x0D // carriage return
+        || c == 0x20 // space
     //  || c == 0x85 // next line      !! represented in utf-8 as C2 85
     //  || c == 0xA0 // no-break space !! represented in utf-8 as C2 A0
 }
 
 pub fn is_non_identifier(c: u8) -> bool {
     is_whitespace(c)
-    || c == b'#'
-    || c == b'['
-    || c == b']'
-    || c == b'('
-    || c == b')'
-    || c == b','
-    || c == b'-'
-    || c == b'+'
-    || c == b'*'
-    || c == b'/'
-    || c == b'^'
-    || c == b'%'
-    || c == b'&'
-    || c == b'|'
-    || c == b'.'
-    || c == b'!'
-    || c == b'='
-    || c == b'>'
-    || c == b'<'
-    || c == b'"'
+        || c == b'#'
+        || c == b'['
+        || c == b']'
+        || c == b'('
+        || c == b')'
+        || c == b','
+        || c == b'-'
+        || c == b'+'
+        || c == b'*'
+        || c == b'/'
+        || c == b'^'
+        || c == b'%'
+        || c == b'&'
+        || c == b'|'
+        || c == b'.'
+        || c == b'!'
+        || c == b'='
+        || c == b'>'
+        || c == b'<'
+        || c == b'"'
 }

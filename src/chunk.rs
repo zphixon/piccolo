@@ -1,4 +1,3 @@
-
 use crate::op::Opcode;
 use crate::value::Value;
 
@@ -39,18 +38,31 @@ impl Chunk {
 
             let op = self.data[offset].into();
 
-            print!("{:04} {} {:?}", offset, if line == prev_line { String::from("   |") } else { format!("{:>4}", line) }, op);
-            offset = match op {
-                Opcode::Return => { offset + 1 },
-                Opcode::Constant => {
-                    print!("#{:04} {:?}", self.data[offset+1], self.constants[self.data[offset+1] as usize]);
-                    offset + 2
+            print!(
+                "{:04} {} {:?}",
+                offset,
+                if line == prev_line {
+                    String::from("   |")
+                } else {
+                    format!("{:>4}", line)
                 },
-                Opcode::Negate => { offset + 1 },
-                Opcode::Add => { offset + 1 },
-                Opcode::Subtract => { offset + 1 },
-                Opcode::Multiply => { offset + 1 },
-                Opcode::Divide => { offset + 1 },
+                op
+            );
+            offset = match op {
+                Opcode::Return => offset + 1,
+                Opcode::Constant => {
+                    print!(
+                        "#{:04} {:?}",
+                        self.data[offset + 1],
+                        self.constants[self.data[offset + 1] as usize]
+                    );
+                    offset + 2
+                }
+                Opcode::Negate => offset + 1,
+                Opcode::Add => offset + 1,
+                Opcode::Subtract => offset + 1,
+                Opcode::Multiply => offset + 1,
+                Opcode::Divide => offset + 1,
             };
             println!();
 
@@ -66,8 +78,12 @@ impl Chunk {
         print!("{:04} {:<6} {:?}", offset, line, op);
         match op {
             Opcode::Constant => {
-                print!("#{:04} {:?}", self.data[offset+1], self.constants[self.data[offset+1] as usize]);
-            },
+                print!(
+                    "#{:04} {:?}",
+                    self.data[offset + 1],
+                    self.constants[self.data[offset + 1] as usize]
+                );
+            }
             _ => {
                 print!(" <>");
             }
@@ -87,4 +103,3 @@ impl Chunk {
         panic!("no line number for token at index {}", idx);
     }
 }
-

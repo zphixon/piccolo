@@ -1,7 +1,7 @@
 use crate::chunk::Chunk;
 use crate::error::PiccoloError;
-use crate::value::Value;
 use crate::op::Opcode;
+use crate::value::Value;
 
 pub struct Machine {
     chunk: Chunk,
@@ -14,7 +14,7 @@ impl Machine {
         Machine {
             chunk,
             ip: 0,
-            stack: vec![]
+            stack: vec![],
         }
     }
 
@@ -35,39 +35,45 @@ impl Machine {
             let op = inst.into();
             match op {
                 Opcode::Return => {
-                    println!("{}", self.stack.pop().unwrap_or_else(|| panic!("empty stack: {}", self.chunk.get_line_from_index(self.ip-1))));
+                    println!(
+                        "{}",
+                        self.stack.pop().unwrap_or_else(|| panic!(
+                            "empty stack: {}",
+                            self.chunk.get_line_from_index(self.ip - 1)
+                        ))
+                    );
                     return Ok(());
-                },
+                }
                 Opcode::Constant => {
                     let c = self.chunk.constants[self.chunk.data[self.ip] as usize].clone();
                     self.ip += 1;
 
                     self.stack.push(c);
-                },
+                }
                 Opcode::Negate => {
                     let v = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value(-v.0));
-                },
+                }
                 Opcode::Add => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value(lhs.0 + rhs.0));
-                },
+                }
                 Opcode::Subtract => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value(lhs.0 - rhs.0));
-                },
+                }
                 Opcode::Multiply => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value(lhs.0 * rhs.0));
-                },
+                }
                 Opcode::Divide => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value(lhs.0 / rhs.0));
-                },
+                }
             }
         }
     }

@@ -1,10 +1,9 @@
-
 extern crate piccolo;
 extern crate rustyline;
 
 use piccolo::chunk::Chunk;
-use piccolo::value::Value;
 use piccolo::op::Opcode;
+use piccolo::value::Value;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -18,15 +17,16 @@ fn main() -> piccolo::Result<()> {
             match rl.readline("-- ") {
                 Ok(mut line) => {
                     #[cfg(target_os = "windows")]
-                    {   // FIXME: powershell hack, still doesn't work in cmd.exe
+                    {
+                        // FIXME: powershell hack, still doesn't work in cmd.exe
                         line.push_str("\n"); // and the prompt doesn't show up in clion
                     }
 
                     if let Err(e) = piccolo::interpret(&line) {
                         println!("{}", e);
                     }
-                },
-                Err(ReadlineError::Interrupted) => {},
+                }
+                Err(ReadlineError::Interrupted) => {}
                 _ => break,
             }
         }
