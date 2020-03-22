@@ -19,4 +19,10 @@ pub enum PiccoloError {
     UnknownFormatCode { code: char, line: usize },
     #[error("Invalid number literal {literal} on line {line}")]
     InvalidNumberLiteral { line: usize, literal: String },
+    #[error("Expected token '{exp}', got token '{got}' on line {line}")]
+    UnexpectedToken {
+        exp: String,
+        got: String,
+        line: usize,
+    },
 }

@@ -1,6 +1,7 @@
 extern crate anyhow;
 extern crate num_enum;
 extern crate thiserror;
+extern crate static_assertions;
 
 pub mod chunk;
 pub mod compiler;
@@ -9,11 +10,26 @@ pub mod machine;
 pub mod op;
 pub mod scanner;
 pub mod value;
+mod rules;
 
 pub use anyhow::Result;
 
 pub fn interpret(src: &str) -> Result<()> {
-    compiler::compile(scanner::Scanner::new(src).scan_tokens()?)
+    #[cfg(feature = "pc-debug")]
+    {
+        assert_eq!(51, rules::RULES.len());
+    }
+
+    use chunk::Chunk;
+    use compiler::Compiler;
+    use machine::Machine;
+    use scanner::Scanner;
+
+    Machine::new(Compiler::compile(
+        Chunk::default(),
+        Scanner::new(src).scan_tokens()?,
+    )?)
+    .interpret()
 }
 
 #[cfg(test)]
@@ -22,6 +38,18 @@ mod tests {
     use crate::machine::Machine;
     use crate::op::Opcode;
     use crate::value::Value;
+    use crate::rules::{Precedence, get_rule};
+    use crate::scanner::TokenKind;
+
+    #[test]
+    fn rules() {
+        assert_eq!(get_rule(&TokenKind::Double(0.3)).precedence, Precedence::None);
+    }
+
+    #[test]
+    fn precedence_ord() {
+        assert!(Precedence::And > Precedence::Or);
+    }
 
     #[test]
     fn math_multiply_add() {
