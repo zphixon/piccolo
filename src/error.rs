@@ -3,8 +3,9 @@ use crate::op::Opcode;
 
 #[derive(Error, Debug)]
 pub enum PiccoloError {
-    #[error("Multiple errors...{err}")]
+    #[error("{num} error(s):{err}")]
     Lots {
+        num: usize,
         err: String,
     },
     #[error("Compile error at line {line}")]

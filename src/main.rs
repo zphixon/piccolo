@@ -10,13 +10,22 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
 fn main() -> piccolo::Result<()> {
-    let mut args = std::env::args();
+    let args = std::env::args();
 
     if args.len() == 1 {
         let mut rl = Editor::<()>::new();
         loop {
             match rl.readline("-- ") {
-                Ok(line) => {},
+                Ok(mut line) => {
+                    #[cfg(target_os = "windows")]
+                    {   // FIXME: powershell hack, still doesn't work in cmd.exe
+                        line.push_str("\n"); // and the prompt doesn't show up in clion
+                    }
+
+                    if let Err(e) = piccolo::interpret(&line) {
+                        println!("{}", e);
+                    }
+                },
                 Err(ReadlineError::Interrupted) => {},
                 _ => break,
             }
