@@ -78,6 +78,26 @@ impl<'a> Token<'a> {
     }
 }
 
+pub (crate) fn print_tokens(tokens: Vec<Token>) {
+    let mut previous_line = 0;
+    for token in tokens.iter() {
+        println!(
+            "{} {:?}{}",
+            if token.line != previous_line {
+                previous_line = token.line; format!("{:>4}", token.line)
+            } else {
+                "   |".into()
+            },
+            token.kind,
+            if token.kind == TokenKind::Identifier {
+                format!(" {}", token.lexeme)
+            } else {
+                "".into()
+            }
+        );
+    }
+}
+
 fn into_keyword(s: &str) -> Option<TokenKind> {
     match s {
         "do" => Some(TokenKind::Do),
@@ -248,20 +268,18 @@ impl<'a> Scanner<'a> {
             }
 
             c => {
-                if is_alpha(c) {
-                    self.ident();
-                } else if is_digit(c) {
+                if is_digit(c) {
                     err = self.number();
                 } else {
-                    err = Err(format!("{}: Unexpected char: {}", self.line, c as char));
+                    self.identifier_or_keyword();
                 }
             }
         }
         err
     }
 
-    fn ident(&mut self) {
-        while is_alphanumeric(self.peek()) {
+    fn identifier_or_keyword(&mut self) {
+        while !is_non_identifier(self.peek()) {
             self.advance();
         }
 
@@ -275,7 +293,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn string(&mut self) -> Result<(), String> {
-        let mut value = String::new();
+        let mut value = Vec::new();
         let line_start = self.line;
         while self.peek() != b'"' && !self.is_at_end() {
             if self.peek() == b'\n' {
@@ -289,16 +307,16 @@ impl<'a> Scanner<'a> {
                 }
                 match self.advance() {
                     b'n' => {
-                        value.push('\n');
+                        value.push(b'\n');
                     }
                     b'r' => {
-                        value.push('\r');
+                        value.push(b'\r');
                     }
                     b'\\' => {
-                        value.push('\\');
+                        value.push(b'\\');
                     }
                     b'"' => {
-                        value.push('"');
+                        value.push(b'"');
                     }
                     b'\n' => {
                         self.advance();
@@ -310,7 +328,7 @@ impl<'a> Scanner<'a> {
                     c => return Err(format!("{} unknown format code: {}", self.line, c as char)),
                 }
             } else {
-                value.push(self.advance() as char);
+                value.push(self.advance());
             }
         }
 
@@ -321,7 +339,7 @@ impl<'a> Scanner<'a> {
             ))
         } else {
             self.advance();
-            self.add_token(TokenKind::String(value.clone()));
+            self.add_token(TokenKind::String(String::from_utf8(value).expect("invalid utf-8 sequence")));
             Ok(())
         }
     }
@@ -373,7 +391,6 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_token(&mut self, kind: TokenKind) {
-        //let text = String::from_utf8(self.source[self.start..self.current].to_vec()).unwrap();
         self.tokens.push(Token::new(kind, std::str::from_utf8(&self.source[self.start..self.current]).unwrap(), self.line));
     }
 
@@ -418,4 +435,39 @@ fn is_alpha(c: u8) -> bool {
 
 fn is_alphanumeric(c: u8) -> bool {
     is_digit(c) || is_alpha(c)
+}
+
+fn is_whitespace(c: u8) -> bool {
+    c == 0x09    // tab
+    || c == 0x0A // line feed
+    || c == 0x0B // line tab
+    || c == 0x0C // form feed
+    || c == 0x0D // carriage return
+    || c == 0x20 // space
+    //  || c == 0x85 // next line      !! represented in utf-8 as C2 85
+    //  || c == 0xA0 // no-break space !! represented in utf-8 as C2 A0
+}
+
+pub fn is_non_identifier(c: u8) -> bool {
+    is_whitespace(c)
+    || c == b'#'
+    || c == b'['
+    || c == b']'
+    || c == b'('
+    || c == b')'
+    || c == b','
+    || c == b'-'
+    || c == b'+'
+    || c == b'*'
+    || c == b'/'
+    || c == b'^'
+    || c == b'%'
+    || c == b'&'
+    || c == b'|'
+    || c == b'.'
+    || c == b'!'
+    || c == b'='
+    || c == b'>'
+    || c == b'<'
+    || c == b'"'
 }
