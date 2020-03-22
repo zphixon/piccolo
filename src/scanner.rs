@@ -22,40 +22,40 @@ pub enum TokenKind {
     Nil,   // nil
 
     // syntax
-    LBracket, // [
-    RBracket, // ]
-    LParen,   // (
-    RParen,   // )
-    Comma,    // ,
-    Dot,      // .
-    ERange,   // ..
-    IRange,   // ...
-    Assign,   // =
-    Newline,  // \n
+    LeftBracket,      // [
+    RightBracket,     // ]
+    LeftParen,        // (
+    RightParen,       // )
+    Comma,            // ,
+    Period,           // .
+    ExclusiveRange,   // ..
+    InclusiveRange,   // ...
+    Assign,           // =
+    Newline,          // \n
 
     // operators
     Not,               // !
     Plus,              // +
     Minus,             // -
-    Star,              // *
+    Multiply,          // *
     Divide,            // /
-    Mod,               // %
+    Modulo,            // %
     And,               // &&
     Or,                // ||
-    BAnd,              // &
-    BOr,               // |
-    BXor,              // ^
+    BitwiseAnd,        // &
+    BitwiseOr,         // |
+    BitwiseXor,        // ^
     Equals,            // ==
     NotEquals,         // !=
     LessThan,          // <
     GreaterThan,       // >
     LessThanEquals,    // <=
     GreaterThanEquals, // >=
-    BitLeft,           // <<
-    BitRight,          // >>
+    ShiftLeft,         // <<
+    ShiftRight,        // >>
 
     // other syntax elements
-    Ident,
+    Identifier,
     String(String),
     True,
     False,
@@ -175,24 +175,24 @@ impl<'a> Scanner<'a> {
 
             b' ' | b'\t' | b'\r' => {}
 
-            b'[' => self.add_token(TokenKind::LBracket),
-            b']' => self.add_token(TokenKind::RBracket),
-            b'(' => self.add_token(TokenKind::LParen),
-            b')' => self.add_token(TokenKind::RParen),
+            b'[' => self.add_token(TokenKind::LeftBracket),
+            b']' => self.add_token(TokenKind::RightBracket),
+            b'(' => self.add_token(TokenKind::LeftParen),
+            b')' => self.add_token(TokenKind::RightParen),
             b',' => self.add_token(TokenKind::Comma),
             b'-' => self.add_token(TokenKind::Minus),
             b'+' => self.add_token(TokenKind::Plus),
-            b'*' => self.add_token(TokenKind::Star),
+            b'*' => self.add_token(TokenKind::Multiply),
             b'/' => self.add_token(TokenKind::Divide),
-            b'^' => self.add_token(TokenKind::BXor),
-            b'%' => self.add_token(TokenKind::Mod),
+            b'^' => self.add_token(TokenKind::BitwiseXor),
+            b'%' => self.add_token(TokenKind::Modulo),
 
             b'&' => {
                 if self.peek() == b'&' {
                     self.advance();
                     self.add_token(TokenKind::And);
                 } else {
-                    self.add_token(TokenKind::BAnd);
+                    self.add_token(TokenKind::BitwiseAnd);
                 }
             }
 
@@ -201,7 +201,7 @@ impl<'a> Scanner<'a> {
                     self.advance();
                     self.add_token(TokenKind::Or);
                 } else {
-                    self.add_token(TokenKind::BOr);
+                    self.add_token(TokenKind::BitwiseOr);
                 }
             }
 
@@ -210,12 +210,12 @@ impl<'a> Scanner<'a> {
                     self.advance();
                     if self.peek() == b'.' {
                         self.advance();
-                        self.add_token(TokenKind::IRange);
+                        self.add_token(TokenKind::InclusiveRange);
                     } else {
-                        self.add_token(TokenKind::ERange);
+                        self.add_token(TokenKind::ExclusiveRange);
                     }
                 } else {
-                    self.add_token(TokenKind::Dot);
+                    self.add_token(TokenKind::Period);
                 }
             }
 
@@ -243,7 +243,7 @@ impl<'a> Scanner<'a> {
                     self.add_token(TokenKind::GreaterThanEquals);
                 } else if self.peek() == b'>' {
                     self.advance();
-                    self.add_token(TokenKind::BitRight);
+                    self.add_token(TokenKind::ShiftRight);
                 } else {
                     self.add_token(TokenKind::GreaterThan);
                 }
@@ -255,7 +255,7 @@ impl<'a> Scanner<'a> {
                     self.add_token(TokenKind::LessThanEquals);
                 } else if self.peek() == b'<' {
                     self.advance();
-                    self.add_token(TokenKind::BitLeft);
+                    self.add_token(TokenKind::ShiftLeft);
                 } else {
                     self.add_token(TokenKind::LessThan);
                 }
@@ -288,7 +288,7 @@ impl<'a> Scanner<'a> {
         if let Some(tk) = into_keyword(&value) {
             self.add_token(tk);
         } else {
-            self.add_token(TokenKind::Ident);
+            self.add_token(TokenKind::Identifier);
         }
     }
 
