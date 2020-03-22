@@ -154,10 +154,10 @@ impl<'a> Scanner<'a> {
 
         if !errors.is_empty() {
             let mut err_string = String::new();
-            for error in errors {
-                err_string.push_str(&format!("{}\n", error));
+            for error in errors.iter() {
+                err_string.push_str(&format!("\n{}", error));
             }
-            Err(PiccoloError::Lots { err: err_string }.into())
+            Err(PiccoloError::Lots { num: errors.len(), err: err_string }.into())
         } else {
             Ok(self.tokens)
         }
@@ -283,7 +283,7 @@ impl<'a> Scanner<'a> {
         }
 
         let value = String::from_utf8(self.source[self.start..self.current].to_vec())
-            .map_err(|e| { PiccoloError::InvalidUTF8 { line: self.line } })?;
+            .map_err(|_| PiccoloError::InvalidUTF8 { line: self.line })?;
 
         if let Some(tk) = into_keyword(&value) {
             self.add_token(tk);
@@ -319,6 +319,9 @@ impl<'a> Scanner<'a> {
                     }
                     b'"' => {
                         value.push(b'"');
+                    }
+                    b't' => {
+                        value.push(b'\t');
                     }
                     b'\n' => {
                         self.advance();
