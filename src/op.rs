@@ -1,5 +1,5 @@
 macro_rules! opcodes {
-    ($name:ident => $($op:ident = $num:expr),*,) => {
+    ($name:ident => $($op:ident = $num:expr,)*) => {
         #[derive(Debug, PartialEq, Clone, Copy)]
         #[repr(u8)]
         pub enum $name {

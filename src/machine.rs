@@ -52,27 +52,36 @@ impl Machine {
                 }
                 Opcode::Negate => {
                     let v = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    self.stack.push(Value(-v.0));
+                    let v: f64 = v.into();
+                    self.stack.push(Value::Double(-v));
                 }
                 Opcode::Add => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    self.stack.push(Value(lhs.0 + rhs.0));
+                    let rhs: f64 = rhs.into();
+                    let lhs: f64 = lhs.into();
+                    self.stack.push(Value::Double(lhs + rhs));
                 }
                 Opcode::Subtract => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    self.stack.push(Value(lhs.0 - rhs.0));
+                    let rhs: f64 = rhs.into();
+                    let lhs: f64 = lhs.into();
+                    self.stack.push(Value::Double(lhs - rhs));
                 }
                 Opcode::Multiply => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    self.stack.push(Value(lhs.0 * rhs.0));
+                    let rhs: f64 = rhs.into();
+                    let lhs: f64 = lhs.into();
+                    self.stack.push(Value::Double(lhs * rhs));
                 }
                 Opcode::Divide => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    self.stack.push(Value(lhs.0 / rhs.0));
+                    let rhs: f64 = rhs.into();
+                    let lhs: f64 = lhs.into();
+                    self.stack.push(Value::Double(lhs / rhs));
                 }
             }
         }

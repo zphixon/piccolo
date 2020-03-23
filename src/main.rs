@@ -32,11 +32,11 @@ fn main() -> piccolo::Result<()> {
         } else {
             let mut c = Chunk::default();
 
-            let one = c.constant(Value(1.0));
-            let two = c.constant(Value(2.0));
-            let three = c.constant(Value(3.0));
-            let four = c.constant(Value(4.0));
-            let five = c.constant(Value(5.0));
+            let one = c.constant(Value::Double(1.0));
+            let two = c.constant(Value::Double(2.0));
+            let three = c.constant(Value::Double(3.0));
+            let four = c.constant(Value::Double(4.0));
+            let five = c.constant(Value::Double(5.0));
 
             c.write(Opcode::Constant, 1);
             c.write(one as u8, 1);
