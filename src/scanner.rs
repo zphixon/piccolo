@@ -1,4 +1,6 @@
 use crate::error::PiccoloError;
+use std::fmt::{Display, Formatter};
+use core::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
@@ -88,6 +90,18 @@ impl<'a> Token<'a> {
     }
 }
 
+impl<'a> Display for Token<'a> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match &self.kind {
+            TokenKind::Identifier => write!(f, "{}", self.lexeme),
+            TokenKind::String(s) => write!(f, "string \"{}\"", s),
+            TokenKind::Double(d) => write!(f, "double {}", d),
+            TokenKind::Integer(i) => write!(f, "integer {}", i),
+            k => write!(f, "{:?}", k),
+        }
+    }
+}
+
 pub fn print_tokens(tokens: Vec<Token>) {
     let mut previous_line = 0;
     for token in tokens.iter() {
@@ -164,15 +178,22 @@ impl<'a> Scanner<'a> {
         self.tokens.push(Token::new(TokenKind::Eof, "", self.line));
 
         if !errors.is_empty() {
-            let mut err_string = String::new();
-            for error in errors.iter() {
-                err_string.push_str(&format!("\n{}", error));
+            if errors.len() > 1 {
+                let mut err_string = String::new();
+                for error in errors.iter() {
+                    err_string.push_str(&format!("\n{}", error));
+                }
+                Err(PiccoloError::Lots {
+                    num: errors.len(),
+                    err: err_string,
+                }
+                .into())
+            } else {
+                Err(PiccoloError::One {
+                    err: format!("{}", errors[0])
+                }
+                .into())
             }
-            Err(PiccoloError::Lots {
-                num: errors.len(),
-                err: err_string,
-            }
-            .into())
         } else {
             Ok(self.tokens)
         }

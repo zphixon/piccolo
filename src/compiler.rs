@@ -31,7 +31,7 @@ impl<'a> Compiler<'a> {
         if *self.current.kind() != token {
             Err(PiccoloError::UnexpectedToken {
                 exp: format!("{:?}", token),
-                got: format!("{:?}", self.current.kind()),
+                got: format!("{}", self.current),
                 line: self.previous.line(),
             }
             .into())

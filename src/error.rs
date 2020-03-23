@@ -1,10 +1,12 @@
 use crate::op::Opcode;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum PiccoloError {
     #[error("{num} error(s):{err}")]
     Lots { num: usize, err: String },
+    #[error("{err}")]
+    One { err: String },
     #[error("Compile error at line {line}")]
     CompileError { line: usize },
     #[error("Runtime error at line {line}")]
@@ -19,7 +21,7 @@ pub enum PiccoloError {
     UnknownFormatCode { code: char, line: usize },
     #[error("Invalid number literal {literal} on line {line}")]
     InvalidNumberLiteral { line: usize, literal: String },
-    #[error("Expected token '{exp}', got token '{got}' on line {line}")]
+    #[error("Expected {exp}, got {got} on line {line}")]
     UnexpectedToken {
         exp: String,
         got: String,
