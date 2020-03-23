@@ -93,9 +93,9 @@ impl<'a> Compiler<'a> {
         let value = self
             .previous
             .lexeme()
-            .parse::<f32>()
+            .parse::<f64>()
             .expect("incorrect number format: file a bug report");
-        self.emit_constant(Value(value));
+        self.emit_constant(Value::Double(value));
         Ok(())
     }
 

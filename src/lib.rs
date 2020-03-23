@@ -48,9 +48,9 @@ mod tests {
     #[test]
     fn math_multiply_add() {
         let mut c = Chunk::default();
-        let one = c.constant(Value(1.0));
-        let two = c.constant(Value(2.0));
-        let three = c.constant(Value(3.0));
+        let one = c.constant(Value::Double(1.0));
+        let two = c.constant(Value::Double(2.0));
+        let three = c.constant(Value::Double(3.0));
 
         // 1 * 2 + 3
 
@@ -71,9 +71,9 @@ mod tests {
     #[test]
     fn math_add_multiply() {
         let mut c = Chunk::default();
-        let one = c.constant(Value(1.0));
-        let two = c.constant(Value(2.0));
-        let three = c.constant(Value(3.0));
+        let one = c.constant(Value::Double(1.0));
+        let two = c.constant(Value::Double(2.0));
+        let three = c.constant(Value::Double(3.0));
 
         // 1 + 2 * 3
 
@@ -94,9 +94,9 @@ mod tests {
     #[test]
     fn math_sub_sub() {
         let mut c = Chunk::default();
-        let one = c.constant(Value(1.0));
-        let two = c.constant(Value(2.0));
-        let three = c.constant(Value(3.0));
+        let one = c.constant(Value::Double(1.0));
+        let two = c.constant(Value::Double(2.0));
+        let three = c.constant(Value::Double(3.0));
 
         // 3 - 2 - 1
 
@@ -117,11 +117,11 @@ mod tests {
     #[test]
     fn math_complex() {
         let mut c = Chunk::default();
-        let one = c.constant(Value(1.0));
-        let two = c.constant(Value(2.0));
-        let three = c.constant(Value(3.0));
-        let four = c.constant(Value(4.0));
-        let five = c.constant(Value(5.0));
+        let one = c.constant(Value::Double(1.0));
+        let two = c.constant(Value::Double(2.0));
+        let three = c.constant(Value::Double(3.0));
+        let four = c.constant(Value::Double(4.0));
+        let five = c.constant(Value::Double(5.0));
 
         // 1 + 2 * 3 - 4 / -5
 
