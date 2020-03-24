@@ -14,15 +14,14 @@ fn main() -> piccolo::Result<()> {
                 Ok(line) => {
                     #[cfg(feature = "pc-debug")]
                     {
-                        use piccolo::chunk::Chunk;
-                        use piccolo::compiler::Compiler;
-                        use piccolo::machine::Machine;
-                        use piccolo::scanner;
-                        use piccolo::scanner::Scanner;
+                        use piccolo::Chunk;
+                        use piccolo::Compiler;
+                        use piccolo::Machine;
+                        use piccolo::Scanner;
 
                         let tokens = Scanner::new(&line).scan_tokens()?;
                         println!("****** tokens");
-                        scanner::print_tokens(&tokens);
+                        piccolo::print_tokens(&tokens);
                         println!("****** compiler");
                         let chunk = Compiler::compile(Chunk::default(), &tokens)?;
                         println!("****** chunk");
@@ -52,15 +51,14 @@ fn main() -> piccolo::Result<()> {
 
         #[cfg(feature = "pc-debug")]
         {
-            use piccolo::chunk::Chunk;
-            use piccolo::compiler::Compiler;
-            use piccolo::machine::Machine;
-            use piccolo::scanner;
-            use piccolo::scanner::Scanner;
+            use piccolo::Chunk;
+            use piccolo::Compiler;
+            use piccolo::Machine;
+            use piccolo::Scanner;
 
             let tokens = Scanner::new(&contents).scan_tokens()?;
             println!("****** tokens");
-            scanner::print_tokens(&tokens);
+            piccolo::print_tokens(&tokens);
             println!("****** compiler");
             let chunk = Compiler::compile(Chunk::default(), &tokens)?;
             println!("****** chunk");

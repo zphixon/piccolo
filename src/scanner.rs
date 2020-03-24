@@ -3,7 +3,7 @@ use core::fmt;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum TokenKind {
+pub(crate) enum TokenKind {
     // keywords
     Do,    // do
     End,   // end
@@ -67,26 +67,14 @@ pub enum TokenKind {
 
 #[derive(Debug, Clone)]
 pub struct Token<'a> {
-    kind: TokenKind,
-    lexeme: &'a str,
-    line: usize,
+    pub(crate) kind: TokenKind,
+    pub(crate) lexeme: &'a str,
+    pub(crate) line: usize,
 }
 
 impl<'a> Token<'a> {
-    pub fn new(kind: TokenKind, lexeme: &'a str, line: usize) -> Self {
+    pub(crate) fn new(kind: TokenKind, lexeme: &'a str, line: usize) -> Self {
         Token { kind, lexeme, line }
-    }
-
-    pub fn kind(&self) -> &TokenKind {
-        &self.kind
-    }
-
-    pub fn line(&self) -> usize {
-        self.line
-    }
-
-    pub fn lexeme(&self) -> &str {
-        self.lexeme
     }
 }
 
@@ -102,6 +90,7 @@ impl<'a> Display for Token<'a> {
     }
 }
 
+#[cfg(feature = "pc-debug")]
 pub fn print_tokens(tokens: &[Token]) {
     let mut previous_line = 0;
     for token in tokens.iter() {

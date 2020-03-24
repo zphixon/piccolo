@@ -10,7 +10,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn write<T: Into<u8>>(&mut self, byte: T, line: usize) {
+    pub(crate) fn write<T: Into<u8>>(&mut self, byte: T, line: usize) {
         self.data.push(byte.into());
 
         let len = self.lines.len();
@@ -23,7 +23,7 @@ impl Chunk {
         }
     }
 
-    pub fn constant(&mut self, value: Value) -> usize {
+    pub(crate) fn make_constant(&mut self, value: Value) -> usize {
         self.constants.push(value);
         let idx = self.constants.len() - 1;
         if idx > std::u8::MAX as usize {
@@ -79,7 +79,8 @@ impl Chunk {
         }
     }
 
-    pub fn disassemble_instruction(&self, offset: usize) {
+    #[cfg(feature = "pc-debug")]
+    pub(crate) fn disassemble_instruction(&self, offset: usize) {
         let line = self.get_line_from_index(offset);
 
         let op = self.data[offset].into();
@@ -95,7 +96,7 @@ impl Chunk {
         println!();
     }
 
-    pub fn get_line_from_index(&self, idx: usize) -> usize {
+    pub(crate) fn get_line_from_index(&self, idx: usize) -> usize {
         let mut sum = 0;
         for (k, v) in self.lines.iter().enumerate() {
             sum += *v;
