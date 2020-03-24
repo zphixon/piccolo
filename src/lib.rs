@@ -28,10 +28,10 @@ pub fn interpret(src: &str) -> Result<value::Value> {
 #[cfg(test)]
 mod tests {
     use crate::chunk::Chunk;
+    use crate::compiler::Precedence;
     use crate::machine::Machine;
     use crate::op::Opcode;
     use crate::value::Value;
-    use crate::compiler::Precedence;
 
     #[test]
     fn concat() {

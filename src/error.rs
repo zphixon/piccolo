@@ -29,5 +29,5 @@ pub enum PiccoloError {
         got: String,
         op: Opcode,
         line: usize,
-    }
+    },
 }
