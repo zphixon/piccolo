@@ -1,5 +1,4 @@
 extern crate anyhow;
-extern crate num_enum;
 extern crate thiserror;
 
 mod chunk;
