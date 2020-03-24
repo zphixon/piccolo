@@ -22,7 +22,8 @@ fn main() -> piccolo::Result<()> {
                         println!("****** tokens");
                         piccolo::scanner::print_tokens(&tokens);
                         println!("****** compiler");
-                        let chunk = piccolo::compiler::Compiler::compile(Chunk::default(), &tokens)?;
+                        let chunk =
+                            piccolo::compiler::Compiler::compile(Chunk::default(), &tokens)?;
                         println!("****** chunk");
                         chunk.disassemble("line");
                         let mut vm = piccolo::machine::Machine::new(chunk);

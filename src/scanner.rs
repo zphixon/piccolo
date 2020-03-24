@@ -1,6 +1,6 @@
 use crate::error::PiccoloError;
-use std::fmt::{Display, Formatter};
 use core::fmt;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
@@ -190,7 +190,7 @@ impl<'a> Scanner<'a> {
                 .into())
             } else {
                 Err(PiccoloError::One {
-                    err: format!("{}", errors[0])
+                    err: format!("{}", errors[0]),
                 }
                 .into())
             }

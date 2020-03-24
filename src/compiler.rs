@@ -28,70 +28,130 @@ pub struct Compiler<'a> {
         TokenKind,
         Option<fn(&mut Compiler) -> crate::Result<()>>,
         Option<fn(&mut Compiler) -> crate::Result<()>>,
-        Precedence
+        Precedence,
     )],
 }
 
 impl<'a> Compiler<'a> {
-    pub fn compile(chunk: Chunk, s: &[Token]) -> crate::Result<Chunk> { // {{{
+    pub fn compile(chunk: Chunk, s: &[Token]) -> crate::Result<Chunk> {
         let mut compiler = Compiler {
             chunk,
             previous: 0,
             current: 0,
             tokens: s,
             rules: &[
-                (TokenKind::Do,                    None,                     None,                   Precedence::None,       ),
-                (TokenKind::End,                   None,                     None,                   Precedence::None,       ),
-                (TokenKind::Fn,                    None,                     None,                   Precedence::None,       ),
-                (TokenKind::If,                    None,                     None,                   Precedence::None,       ),
-                (TokenKind::Else,                  None,                     None,                   Precedence::None,       ),
-                (TokenKind::While,                 None,                     None,                   Precedence::None,       ),
-                (TokenKind::For,                   None,                     None,                   Precedence::None,       ),
-                (TokenKind::In,                    None,                     None,                   Precedence::None,       ),
-                (TokenKind::Data,                  None,                     None,                   Precedence::None,       ),
-                (TokenKind::Is,                    None,                     None,                   Precedence::None,       ),
-                (TokenKind::Me,                    None,                     None,                   Precedence::None,       ),
-                (TokenKind::New,                   None,                     None,                   Precedence::None,       ),
-                (TokenKind::Err,                   None,                     None,                   Precedence::None,       ),
-                (TokenKind::Retn,                  None,                     None,                   Precedence::None,       ),
-                (TokenKind::Nil,                   Some(|c| Compiler::literal(c)),  None,                   Precedence::None,       ),
-                (TokenKind::LeftBracket,           None,                     None,                   Precedence::None,       ),
-                (TokenKind::RightBracket,          None,                     None,                   Precedence::None,       ),
-                (TokenKind::LeftParen,             Some(|c| Compiler::grouping(c)), None,                   Precedence::None,       ),
-                (TokenKind::RightParen,            None,                     None,                   Precedence::None,       ),
-                (TokenKind::Comma,                 None,                     None,                   Precedence::None,       ),
-                (TokenKind::Period,                None,                     None,                   Precedence::None,       ),
-                (TokenKind::ExclusiveRange,        None,                     None,                   Precedence::None,       ),
-                (TokenKind::InclusiveRange,        None,                     None,                   Precedence::None,       ),
-                (TokenKind::Assign,                None,                     None,                   Precedence::None,       ),
-                (TokenKind::Newline,               None,                     None,                   Precedence::None,       ),
-                (TokenKind::Not,                   None,                     None,                   Precedence::None,       ),
-                (TokenKind::Plus,                  None,                     Some(|c| Compiler::binary(c)), Precedence::Term,       ),
-                (TokenKind::Minus,                 Some(|c| Compiler::unary(c)),    Some(|c| Compiler::binary(c)), Precedence::Term,       ),
-                (TokenKind::Multiply,              None,                     Some(|c| Compiler::binary(c)), Precedence::Factor,     ),
-                (TokenKind::Divide,                None,                     Some(|c| Compiler::binary(c)), Precedence::Factor,     ),
-                (TokenKind::Modulo,                None,                     Some(|c| Compiler::binary(c)), Precedence::Factor,     ),
-                (TokenKind::And,                   None,                     None,                   Precedence::None,       ),
-                (TokenKind::Or,                    None,                     None,                   Precedence::None,       ),
-                (TokenKind::BitwiseAnd,            None,                     None,                   Precedence::None,       ),
-                (TokenKind::BitwiseOr,             None,                     None,                   Precedence::None,       ),
-                (TokenKind::BitwiseXor,            None,                     None,                   Precedence::None,       ),
-                (TokenKind::Equals,                None,                     None,                   Precedence::None,       ),
-                (TokenKind::NotEquals,             None,                     None,                   Precedence::None,       ),
-                (TokenKind::LessThan,              None,                     None,                   Precedence::None,       ),
-                (TokenKind::GreaterThan,           None,                     None,                   Precedence::None,       ),
-                (TokenKind::LessThanEquals,        None,                     None,                   Precedence::None,       ),
-                (TokenKind::GreaterThanEquals,     None,                     None,                   Precedence::None,       ),
-                (TokenKind::ShiftLeft,             None,                     None,                   Precedence::None,       ),
-                (TokenKind::ShiftRight,            None,                     None,                   Precedence::None,       ),
-                (TokenKind::Identifier,            None,                     None,                   Precedence::None,       ),
-                (TokenKind::True,                  Some(|c| Compiler::literal(c)),  None,                   Precedence::None,       ),
-                (TokenKind::False,                 Some(|c| Compiler::literal(c)),  None,                   Precedence::None,       ),
-                (TokenKind::Eof,                   None,                     None,                   Precedence::None,       ),
-                (TokenKind::String(String::new()), None,                     None,                   Precedence::None,       ),
-                (TokenKind::Double(0.0),           Some(|c| Compiler::number(c)),   None,                   Precedence::None,       ),
-                (TokenKind::Integer(0),            Some(|c| Compiler::number(c)),   None,                   Precedence::None,       ),
-            ]
+                (TokenKind::Do, None, None, Precedence::None),
+                (TokenKind::End, None, None, Precedence::None),
+                (TokenKind::Fn, None, None, Precedence::None),
+                (TokenKind::If, None, None, Precedence::None),
+                (TokenKind::Else, None, None, Precedence::None),
+                (TokenKind::While, None, None, Precedence::None),
+                (TokenKind::For, None, None, Precedence::None),
+                (TokenKind::In, None, None, Precedence::None),
+                (TokenKind::Data, None, None, Precedence::None),
+                (TokenKind::Is, None, None, Precedence::None),
+                (TokenKind::Me, None, None, Precedence::None),
+                (TokenKind::New, None, None, Precedence::None),
+                (TokenKind::Err, None, None, Precedence::None),
+                (TokenKind::Retn, None, None, Precedence::None),
+                (
+                    TokenKind::Nil,
+                    Some(|c| Compiler::literal(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (TokenKind::LeftBracket, None, None, Precedence::None),
+                (TokenKind::RightBracket, None, None, Precedence::None),
+                (
+                    TokenKind::LeftParen,
+                    Some(|c| Compiler::grouping(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (TokenKind::RightParen, None, None, Precedence::None),
+                (TokenKind::Comma, None, None, Precedence::None),
+                (TokenKind::Period, None, None, Precedence::None),
+                (TokenKind::ExclusiveRange, None, None, Precedence::None),
+                (TokenKind::InclusiveRange, None, None, Precedence::None),
+                (TokenKind::Assign, None, None, Precedence::None),
+                (TokenKind::Newline, None, None, Precedence::None),
+                (TokenKind::Not, None, None, Precedence::None),
+                (
+                    TokenKind::Plus,
+                    None,
+                    Some(|c| Compiler::binary(c)),
+                    Precedence::Term,
+                ),
+                (
+                    TokenKind::Minus,
+                    Some(|c| Compiler::unary(c)),
+                    Some(|c| Compiler::binary(c)),
+                    Precedence::Term,
+                ),
+                (
+                    TokenKind::Multiply,
+                    None,
+                    Some(|c| Compiler::binary(c)),
+                    Precedence::Factor,
+                ),
+                (
+                    TokenKind::Divide,
+                    None,
+                    Some(|c| Compiler::binary(c)),
+                    Precedence::Factor,
+                ),
+                (
+                    TokenKind::Modulo,
+                    None,
+                    Some(|c| Compiler::binary(c)),
+                    Precedence::Factor,
+                ),
+                (TokenKind::And, None, None, Precedence::None),
+                (TokenKind::Or, None, None, Precedence::None),
+                (TokenKind::BitwiseAnd, None, None, Precedence::None),
+                (TokenKind::BitwiseOr, None, None, Precedence::None),
+                (TokenKind::BitwiseXor, None, None, Precedence::None),
+                (TokenKind::Equals, None, None, Precedence::None),
+                (TokenKind::NotEquals, None, None, Precedence::None),
+                (TokenKind::LessThan, None, None, Precedence::None),
+                (TokenKind::GreaterThan, None, None, Precedence::None),
+                (TokenKind::LessThanEquals, None, None, Precedence::None),
+                (TokenKind::GreaterThanEquals, None, None, Precedence::None),
+                (TokenKind::ShiftLeft, None, None, Precedence::None),
+                (TokenKind::ShiftRight, None, None, Precedence::None),
+                (TokenKind::Identifier, None, None, Precedence::None),
+                (
+                    TokenKind::True,
+                    Some(|c| Compiler::literal(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (
+                    TokenKind::False,
+                    Some(|c| Compiler::literal(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (TokenKind::Eof, None, None, Precedence::None),
+                (
+                    TokenKind::String(String::new()),
+                    None,
+                    None,
+                    Precedence::None,
+                ),
+                (
+                    TokenKind::Double(0.0),
+                    Some(|c| Compiler::number(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (
+                    TokenKind::Integer(0),
+                    Some(|c| Compiler::number(c)),
+                    None,
+                    Precedence::None,
+                ),
+            ],
         };
 
         //compiler.advance();
@@ -99,7 +159,7 @@ impl<'a> Compiler<'a> {
         compiler.consume(TokenKind::Eof)?;
         compiler.emit(Opcode::Return);
         Ok(compiler.chunk)
-    } // }}}
+    }
 
     pub fn consume(&mut self, token: TokenKind) -> crate::Result<()> {
         if *self.current().kind() != token {
@@ -215,7 +275,11 @@ impl<'a> Compiler<'a> {
             self.emit_constant(Value::Double(value));
             Ok(())
         } else {
-            Err(PiccoloError::InvalidNumberLiteral { line: self.previous().line(), literal: self.previous().lexeme().to_owned() }.into())
+            Err(PiccoloError::InvalidNumberLiteral {
+                line: self.previous().line(),
+                literal: self.previous().lexeme().to_owned(),
+            }
+            .into())
         }
     }
 
@@ -247,10 +311,13 @@ impl<'a> Compiler<'a> {
         self.chunk.write(byte2, self.previous().line());
     }
 
-    pub(crate) fn get_rule(&'a self, kind: &TokenKind) -> (
+    pub(crate) fn get_rule(
+        &'a self,
+        kind: &TokenKind,
+    ) -> (
         &'a Option<fn(&mut Compiler) -> crate::Result<()>>,
         &'a Option<fn(&mut Compiler) -> crate::Result<()>>,
-        &'a Precedence
+        &'a Precedence,
     ) {
         for (k, infix, prefix, precedence) in self.rules.iter() {
             let rule = (infix, prefix, precedence);

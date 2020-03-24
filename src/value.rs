@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
-use std::fmt::{Display, Formatter};
 use core::fmt;
+use std::fmt::{Display, Formatter};
 
 // TODO: PartialOrd
 macro_rules! values {
@@ -79,4 +79,3 @@ impl Value {
         }
     }
 }
-

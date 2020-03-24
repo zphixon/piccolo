@@ -1,8 +1,8 @@
 use crate::chunk::Chunk;
 use crate::error::PiccoloError;
 use crate::op::Opcode;
-use crate::value::Value;
 use crate::value::Nil;
+use crate::value::Value;
 
 pub struct Machine {
     chunk: Chunk,
@@ -61,7 +61,8 @@ impl Machine {
                             got: v.type_name().to_owned(),
                             op: Opcode::Negate,
                             line,
-                        }.into())
+                        }
+                        .into());
                     }
                 }
                 Opcode::Add => {
@@ -81,7 +82,8 @@ impl Machine {
                                 got: format!("double + {}", rhs.type_name()),
                                 op: Opcode::Add,
                                 line,
-                            }.into())
+                            }
+                            .into());
                         }
                     } else if lhs.is_integer() {
                         let lhs = lhs.into::<i64>();
@@ -97,7 +99,8 @@ impl Machine {
                                 got: format!("integer + {}", rhs.type_name()),
                                 op: Opcode::Add,
                                 line,
-                            }.into())
+                            }
+                            .into());
                         }
                     } else if lhs.is_string() {
                         let mut lhs = lhs.into::<String>();
@@ -109,7 +112,8 @@ impl Machine {
                             got: format!("{} + {}", lhs.type_name(), rhs.type_name()),
                             op: Opcode::Add,
                             line,
-                        }.into())
+                        }
+                        .into());
                     }
                 }
                 Opcode::Subtract => {
