@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use std::fmt::{Display, Formatter};
 use core::fmt;
 
