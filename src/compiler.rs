@@ -161,12 +161,12 @@ impl<'a> Compiler<'a> {
         Ok(compiler.chunk)
     }
 
-    pub fn consume(&mut self, token: TokenKind) -> crate::Result<()> {
-        if *self.current().kind() != token {
+    fn consume(&mut self, token: TokenKind) -> crate::Result<()> {
+        if self.current().kind != token {
             Err(PiccoloError::UnexpectedToken {
                 exp: format!("{:?}", token),
                 got: format!("{}", self.current()),
-                line: self.previous().line(),
+                line: self.previous().line,
             }
             .into())
         } else {
@@ -175,7 +175,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    pub fn expression(&mut self) -> crate::Result<()> {
+    fn expression(&mut self) -> crate::Result<()> {
         #[cfg(feature = "pc-debug")]
         {
             println!("expression");
@@ -184,25 +184,25 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    pub(crate) fn precedence(&mut self, prec: Precedence) -> crate::Result<()> {
+    fn precedence(&mut self, prec: Precedence) -> crate::Result<()> {
         #[cfg(feature = "pc-debug")]
         {
             println!("precedence {:?}", prec);
         }
         self.advance();
-        if let (Some(prefix), _, _) = self.get_rule(self.previous().kind()) {
+        if let (Some(prefix), _, _) = self.get_rule(&self.previous().kind) {
             prefix(self)?;
         }
-        while prec <= *self.get_rule(self.current().kind()).2 {
+        while prec <= *self.get_rule(&self.current().kind).2 {
             self.advance();
-            if let (_, Some(infix), _) = self.get_rule(self.previous().kind()) {
+            if let (_, Some(infix), _) = self.get_rule(&self.previous().kind) {
                 infix(self)?;
             }
         }
         Ok(())
     }
 
-    pub fn grouping(&mut self) -> crate::Result<()> {
+    fn grouping(&mut self) -> crate::Result<()> {
         #[cfg(feature = "pc-debug")]
         {
             println!("grouping");
@@ -211,12 +211,12 @@ impl<'a> Compiler<'a> {
         self.consume(TokenKind::RightParen)
     }
 
-    pub fn unary(&mut self) -> crate::Result<()> {
+    fn unary(&mut self) -> crate::Result<()> {
         #[cfg(feature = "pc-debug")]
         {
             println!("unary");
         }
-        let kind = self.previous().kind().clone();
+        let kind = self.previous().kind.clone();
         self.precedence(Precedence::Unary)?;
         match kind {
             TokenKind::Minus => self.emit(Opcode::Negate),
@@ -226,12 +226,12 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    pub fn binary(&mut self) -> crate::Result<()> {
+    fn binary(&mut self) -> crate::Result<()> {
         #[cfg(feature = "pc-debug")]
         {
             println!("binary");
         }
-        let kind = self.previous().kind().clone();
+        let kind = self.previous().kind.clone();
         let (_, _, &prec) = self.get_rule(&kind);
         self.precedence(prec)?;
         match kind {
@@ -244,51 +244,46 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    pub fn advance(&mut self) {
+    fn advance(&mut self) {
+        // if we wanted to do on-demand scanning we would make a call to the scanner here
         self.previous = self.current;
         self.current += 1;
-        // if we wanted to do on-demand scanning we would make a call to the scanner here
-        //while self.scan_token().is_err() {}
     }
 
-    pub fn previous(&self) -> &Token {
+    fn previous(&self) -> &Token {
         &self.tokens[self.previous]
     }
 
-    pub fn current(&self) -> &Token {
+    fn current(&self) -> &Token {
         &self.tokens[self.current]
     }
 
-    //pub fn scan_token(&mut self) -> crate::Result<()> {
-    //    Ok(())
-    //}
-
-    pub fn number(&mut self) -> crate::Result<()> {
+    fn number(&mut self) -> crate::Result<()> {
         #[cfg(feature = "pc-debug")]
         {
             println!("number");
         }
-        if let Ok(value) = self.previous().lexeme().parse::<i64>() {
+        if let Ok(value) = self.previous().lexeme.parse::<i64>() {
             self.emit_constant(Value::Integer(value));
             Ok(())
-        } else if let Ok(value) = self.previous().lexeme().parse::<f64>() {
+        } else if let Ok(value) = self.previous().lexeme.parse::<f64>() {
             self.emit_constant(Value::Double(value));
             Ok(())
         } else {
             Err(PiccoloError::InvalidNumberLiteral {
-                line: self.previous().line(),
-                literal: self.previous().lexeme().to_owned(),
+                line: self.previous().line,
+                literal: self.previous().lexeme.to_owned(),
             }
             .into())
         }
     }
 
-    pub fn literal(&mut self) -> crate::Result<()> {
+    fn literal(&mut self) -> crate::Result<()> {
         #[cfg(feature = "pc-debug")]
         {
             println!("literal");
         }
-        match self.previous().kind() {
+        match self.previous().kind {
             TokenKind::Nil => self.emit(Opcode::Nil),
             TokenKind::True => self.emit(Opcode::True),
             TokenKind::False => self.emit(Opcode::False),
@@ -297,21 +292,21 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    pub fn emit_constant(&mut self, c: Value) {
-        let c = self.chunk.constant(c);
+    fn emit_constant(&mut self, c: Value) {
+        let c = self.chunk.make_constant(c);
         self.emit2(Opcode::Constant, c as u8);
     }
 
-    pub fn emit<T: Into<u8>>(&mut self, byte: T) {
-        self.chunk.write(byte, self.previous().line());
+    fn emit<T: Into<u8>>(&mut self, byte: T) {
+        self.chunk.write(byte, self.previous().line);
     }
 
-    pub fn emit2<T: Into<u8>, U: Into<u8>>(&mut self, byte1: T, byte2: U) {
-        self.chunk.write(byte1, self.previous().line());
-        self.chunk.write(byte2, self.previous().line());
+    fn emit2<T: Into<u8>, U: Into<u8>>(&mut self, byte1: T, byte2: U) {
+        self.chunk.write(byte1, self.previous().line);
+        self.chunk.write(byte2, self.previous().line);
     }
 
-    pub(crate) fn get_rule(
+    fn get_rule(
         &'a self,
         kind: &TokenKind,
     ) -> (

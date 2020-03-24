@@ -2,22 +2,25 @@ extern crate anyhow;
 extern crate num_enum;
 extern crate thiserror;
 
-pub mod chunk;
-pub mod compiler;
-pub mod error;
-pub mod machine;
-pub mod op;
-pub mod scanner;
-pub mod value;
+mod chunk;
+mod compiler;
+mod error;
+mod machine;
+mod op;
+mod scanner;
+mod value;
+
+pub use chunk::Chunk;
+pub use compiler::Compiler;
+pub use machine::Machine;
+pub use scanner::Scanner;
+
+#[cfg(feature = "pc-debug")]
+pub use scanner::print_tokens;
 
 pub use anyhow::Result;
 
 pub fn interpret(src: &str) -> Result<value::Value> {
-    use chunk::Chunk;
-    use compiler::Compiler;
-    use machine::Machine;
-    use scanner::Scanner;
-
     Machine::new(Compiler::compile(
         Chunk::default(),
         &Scanner::new(src).scan_tokens()?,
@@ -36,8 +39,8 @@ mod tests {
     #[test]
     fn concat() {
         let mut c = Chunk::default();
-        let s1 = c.constant(Value::String("ye".into()));
-        let s2 = c.constant(Value::String("et".into()));
+        let s1 = c.make_constant(Value::String("ye".into()));
+        let s2 = c.make_constant(Value::String("et".into()));
 
         c.write(Opcode::Constant, 1);
         c.write(s1 as u8, 1);
@@ -58,9 +61,9 @@ mod tests {
     #[test]
     fn math_multiply_add() {
         let mut c = Chunk::default();
-        let one = c.constant(Value::Double(1.0));
-        let two = c.constant(Value::Double(2.0));
-        let three = c.constant(Value::Double(3.0));
+        let one = c.make_constant(Value::Double(1.0));
+        let two = c.make_constant(Value::Double(2.0));
+        let three = c.make_constant(Value::Double(3.0));
 
         // 1 * 2 + 3
 
@@ -75,15 +78,15 @@ mod tests {
         c.write(Opcode::Return, 1);
 
         let mut vm = Machine::new(c);
-        vm.interpret();
+        vm.interpret().unwrap();
     }
 
     #[test]
     fn math_add_multiply() {
         let mut c = Chunk::default();
-        let one = c.constant(Value::Double(1.0));
-        let two = c.constant(Value::Double(2.0));
-        let three = c.constant(Value::Double(3.0));
+        let one = c.make_constant(Value::Double(1.0));
+        let two = c.make_constant(Value::Double(2.0));
+        let three = c.make_constant(Value::Double(3.0));
 
         // 1 + 2 * 3
 
@@ -98,15 +101,15 @@ mod tests {
         c.write(Opcode::Return, 1);
 
         let mut vm = Machine::new(c);
-        vm.interpret().expect("not ok :(");
+        vm.interpret().unwrap();
     }
 
     #[test]
     fn math_sub_sub() {
         let mut c = Chunk::default();
-        let one = c.constant(Value::Double(1.0));
-        let two = c.constant(Value::Double(2.0));
-        let three = c.constant(Value::Double(3.0));
+        let one = c.make_constant(Value::Double(1.0));
+        let two = c.make_constant(Value::Double(2.0));
+        let three = c.make_constant(Value::Double(3.0));
 
         // 3 - 2 - 1
 
@@ -121,17 +124,17 @@ mod tests {
         c.write(Opcode::Return, 1);
 
         let mut vm = Machine::new(c);
-        vm.interpret().expect("not ok :(");
+        vm.interpret().unwrap();
     }
 
     #[test]
     fn math_complex() {
         let mut c = Chunk::default();
-        let one = c.constant(Value::Double(1.0));
-        let two = c.constant(Value::Double(2.0));
-        let three = c.constant(Value::Double(3.0));
-        let four = c.constant(Value::Double(4.0));
-        let five = c.constant(Value::Double(5.0));
+        let one = c.make_constant(Value::Double(1.0));
+        let two = c.make_constant(Value::Double(2.0));
+        let three = c.make_constant(Value::Double(3.0));
+        let four = c.make_constant(Value::Double(4.0));
+        let five = c.make_constant(Value::Double(5.0));
 
         // 1 + 2 * 3 - 4 / -5
 
@@ -153,7 +156,7 @@ mod tests {
         c.write(Opcode::Return, 1);
 
         let mut vm = Machine::new(c);
-        vm.interpret().expect("not ok :(");
+        vm.interpret().unwrap();
     }
 
     #[test]
