@@ -9,9 +9,14 @@ fn main() -> piccolo::Result<()> {
 
     if args.len() == 1 {
         let mut rl = Editor::<()>::new();
+        rl.load_history(".piccolo_history")
+            .or_else(|_| std::fs::File::create(".piccolo_history").map(|_| ()));
+
         loop {
             match rl.readline("-- ") {
                 Ok(line) => {
+                    rl.add_history_entry(&line);
+
                     #[cfg(feature = "pc-debug")]
                     {
                         use piccolo::Chunk;
@@ -19,16 +24,24 @@ fn main() -> piccolo::Result<()> {
                         use piccolo::Machine;
                         use piccolo::Scanner;
 
-                        let tokens = Scanner::new(&line).scan_tokens()?;
-                        println!("****** tokens");
-                        piccolo::print_tokens(&tokens);
-                        println!("****** compiler");
-                        let chunk = Compiler::compile(Chunk::default(), &tokens)?;
-                        println!("****** chunk");
-                        chunk.disassemble("line");
-                        let mut vm = Machine::new(chunk);
-                        println!("****** result");
-                        println!("{}", vm.interpret()?);
+                        let tokens = Scanner::new(&line).scan_tokens();
+                        if let Ok(tokens) = tokens {
+                            println!("****** tokens");
+                            piccolo::print_tokens(&tokens);
+                            println!("****** compiler");
+                            let chunk = Compiler::compile(Chunk::default(), &tokens);
+                            if let Ok(chunk) = chunk {
+                                println!("****** chunk");
+                                chunk.disassemble("line");
+                                let mut vm = Machine::new(chunk);
+                                println!("****** result");
+                                println!("{:#?}", vm.interpret());
+                            } else {
+                                println!("{}", chunk.err().unwrap());
+                            }
+                        } else {
+                            println!("{}", tokens.err().unwrap());
+                        }
                     }
 
                     #[cfg(not(feature = "pc-debug"))]
@@ -45,6 +58,7 @@ fn main() -> piccolo::Result<()> {
                 _ => break,
             }
         }
+        rl.save_history(".piccolo_history").unwrap();
     } else {
         let args: Vec<String> = args.collect();
         let contents = std::fs::read_to_string(&args[1]).expect("filename doesn't exist");
