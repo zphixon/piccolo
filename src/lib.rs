@@ -13,7 +13,7 @@ mod rules;
 
 pub use anyhow::Result;
 
-pub fn interpret(src: &str) -> Result<()> {
+pub fn interpret(src: &str) -> Result<value::Value> {
     use chunk::Chunk;
     use compiler::Compiler;
     use machine::Machine;
@@ -21,7 +21,7 @@ pub fn interpret(src: &str) -> Result<()> {
 
     Machine::new(Compiler::compile(
         Chunk::default(),
-        Scanner::new(src).scan_tokens()?,
+        &Scanner::new(src).scan_tokens()?,
     )?)
     .interpret()
 }
@@ -32,12 +32,24 @@ mod tests {
     use crate::machine::Machine;
     use crate::op::Opcode;
     use crate::value::Value;
-    use crate::rules::{Precedence, get_rule};
+    use crate::rules::Precedence;
     use crate::scanner::TokenKind;
 
     #[test]
-    fn rules() {
-        assert_eq!(get_rule(&TokenKind::Double(0.3)).precedence, Precedence::None);
+    fn concat() {
+        let mut c = Chunk::default();
+        let s1 = c.constant(Value::String("ye".into()));
+        let s2 = c.constant(Value::String("et".into()));
+
+        c.write(Opcode::Constant, 1);
+        c.write(s1 as u8, 1);
+        c.write(Opcode::Constant, 1);
+        c.write(s2 as u8, 1);
+        c.write(Opcode::Add, 1);
+        c.write(Opcode::Return, 1);
+
+        let mut vm = Machine::new(c);
+        vm.interpret().unwrap();
     }
 
     #[test]
@@ -65,7 +77,7 @@ mod tests {
         c.write(Opcode::Return, 1);
 
         let mut vm = Machine::new(c);
-        vm.interpret().expect("not ok :(");
+        vm.interpret();
     }
 
     #[test]
