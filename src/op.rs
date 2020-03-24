@@ -28,9 +28,12 @@ macro_rules! opcodes {
 opcodes!(Opcode =>
     Return = 0,
     Constant = 1,
-    Negate = 2,
-    Add = 3,
-    Subtract = 4,
-    Multiply = 5,
-    Divide = 6,
+    Nil = 2,
+    True = 3,
+    False = 4,
+    Negate = 5,
+    Add = 6,
+    Subtract = 7,
+    Multiply = 8,
+    Divide = 9,
 );

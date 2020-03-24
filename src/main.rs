@@ -15,9 +15,29 @@ fn main() -> piccolo::Result<()> {
         let mut rl = Editor::<()>::new();
         loop {
             match rl.readline("-- ") {
-                Ok(mut line) => {
-                    if let Err(e) = piccolo::interpret(&line) {
-                        println!("{}", e);
+                Ok(line) => {
+                    #[cfg(feature = "pc-debug")]
+                    {
+                        let tokens = piccolo::scanner::Scanner::new(&line).scan_tokens()?;
+                        println!("****** tokens");
+                        piccolo::scanner::print_tokens(&tokens);
+                        println!("****** compiler");
+                        let chunk = piccolo::compiler::Compiler::compile(Chunk::default(), &tokens)?;
+                        println!("****** chunk");
+                        chunk.disassemble("line");
+                        let mut vm = piccolo::machine::Machine::new(chunk);
+                        println!("****** result");
+                        println!("{}", vm.interpret()?);
+                    }
+
+                    #[cfg(not(feature = "pc-debug"))]
+                    {
+                        let r = piccolo::interpret(&line);
+                        if let Ok(v) = r {
+                            println!("{}", v);
+                        } else if let Err(e) = r {
+                            println!("{}", e);
+                        }
                     }
                 }
                 Err(ReadlineError::Interrupted) => {}
@@ -37,29 +57,44 @@ fn main() -> piccolo::Result<()> {
             let three = c.constant(Value::Double(3.0));
             let four = c.constant(Value::Double(4.0));
             let five = c.constant(Value::Double(5.0));
+            let int = c.constant(Value::Integer(21));
+            let s = c.constant(Value::String("pee".into()));
 
+            c.write(Opcode::Constant, 1);
+            c.write(int as u8, 1);
             c.write(Opcode::Constant, 1);
             c.write(one as u8, 1);
-            c.write(Opcode::Constant, 1);
-            c.write(two as u8, 1);
-            c.write(Opcode::Constant, 1);
-            c.write(three as u8, 1);
-            c.write(Opcode::Multiply, 1);
-            c.write(Opcode::Constant, 1);
-            c.write(four as u8, 1);
-            c.write(Opcode::Constant, 1);
-            c.write(five as u8, 1);
-            c.write(Opcode::Negate, 1);
-            c.write(Opcode::Divide, 1);
-            c.write(Opcode::Subtract, 1);
             c.write(Opcode::Add, 1);
-            c.write(Opcode::Return, 1);
+            //c.write(Opcode::Constant, 1);
+            //c.write(one as u8, 1);
+            //c.write(Opcode::Constant, 1);
+            //c.write(int as u8, 1);
+            //c.write(Opcode::Add, 1);
 
+            //c.write(Opcode::Constant, 1);
+            //c.write(one as u8, 1);
+            //c.write(Opcode::Constant, 1);
+            //c.write(two as u8, 1);
+            //c.write(Opcode::Constant, 1);
+            //c.write(three as u8, 1);
+            //c.write(Opcode::Multiply, 1);
+            //c.write(Opcode::Constant, 1);
+            //c.write(four as u8, 1);
+            //c.write(Opcode::Constant, 1);
+            //c.write(five as u8, 1);
+            //c.write(Opcode::Negate, 1);
+            //c.write(Opcode::Divide, 1);
+            //c.write(Opcode::Subtract, 1);
+            //c.write(Opcode::Add, 1);
+            //c.write(Opcode::Negate, 1);
+            //c.write(Opcode::Return, 1);
+
+            c.write(Opcode::Return, 1);
             c.disassemble("poop");
 
             let mut vm = piccolo::machine::Machine::new(c);
             println!(" -- interpret --");
-            vm.interpret()?;
+            println!("{}", vm.interpret()?);
         }
     }
 

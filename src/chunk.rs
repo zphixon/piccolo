@@ -69,6 +69,9 @@ impl Chunk {
                 Opcode::Subtract => offset + 1,
                 Opcode::Multiply => offset + 1,
                 Opcode::Divide => offset + 1,
+                Opcode::Nil => offset + 1,
+                Opcode::True => offset + 1,
+                Opcode::False => offset + 1,
             };
             println!();
 
@@ -90,9 +93,7 @@ impl Chunk {
                     self.constants[self.data[offset + 1] as usize]
                 );
             }
-            _ => {
-                print!(" <>");
-            }
+            _ => {}
         };
         println!();
     }

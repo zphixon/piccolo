@@ -102,7 +102,7 @@ impl<'a> Display for Token<'a> {
     }
 }
 
-pub fn print_tokens(tokens: Vec<Token>) {
+pub fn print_tokens(tokens: &[Token]) {
     let mut previous_line = 0;
     for token in tokens.iter() {
         println!(

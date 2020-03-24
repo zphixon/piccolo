@@ -7,10 +7,6 @@ pub enum PiccoloError {
     Lots { num: usize, err: String },
     #[error("{err}")]
     One { err: String },
-    #[error("Compile error at line {line}")]
-    CompileError { line: usize },
-    #[error("Runtime error at line {line}")]
-    RuntimeError { line: usize },
     #[error("Stack underflow - file a bug report! line {line}, {op:?}")]
     StackUnderflow { line: usize, op: Opcode },
     #[error("Invalid UTF8 on line {line}")]
@@ -27,4 +23,11 @@ pub enum PiccoloError {
         got: String,
         line: usize,
     },
+    #[error("Expected type {exp}, got {got} for {op:?} on line {line}")]
+    IncorrectType {
+        exp: String,
+        got: String,
+        op: Opcode,
+        line: usize,
+    }
 }
