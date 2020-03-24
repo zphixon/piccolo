@@ -1,14 +1,6 @@
 extern crate piccolo;
 extern crate rustyline;
 
-use piccolo::chunk::Chunk;
-use piccolo::op::Opcode;
-use piccolo::value::Value;
-
-use piccolo::compiler::Compiler;
-use piccolo::machine::Machine;
-use piccolo::scanner;
-use piccolo::scanner::Scanner;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
@@ -22,6 +14,12 @@ fn main() -> piccolo::Result<()> {
                 Ok(line) => {
                     #[cfg(feature = "pc-debug")]
                     {
+                        use piccolo::chunk::Chunk;
+                        use piccolo::compiler::Compiler;
+                        use piccolo::machine::Machine;
+                        use piccolo::scanner;
+                        use piccolo::scanner::Scanner;
+
                         let tokens = Scanner::new(&line).scan_tokens()?;
                         println!("****** tokens");
                         scanner::print_tokens(&tokens);
@@ -54,6 +52,12 @@ fn main() -> piccolo::Result<()> {
 
         #[cfg(feature = "pc-debug")]
         {
+            use piccolo::chunk::Chunk;
+            use piccolo::compiler::Compiler;
+            use piccolo::machine::Machine;
+            use piccolo::scanner;
+            use piccolo::scanner::Scanner;
+
             let tokens = Scanner::new(&contents).scan_tokens()?;
             println!("****** tokens");
             scanner::print_tokens(&tokens);

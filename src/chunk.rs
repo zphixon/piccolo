@@ -85,16 +85,13 @@ impl Chunk {
         let op = self.data[offset].into();
 
         print!("{:04} {:<6} {:?}", offset, line, op);
-        match op {
-            Opcode::Constant => {
-                print!(
-                    "#{:04} {:?}",
-                    self.data[offset + 1],
-                    self.constants[self.data[offset + 1] as usize]
-                );
-            }
-            _ => {}
-        };
+        if let Opcode::Constant = op {
+            print!(
+                "#{:04} {:?}",
+                self.data[offset + 1],
+                self.constants[self.data[offset + 1] as usize]
+            );
+        }
         println!();
     }
 
