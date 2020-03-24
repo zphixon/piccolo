@@ -9,7 +9,6 @@ pub mod machine;
 pub mod op;
 pub mod scanner;
 pub mod value;
-mod rules;
 
 pub use anyhow::Result;
 
@@ -32,8 +31,7 @@ mod tests {
     use crate::machine::Machine;
     use crate::op::Opcode;
     use crate::value::Value;
-    use crate::rules::Precedence;
-    use crate::scanner::TokenKind;
+    use crate::compiler::Precedence;
 
     #[test]
     fn concat() {

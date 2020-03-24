@@ -1,10 +1,23 @@
 use crate::chunk::Chunk;
 use crate::error::PiccoloError;
-use crate::error::PiccoloError::UnexpectedToken;
 use crate::op::Opcode;
 use crate::scanner::{Token, TokenKind};
 use crate::value::Value;
-use crate::rules::Precedence;
+
+#[derive(Debug, Clone, Copy, PartialOrd, PartialEq)]
+pub(crate) enum Precedence {
+    None,
+    Assignment,
+    Or,
+    And,
+    Equality,
+    Comparison,
+    Term,
+    Factor,
+    Unary,
+    Call,
+    Primary,
+}
 
 pub struct Compiler<'a> {
     chunk: Chunk,
