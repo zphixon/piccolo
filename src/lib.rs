@@ -31,10 +31,10 @@ pub fn interpret(src: &str) -> Result<value::Value> {
 mod tests {
     use crate::chunk::Chunk;
     use crate::compiler::Precedence;
+    use crate::interpret;
     use crate::machine::Machine;
     use crate::op::Opcode;
     use crate::value::Value;
-    use crate::interpret;
 
     #[test]
     fn comparison() {

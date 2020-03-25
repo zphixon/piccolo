@@ -77,17 +77,17 @@ impl Machine {
                     let a = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let b = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value::Bool(a == b));
-                },
+                }
                 Opcode::Greater => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value::Bool(lhs > rhs));
-                },
+                }
                 Opcode::Less => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.stack.push(Value::Bool(lhs < rhs));
-                },
+                }
                 Opcode::Add => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
