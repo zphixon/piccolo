@@ -1,13 +1,15 @@
 use crate::chunk::Chunk;
 use crate::error::PiccoloError;
 use crate::op::Opcode;
-use crate::value::Nil;
 use crate::value::Value;
+
+use broom::prelude::*;
 
 pub struct Machine {
     chunk: Chunk,
     ip: usize,
     stack: Vec<Value>,
+    heap: Heap<Value>,
 }
 
 impl Machine {
@@ -16,6 +18,7 @@ impl Machine {
             chunk,
             ip: 0,
             stack: vec![],
+            heap: Heap::default(),
         }
     }
 
@@ -36,7 +39,7 @@ impl Machine {
             let op = inst.into();
             match op {
                 Opcode::Return => {
-                    return Ok(self.stack.pop().unwrap_or(Value::Nil(Nil)));
+                    return Ok(self.stack.pop().unwrap_or(Value::Nil));
                 }
                 Opcode::Constant => {
                     let c = self.chunk.constants[self.chunk.data[self.ip] as usize].clone();
@@ -44,7 +47,7 @@ impl Machine {
 
                     self.stack.push(c);
                 }
-                Opcode::Nil => self.stack.push(Value::Nil(Nil)),
+                Opcode::Nil => self.stack.push(Value::Nil),
                 Opcode::True => self.stack.push(Value::Bool(true)),
                 Opcode::False => self.stack.push(Value::Bool(false)),
                 Opcode::Negate => {
