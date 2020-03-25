@@ -211,19 +211,11 @@ impl<'a> Compiler<'a> {
     }
 
     fn expression(&mut self) -> crate::Result<()> {
-        #[cfg(feature = "pc-debug")]
-        {
-            println!("expression");
-        }
         self.precedence(Precedence::Assignment)?;
         Ok(())
     }
 
     fn precedence(&mut self, prec: Precedence) -> crate::Result<()> {
-        #[cfg(feature = "pc-debug")]
-        {
-            println!("precedence {:?}", prec);
-        }
         self.advance();
         if let (Some(prefix), _, _) = self.get_rule(&self.previous().kind) {
             prefix(self)?;
@@ -238,19 +230,11 @@ impl<'a> Compiler<'a> {
     }
 
     fn grouping(&mut self) -> crate::Result<()> {
-        #[cfg(feature = "pc-debug")]
-        {
-            println!("grouping");
-        }
         self.expression()?;
         self.consume(TokenKind::RightParen)
     }
 
     fn unary(&mut self) -> crate::Result<()> {
-        #[cfg(feature = "pc-debug")]
-        {
-            println!("unary");
-        }
         let kind = self.previous().kind.clone();
         self.precedence(Precedence::Unary)?;
         match kind {
@@ -262,10 +246,6 @@ impl<'a> Compiler<'a> {
     }
 
     fn binary(&mut self) -> crate::Result<()> {
-        #[cfg(feature = "pc-debug")]
-        {
-            println!("binary");
-        }
         let kind = self.previous().kind.clone();
         let (_, _, &prec) = self.get_rule(&kind);
         self.precedence(prec)?;
@@ -300,10 +280,6 @@ impl<'a> Compiler<'a> {
     }
 
     fn number(&mut self) -> crate::Result<()> {
-        #[cfg(feature = "pc-debug")]
-        {
-            println!("number");
-        }
         if let Ok(value) = self.previous().lexeme.parse::<i64>() {
             self.emit_constant(Value::Integer(value));
             Ok(())
@@ -320,10 +296,6 @@ impl<'a> Compiler<'a> {
     }
 
     fn literal(&mut self) -> crate::Result<()> {
-        #[cfg(feature = "pc-debug")]
-        {
-            println!("literal");
-        }
         match self.previous().kind {
             TokenKind::Nil => self.emit(Opcode::Nil),
             TokenKind::True => self.emit(Opcode::True),
@@ -334,10 +306,6 @@ impl<'a> Compiler<'a> {
     }
 
     fn string(&mut self) -> crate::Result<()> {
-        #[cfg(feature = "pc-debug")]
-        {
-            println!("string");
-        }
         let s = match &self.previous().kind {
             TokenKind::String(s) => s.clone(),
             _ => unreachable!(),
