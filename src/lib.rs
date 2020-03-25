@@ -1,5 +1,6 @@
 extern crate anyhow;
 extern crate thiserror;
+extern crate broom;
 
 mod chunk;
 mod compiler;
