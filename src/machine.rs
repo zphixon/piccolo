@@ -65,6 +65,14 @@ impl Machine {
                         .into());
                     }
                 }
+                Opcode::Not => {
+                    let v = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    if v.is_truthy() {
+                        self.stack.push(Value::Bool(false));
+                    } else {
+                        self.stack.push(Value::Bool(true));
+                    }
+                }
                 Opcode::Add => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;

@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
 use core::fmt;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Debug};
 
 // TODO: PartialOrd
 macro_rules! values {
@@ -72,7 +72,7 @@ impl Display for Nil {
 }
 
 impl Value {
-    fn is_truthy(&self) -> bool {
+    pub fn is_truthy(&self) -> bool {
         match self {
             Value::Bool(b) => *b,
             _ => true,
