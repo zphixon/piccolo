@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 
 use core::fmt;
-use std::fmt::{Display, Formatter, Debug};
 use std::cmp::Ordering;
+use std::fmt::{Debug, Display, Formatter};
 
 // TODO: PartialOrd
 macro_rules! values {

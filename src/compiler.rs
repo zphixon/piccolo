@@ -75,7 +75,12 @@ impl<'a> Compiler<'a> {
                 (TokenKind::InclusiveRange, None, None, Precedence::None),
                 (TokenKind::Assign, None, None, Precedence::None),
                 (TokenKind::Newline, None, None, Precedence::None),
-                (TokenKind::Not, Some(|c| Compiler::unary(c)), None, Precedence::None),
+                (
+                    TokenKind::Not,
+                    Some(|c| Compiler::unary(c)),
+                    None,
+                    Precedence::None,
+                ),
                 (
                     TokenKind::Plus,
                     None,
@@ -111,12 +116,42 @@ impl<'a> Compiler<'a> {
                 (TokenKind::BitwiseAnd, None, None, Precedence::None),
                 (TokenKind::BitwiseOr, None, None, Precedence::None),
                 (TokenKind::BitwiseXor, None, None, Precedence::None),
-                (TokenKind::Equals, None, Some(|c| Compiler::binary(c)), Precedence::Equality),
-                (TokenKind::NotEquals, None, Some(|c| Compiler::binary(c)), Precedence::Equality),
-                (TokenKind::LessThan, None, Some(|c| Compiler::binary(c)), Precedence::Comparison),
-                (TokenKind::GreaterThan, None, Some(|c| Compiler::binary(c)), Precedence::Comparison),
-                (TokenKind::LessThanEquals, None, Some(|c| Compiler::binary(c)), Precedence::Comparison),
-                (TokenKind::GreaterThanEquals, None, Some(|c| Compiler::binary(c)), Precedence::Comparison),
+                (
+                    TokenKind::Equals,
+                    None,
+                    Some(|c| Compiler::binary(c)),
+                    Precedence::Equality,
+                ),
+                (
+                    TokenKind::NotEquals,
+                    None,
+                    Some(|c| Compiler::binary(c)),
+                    Precedence::Equality,
+                ),
+                (
+                    TokenKind::LessThan,
+                    None,
+                    Some(|c| Compiler::binary(c)),
+                    Precedence::Comparison,
+                ),
+                (
+                    TokenKind::GreaterThan,
+                    None,
+                    Some(|c| Compiler::binary(c)),
+                    Precedence::Comparison,
+                ),
+                (
+                    TokenKind::LessThanEquals,
+                    None,
+                    Some(|c| Compiler::binary(c)),
+                    Precedence::Comparison,
+                ),
+                (
+                    TokenKind::GreaterThanEquals,
+                    None,
+                    Some(|c| Compiler::binary(c)),
+                    Precedence::Comparison,
+                ),
                 (TokenKind::ShiftLeft, None, None, Precedence::None),
                 (TokenKind::ShiftRight, None, None, Precedence::None),
                 (TokenKind::Identifier, None, None, Precedence::None),
@@ -305,7 +340,7 @@ impl<'a> Compiler<'a> {
         }
         let s = match &self.previous().kind {
             TokenKind::String(s) => s.clone(),
-            _ => unreachable!()
+            _ => unreachable!(),
         };
         self.emit_constant(Value::String(s));
         Ok(())
