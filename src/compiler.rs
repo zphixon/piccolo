@@ -301,12 +301,13 @@ impl<'a> Compiler<'a> {
     fn string(&mut self) -> crate::Result<()> {
         #[cfg(feature = "pc-debug")]
         {
-            println!("literal");
+            println!("string");
         }
-        match &self.previous().kind {
-            TokenKind::String(s) => self.emit_constant(Value::String(s.clone())),
+        let s = match &self.previous().kind {
+            TokenKind::String(s) => s.clone(),
             _ => unreachable!()
-        }
+        };
+        self.emit_constant(Value::String(s));
         Ok(())
     }
 
