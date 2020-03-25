@@ -75,7 +75,7 @@ impl<'a> Compiler<'a> {
                 (TokenKind::InclusiveRange, None, None, Precedence::None),
                 (TokenKind::Assign, None, None, Precedence::None),
                 (TokenKind::Newline, None, None, Precedence::None),
-                (TokenKind::Not, None, None, Precedence::None),
+                (TokenKind::Not, Some(|c| Compiler::unary(c)), None, Precedence::None),
                 (
                     TokenKind::Plus,
                     None,
@@ -135,7 +135,7 @@ impl<'a> Compiler<'a> {
                 (TokenKind::Eof, None, None, Precedence::None),
                 (
                     TokenKind::String(String::new()),
-                    None,
+                    Some(|c| Compiler::string(c)),
                     None,
                     Precedence::None,
                 ),
@@ -220,7 +220,7 @@ impl<'a> Compiler<'a> {
         self.precedence(Precedence::Unary)?;
         match kind {
             TokenKind::Minus => self.emit(Opcode::Negate),
-            TokenKind::Not => unimplemented!(),
+            TokenKind::Not => self.emit(Opcode::Not),
             _ => unreachable!(),
         }
         Ok(())
@@ -288,6 +288,18 @@ impl<'a> Compiler<'a> {
             TokenKind::True => self.emit(Opcode::True),
             TokenKind::False => self.emit(Opcode::False),
             _ => unreachable!(),
+        }
+        Ok(())
+    }
+
+    fn string(&mut self) -> crate::Result<()> {
+        #[cfg(feature = "pc-debug")]
+        {
+            println!("literal");
+        }
+        match &self.previous().kind {
+            TokenKind::String(s) => self.emit_constant(Value::String(s.clone())),
+            _ => unreachable!()
         }
         Ok(())
     }

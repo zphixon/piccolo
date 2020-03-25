@@ -36,4 +36,5 @@ opcodes!(Opcode =>
     Subtract = 7,
     Multiply = 8,
     Divide = 9,
+    Not = 10,
 );
