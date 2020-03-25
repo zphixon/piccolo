@@ -73,6 +73,9 @@ impl Chunk {
                 Opcode::True => offset + 1,
                 Opcode::False => offset + 1,
                 Opcode::Not => offset + 1,
+                Opcode::Equal => offset + 1,
+                Opcode::Greater => offset + 1,
+                Opcode::Less => offset + 1,
             };
             println!();
 
