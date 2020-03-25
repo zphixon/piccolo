@@ -2,6 +2,7 @@
 
 use core::fmt;
 use std::fmt::{Display, Formatter, Debug};
+use std::cmp::Ordering;
 
 // TODO: PartialOrd
 macro_rules! values {
@@ -27,6 +28,21 @@ macro_rules! values {
                 match self {
                     $($name::$variant(_) => stringify!($typename),)*
                 }
+            }
+        }
+
+        impl PartialOrd for $name {
+            fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
+                $(if self.$is_ty() && rhs.$is_ty() {
+                    match self {
+                        $name::$variant(l) => match rhs {
+                            $name::$variant(r) => return l.partial_cmp(r),
+                            _ => unreachable!(),
+                        }
+                        _ => unreachable!(),
+                    }
+                })*
+                None
             }
         }
 
@@ -63,7 +79,7 @@ values!(Value =>
     {nil,     is_nil,     Nil(Nil)},
 );
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
 pub struct Nil;
 impl Display for Nil {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {

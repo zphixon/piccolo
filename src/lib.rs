@@ -34,6 +34,19 @@ mod tests {
     use crate::machine::Machine;
     use crate::op::Opcode;
     use crate::value::Value;
+    use crate::interpret;
+
+    #[test]
+    fn comparison() {
+        assert!(interpret("1 < 2").unwrap().into::<bool>());
+        assert!(interpret("1 <= 2").unwrap().into::<bool>());
+        assert!(interpret("2 > 1").unwrap().into::<bool>());
+        assert!(interpret("2 >= 1").unwrap().into::<bool>());
+        assert!(interpret("2 == 2").unwrap().into::<bool>());
+        assert!(interpret("3 != 2").unwrap().into::<bool>());
+        assert!(interpret("\"a\" == \"a\"").unwrap().into::<bool>());
+        assert!(interpret("\"a\" != \"b\"").unwrap().into::<bool>());
+    }
 
     #[test]
     fn concat() {
