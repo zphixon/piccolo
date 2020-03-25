@@ -74,6 +74,7 @@ impl Display for Nil {
 impl Value {
     pub fn is_truthy(&self) -> bool {
         match self {
+            Value::Nil(_) => false,
             Value::Bool(b) => *b,
             _ => true,
         }
