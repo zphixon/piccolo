@@ -10,7 +10,7 @@ fn main() -> piccolo::Result<()> {
     if args.len() == 1 {
         let mut rl = Editor::<()>::new();
         rl.load_history(".piccolo_history")
-            .or_else(|_| std::fs::File::create(".piccolo_history").map(|_| ()));
+            .or_else(|_| std::fs::File::create(".piccolo_history").map(|_| ())).unwrap();
 
         loop {
             match rl.readline("-- ") {
