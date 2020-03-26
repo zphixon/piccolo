@@ -4,12 +4,15 @@ use crate::op::Opcode;
 use crate::value::Value;
 
 use broom::prelude::*;
+use internment::Intern;
+use std::collections::HashSet;
 
 /// Interprets compiled Piccolo bytecode.
 #[derive(Default)]
 pub struct Machine {
     chunk: Chunk,
     ip: usize,
+    //strings: HashSet<Intern<String>>, //idfk
     stack: Vec<Value>,
     heap: Heap<Value>,
 }
@@ -21,6 +24,7 @@ impl Machine {
         Machine {
             chunk,
             ip: 0,
+            //strings: HashSet::new(),
             stack: vec![],
             heap: Heap::default(),
         }
@@ -28,7 +32,7 @@ impl Machine {
 
     /// Interprets the machine's bytecode, returning a Value.
     pub fn interpret(&mut self) -> crate::Result<Value> {
-        loop {
+        while self.ip < self.chunk.data.len() {
             use PiccoloError::StackUnderflow;
 
             #[cfg(feature = "pc-debug")]
@@ -43,8 +47,14 @@ impl Machine {
 
             let op = inst.into();
             match op {
+                Opcode::Pop => {
+                    if self.ip == self.chunk.data.len() {
+                        return self.stack.pop().ok_or(StackUnderflow { line, op }.into());
+                    }
+                    self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                }
                 Opcode::Return => {
-                    return Ok(self.stack.pop().unwrap_or(Value::Nil));
+                    println!("{}", self.stack.pop().ok_or(StackUnderflow { line, op })?)
                 }
                 Opcode::Constant => {
                     let c = self.chunk.constants[self.chunk.data[self.ip] as usize].clone();
@@ -170,5 +180,6 @@ impl Machine {
                 }
             }
         }
+        Ok(Value::Nil)
     }
 }

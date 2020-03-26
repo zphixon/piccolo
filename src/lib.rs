@@ -4,6 +4,7 @@
 //! for embedding in Rust projects.
 
 extern crate anyhow;
+extern crate internment;
 extern crate thiserror;
 extern crate broom;
 
