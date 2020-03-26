@@ -1,3 +1,8 @@
+//! # Piccolo
+//!
+//! Piccolo is a small, light, high-pitched scripting language (eventually) intended
+//! for embedding in Rust projects.
+
 extern crate anyhow;
 extern crate thiserror;
 extern crate broom;
@@ -14,12 +19,25 @@ pub use chunk::Chunk;
 pub use compiler::Compiler;
 pub use machine::Machine;
 pub use scanner::Scanner;
+pub use error::PiccoloError;
 
 #[cfg(feature = "pc-debug")]
 pub use scanner::print_tokens;
 
 pub use anyhow::Result;
+pub use anyhow::Error;
 
+/// Interprets a Piccolo source and returns its result.
+///
+/// # Examples
+///
+/// ```rust
+/// # fn main() -> Result<(), piccolo::Error> {
+/// let result = piccolo::interpret("1 + 2")?;
+/// assert_eq!(3, result.into::<i64>());
+/// # Ok(())
+/// # }
+/// ```
 pub fn interpret(src: &str) -> Result<value::Value> {
     Machine::new(Compiler::compile(
         Chunk::default(),

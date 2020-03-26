@@ -2,6 +2,7 @@ use crate::op::Opcode;
 use crate::value::Value;
 
 // TODO: change lines to a reasonable number type
+/// Stores a piece of compiled Piccolo bytecode.
 #[derive(Default)]
 pub struct Chunk {
     pub(crate) data: Vec<u8>,
@@ -33,6 +34,7 @@ impl Chunk {
         }
     }
 
+    #[cfg(feature = "pc-debug")]
     pub fn disassemble(&self, name: &str) {
         println!(" -- {} --", name);
 
