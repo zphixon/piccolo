@@ -14,6 +14,7 @@ impl Trace<Self> for Value {
     }
 }
 
+/// Wrapper type for piccolo values.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     String(String),

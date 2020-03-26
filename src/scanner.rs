@@ -135,6 +135,7 @@ fn into_keyword(s: &str) -> Option<TokenKind> {
     }
 }
 
+/// Converts a piccolo source into a list of tokens.
 pub struct Scanner<'a> {
     source: &'a [u8],
     tokens: Vec<Token<'a>>,
@@ -144,6 +145,7 @@ pub struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
+    /// Create a new scanner from a source.
     pub fn new(source: &'a str) -> Self {
         Scanner {
             source: source.as_bytes(),
@@ -154,6 +156,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    /// Creates a list of tokens.
     pub fn scan_tokens(mut self) -> crate::Result<Vec<Token<'a>>> {
         let mut errors = Vec::new();
 
@@ -491,7 +494,7 @@ fn is_whitespace(c: u8) -> bool {
                      //  || c == 0xA0 // no-break space !! represented in utf-8 as C2 A0
 }
 
-pub fn is_non_identifier(c: u8) -> bool {
+fn is_non_identifier(c: u8) -> bool {
     is_whitespace(c)
         || c == 0x00
         || c == b'#'

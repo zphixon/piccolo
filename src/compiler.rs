@@ -19,6 +19,7 @@ pub(crate) enum Precedence {
     Primary,
 }
 
+/// Compiles a list of tokens to Piccolo bytecode.
 pub struct Compiler<'a> {
     chunk: Chunk,
     previous: usize,
@@ -33,6 +34,7 @@ pub struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
+    /// Parses and compiles a list of tokens. Uses a Pratt parser.
     pub fn compile(chunk: Chunk, s: &[Token]) -> crate::Result<Chunk> {
         let mut compiler = Compiler {
             chunk,

@@ -5,6 +5,8 @@ use crate::value::Value;
 
 use broom::prelude::*;
 
+/// Interprets compiled Piccolo bytecode.
+#[derive(Default)]
 pub struct Machine {
     chunk: Chunk,
     ip: usize,
@@ -13,6 +15,8 @@ pub struct Machine {
 }
 
 impl Machine {
+    // TODO: make interpret hold a chunk rather than Machine owning it
+    /// Creates a new machine.
     pub fn new(chunk: Chunk) -> Self {
         Machine {
             chunk,
@@ -22,6 +26,7 @@ impl Machine {
         }
     }
 
+    /// Interprets the machine's bytecode, returning a Value.
     pub fn interpret(&mut self) -> crate::Result<Value> {
         loop {
             use PiccoloError::StackUnderflow;
