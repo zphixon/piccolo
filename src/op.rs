@@ -41,4 +41,6 @@ opcodes!(Opcode =>
     Greater = 12,
     Less = 13,
     Pop = 14,
+    DefineGlobal = 15,
+    GetGlobal = 16,
 );

@@ -187,6 +187,7 @@ impl<'a> Scanner<'a> {
                 .into())
             }
         } else {
+            self.tokens = self.tokens.into_iter().filter(|t| t.kind != TokenKind::Newline).collect();
             Ok(self.tokens)
         }
     }

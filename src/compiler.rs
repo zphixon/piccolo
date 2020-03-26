@@ -156,7 +156,12 @@ impl<'a> Compiler<'a> {
                 ),
                 (TokenKind::ShiftLeft, None, None, Precedence::None),
                 (TokenKind::ShiftRight, None, None, Precedence::None),
-                (TokenKind::Identifier, None, None, Precedence::None),
+                (
+                    TokenKind::Identifier,
+                    Some(|c| Compiler::variable(c)),
+                    None,
+                    Precedence::None
+                ),
                 (
                     TokenKind::True,
                     Some(|c| Compiler::literal(c)),
@@ -230,7 +235,28 @@ impl<'a> Compiler<'a> {
     }
 
     fn declaration(&mut self) -> crate::Result<()> {
-        self.statement()
+        if self.lookahead(1).kind == TokenKind::Assign {
+            self.var_declaration()
+        } else {
+            self.statement()
+        }
+    }
+
+    fn var_declaration(&mut self) -> crate::Result<()> {
+        let global = self.parse_variable()?;
+        self.consume(TokenKind::Assign)?;
+        self.expression()?;
+        self.define_variable(global);
+        Ok(())
+    }
+
+    fn parse_variable(&mut self) -> crate::Result<usize> {
+        self.consume(TokenKind::Identifier)?;
+        Ok(self.identifier_constant(&self.tokens[self.previous]))
+    }
+
+    fn define_variable(&mut self, var: usize) {
+        self.emit2(Opcode::DefineGlobal, var as u8);
     }
 
     fn statement(&mut self) -> crate::Result<()> {
@@ -322,6 +348,10 @@ impl<'a> Compiler<'a> {
         &self.tokens[self.current]
     }
 
+    fn lookahead(&self, num: usize) -> &Token {
+        &self.tokens[self.current + num]
+    }
+
     fn number(&mut self) -> crate::Result<()> {
         if let Ok(value) = self.previous().lexeme.parse::<i64>() {
             self.emit_constant(Value::Integer(value));
@@ -355,6 +385,20 @@ impl<'a> Compiler<'a> {
         };
         self.emit_constant(Value::String(s));
         Ok(())
+    }
+
+    fn variable(&mut self) -> crate::Result<()> {
+        self.named_variable(&self.tokens[self.previous])
+    }
+
+    fn named_variable(&mut self, token: &Token) -> crate::Result<()> {
+        let arg = self.identifier_constant(token);
+        self.emit2(Opcode::GetGlobal, arg as u8);
+        Ok(())
+    }
+
+    fn identifier_constant(&mut self, token: &Token) -> usize {
+        self.chunk.make_constant(Value::String(token.lexeme.to_owned()))
     }
 
     fn emit_constant(&mut self, c: Value) {

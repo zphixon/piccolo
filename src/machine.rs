@@ -5,7 +5,7 @@ use crate::value::Value;
 
 use broom::prelude::*;
 use internment::Intern;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 /// Interprets compiled Piccolo bytecode.
 #[derive(Default)]
@@ -13,6 +13,7 @@ pub struct Machine {
     chunk: Chunk,
     ip: usize,
     //strings: HashSet<Intern<String>>, //idfk
+    globals: HashMap<String, Value>,
     stack: Vec<Value>,
     heap: Heap<Value>,
 }
@@ -25,6 +26,7 @@ impl Machine {
             chunk,
             ip: 0,
             //strings: HashSet::new(),
+            globals: HashMap::new(),
             stack: vec![],
             heap: Heap::default(),
         }
@@ -55,6 +57,22 @@ impl Machine {
                 }
                 Opcode::Return => {
                     println!("{}", self.stack.pop().ok_or(StackUnderflow { line, op })?)
+                }
+                Opcode::DefineGlobal => {
+                    let name = self.chunk.constants[self.chunk.data[self.ip] as usize].clone().into::<String>();
+                    self.globals.insert(name, self.stack[self.stack.len() - 1].clone());
+                    self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    self.ip += 1;
+                }
+                Opcode::GetGlobal => {
+                    //let name = self.chunk.constants[self.chunk.data[self.ip] as usize].clone().into::<String>();
+                    let name = self.chunk.constants[self.chunk.data[self.ip] as usize].ref_string();
+                    if let Some(var) = self.globals.get(name) {
+                        self.stack.push(var.clone());
+                    } else {
+                        return Err(PiccoloError::UndefinedVariable { name: name.to_owned(), line }.into());
+                    }
+                    self.ip += 1;
                 }
                 Opcode::Constant => {
                     let c = self.chunk.constants[self.chunk.data[self.ip] as usize].clone();
