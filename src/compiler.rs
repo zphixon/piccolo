@@ -191,10 +191,14 @@ impl<'a> Compiler<'a> {
             ],
         };
 
-        //compiler.advance();
-        compiler.expression()?;
-        compiler.consume(TokenKind::Eof)?;
-        compiler.emit(Opcode::Return);
+        // compiler.advance();
+        while !compiler.matches(TokenKind::Eof) {
+            //println!("{:?}", compiler.current());
+            compiler.declaration()?;
+        }
+        // compiler.expression()?;
+        // compiler.consume(TokenKind::Eof)?;
+        // compiler.emit(Opcode::Return);
         Ok(compiler.chunk)
     }
 
@@ -210,6 +214,43 @@ impl<'a> Compiler<'a> {
             self.advance();
             Ok(())
         }
+    }
+
+    fn matches(&mut self, kind: TokenKind) -> bool {
+        if !self.check(kind) {
+            false
+        } else {
+            self.advance();
+            true
+        }
+    }
+
+    fn check(&self, kind: TokenKind) -> bool {
+        self.current().kind == kind
+    }
+
+    fn declaration(&mut self) -> crate::Result<()> {
+        self.statement()
+    }
+
+    fn statement(&mut self) -> crate::Result<()> {
+        if self.matches(TokenKind::Retn) {
+            self.return_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn return_statement(&mut self) -> crate::Result<()> {
+        self.expression()?;
+        self.emit(Opcode::Return);
+        Ok(())
+    }
+
+    fn expression_statement(&mut self) -> crate::Result<()> {
+        self.expression()?;
+        self.emit(Opcode::Pop);
+        Ok(())
     }
 
     fn expression(&mut self) -> crate::Result<()> {

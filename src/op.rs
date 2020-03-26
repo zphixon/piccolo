@@ -40,4 +40,5 @@ opcodes!(Opcode =>
     Equal = 11,
     Greater = 12,
     Less = 13,
+    Pop = 14,
 );
