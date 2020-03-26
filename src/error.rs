@@ -30,4 +30,9 @@ pub enum PiccoloError {
         op: Opcode,
         line: usize,
     },
+    #[error("Undefined variable '{name}' on line {line}")]
+    UndefinedVariable {
+        name: String,
+        line: usize,
+    }
 }

@@ -37,6 +37,13 @@ impl Value {
         std::convert::Into::<T>::into(self)
     }
 
+    pub fn ref_string(&self) -> &String {
+        match self {
+            Value::String(s) => s,
+            _ => panic!("tried to take reference to inner string - file a bug report!")
+        }
+    }
+
     pub fn is_string(&self) -> bool {
         match self {
             Value::String(_) => true,
