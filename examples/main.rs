@@ -78,7 +78,6 @@ fn main() -> piccolo::Result<()> {
             let chunk = Compiler::compile(Chunk::default(), &tokens)?;
             println!("****** chunk");
             chunk.disassemble("file");
-            println!("{:?}", chunk.data);
             let mut vm = Machine::new(chunk);
             println!("****** result");
             println!("{}", vm.interpret()?);
