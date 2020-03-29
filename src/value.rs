@@ -4,23 +4,66 @@ use core::fmt;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 
-use broom::prelude::*;
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::any::{Any, TypeId};
+use crate::PiccoloError;
+use std::cmp::Ordering::Equal;
+use downcast_rs::Downcast;
+use slotmap::DenseSlotMap;
+use slotmap::DefaultKey;
 
-impl Trace<Self> for Value {
-    fn trace(&self, _tracer: &mut Tracer<Self>) {
-        match self {
-            _ => {}
-        }
+pub trait Object: Downcast + Debug + Display {
+    fn type_name(&self) -> &'static str;
+    fn gt(&self, other: &dyn Object) -> bool;
+    fn eq(&self, other: &dyn Object) -> bool;
+}
+downcast_rs::impl_downcast!(Object);
+
+impl Object for String {
+    fn type_name(&self) -> &'static str {
+        "string"
+    }
+
+    fn gt(&self, other: &dyn Object) -> bool {
+        self > other.downcast_ref::<String>().unwrap()
+    }
+
+    fn eq(&self, other: &dyn Object) -> bool {
+        self == other.downcast_ref::<String>().unwrap()
+    }
+}
+
+#[derive(Debug)]
+pub struct Idklol(pub f32);
+impl Object for Idklol {
+    fn type_name(&self) -> &'static str {
+        "IDK lol"
+    }
+
+    fn gt(&self, other: &dyn Object) -> bool {
+        self.0 > other.downcast_ref::<Idklol>().unwrap().0
+    }
+
+    fn eq(&self, other: &dyn Object) -> bool {
+        println!("{:?} == {:?}", self, other);
+        self.0 == other.downcast_ref::<Idklol>().unwrap().0
+    }
+}
+impl Display for Idklol {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "idklol({})", self.0)
     }
 }
 
 /// Wrapper type for piccolo values.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Value {
     String(String),
     Bool(bool),
     Integer(i64),
     Double(f64),
+    Object(DefaultKey),
     Nil,
 }
 
@@ -72,6 +115,13 @@ impl Value {
         }
     }
 
+    pub fn is_object(&self) -> bool {
+        match self {
+            Value::Object(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn is_nil(&self) -> bool {
         match self {
             Value::Nil => true,
@@ -79,64 +129,82 @@ impl Value {
         }
     }
 
-    pub fn type_name(&self) -> &'static str {
+    pub fn type_name(&self, map: &DenseSlotMap<DefaultKey, Box<dyn Object>>) -> &'static str {
         match self {
             Value::String(_) => "string",
             Value::Bool(_) => "bool",
             Value::Integer(_) => "integer",
             Value::Double(_) => "double",
+            Value::Object(v) => map.get(*v).unwrap().type_name(),
             Value::Nil => "nil",
         }
     }
-}
 
-impl PartialOrd for Value {
-    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
-        if self.is_string() && rhs.is_string() {
-            match self {
-                Value::String(l) => match rhs {
-                    Value::String(r) => return l.partial_cmp(r),
-                    _ => unreachable!(),
-                },
-                _ => unreachable!(),
+    pub fn fmt(&self, map: &DenseSlotMap<DefaultKey, Box<dyn Object>>) -> String {
+        match self {
+            Value::String(v) => format!("{}", v),
+            Value::Bool(v) => format!("{}", v),
+            Value::Integer(v) => format!("{}", v),
+            Value::Double(v) => format!("{}", v),
+            Value::Object(v) => format!("{}", map.get(*v).unwrap()),
+            Value::Nil => String::new(),
+        }
+    }
+
+    pub fn eq(&self, other: &Value, map: &DenseSlotMap<DefaultKey, Box<dyn Object>>) -> bool {
+        match self {
+            Value::String(l) => match other {
+                Value::String(r) => l == r,
+                _ => false,
             }
-        }
-
-        if self.is_bool() && rhs.is_bool() {
-            match self {
-                Value::Bool(l) => match rhs {
-                    Value::Bool(r) => return l.partial_cmp(r),
-                    _ => unreachable!(),
-                },
-                _ => unreachable!(),
+            Value::Bool(l) => match other {
+                Value::Bool(r) => l == r,
+                _ => false,
             }
-        }
-
-        if self.is_integer() && rhs.is_integer() {
-            match self {
-                Value::Integer(l) => match rhs {
-                    Value::Integer(r) => return l.partial_cmp(r),
-                    _ => unreachable!(),
-                },
-                _ => unreachable!(),
+            Value::Integer(l) => match other {
+                Value::Integer(r) => l == r,
+                _ => false,
             }
-        }
-
-        if self.is_double() && rhs.is_double() {
-            match self {
-                Value::Double(l) => match rhs {
-                    Value::Double(r) => return l.partial_cmp(r),
-                    _ => unreachable!(),
-                },
-                _ => unreachable!(),
+            Value::Double(l) => match other {
+                Value::Double(r) => l == r,
+                _ => false,
             }
+            Value::Object(l) => match other {
+                Value::Object(r) => map.get(*l).unwrap().eq(map.get(*r).unwrap().as_ref()),
+                _ => false,
+            }
+            _ => false,
         }
+    }
 
-        if self.is_nil() && rhs.is_nil() {
-            return Some(Ordering::Equal);
+    pub fn gt(&self, other: &Value, map: &DenseSlotMap<DefaultKey, Box<dyn Object>>) -> bool {
+        match self {
+            Value::Integer(l) => match other {
+                Value::Integer(r) => l > r,
+                Value::Double(r) => *l as f64 > *r,
+                _ => false,
+            }
+            Value::Double(l) => match other {
+                Value::Integer(r) => *l > *r as f64,
+                Value::Double(r) => l > r,
+                _ => false,
+            }
+            Value::String(l) => match other {
+                Value::String(r) => l > r,
+                _ => false,
+            }
+            Value::Bool(l) => match other {
+                Value::Bool(r) => l > r,
+                _ => false,
+            }
+            Value::Object(l) => match other {
+                Value::Object(r) => {
+                    map.get(*l).unwrap().gt(map.get(*r).unwrap().as_ref())
+                }
+                _ => false,
+            }
+            _ => false,
         }
-
-        None
     }
 }
 
@@ -197,17 +265,5 @@ impl From<i64> for Value {
 impl From<f64> for Value {
     fn from(Double: f64) -> Self {
         Value::Double(Double)
-    }
-}
-
-impl std::fmt::Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Value::String(v) => write!(f, "{}", v),
-            Value::Bool(v) => write!(f, "{}", v),
-            Value::Integer(v) => write!(f, "{}", v),
-            Value::Double(v) => write!(f, "{}", v),
-            Value::Nil => write!(f, "nil"),
-        }
     }
 }

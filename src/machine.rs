@@ -1,11 +1,11 @@
 use crate::chunk::Chunk;
 use crate::error::PiccoloError;
 use crate::op::Opcode;
-use crate::value::Value;
+use crate::value::{Value, Object};
 
-use broom::prelude::*;
-use internment::Intern;
 use std::collections::HashMap;
+use std::fmt::Debug;
+use slotmap::{DenseSlotMap, DefaultKey};
 
 /// Interprets compiled Piccolo bytecode.
 #[derive(Default)]
@@ -15,7 +15,7 @@ pub struct Machine {
     //strings: HashSet<Intern<String>>, //idfk
     globals: HashMap<String, Value>,
     stack: Vec<Value>,
-    heap: Heap<Value>,
+    pub(crate) heap: DenseSlotMap<DefaultKey, Box<dyn Object>>,
 }
 
 impl Machine {
@@ -28,8 +28,12 @@ impl Machine {
             //strings: HashSet::new(),
             globals: HashMap::new(),
             stack: vec![],
-            heap: Heap::default(),
+            heap: DenseSlotMap::new(),
         }
+    }
+
+    pub fn heap(&self) -> &DenseSlotMap<DefaultKey, Box<dyn Object>> {
+        &self.heap
     }
 
     /// Interprets the machine's bytecode, returning a Value.
@@ -56,7 +60,9 @@ impl Machine {
                     self.stack.pop().ok_or(StackUnderflow { line, op })?;
                 }
                 Opcode::Return => {
-                    println!("{}", self.stack.pop().ok_or(StackUnderflow { line, op })?)
+                    let v = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    println!("{}", v.fmt(&self.heap));
+                    //println!("{}", self.stack.pop().ok_or(StackUnderflow { line, op }).fmt(DenseSlotMap::new())?)
                 }
                 Opcode::DefineGlobal => {
                     let name = self.chunk.constants[self.chunk.data[self.ip] as usize].clone().into::<String>();
@@ -94,7 +100,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::IncorrectType {
                             exp: "integer or double".into(),
-                            got: v.type_name().to_owned(),
+                            got: v.type_name(&self.heap).to_owned(),
                             op: Opcode::Negate,
                             line,
                         }
@@ -112,17 +118,17 @@ impl Machine {
                 Opcode::Equal => {
                     let a = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let b = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    self.stack.push(Value::Bool(a == b));
+                    self.stack.push(Value::Bool(a.eq(&b, &self.heap)));
                 }
                 Opcode::Greater => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    self.stack.push(Value::Bool(lhs > rhs));
+                    self.stack.push(Value::Bool(lhs.gt(&rhs, &self.heap)));
                 }
                 Opcode::Less => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    self.stack.push(Value::Bool(lhs < rhs));
+                    self.stack.push(Value::Bool(rhs.gt(&lhs, &self.heap)));
                 }
                 Opcode::Add => {
                     let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
@@ -138,7 +144,7 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::IncorrectType {
                                 exp: "integer, double, or string".into(),
-                                got: format!("double + {}", rhs.type_name()),
+                                got: format!("double + {}", rhs.type_name(&self.heap)),
                                 op: Opcode::Add,
                                 line,
                             }
@@ -155,7 +161,7 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::IncorrectType {
                                 exp: "integer, double, or string".into(),
-                                got: format!("integer + {}", rhs.type_name()),
+                                got: format!("integer + {}", rhs.type_name(&self.heap)),
                                 op: Opcode::Add,
                                 line,
                             }
@@ -163,12 +169,12 @@ impl Machine {
                         }
                     } else if lhs.is_string() {
                         let mut lhs = lhs.into::<String>();
-                        lhs.push_str(&format!("{}", rhs));
+                        lhs.push_str(&format!("{}", rhs.fmt(&self.heap)));
                         self.stack.push(Value::String(lhs));
                     } else {
                         return Err(PiccoloError::IncorrectType {
                             exp: "integer, double, or string".into(),
-                            got: format!("{} + {}", lhs.type_name(), rhs.type_name()),
+                            got: format!("{} + {}", lhs.type_name(&self.heap), rhs.type_name(&self.heap)),
                             op: Opcode::Add,
                             line,
                         }
