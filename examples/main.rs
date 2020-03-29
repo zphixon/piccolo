@@ -49,7 +49,7 @@ fn main() -> piccolo::Result<()> {
                     {
                         let r = piccolo::interpret(&line);
                         if let Ok(v) = r {
-                            println!("{}", v);
+                            println!("{:?}", v);
                         } else if let Err(e) = r {
                             println!("{}", e);
                         }
@@ -80,7 +80,7 @@ fn main() -> piccolo::Result<()> {
             chunk.disassemble("file");
             let mut vm = Machine::new(chunk);
             println!("****** result");
-            println!("{}", vm.interpret()?);
+            println!("{}", vm.interpret()?.fmt(vm.heap()));
         }
 
         #[cfg(not(feature = "pc-debug"))]

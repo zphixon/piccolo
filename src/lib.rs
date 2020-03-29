@@ -4,9 +4,9 @@
 //! for embedding in Rust projects.
 
 extern crate anyhow;
-extern crate internment;
+extern crate downcast_rs;
+extern crate slotmap;
 extern crate thiserror;
-extern crate broom;
 
 mod chunk;
 mod compiler;
@@ -14,7 +14,7 @@ mod error;
 mod machine;
 mod op;
 mod scanner;
-mod value;
+pub mod value;
 
 pub use chunk::Chunk;
 pub use compiler::Compiler;
@@ -51,10 +51,23 @@ pub fn interpret(src: &str) -> Result<value::Value> {
 mod tests {
     use crate::chunk::Chunk;
     use crate::compiler::Precedence;
-    use crate::interpret;
+    use crate::{interpret, Compiler, Scanner};
     use crate::machine::Machine;
     use crate::op::Opcode;
-    use crate::value::Value;
+    use crate::value::{Value, Idklol, Object};
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use slotmap::{DefaultKey, DenseSlotMap};
+
+    #[test]
+    fn downcast() {
+        let mut sm: DenseSlotMap<DefaultKey, Box<dyn Object>> = DenseSlotMap::new();
+        let key1 = sm.insert(Box::new(Idklol(2.3)));
+        let v1 = Value::Object(key1);
+        let key2 = sm.insert(Box::new(Idklol(2.3)));
+        let v2 = Value::Object(key2);
+        assert!(v1.eq(&v2, &sm));
+    }
 
     #[test]
     fn comparison() {
