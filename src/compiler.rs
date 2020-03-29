@@ -160,7 +160,7 @@ impl<'a> Compiler<'a> {
                     TokenKind::Identifier,
                     Some(|c| Compiler::variable(c)),
                     None,
-                    Precedence::None
+                    Precedence::None,
                 ),
                 (
                     TokenKind::True,
@@ -398,7 +398,8 @@ impl<'a> Compiler<'a> {
     }
 
     fn identifier_constant(&mut self, token: &Token) -> usize {
-        self.chunk.make_constant(Value::String(token.lexeme.to_owned()))
+        self.chunk
+            .make_constant(Value::String(token.lexeme.to_owned()))
     }
 
     fn emit_constant(&mut self, c: Value) {

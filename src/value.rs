@@ -4,14 +4,14 @@ use core::fmt;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::any::{Any, TypeId};
 use crate::PiccoloError;
-use std::cmp::Ordering::Equal;
 use downcast_rs::Downcast;
-use slotmap::DenseSlotMap;
 use slotmap::DefaultKey;
+use slotmap::DenseSlotMap;
+use std::any::{Any, TypeId};
+use std::cell::RefCell;
+use std::cmp::Ordering::Equal;
+use std::rc::Rc;
 
 pub trait Object: Downcast + Debug + Display {
     fn type_name(&self) -> &'static str;
@@ -76,14 +76,17 @@ impl Value {
         }
     }
 
-    pub fn into<T>(self) -> T where Value: Into<T> {
+    pub fn into<T>(self) -> T
+    where
+        Value: Into<T>,
+    {
         std::convert::Into::<T>::into(self)
     }
 
     pub fn ref_string(&self) -> &String {
         match self {
             Value::String(s) => s,
-            _ => panic!("tried to take reference to inner string - file a bug report!")
+            _ => panic!("tried to take reference to inner string - file a bug report!"),
         }
     }
 
@@ -156,23 +159,23 @@ impl Value {
             Value::String(l) => match other {
                 Value::String(r) => l == r,
                 _ => false,
-            }
+            },
             Value::Bool(l) => match other {
                 Value::Bool(r) => l == r,
                 _ => false,
-            }
+            },
             Value::Integer(l) => match other {
                 Value::Integer(r) => l == r,
                 _ => false,
-            }
+            },
             Value::Double(l) => match other {
                 Value::Double(r) => l == r,
                 _ => false,
-            }
+            },
             Value::Object(l) => match other {
                 Value::Object(r) => map.get(*l).unwrap().eq(map.get(*r).unwrap().as_ref()),
                 _ => false,
-            }
+            },
             _ => false,
         }
     }
@@ -183,26 +186,24 @@ impl Value {
                 Value::Integer(r) => l > r,
                 Value::Double(r) => *l as f64 > *r,
                 _ => false,
-            }
+            },
             Value::Double(l) => match other {
                 Value::Integer(r) => *l > *r as f64,
                 Value::Double(r) => l > r,
                 _ => false,
-            }
+            },
             Value::String(l) => match other {
                 Value::String(r) => l > r,
                 _ => false,
-            }
+            },
             Value::Bool(l) => match other {
                 Value::Bool(r) => l > r,
                 _ => false,
-            }
+            },
             Value::Object(l) => match other {
-                Value::Object(r) => {
-                    map.get(*l).unwrap().gt(map.get(*r).unwrap().as_ref())
-                }
+                Value::Object(r) => map.get(*l).unwrap().gt(map.get(*r).unwrap().as_ref()),
                 _ => false,
-            }
+            },
             _ => false,
         }
     }

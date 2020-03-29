@@ -1,11 +1,11 @@
 use crate::chunk::Chunk;
 use crate::error::PiccoloError;
 use crate::op::Opcode;
-use crate::value::{Value, Object};
+use crate::value::{Object, Value};
 
+use slotmap::{DefaultKey, DenseSlotMap};
 use std::collections::HashMap;
 use std::fmt::Debug;
-use slotmap::{DenseSlotMap, DefaultKey};
 
 /// Interprets compiled Piccolo bytecode.
 #[derive(Default)]
@@ -15,7 +15,7 @@ pub struct Machine {
     //strings: HashSet<Intern<String>>, //idfk
     globals: HashMap<String, Value>,
     stack: Vec<Value>,
-    pub(crate) heap: DenseSlotMap<DefaultKey, Box<dyn Object>>,
+    heap: DenseSlotMap<DefaultKey, Box<dyn Object>>,
 }
 
 impl Machine {
@@ -65,8 +65,11 @@ impl Machine {
                     //println!("{}", self.stack.pop().ok_or(StackUnderflow { line, op }).fmt(DenseSlotMap::new())?)
                 }
                 Opcode::DefineGlobal => {
-                    let name = self.chunk.constants[self.chunk.data[self.ip] as usize].clone().into::<String>();
-                    self.globals.insert(name, self.stack[self.stack.len() - 1].clone());
+                    let name = self.chunk.constants[self.chunk.data[self.ip] as usize]
+                        .clone()
+                        .into::<String>();
+                    self.globals
+                        .insert(name, self.stack[self.stack.len() - 1].clone());
                     self.stack.pop().ok_or(StackUnderflow { line, op })?;
                     self.ip += 1;
                 }
@@ -76,7 +79,11 @@ impl Machine {
                     if let Some(var) = self.globals.get(name) {
                         self.stack.push(var.clone());
                     } else {
-                        return Err(PiccoloError::UndefinedVariable { name: name.to_owned(), line }.into());
+                        return Err(PiccoloError::UndefinedVariable {
+                            name: name.to_owned(),
+                            line,
+                        }
+                        .into());
                     }
                     self.ip += 1;
                 }
@@ -174,7 +181,11 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::IncorrectType {
                             exp: "integer, double, or string".into(),
-                            got: format!("{} + {}", lhs.type_name(&self.heap), rhs.type_name(&self.heap)),
+                            got: format!(
+                                "{} + {}",
+                                lhs.type_name(&self.heap),
+                                rhs.type_name(&self.heap)
+                            ),
                             op: Opcode::Add,
                             line,
                         }
