@@ -31,10 +31,7 @@ pub enum PiccoloError {
         line: usize,
     },
     #[error("Undefined variable '{name}' on line {line}")]
-    UndefinedVariable {
-        name: String,
-        line: usize,
-    },
+    UndefinedVariable { name: String, line: usize },
     #[error("Unknown field on '{obj}': '{name}' (line {line})")]
     UnknownField {
         obj: String,

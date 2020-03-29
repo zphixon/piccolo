@@ -18,15 +18,15 @@ pub mod value;
 
 pub use chunk::Chunk;
 pub use compiler::Compiler;
+pub use error::PiccoloError;
 pub use machine::Machine;
 pub use scanner::Scanner;
-pub use error::PiccoloError;
 
 #[cfg(feature = "pc-debug")]
 pub use scanner::print_tokens;
 
-pub use anyhow::Result;
 pub use anyhow::Error;
+pub use anyhow::Result;
 
 /// Interprets a Piccolo source and returns its result.
 ///
@@ -51,13 +51,13 @@ pub fn interpret(src: &str) -> Result<value::Value> {
 mod tests {
     use crate::chunk::Chunk;
     use crate::compiler::Precedence;
-    use crate::{interpret, Compiler, Scanner};
     use crate::machine::Machine;
     use crate::op::Opcode;
-    use crate::value::{Value, Idklol, Object};
+    use crate::value::{Idklol, Object, Value};
+    use crate::{interpret, Compiler, Scanner};
+    use slotmap::{DefaultKey, DenseSlotMap};
     use std::cell::RefCell;
     use std::rc::Rc;
-    use slotmap::{DefaultKey, DenseSlotMap};
 
     #[test]
     fn downcast() {
