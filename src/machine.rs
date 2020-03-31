@@ -41,13 +41,13 @@ impl Machine {
     // this method is only ever called after self.ip is incremented
     // theoretically a program should never start with Opcode::Pop
     fn pop(&mut self) -> crate::Result<Value> {
-        self.stack.pop().ok_or_else(||
+        self.stack.pop().ok_or_else(|| {
             StackUnderflow {
                 line: self.chunk.get_line_from_index(self.ip),
                 op: self.chunk.data[self.ip].into(),
             }
-            .into(),
-        )
+            .into()
+        })
     }
 
     fn peek(&self, dist: usize) -> Option<&Value> {
@@ -88,7 +88,6 @@ impl Machine {
                 Opcode::Pop => {
                     if self.ip == self.chunk.data.len() {
                         return self.pop();
-                        //return self.stack.pop().ok_or(StackUnderflow { line, op }.into());
                     }
                     self.pop()?;
                 }
@@ -104,8 +103,6 @@ impl Machine {
                     self.ip += 1;
                 }
                 Opcode::GetGlobal => {
-                    //let name = self.chunk.constants[self.chunk.data[self.ip] as usize].clone().into::<String>();
-                    //let name = self.chunk.constants[self.chunk.data[self.ip] as usize].ref_string();
                     let name = self.constant()?.ref_string();
                     if let Some(var) = self.globals.get(name) {
                         self.stack.push(var.clone());
@@ -119,18 +116,17 @@ impl Machine {
                     self.ip += 1;
                 }
                 Opcode::SetGlobal => {
-                    //let name = self.chunk.constants[self.chunk.data[self.ip] as usize].clone().into::<String>();
                     let name = self.constant()?.clone().into::<String>();
                     self.globals
                         // TODO: remove clone
                         .insert(name.clone(), self.peek(0).unwrap().clone())
-                        .map_or_else(|| Err(PiccoloError::UndefinedVariable {
-                            name, line
-                        }), |_| Ok(()))?;
+                        .map_or_else(
+                            || Err(PiccoloError::UndefinedVariable { name, line }),
+                            |_| Ok(()),
+                        )?;
                     self.ip += 1;
                 }
                 Opcode::Constant => {
-                    //let c = self.chunk.constants[self.chunk.data[self.ip] as usize].clone();
                     let c = self.constant()?.clone();
                     self.ip += 1;
 
