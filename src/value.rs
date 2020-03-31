@@ -13,11 +13,30 @@ use std::cell::RefCell;
 use std::cmp::Ordering::Equal;
 use std::rc::Rc;
 
+// TODO: get/set needs access to the interpreter's heap so it can allocate objects
+/// Trait for Piccolo objects.
 pub trait Object: Downcast + Debug + Display {
-    fn type_name(&self) -> &'static str;
-    fn gt(&self, other: &dyn Object) -> bool;
-    fn eq(&self, other: &dyn Object) -> bool;
+    fn type_name(&self) -> &'static str {
+        "object"
+    }
+
+    fn gt(&self, _other: &dyn Object) -> bool {
+        false
+    }
+
+    fn eq(&self, _other: &dyn Object) -> bool {
+        false
+    }
+
+    fn get(&self, _property: &str) -> Option<Value> {
+        None
+    }
+
+    fn set(&mut self, _property: &str) -> Option<Value> {
+        None
+    }
 }
+
 downcast_rs::impl_downcast!(Object);
 
 impl Object for String {
@@ -32,27 +51,16 @@ impl Object for String {
     fn eq(&self, other: &dyn Object) -> bool {
         self == other.downcast_ref::<String>().unwrap()
     }
-}
 
-#[derive(Debug)]
-pub struct Idklol(pub f32);
-impl Object for Idklol {
-    fn type_name(&self) -> &'static str {
-        "IDK lol"
+    fn get(&self, property: &str) -> Option<Value> {
+        match property {
+            "len" => Some(Value::Integer(self.len() as i64)),
+            _ => None,
+        }
     }
 
-    fn gt(&self, other: &dyn Object) -> bool {
-        self.0 > other.downcast_ref::<Idklol>().unwrap().0
-    }
-
-    fn eq(&self, other: &dyn Object) -> bool {
-        println!("{:?} == {:?}", self, other);
-        self.0 == other.downcast_ref::<Idklol>().unwrap().0
-    }
-}
-impl Display for Idklol {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "idklol({})", self.0)
+    fn set(&mut self, _property: &str) -> Option<Value> {
+        None
     }
 }
 
