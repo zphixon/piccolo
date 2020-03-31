@@ -22,15 +22,17 @@ pub(crate) enum TokenKind {
     Nil,   // nil
 
     // syntax
-    LeftBracket,    // [
-    RightBracket,   // ]
-    LeftParen,      // (
-    RightParen,     // )
+    LeftBracket,  // [
+    RightBracket, // ]
+    LeftParen,    // (
+    RightParen,   // )
+    // braces?
     Comma,          // ,
     Period,         // .
     ExclusiveRange, // ..
     InclusiveRange, // ...
     Assign,         // =
+    Declare,        // :=
     Newline,        // \n
 
     // operators
@@ -270,6 +272,20 @@ impl<'a> Scanner<'a> {
                     self.add_token(TokenKind::Equals);
                 } else {
                     self.add_token(TokenKind::Assign);
+                }
+            }
+
+            b':' => {
+                if self.peek() == b'=' {
+                    self.advance();
+                    self.add_token(TokenKind::Declare);
+                } else {
+                    return Err(PiccoloError::UnexpectedToken {
+                        exp: "=".into(),
+                        got: String::from_utf8([self.peek()].to_vec()).unwrap(),
+                        line: self.line,
+                    }
+                    .into());
                 }
             }
 

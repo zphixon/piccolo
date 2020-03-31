@@ -91,6 +91,16 @@ impl Chunk {
                     );
                     offset + 2
                 }
+                Opcode::SetGlobal => {
+                    print!(
+                        "#{:04} {}",
+                        self.data[offset + 1],
+                        self.constants[self.data[offset + 1] as usize]
+                            .clone()
+                            .into::<String>(),
+                    );
+                    offset + 2
+                }
             };
             println!();
 

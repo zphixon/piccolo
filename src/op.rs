@@ -43,4 +43,5 @@ opcodes!(Opcode =>
     Pop = 14,
     DefineGlobal = 15,
     GetGlobal = 16,
+    SetGlobal = 17,
 );
