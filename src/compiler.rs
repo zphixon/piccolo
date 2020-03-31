@@ -20,6 +20,7 @@ pub(crate) enum Precedence {
 }
 
 /// Compiles a list of tokens to Piccolo bytecode.
+// TODO: scan on demand
 pub struct Compiler<'a> {
     chunk: Chunk,
     previous: usize,
