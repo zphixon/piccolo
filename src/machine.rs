@@ -122,8 +122,12 @@ impl Machine {
                     //let name = self.chunk.constants[self.chunk.data[self.ip] as usize].clone().into::<String>();
                     let name = self.constant()?.clone().into::<String>();
                     self.globals
-                        .insert(name, self.peek(0).unwrap().clone());
-                    self.ip += 1; // ?
+                        // TODO: remove clone
+                        .insert(name.clone(), self.peek(0).unwrap().clone())
+                        .map_or_else(|| Err(PiccoloError::UndefinedVariable {
+                            name, line
+                        }), |_| Ok(()))?;
+                    self.ip += 1;
                 }
                 Opcode::Constant => {
                     //let c = self.chunk.constants[self.chunk.data[self.ip] as usize].clone();
