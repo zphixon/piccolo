@@ -76,6 +76,7 @@ impl<'a> Compiler<'a> {
                 (TokenKind::ExclusiveRange, None, None, Precedence::None),
                 (TokenKind::InclusiveRange, None, None, Precedence::None),
                 (TokenKind::Assign, None, None, Precedence::None),
+                (TokenKind::Declare, None, None, Precedence::None),
                 (TokenKind::Newline, None, None, Precedence::None),
                 (
                     TokenKind::Not,
@@ -235,7 +236,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn declaration(&mut self) -> crate::Result<()> {
-        if self.lookahead(1).kind == TokenKind::Assign {
+        if self.lookahead(1).kind == TokenKind::Declare {
             self.var_declaration()
         } else {
             self.statement()
@@ -244,7 +245,7 @@ impl<'a> Compiler<'a> {
 
     fn var_declaration(&mut self) -> crate::Result<()> {
         let global = self.parse_variable()?;
-        self.consume(TokenKind::Assign)?;
+        self.consume(TokenKind::Declare)?;
         self.expression()?;
         self.define_variable(global);
         Ok(())
@@ -393,7 +394,11 @@ impl<'a> Compiler<'a> {
 
     fn named_variable(&mut self, token: &Token) -> crate::Result<()> {
         let arg = self.identifier_constant(token);
-        self.emit2(Opcode::GetGlobal, arg as u8);
+        if self.matches(TokenKind::Assign) {
+            self.emit2(Opcode::SetGlobal, arg as u8);
+        } else {
+            self.emit2(Opcode::GetGlobal, arg as u8);
+        }
         Ok(())
     }
 

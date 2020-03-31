@@ -3,6 +3,7 @@ use crate::error::PiccoloError;
 use crate::op::Opcode;
 use crate::value::{Object, Value};
 
+use crate::error::PiccoloError::StackUnderflow;
 use slotmap::{DefaultKey, DenseSlotMap};
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -36,6 +37,37 @@ impl Machine {
         &self.heap
     }
 
+    // TODO: determine if self.ip - 1 is necessary
+    // this method is only ever called after self.ip is incremented
+    // theoretically a program should never start with Opcode::Pop
+    fn pop(&mut self) -> crate::Result<Value> {
+        self.stack.pop().ok_or_else(||
+            StackUnderflow {
+                line: self.chunk.get_line_from_index(self.ip),
+                op: self.chunk.data[self.ip].into(),
+            }
+            .into(),
+        )
+    }
+
+    fn peek(&self, dist: usize) -> Option<&Value> {
+        self.stack.get(self.stack.len() - dist - 1)
+    }
+
+    fn constant(&self) -> crate::Result<&Value> {
+        // equivalent to self.chunk.constants[self.chunk.data[self.ip] as usize]
+        self.chunk
+            .data
+            .get(self.ip)
+            .and_then(|idx| self.chunk.constants.get(*idx as usize))
+            .ok_or(
+                PiccoloError::One {
+                    err: String::from("Constant does not exist"),
+                }
+                .into(),
+            )
+    }
+
     /// Interprets the machine's bytecode, returning a Value.
     pub fn interpret(&mut self) -> crate::Result<Value> {
         while self.ip < self.chunk.data.len() {
@@ -55,19 +87,17 @@ impl Machine {
             match op {
                 Opcode::Pop => {
                     if self.ip == self.chunk.data.len() {
-                        return self.stack.pop().ok_or(StackUnderflow { line, op }.into());
+                        return self.pop();
+                        //return self.stack.pop().ok_or(StackUnderflow { line, op }.into());
                     }
-                    self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    self.pop()?;
                 }
                 Opcode::Return => {
-                    let v = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let v = self.pop()?;
                     println!("{}", v.fmt(&self.heap));
-                    //println!("{}", self.stack.pop().ok_or(StackUnderflow { line, op }).fmt(DenseSlotMap::new())?)
                 }
                 Opcode::DefineGlobal => {
-                    let name = self.chunk.constants[self.chunk.data[self.ip] as usize]
-                        .clone()
-                        .into::<String>();
+                    let name = self.constant()?.clone().into::<String>();
                     self.globals
                         .insert(name, self.stack[self.stack.len() - 1].clone());
                     self.stack.pop().ok_or(StackUnderflow { line, op })?;
@@ -75,7 +105,8 @@ impl Machine {
                 }
                 Opcode::GetGlobal => {
                     //let name = self.chunk.constants[self.chunk.data[self.ip] as usize].clone().into::<String>();
-                    let name = self.chunk.constants[self.chunk.data[self.ip] as usize].ref_string();
+                    //let name = self.chunk.constants[self.chunk.data[self.ip] as usize].ref_string();
+                    let name = self.constant()?.ref_string();
                     if let Some(var) = self.globals.get(name) {
                         self.stack.push(var.clone());
                     } else {
@@ -87,8 +118,16 @@ impl Machine {
                     }
                     self.ip += 1;
                 }
+                Opcode::SetGlobal => {
+                    //let name = self.chunk.constants[self.chunk.data[self.ip] as usize].clone().into::<String>();
+                    let name = self.constant()?.clone().into::<String>();
+                    self.globals
+                        .insert(name, self.peek(0).unwrap().clone());
+                    self.ip += 1; // ?
+                }
                 Opcode::Constant => {
-                    let c = self.chunk.constants[self.chunk.data[self.ip] as usize].clone();
+                    //let c = self.chunk.constants[self.chunk.data[self.ip] as usize].clone();
+                    let c = self.constant()?.clone();
                     self.ip += 1;
 
                     self.stack.push(c);
@@ -97,7 +136,7 @@ impl Machine {
                 Opcode::True => self.stack.push(Value::Bool(true)),
                 Opcode::False => self.stack.push(Value::Bool(false)),
                 Opcode::Negate => {
-                    let v = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let v = self.pop()?;
                     if v.is_double() {
                         let v = v.into::<f64>();
                         self.stack.push(Value::Double(-v));
@@ -115,7 +154,7 @@ impl Machine {
                     }
                 }
                 Opcode::Not => {
-                    let v = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let v = self.pop()?;
                     if v.is_truthy() {
                         self.stack.push(Value::Bool(false));
                     } else {
@@ -123,23 +162,23 @@ impl Machine {
                     }
                 }
                 Opcode::Equal => {
-                    let a = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    let b = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let a = self.pop()?;
+                    let b = self.pop()?;
                     self.stack.push(Value::Bool(a.eq(&b, &self.heap)));
                 }
                 Opcode::Greater => {
-                    let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
                     self.stack.push(Value::Bool(lhs.gt(&rhs, &self.heap)));
                 }
                 Opcode::Less => {
-                    let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
                     self.stack.push(Value::Bool(rhs.gt(&lhs, &self.heap)));
                 }
                 Opcode::Add => {
-                    let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
                     if lhs.is_double() {
                         let lhs = lhs.into::<f64>();
                         if rhs.is_double() {
@@ -193,22 +232,22 @@ impl Machine {
                     }
                 }
                 Opcode::Subtract => {
-                    let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
                     let lhs: f64 = lhs.into();
                     let rhs: f64 = rhs.into();
                     self.stack.push(Value::Double(lhs - rhs));
                 }
                 Opcode::Multiply => {
-                    let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
                     let lhs: f64 = lhs.into();
                     let rhs: f64 = rhs.into();
                     self.stack.push(Value::Double(lhs * rhs));
                 }
                 Opcode::Divide => {
-                    let rhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
-                    let lhs = self.stack.pop().ok_or(StackUnderflow { line, op })?;
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
                     let lhs: f64 = lhs.into();
                     let rhs: f64 = rhs.into();
                     self.stack.push(Value::Double(lhs / rhs));
