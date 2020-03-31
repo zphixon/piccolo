@@ -198,14 +198,9 @@ impl<'a> Compiler<'a> {
             ],
         };
 
-        // compiler.advance();
         while !compiler.matches(TokenKind::Eof) {
-            //println!("{:?}", compiler.current());
             compiler.declaration()?;
         }
-        // compiler.expression()?;
-        // compiler.consume(TokenKind::Eof)?;
-        // compiler.emit(Opcode::Return);
         Ok(compiler.chunk)
     }
 
