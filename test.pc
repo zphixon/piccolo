@@ -2,6 +2,8 @@
 a := "ayyyy lmao"
 b := a + "ooo"
 b = b + "323"
+c = b
+b = c + b
 retn b
 
 # fn thing(arg_juan, arg_deux) is
