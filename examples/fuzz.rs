@@ -43,6 +43,5 @@ fn run() {
         if let Ok(r) = Machine::new(c).interpret() {
             panic!("possibly invalid program compiles and runs");
         }
-    } else {
     }
 }
