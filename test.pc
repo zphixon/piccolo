@@ -2,7 +2,7 @@
 a := "ayyyy lmao"
 b := a + "ooo"
 b = b + "323"
-c = b
+c := b
 b = c + b
 retn b
 
