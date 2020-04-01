@@ -10,6 +10,7 @@ This branch is a bytecode interpreter rewrite of the previous AST-walking versio
 * Flesh out iterators (e.g. Lua's ipairs)
 * Explicit constructors
 * Rust interop
+* Algol-style loop constructs (`for i from 0 to 10 by 1 while condition do end`)
 
 ## Design decisions still to be made
 * Implicit vs explicit variable declaration
