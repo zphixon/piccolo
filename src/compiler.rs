@@ -300,11 +300,19 @@ impl<'a> Compiler<'a> {
         self.advance();
         if let (Some(prefix), _, _) = self.get_rule(&self.previous().kind) {
             prefix(self)?;
+        } else {
+            return Err(PiccoloError::MalformedExpression {
+                from: self.previous().lexeme.to_owned(),
+                line: self.previous().line,
+            }
+            .into())
         }
         while prec <= *self.get_rule(&self.current().kind).2 {
             self.advance();
             if let (_, Some(infix), _) = self.get_rule(&self.previous().kind) {
                 infix(self)?;
+            } else {
+                println!("no rule for {:?}", self.previous().kind);
             }
         }
         Ok(())
@@ -406,7 +414,11 @@ impl<'a> Compiler<'a> {
     fn named_variable(&mut self, token: &Token) -> crate::Result<()> {
         let arg = self.identifier_constant(token);
         if self.matches(TokenKind::Assign) {
-            panic!("assignment is not an expression");
+            return Err(PiccoloError::MalformedExpression {
+                from: "=".into(),
+                line: self.previous().line,
+            }
+            .into())
         } else {
             self.emit2(Opcode::GetGlobal, arg as u8);
         }
