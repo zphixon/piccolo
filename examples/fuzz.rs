@@ -41,7 +41,7 @@ fn run() {
     if let Ok(c) = Compiler::compile(Chunk::default(), &v) {
         c.disassemble("");
         if let Ok(r) = Machine::new(c).interpret() {
-            panic!();
+            panic!("possibly invalid program compiles and runs");
         }
     } else {
     }
