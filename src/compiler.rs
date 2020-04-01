@@ -312,7 +312,7 @@ impl<'a> Compiler<'a> {
             if let (_, Some(infix), _) = self.get_rule(&self.previous().kind) {
                 infix(self)?;
             } else {
-                println!("no rule for {:?}", self.previous().kind);
+                panic!("no infix rule for {:?}", self.previous().kind);
             }
         }
         Ok(())
