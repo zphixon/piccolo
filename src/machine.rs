@@ -231,25 +231,20 @@ impl Machine {
                         .into());
                     }
                 }
+                // TODO: support more than just f64
                 Opcode::Subtract => {
-                    let rhs = self.pop()?;
-                    let lhs = self.pop()?;
-                    let lhs: f64 = lhs.into();
-                    let rhs: f64 = rhs.into();
+                    let rhs = self.pop()?.into::<f64>();
+                    let lhs = self.pop()?.into::<f64>();
                     self.stack.push(Value::Double(lhs - rhs));
                 }
                 Opcode::Multiply => {
-                    let rhs = self.pop()?;
-                    let lhs = self.pop()?;
-                    let lhs: f64 = lhs.into();
-                    let rhs: f64 = rhs.into();
+                    let rhs = self.pop()?.into::<f64>();
+                    let lhs = self.pop()?.into::<f64>();
                     self.stack.push(Value::Double(lhs * rhs));
                 }
                 Opcode::Divide => {
-                    let rhs = self.pop()?;
-                    let lhs = self.pop()?;
-                    let lhs: f64 = lhs.into();
-                    let rhs: f64 = rhs.into();
+                    let rhs = self.pop()?.into::<f64>();
+                    let lhs = self.pop()?.into::<f64>();
                     self.stack.push(Value::Double(lhs / rhs));
                 }
             }

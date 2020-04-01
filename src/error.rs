@@ -38,4 +38,9 @@ pub enum PiccoloError {
         name: String,
         line: usize,
     },
+    #[error("Malformed expression from {from} on line {line}")]
+    MalformedExpression {
+        from: String,
+        line: usize,
+    },
 }
