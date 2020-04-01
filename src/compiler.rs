@@ -341,7 +341,7 @@ impl<'a> Compiler<'a> {
             TokenKind::GreaterThanEquals => self.emit2(Opcode::Less, Opcode::Not),
             TokenKind::LessThan => self.emit(Opcode::Less),
             TokenKind::LessThanEquals => self.emit2(Opcode::Greater, Opcode::Not),
-            _ => unreachable!(),
+            _ => {},
         }
         Ok(())
     }

@@ -8,6 +8,9 @@ extern crate downcast_rs;
 extern crate slotmap;
 extern crate thiserror;
 
+#[cfg(feature = "pc-debug")]
+extern crate rand;
+
 mod chunk;
 mod compiler;
 mod error;
@@ -21,9 +24,13 @@ pub use compiler::Compiler;
 pub use error::PiccoloError;
 pub use machine::Machine;
 pub use scanner::Scanner;
+pub use scanner::Token;
 
 #[cfg(feature = "pc-debug")]
 pub use scanner::print_tokens;
+
+#[cfg(feature = "pc-debug")]
+pub use scanner::{random, TokenKind};
 
 pub use anyhow::Error;
 pub use anyhow::Result;
@@ -53,20 +60,18 @@ mod tests {
     use crate::compiler::Precedence;
     use crate::machine::Machine;
     use crate::op::Opcode;
-    use crate::value::{Idklol, Object, Value};
+    use crate::value::{Object, Value};
     use crate::{interpret, Compiler, Scanner};
     use slotmap::{DefaultKey, DenseSlotMap};
     use std::cell::RefCell;
     use std::rc::Rc;
+    use crate::scanner::{Token, TokenKind};
+    use self::rand::Rng;
+
+    extern crate rand;
 
     #[test]
-    fn downcast() {
-        let mut sm: DenseSlotMap<DefaultKey, Box<dyn Object>> = DenseSlotMap::new();
-        let key1 = sm.insert(Box::new(Idklol(2.3)));
-        let v1 = Value::Object(key1);
-        let key2 = sm.insert(Box::new(Idklol(2.3)));
-        let v2 = Value::Object(key2);
-        assert!(v1.eq(&v2, &sm));
+    fn fuzz() {
     }
 
     #[test]
