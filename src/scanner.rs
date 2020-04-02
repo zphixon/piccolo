@@ -3,7 +3,7 @@ use core::fmt;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum TokenKind {
+pub(crate) enum TokenKind {
     // keywords
     Do,    // do
     End,   // end
@@ -75,7 +75,7 @@ pub struct Token<'a> {
 }
 
 impl<'a> Token<'a> {
-    pub fn new(kind: TokenKind, lexeme: &'a str, line: usize) -> Self {
+    pub(crate) fn new(kind: TokenKind, lexeme: &'a str, line: usize) -> Self {
         Token { kind, lexeme, line }
     }
 }
@@ -540,69 +540,3 @@ fn is_non_identifier(c: u8) -> bool {
         || c == b'"'
 }
 
-#[cfg(feature = "pc-debug")]
-pub mod random {
-    use rand::distributions::{Distribution, Standard};
-    use rand::Rng;
-    use crate::scanner::TokenKind;
-
-    impl Distribution<TokenKind> for Standard {
-        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> TokenKind {
-            match rng.gen_range(0, 25) {
-                //0 => TokenKind::Do,
-                //1 => TokenKind::End,
-                //2 => TokenKind::Fn,
-                //3 => TokenKind::If,
-                //4 => TokenKind::Else,
-                //5 => TokenKind::While,
-                //6 => TokenKind::For,
-                //7 => TokenKind::In,
-                //8 => TokenKind::Data,
-                //9 => TokenKind::Is,
-                //10 => TokenKind::Me,
-                //11 => TokenKind::New,
-                //12 => TokenKind::Err,
-                1 => TokenKind::Retn,
-                //14 => TokenKind::Nil,
-                //15 => TokenKind::LeftBracket,
-                //16 => TokenKind::RightBracket,
-                2 => TokenKind::LeftParen,
-                3 => TokenKind::RightParen,
-                //19 => TokenKind::Comma,
-                //20 => TokenKind::Period,
-                //21 => TokenKind::ExclusiveRange,
-                //22 => TokenKind::InclusiveRange,
-                4 => TokenKind::Assign,
-                5 => TokenKind::Declare,
-                6 => TokenKind::Newline,
-                7 => TokenKind::Not,
-                8 => TokenKind::Plus,
-                9 => TokenKind::Minus,
-                10 => TokenKind::Multiply,
-                11 => TokenKind::Divide,
-                12 => TokenKind::Modulo,
-                13 => TokenKind::And,
-                14 => TokenKind::Or,
-                //34 => TokenKind::BitwiseAnd,
-                //35 => TokenKind::BitwiseOr,
-                //36 => TokenKind::BitwiseXor,
-                15 => TokenKind::Equals,
-                16 => TokenKind::NotEquals,
-                17 => TokenKind::LessThan,
-                18 => TokenKind::GreaterThan,
-                19 => TokenKind::LessThanEquals,
-                20 => TokenKind::GreaterThanEquals,
-                //43 => TokenKind::ShiftLeft,
-                //44 => TokenKind::ShiftRight,
-                21 => TokenKind::Identifier,
-                22 => TokenKind::String(String::from("yee")),
-                23 => TokenKind::True,
-                24 => TokenKind::False,
-                25 => TokenKind::Double(0.0),
-                26 => TokenKind::Integer(1),
-                _ => TokenKind::Nil
-                //_ => TokenKind::Eof,
-            }
-        }
-    }
-}

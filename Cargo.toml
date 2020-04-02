@@ -9,6 +9,7 @@ edition = "2018"
 [features]
 default = []
 pc-debug = []
+fuzzer = ["pc-debug"]
 
 [dependencies]
 anyhow = "1.0.27"
