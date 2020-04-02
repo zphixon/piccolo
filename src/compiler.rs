@@ -299,6 +299,11 @@ impl<'a> Compiler<'a> {
     fn precedence(&mut self, prec: Precedence) -> crate::Result<()> {
         self.advance();
         if let (Some(prefix), _, _) = self.get_rule(&self.previous().kind) {
+            // TODO: refactor to check if assignment is allowed
+            // prefix needs to take a bool argument, pass it to named_variable where
+            // if we match an assignment token and you can assign to the target, then
+            // parse an expression, although targets like a*b=c+d already fail.
+            //prefix(self, prec <= Precedence::Assignment)?;
             prefix(self)?;
         } else {
             return Err(PiccoloError::MalformedExpression {
@@ -415,7 +420,7 @@ impl<'a> Compiler<'a> {
         let arg = self.identifier_constant(token);
         if self.matches(TokenKind::Assign) {
             return Err(PiccoloError::MalformedExpression {
-                from: "=".into(),
+                from: token.lexeme.to_owned(),
                 line: self.previous().line,
             }
             .into());
