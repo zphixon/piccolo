@@ -230,21 +230,158 @@ impl Machine {
                         .into());
                     }
                 }
-                // TODO: support more than just f64
                 Opcode::Subtract => {
-                    let rhs = self.pop()?.into::<f64>();
-                    let lhs = self.pop()?.into::<f64>();
-                    self.stack.push(Value::Double(lhs - rhs));
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
+                    if lhs.is_double() {
+                        let lhs = lhs.into::<f64>();
+                        if rhs.is_double() {
+                            let rhs = rhs.into::<f64>();
+                            self.stack.push(Value::Double(lhs - rhs));
+                        } else if rhs.is_integer() {
+                            let rhs = rhs.into::<i64>();
+                            self.stack.push(Value::Double(lhs - rhs as f64));
+                        } else {
+                            return Err(PiccoloError::IncorrectType {
+                                exp: "integer or double".into(),
+                                got: format!("double - {}", rhs.type_name(&self.heap)),
+                                op: Opcode::Subtract,
+                                line,
+                            }
+                            .into());
+                        }
+                    } else if lhs.is_integer() {
+                        let lhs = lhs.into::<i64>();
+                        if rhs.is_integer() {
+                            let rhs = rhs.into::<i64>();
+                            self.stack.push(Value::Integer(lhs - rhs));
+                        } else if rhs.is_double() {
+                            let rhs = rhs.into::<f64>();
+                            self.stack.push(Value::Double(lhs as f64 - rhs));
+                        } else {
+                            return Err(PiccoloError::IncorrectType {
+                                exp: "integer or double".into(),
+                                got: format!("integer - {}", rhs.type_name(&self.heap)),
+                                op: Opcode::Subtract,
+                                line,
+                            }
+                            .into());
+                        }
+                    } else {
+                        return Err(PiccoloError::IncorrectType {
+                            exp: "integer or double".into(),
+                            got: format!(
+                                "{} - {}",
+                                lhs.type_name(&self.heap),
+                                rhs.type_name(&self.heap)
+                            ),
+                            op: Opcode::Subtract,
+                            line,
+                        }
+                        .into());
+                    }
                 }
                 Opcode::Multiply => {
-                    let rhs = self.pop()?.into::<f64>();
-                    let lhs = self.pop()?.into::<f64>();
-                    self.stack.push(Value::Double(lhs * rhs));
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
+                    if lhs.is_double() {
+                        let lhs = lhs.into::<f64>();
+                        if rhs.is_double() {
+                            let rhs = rhs.into::<f64>();
+                            self.stack.push(Value::Double(lhs * rhs));
+                        } else if rhs.is_integer() {
+                            let rhs = rhs.into::<i64>();
+                            self.stack.push(Value::Double(lhs * rhs as f64));
+                        } else {
+                            return Err(PiccoloError::IncorrectType {
+                                exp: "integer or double".into(),
+                                got: format!("double * {}", rhs.type_name(&self.heap)),
+                                op: Opcode::Multiply,
+                                line,
+                            }
+                            .into());
+                        }
+                    } else if lhs.is_integer() {
+                        let lhs = lhs.into::<i64>();
+                        if rhs.is_integer() {
+                            let rhs = rhs.into::<i64>();
+                            self.stack.push(Value::Integer(lhs * rhs));
+                        } else if rhs.is_double() {
+                            let rhs = rhs.into::<f64>();
+                            self.stack.push(Value::Double(lhs as f64 * rhs));
+                        } else {
+                            return Err(PiccoloError::IncorrectType {
+                                exp: "integer or double".into(),
+                                got: format!("integer * {}", rhs.type_name(&self.heap)),
+                                op: Opcode::Multiply,
+                                line,
+                            }
+                            .into());
+                        }
+                    } else {
+                        return Err(PiccoloError::IncorrectType {
+                            exp: "integer or double".into(),
+                            got: format!(
+                                "{} * {}",
+                                lhs.type_name(&self.heap),
+                                rhs.type_name(&self.heap)
+                            ),
+                            op: Opcode::Multiply,
+                            line,
+                        }
+                        .into());
+                    }
                 }
                 Opcode::Divide => {
-                    let rhs = self.pop()?.into::<f64>();
-                    let lhs = self.pop()?.into::<f64>();
-                    self.stack.push(Value::Double(lhs / rhs));
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
+                    if lhs.is_double() {
+                        let lhs = lhs.into::<f64>();
+                        if rhs.is_double() {
+                            let rhs = rhs.into::<f64>();
+                            self.stack.push(Value::Double(lhs * rhs));
+                        } else if rhs.is_integer() {
+                            let rhs = rhs.into::<i64>();
+                            self.stack.push(Value::Double(lhs * rhs as f64));
+                        } else {
+                            return Err(PiccoloError::IncorrectType {
+                                exp: "integer or double".into(),
+                                got: format!("double / {}", rhs.type_name(&self.heap)),
+                                op: Opcode::Divide,
+                                line,
+                            }
+                            .into());
+                        }
+                    } else if lhs.is_integer() {
+                        let lhs = lhs.into::<i64>();
+                        if rhs.is_integer() {
+                            let rhs = rhs.into::<i64>();
+                            self.stack.push(Value::Integer(lhs * rhs));
+                        } else if rhs.is_double() {
+                            let rhs = rhs.into::<f64>();
+                            self.stack.push(Value::Double(lhs as f64 * rhs));
+                        } else {
+                            return Err(PiccoloError::IncorrectType {
+                                exp: "integer or double".into(),
+                                got: format!("integer / {}", rhs.type_name(&self.heap)),
+                                op: Opcode::Divide,
+                                line,
+                            }
+                            .into());
+                        }
+                    } else {
+                        return Err(PiccoloError::IncorrectType {
+                            exp: "integer or double".into(),
+                            got: format!(
+                                "{} / {}",
+                                lhs.type_name(&self.heap),
+                                rhs.type_name(&self.heap)
+                            ),
+                            op: Opcode::Divide,
+                            line,
+                        }
+                        .into());
+                    }
                 }
             }
         }
