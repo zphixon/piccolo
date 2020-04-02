@@ -51,14 +51,16 @@ pub fn interpret(src: &str) -> Result<value::Value> {
 #[cfg(feature = "fuzzer")]
 pub mod fuzzer {
     extern crate rand;
-    use rand::Rng;
-    use rand::distributions::{Distribution, Standard};
-    use crate::scanner::TokenKind;
-    use crate::scanner::Token;
-    use crate::scanner;
-    use crate::compiler::Compiler;
+
     use crate::chunk::Chunk;
+    use crate::compiler::Compiler;
     use crate::machine::Machine;
+    use crate::scanner;
+    use crate::scanner::Token;
+    use crate::scanner::TokenKind;
+
+    use rand::distributions::{Distribution, Standard};
+    use rand::Rng;
 
     pub fn fuzz(n: usize) {
         for n in 1..=n {
@@ -148,8 +150,7 @@ pub mod fuzzer {
                 24 => TokenKind::False,
                 25 => TokenKind::Double(0.0),
                 26 => TokenKind::Integer(1),
-                _ => TokenKind::Nil
-                //_ => TokenKind::Eof,
+                _ => TokenKind::Nil, //_ => TokenKind::Eof,
             }
         }
     }
@@ -161,19 +162,14 @@ mod tests {
     use crate::compiler::Precedence;
     use crate::machine::Machine;
     use crate::op::Opcode;
+    use crate::scanner::{Token, TokenKind};
     use crate::value::{Object, Value};
     use crate::{interpret, Compiler, Scanner};
+
     use slotmap::{DefaultKey, DenseSlotMap};
+
     use std::cell::RefCell;
     use std::rc::Rc;
-    use crate::scanner::{Token, TokenKind};
-    use self::rand::Rng;
-
-    extern crate rand;
-
-    #[test]
-    fn fuzz() {
-    }
 
     #[test]
     fn comparison() {

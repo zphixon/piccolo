@@ -305,7 +305,7 @@ impl<'a> Compiler<'a> {
                 from: self.previous().lexeme.to_owned(),
                 line: self.previous().line,
             }
-            .into())
+            .into());
         }
         while prec <= *self.get_rule(&self.current().kind).2 {
             self.advance();
@@ -349,7 +349,7 @@ impl<'a> Compiler<'a> {
             TokenKind::GreaterThanEquals => self.emit2(Opcode::Less, Opcode::Not),
             TokenKind::LessThan => self.emit(Opcode::Less),
             TokenKind::LessThanEquals => self.emit2(Opcode::Greater, Opcode::Not),
-            _ => {},
+            _ => {}
         }
         Ok(())
     }
@@ -418,7 +418,7 @@ impl<'a> Compiler<'a> {
                 from: "=".into(),
                 line: self.previous().line,
             }
-            .into())
+            .into());
         } else {
             self.emit2(Opcode::GetGlobal, arg as u8);
         }

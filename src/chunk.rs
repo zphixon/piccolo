@@ -1,4 +1,3 @@
-use crate::op::Opcode;
 use crate::value::Value;
 
 // TODO: change lines to a reasonable number type
@@ -28,6 +27,8 @@ impl Chunk {
 
     #[cfg(feature = "pc-debug")]
     pub fn disassemble(&self, name: &str) {
+        use crate::op::Opcode;
+
         println!(" -- {} --", name);
 
         let mut prev_line = 0;
@@ -110,6 +111,8 @@ impl Chunk {
 
     #[cfg(feature = "pc-debug")]
     pub(crate) fn disassemble_instruction(&self, offset: usize) {
+        use crate::op::Opcode;
+
         let line = self.get_line_from_index(offset);
 
         let op = self.data[offset].into();

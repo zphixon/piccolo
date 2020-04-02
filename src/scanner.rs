@@ -1,4 +1,5 @@
 use crate::error::PiccoloError;
+
 use core::fmt;
 use std::fmt::{Display, Formatter};
 
@@ -539,4 +540,3 @@ fn is_non_identifier(c: u8) -> bool {
         || c == b'<'
         || c == b'"'
 }
-
