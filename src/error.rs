@@ -1,4 +1,5 @@
 use crate::op::Opcode;
+
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]
@@ -39,8 +40,5 @@ pub enum PiccoloError {
         line: usize,
     },
     #[error("Malformed expression from {from} on line {line}")]
-    MalformedExpression {
-        from: String,
-        line: usize,
-    },
+    MalformedExpression { from: String, line: usize },
 }

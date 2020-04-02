@@ -1,17 +1,10 @@
 #![allow(non_snake_case)]
 
-use core::fmt;
-use std::cmp::Ordering;
-use std::fmt::{Debug, Display, Formatter};
-
-use crate::PiccoloError;
 use downcast_rs::Downcast;
 use slotmap::DefaultKey;
 use slotmap::DenseSlotMap;
-use std::any::{Any, TypeId};
-use std::cell::RefCell;
-use std::cmp::Ordering::Equal;
-use std::rc::Rc;
+
+use std::fmt::{Debug, Display};
 
 // TODO: get/set needs access to the interpreter's heap so it can allocate objects
 /// Trait for Piccolo objects.

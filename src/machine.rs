@@ -3,10 +3,9 @@ use crate::error::PiccoloError;
 use crate::op::Opcode;
 use crate::value::{Object, Value};
 
-use crate::error::PiccoloError::StackUnderflow;
 use slotmap::{DefaultKey, DenseSlotMap};
+
 use std::collections::HashMap;
-use std::fmt::Debug;
 
 /// Interprets compiled Piccolo bytecode.
 #[derive(Default)]
@@ -42,7 +41,7 @@ impl Machine {
     // theoretically a program should never start with Opcode::Pop
     fn pop(&mut self) -> crate::Result<Value> {
         self.stack.pop().ok_or_else(|| {
-            StackUnderflow {
+            PiccoloError::StackUnderflow {
                 line: self.chunk.get_line_from_index(self.ip),
                 op: self.chunk.data[self.ip].into(),
             }
