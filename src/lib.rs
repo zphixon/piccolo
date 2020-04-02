@@ -8,9 +8,6 @@ extern crate downcast_rs;
 extern crate slotmap;
 extern crate thiserror;
 
-#[cfg(feature = "pc-debug")]
-extern crate rand;
-
 mod chunk;
 mod compiler;
 mod error;
@@ -28,9 +25,6 @@ pub use scanner::Token;
 
 #[cfg(feature = "pc-debug")]
 pub use scanner::print_tokens;
-
-#[cfg(feature = "pc-debug")]
-pub use scanner::{random, TokenKind};
 
 pub use anyhow::Error;
 pub use anyhow::Result;
@@ -52,6 +46,113 @@ pub fn interpret(src: &str) -> Result<value::Value> {
         &Scanner::new(src).scan_tokens()?,
     )?)
     .interpret()
+}
+
+#[cfg(feature = "fuzzer")]
+pub mod fuzzer {
+    extern crate rand;
+    use rand::Rng;
+    use rand::distributions::{Distribution, Standard};
+    use crate::scanner::TokenKind;
+    use crate::scanner::Token;
+    use crate::scanner;
+    use crate::compiler::Compiler;
+    use crate::chunk::Chunk;
+    use crate::machine::Machine;
+
+    pub fn fuzz(n: usize) {
+        for n in 1..=n {
+            println!("run {} ---------------", n);
+            run();
+        }
+    }
+
+    fn run() {
+        let s = "id";
+        let mut v: Vec<Token> = Vec::new();
+        let mut r = rand::thread_rng();
+        let n = r.gen_range(5, 20);
+        // occasionally creates valid programs
+        for (_, i) in (1..n).enumerate() {
+            v.push(Token::new(r.gen(), s, i));
+        }
+
+        #[cfg(feature = "pc-debug")]
+        {
+            v.push(Token::new(TokenKind::Eof, s, n));
+            scanner::print_tokens(&v);
+        }
+        #[cfg(not(feature = "pc-debug"))]
+        {
+            compile_error!("fuzzer requires pc-debug feature")
+        }
+        if let Ok(c) = Compiler::compile(Chunk::default(), &v) {
+            c.disassemble("");
+            if let Ok(_) = Machine::new(c).interpret() {
+                panic!("possibly invalid program compiles and runs");
+            }
+        }
+    }
+
+    impl Distribution<TokenKind> for Standard {
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> TokenKind {
+            match rng.gen_range(0, 25) {
+                //0 => TokenKind::Do,
+                //1 => TokenKind::End,
+                //2 => TokenKind::Fn,
+                //3 => TokenKind::If,
+                //4 => TokenKind::Else,
+                //5 => TokenKind::While,
+                //6 => TokenKind::For,
+                //7 => TokenKind::In,
+                //8 => TokenKind::Data,
+                //9 => TokenKind::Is,
+                //10 => TokenKind::Me,
+                //11 => TokenKind::New,
+                //12 => TokenKind::Err,
+                1 => TokenKind::Retn,
+                //14 => TokenKind::Nil,
+                //15 => TokenKind::LeftBracket,
+                //16 => TokenKind::RightBracket,
+                2 => TokenKind::LeftParen,
+                3 => TokenKind::RightParen,
+                //19 => TokenKind::Comma,
+                //20 => TokenKind::Period,
+                //21 => TokenKind::ExclusiveRange,
+                //22 => TokenKind::InclusiveRange,
+                4 => TokenKind::Assign,
+                5 => TokenKind::Declare,
+                6 => TokenKind::Newline,
+                7 => TokenKind::Not,
+                8 => TokenKind::Plus,
+                9 => TokenKind::Minus,
+                10 => TokenKind::Multiply,
+                11 => TokenKind::Divide,
+                12 => TokenKind::Modulo,
+                13 => TokenKind::And,
+                14 => TokenKind::Or,
+                //34 => TokenKind::BitwiseAnd,
+                //35 => TokenKind::BitwiseOr,
+                //36 => TokenKind::BitwiseXor,
+                15 => TokenKind::Equals,
+                16 => TokenKind::NotEquals,
+                17 => TokenKind::LessThan,
+                18 => TokenKind::GreaterThan,
+                19 => TokenKind::LessThanEquals,
+                20 => TokenKind::GreaterThanEquals,
+                //43 => TokenKind::ShiftLeft,
+                //44 => TokenKind::ShiftRight,
+                21 => TokenKind::Identifier,
+                22 => TokenKind::String(String::from("yee")),
+                23 => TokenKind::True,
+                24 => TokenKind::False,
+                25 => TokenKind::Double(0.0),
+                26 => TokenKind::Integer(1),
+                _ => TokenKind::Nil
+                //_ => TokenKind::Eof,
+            }
+        }
+    }
 }
 
 #[cfg(test)]
