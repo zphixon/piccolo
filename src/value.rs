@@ -13,12 +13,12 @@ pub trait Object: Downcast + Debug + Display {
         "object"
     }
 
-    fn gt(&self, _other: &dyn Object) -> bool {
-        false
+    fn gt(&self, _other: &dyn Object) -> Option<bool> {
+        None
     }
 
-    fn eq(&self, _other: &dyn Object) -> bool {
-        false
+    fn eq(&self, _other: &dyn Object) -> Option<bool> {
+        None
     }
 
     fn get(&self, _property: &str) -> Option<Value> {
@@ -37,12 +37,16 @@ impl Object for String {
         "string"
     }
 
-    fn gt(&self, other: &dyn Object) -> bool {
-        self > other.downcast_ref::<String>().unwrap()
+    fn gt(&self, other: &dyn Object) -> Option<bool> {
+        other
+            .downcast_ref::<String>()
+            .map_or(None, |s| Some(self > s))
     }
 
-    fn eq(&self, other: &dyn Object) -> bool {
-        self == other.downcast_ref::<String>().unwrap()
+    fn eq(&self, other: &dyn Object) -> Option<bool> {
+        other
+            .downcast_ref::<String>()
+            .map_or(None, |s| Some(self == s))
     }
 
     fn get(&self, property: &str) -> Option<Value> {
@@ -155,57 +159,65 @@ impl Value {
         }
     }
 
-    pub fn eq(&self, other: &Value, map: &DenseSlotMap<DefaultKey, Box<dyn Object>>) -> bool {
+    pub fn eq(
+        &self,
+        other: &Value,
+        map: &DenseSlotMap<DefaultKey, Box<dyn Object>>,
+    ) -> Option<bool> {
         match self {
             Value::String(l) => match other {
-                Value::String(r) => l == r,
-                _ => false,
+                Value::String(r) => Some(l == r),
+                _ => None,
             },
             Value::Bool(l) => match other {
-                Value::Bool(r) => l == r,
-                _ => false,
+                Value::Bool(r) => Some(l == r),
+                _ => None,
             },
             Value::Integer(l) => match other {
-                Value::Integer(r) => l == r,
-                _ => false,
+                Value::Integer(r) => Some(l == r),
+                _ => None,
             },
             Value::Double(l) => match other {
-                Value::Double(r) => l == r,
-                _ => false,
+                Value::Double(r) => Some(l == r),
+                _ => None,
             },
             Value::Object(l) => match other {
                 Value::Object(r) => map.get(*l).unwrap().eq(map.get(*r).unwrap().as_ref()),
-                _ => false,
+                _ => None,
             },
-            _ => false,
+            _ => None,
         }
     }
 
-    pub fn gt(&self, other: &Value, map: &DenseSlotMap<DefaultKey, Box<dyn Object>>) -> bool {
+    pub fn gt(
+        &self,
+        other: &Value,
+        map: &DenseSlotMap<DefaultKey, Box<dyn Object>>,
+    ) -> Option<bool> {
         match self {
             Value::Integer(l) => match other {
-                Value::Integer(r) => l > r,
-                Value::Double(r) => *l as f64 > *r,
-                _ => false,
+                Value::Integer(r) => Some(l > r),
+                Value::Double(r) => Some(*l as f64 > *r),
+                _ => None,
             },
             Value::Double(l) => match other {
-                Value::Integer(r) => *l > *r as f64,
-                Value::Double(r) => l > r,
-                _ => false,
+                Value::Integer(r) => Some(*l > *r as f64),
+                Value::Double(r) => Some(l > r),
+                _ => None,
             },
             Value::String(l) => match other {
-                Value::String(r) => l > r,
-                _ => false,
+                Value::String(r) => Some(l > r),
+                _ => None,
             },
             Value::Bool(l) => match other {
-                Value::Bool(r) => l > r,
-                _ => false,
+                Value::Bool(r) => Some(l > r),
+                _ => None,
             },
             Value::Object(l) => match other {
                 Value::Object(r) => map.get(*l).unwrap().gt(map.get(*r).unwrap().as_ref()),
-                _ => false,
+                _ => None,
             },
-            _ => false,
+            _ => None,
         }
     }
 }
