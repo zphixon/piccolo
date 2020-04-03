@@ -36,7 +36,7 @@ fn main() -> piccolo::Result<()> {
                                 chunk.disassemble("line");
                                 let mut vm = Machine::new(chunk);
                                 println!("****** result");
-                                println!("{:#?}", vm.interpret());
+                                println!("{:?}", vm.interpret());
                             } else {
                                 println!("{}", chunk.err().unwrap());
                             }
