@@ -193,8 +193,8 @@ impl Machine {
                     self.stack
                         .push(Value::Bool(rhs.gt(&lhs, &self.heap).map_or(
                             Err(PiccoloError::IncorrectType {
-                                exp: rhs.type_name(&self.heap).to_owned(),
-                                got: lhs.type_name(&self.heap).to_owned(),
+                                exp: lhs.type_name(&self.heap).to_owned(),
+                                got: rhs.type_name(&self.heap).to_owned(),
                                 op,
                                 line,
                             }),
