@@ -535,6 +535,7 @@ fn is_non_identifier(c: u8) -> bool {
         || c == b'|'
         || c == b'.'
         || c == b'!'
+        || c == b':'
         || c == b'='
         || c == b'>'
         || c == b'<'
