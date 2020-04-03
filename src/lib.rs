@@ -62,6 +62,11 @@ pub mod fuzzer {
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
 
+    /// Run `n` tests of random tokens.
+    ///
+    /// Panics:
+    ///
+    /// Panics if an invalid program compiles and runs without an error.
     pub fn fuzz(n: usize) {
         for n in 1..=n {
             println!("run {} ---------------", n);
@@ -78,17 +83,17 @@ pub mod fuzzer {
         for (_, i) in (1..n).enumerate() {
             v.push(Token::new(r.gen(), s, i));
         }
+        v.push(Token::new(TokenKind::Eof, s, n));
 
-        #[cfg(feature = "pc-debug")]
-        {
-            v.push(Token::new(TokenKind::Eof, s, n));
-            scanner::print_tokens(&v);
-        }
         #[cfg(not(feature = "pc-debug"))]
         {
             compile_error!("fuzzer requires pc-debug feature")
         }
         if let Ok(c) = Compiler::compile(Chunk::default(), &v) {
+            #[cfg(feature = "pc-debug")]
+            {
+                scanner::print_tokens(&v);
+            }
             c.disassemble("");
             if let Ok(_) = Machine::new(c).interpret() {
                 panic!("possibly invalid program compiles and runs");
