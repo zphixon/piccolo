@@ -163,10 +163,10 @@ impl Machine {
                 Opcode::Equal => {
                     let a = self.pop()?;
                     let b = self.pop()?;
-                    self.stack.push(Value::Bool(a.eq(&b, self.heap()).map_or(
+                    self.stack.push(Value::Bool(a.eq(&b, &self.heap).map_or(
                         Err(PiccoloError::IncorrectType {
-                            exp: a.type_name(self.heap()).to_owned(),
-                            got: b.type_name(self.heap()).to_owned(),
+                            exp: a.type_name(&self.heap).to_owned(),
+                            got: b.type_name(&self.heap).to_owned(),
                             op,
                             line,
                         }),
@@ -177,10 +177,10 @@ impl Machine {
                     let rhs = self.pop()?;
                     let lhs = self.pop()?;
                     self.stack
-                        .push(Value::Bool(lhs.gt(&rhs, self.heap()).map_or(
+                        .push(Value::Bool(lhs.gt(&rhs, &self.heap).map_or(
                             Err(PiccoloError::IncorrectType {
-                                exp: lhs.type_name(self.heap()).to_owned(),
-                                got: rhs.type_name(self.heap()).to_owned(),
+                                exp: lhs.type_name(&self.heap).to_owned(),
+                                got: rhs.type_name(&self.heap).to_owned(),
                                 op,
                                 line,
                             }),
@@ -191,10 +191,10 @@ impl Machine {
                     let rhs = self.pop()?;
                     let lhs = self.pop()?;
                     self.stack
-                        .push(Value::Bool(rhs.gt(&lhs, self.heap()).map_or(
+                        .push(Value::Bool(rhs.gt(&lhs, &self.heap).map_or(
                             Err(PiccoloError::IncorrectType {
-                                exp: rhs.type_name(self.heap()).to_owned(),
-                                got: lhs.type_name(self.heap()).to_owned(),
+                                exp: rhs.type_name(&self.heap).to_owned(),
+                                got: lhs.type_name(&self.heap).to_owned(),
                                 op,
                                 line,
                             }),
