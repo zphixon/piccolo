@@ -339,10 +339,10 @@ impl Machine {
                         let lhs = lhs.into::<f64>();
                         if rhs.is_double() {
                             let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs * rhs));
+                            self.stack.push(Value::Double(lhs / rhs));
                         } else if rhs.is_integer() {
                             let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Double(lhs * rhs as f64));
+                            self.stack.push(Value::Double(lhs / rhs as f64));
                         } else {
                             return Err(PiccoloError::IncorrectType {
                                 exp: "integer or double".into(),
@@ -356,10 +356,10 @@ impl Machine {
                         let lhs = lhs.into::<i64>();
                         if rhs.is_integer() {
                             let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Integer(lhs * rhs));
+                            self.stack.push(Value::Integer(lhs / rhs));
                         } else if rhs.is_double() {
                             let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs as f64 * rhs));
+                            self.stack.push(Value::Double(lhs as f64 / rhs));
                         } else {
                             return Err(PiccoloError::IncorrectType {
                                 exp: "integer or double".into(),
