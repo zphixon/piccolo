@@ -176,30 +176,46 @@ impl Machine {
                 Opcode::Greater => {
                     let rhs = self.pop()?;
                     let lhs = self.pop()?;
-                    self.stack
-                        .push(Value::Bool(lhs.gt(&rhs, &self.heap).map_or(
-                            Err(PiccoloError::IncorrectType {
-                                exp: lhs.type_name(&self.heap).to_owned(),
-                                got: rhs.type_name(&self.heap).to_owned(),
-                                op,
-                                line,
-                            }),
-                            |b| Ok(b),
-                        )?));
+                    if rhs.is_bool() || lhs.is_bool() {
+                        return Err(PiccoloError::IncorrectType {
+                            exp: "that isn't bool".into(),
+                            got: "bool".into(),
+                            op,
+                            line,
+                        }
+                        .into());
+                    }
+                    self.stack.push(Value::Bool(lhs.gt(&rhs, &self.heap).map_or(
+                        Err(PiccoloError::IncorrectType {
+                            exp: lhs.type_name(&self.heap).to_owned(),
+                            got: rhs.type_name(&self.heap).to_owned(),
+                            op,
+                            line,
+                        }),
+                        |b| Ok(b),
+                    )?));
                 }
                 Opcode::Less => {
                     let rhs = self.pop()?;
                     let lhs = self.pop()?;
-                    self.stack
-                        .push(Value::Bool(rhs.gt(&lhs, &self.heap).map_or(
-                            Err(PiccoloError::IncorrectType {
-                                exp: lhs.type_name(&self.heap).to_owned(),
-                                got: rhs.type_name(&self.heap).to_owned(),
-                                op,
-                                line,
-                            }),
-                            |b| Ok(b),
-                        )?));
+                    if rhs.is_bool() || lhs.is_bool() {
+                        return Err(PiccoloError::IncorrectType {
+                            exp: "that isn't bool".into(),
+                            got: "bool".into(),
+                            op,
+                            line,
+                        }
+                        .into());
+                    }
+                    self.stack.push(Value::Bool(rhs.gt(&lhs, &self.heap).map_or(
+                        Err(PiccoloError::IncorrectType {
+                            exp: lhs.type_name(&self.heap).to_owned(),
+                            got: rhs.type_name(&self.heap).to_owned(),
+                            op,
+                            line,
+                        }),
+                        |b| Ok(b),
+                    )?));
                 }
                 Opcode::Add => {
                     let rhs = self.pop()?;

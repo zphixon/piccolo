@@ -211,10 +211,6 @@ impl Value {
                 Value::String(r) => Some(l > r),
                 _ => None,
             },
-            Value::Bool(l) => match other {
-                Value::Bool(r) => Some(l > r),
-                _ => None,
-            },
             Value::Object(l) => match other {
                 Value::Object(r) => map.get(*l).unwrap().gt(map.get(*r).unwrap().as_ref()),
                 _ => None,
