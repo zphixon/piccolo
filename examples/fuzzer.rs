@@ -16,6 +16,6 @@ fn main() {
     }
     #[cfg(not(feature = "fuzzer"))]
     {
-        compile_error!("fuzzer requires fuzzer feature");
+        println!("Fuzzer requires piccolo to be built with --features 'fuzzer'");
     }
 }
