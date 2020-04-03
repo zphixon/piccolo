@@ -175,9 +175,11 @@ impl Value {
             },
             Value::Integer(l) => match other {
                 Value::Integer(r) => Some(l == r),
+                Value::Double(r) => Some(*l as f64 == *r),
                 _ => None,
             },
             Value::Double(l) => match other {
+                Value::Integer(r) => Some(*l == *r as f64),
                 Value::Double(r) => Some(l == r),
                 _ => None,
             },
