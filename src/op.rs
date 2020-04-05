@@ -25,6 +25,7 @@ macro_rules! opcodes {
     };
 }
 
+// TODO: multi-byte constant opcode
 opcodes!(Opcode =>
     Return = 0,
     Constant = 1,

@@ -67,37 +67,36 @@ pub mod fuzzer {
     /// Panics:
     ///
     /// Panics if an invalid program compiles and runs without an error.
-    pub fn fuzz(n: usize) {
+    pub fn fuzz(n: usize, min_len: usize, max_len: usize) {
+        let start = std::time::Instant::now();
+        let mut avg = 0.0;
         for n in 1..=n {
-            println!("run {} ---------------", n);
-            run();
+            let s = std::time::Instant::now();
+            if let Some(_) = run(n, min_len, max_len) {
+                panic!("run {}: possibly invalid program compiled and executed successfully", n);
+            }
+            avg += (std::time::Instant::now() - s).as_secs_f64();
         }
+        println!("{} runs, in {:.8} sec ({:.8} avg per run)", n, (std::time::Instant::now() - start).as_secs_f64(), avg/n as f64);
     }
 
-    fn run() {
-        let s = "id";
-        let mut v: Vec<Token> = Vec::new();
+    // occasionally creates valid programs
+    fn run(n: usize, min_len: usize, max_len: usize) -> Option<()> {
+        let dummy_lexeme = "id";
+        let mut tokens: Vec<Token> = Vec::new();
         let mut r = rand::thread_rng();
-        let n = r.gen_range(5, 20);
-        // occasionally creates valid programs
-        for (_, i) in (1..n).enumerate() {
-            v.push(Token::new(r.gen(), s, i));
+        let lines = r.gen_range(min_len, max_len);
+        for (_, line) in (1..lines).enumerate() {
+            tokens.push(Token::new(r.gen(), dummy_lexeme, line));
         }
-        v.push(Token::new(TokenKind::Eof, s, n));
-
-        #[cfg(not(feature = "pc-debug"))]
-        {
-            compile_error!("fuzzer requires pc-debug feature")
-        }
-        #[cfg(feature = "pc-debug")]
-        {
-            scanner::print_tokens(&v);
-        }
-        if let Ok(c) = Compiler::compile(Chunk::default(), &v) {
-            c.disassemble("");
-            if let Ok(_) = Machine::new(c).interpret() {
-                panic!("possibly invalid program compiles and runs");
-            }
+        tokens.push(Token::new(TokenKind::Eof, dummy_lexeme, lines));
+        if let Ok(chunk) = Compiler::compile(Chunk::default(), &tokens) {
+            println!("----- run {} compiles -----", n);
+            scanner::print_tokens(&tokens);
+            chunk.disassemble("");
+            Machine::new(chunk).interpret().ok().map(|_| {})
+        } else {
+            None
         }
     }
 
