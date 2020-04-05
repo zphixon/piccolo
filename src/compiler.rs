@@ -26,6 +26,7 @@ pub struct Compiler<'a> {
     previous: usize,
     current: usize,
     tokens: &'a [Token<'a>],
+    output: bool,
     rules: &'a [(
         TokenKind,
         Option<fn(&mut Compiler) -> Result<(), PiccoloError>>,
@@ -48,6 +49,7 @@ impl<'a> Compiler<'a> {
             previous: 0,
             current: 0,
             tokens: s,
+            output: true,
             rules: &[
                 // token, prefix, infix, precedence
                 (TokenKind::Do, None, None, Precedence::None),
@@ -211,6 +213,7 @@ impl<'a> Compiler<'a> {
             let result = compiler.declaration();
             if result.is_err() {
                 errors.push(result.unwrap_err());
+                compiler.output = false;
             }
         }
 
@@ -452,8 +455,12 @@ impl<'a> Compiler<'a> {
     }
 
     fn identifier_constant(&mut self, token: &Token) -> usize {
-        self.chunk
-            .make_constant(Value::String(token.lexeme.to_owned()))
+        if self.output {
+            self.chunk
+                .make_constant(Value::String(token.lexeme.to_owned()))
+        } else {
+            0
+        }
     }
 
     fn emit_constant(&mut self, c: Value) {
@@ -462,12 +469,16 @@ impl<'a> Compiler<'a> {
     }
 
     fn emit<T: Into<u8>>(&mut self, byte: T) {
-        self.chunk.write(byte, self.previous().line);
+        if self.output {
+            self.chunk.write(byte, self.previous().line);
+        }
     }
 
     fn emit2<T: Into<u8>, U: Into<u8>>(&mut self, byte1: T, byte2: U) {
-        self.chunk.write(byte1, self.previous().line);
-        self.chunk.write(byte2, self.previous().line);
+        if self.output {
+            self.chunk.write(byte1, self.previous().line);
+            self.chunk.write(byte2, self.previous().line);
+        }
     }
 
     fn get_rule(
