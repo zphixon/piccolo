@@ -12,9 +12,7 @@ pc-debug = []
 fuzzer = ["pc-debug"]
 
 [dependencies]
-anyhow = "1.0.27"
 rustyline = "6.0.0"
-thiserror = "1.0.11"
 downcast-rs = "1.1.1"
 slotmap = "0.4.0"
 rand = "0.7.3"

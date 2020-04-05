@@ -1,4 +1,4 @@
-use crate::error::PiccoloError;
+use crate::error::{ErrorKind, PiccoloError};
 
 use core::fmt;
 use std::fmt::{Display, Formatter};
@@ -160,7 +160,7 @@ impl<'a> Scanner<'a> {
     }
 
     /// Creates a list of tokens.
-    pub fn scan_tokens(mut self) -> crate::Result<Vec<Token<'a>>> {
+    pub fn scan_tokens(mut self) -> Result<Vec<Token<'a>>, Vec<PiccoloError>> {
         let mut errors = Vec::new();
 
         while !self.is_at_end() {
@@ -172,34 +172,39 @@ impl<'a> Scanner<'a> {
 
         self.tokens.push(Token::new(TokenKind::Eof, "", self.line));
 
-        if !errors.is_empty() {
-            if errors.len() > 1 {
-                let mut err_string = String::new();
-                for error in errors.iter() {
-                    err_string.push_str(&format!("\n{}", error));
-                }
-                Err(PiccoloError::Lots {
-                    num: errors.len(),
-                    err: err_string,
-                }
-                .into())
-            } else {
-                Err(PiccoloError::One {
-                    err: format!("{}", errors[0]),
-                }
-                .into())
-            }
+        if errors.is_empty() {
+            Ok(self.tokens.into_iter().filter(|t| t.kind != TokenKind::Newline).collect())
         } else {
-            self.tokens = self
-                .tokens
-                .into_iter()
-                .filter(|t| t.kind != TokenKind::Newline)
-                .collect();
-            Ok(self.tokens)
+            Err(errors)
         }
+        //if !errors.is_empty() {
+        //    if errors.len() > 1 {
+        //        let mut err_string = String::new();
+        //        for error in errors.iter() {
+        //            err_string.push_str(&format!("\n{}", error));
+        //        }
+        //        Err(ErrorKind::Lots {
+        //            num: errors.len(),
+        //            err: err_string,
+        //        }
+        //        .into())
+        //    } else {
+        //        Err(ErrorKind::One {
+        //            err: format!("{}", errors[0]),
+        //        }
+        //        .into())
+        //    }
+        //} else {
+        //    self.tokens = self
+        //        .tokens
+        //        .into_iter()
+        //        .filter(|t| t.kind != TokenKind::Newline)
+        //        .collect();
+        //    Ok(self.tokens)
+        //}
     }
 
-    fn scan_token(&mut self) -> crate::Result<()> {
+    fn scan_token(&mut self) -> Result<(), PiccoloError> {
         match self.advance() {
             b'#' => {
                 while self.peek() != b'\n' && !self.is_at_end() {
@@ -281,12 +286,10 @@ impl<'a> Scanner<'a> {
                     self.advance();
                     self.add_token(TokenKind::Declare);
                 } else {
-                    return Err(PiccoloError::UnexpectedToken {
+                    return Err(PiccoloError::new(ErrorKind::UnexpectedToken {
                         exp: "=".into(),
-                        got: String::from_utf8([self.peek()].to_vec()).unwrap(),
-                        line: self.line,
-                    }
-                    .into());
+                        got: String::from_utf8([self.peek()].to_vec()).unwrap()
+                    }).line(self.line));
                 }
             }
 
@@ -329,13 +332,13 @@ impl<'a> Scanner<'a> {
         Ok(())
     }
 
-    fn identifier_or_keyword(&mut self) -> crate::Result<()> {
+    fn identifier_or_keyword(&mut self) -> Result<(), PiccoloError> {
         while !is_non_identifier(self.peek()) {
             self.advance();
         }
 
         let value = String::from_utf8(self.source[self.start..self.current].to_vec())
-            .map_err(|_| PiccoloError::InvalidUTF8 { line: self.line })?;
+            .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
 
         if let Some(tk) = into_keyword(&value) {
             self.add_token(tk);
@@ -346,7 +349,7 @@ impl<'a> Scanner<'a> {
         Ok(())
     }
 
-    fn string(&mut self) -> crate::Result<()> {
+    fn string(&mut self) -> Result<(), PiccoloError> {
         let mut value = Vec::new();
         let line_start = self.line;
         while self.peek() != b'"' && !self.is_at_end() {
@@ -357,7 +360,7 @@ impl<'a> Scanner<'a> {
             if self.peek() == b'\\' {
                 self.advance();
                 if self.is_at_end() {
-                    return Err(PiccoloError::UnterminatedString { line: line_start }.into());
+                    return Err(PiccoloError::new(ErrorKind::UnterminatedString).line(line_start));
                 }
                 match self.advance() {
                     b'n' => {
@@ -383,11 +386,9 @@ impl<'a> Scanner<'a> {
                         self.reverse();
                     }
                     c => {
-                        return Err(PiccoloError::UnknownFormatCode {
-                            line: line_start,
-                            code: c as char,
-                        }
-                        .into())
+                        return Err(PiccoloError::new(ErrorKind::UnknownFormatCode {
+                            code: c as char
+                        }).line(self.line));
                     }
                 }
             } else {
@@ -396,7 +397,7 @@ impl<'a> Scanner<'a> {
         }
 
         if self.is_at_end() {
-            Err(PiccoloError::UnterminatedString { line: line_start }.into())
+            Err(PiccoloError::new(ErrorKind::UnterminatedString).line(line_start))
         } else {
             self.advance();
             self.add_token(TokenKind::String(
@@ -406,7 +407,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn number(&mut self) -> crate::Result<()> {
+    fn number(&mut self) -> Result<(), PiccoloError> {
         while is_digit(self.peek()) {
             self.advance();
         }
@@ -424,20 +425,18 @@ impl<'a> Scanner<'a> {
         }
 
         let value = String::from_utf8(self.source[self.start..self.current].to_vec())
-            .map_err(|_| PiccoloError::InvalidUTF8 { line: self.line })?;
+            .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
         if let Ok(i) = value.parse::<i64>() {
             self.add_token(TokenKind::Integer(i));
             Ok(())
         } else {
-            Err(PiccoloError::InvalidNumberLiteral {
-                line: self.line,
-                literal: value,
-            }
-            .into())
+            Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
+                literal: value
+            }).line(self.line))
         }
     }
 
-    fn float(&mut self) -> crate::Result<()> {
+    fn float(&mut self) -> Result<(), PiccoloError> {
         while is_digit(self.peek()) {
             self.advance();
         }
@@ -449,16 +448,14 @@ impl<'a> Scanner<'a> {
         }
 
         let value = String::from_utf8(self.source[self.start..self.current].to_vec())
-            .map_err(|_| PiccoloError::InvalidUTF8 { line: self.line })?;
+            .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
         if let Ok(f) = value.parse::<f64>() {
             self.add_token(TokenKind::Double(f));
             Ok(())
         } else {
-            Err(PiccoloError::InvalidNumberLiteral {
-                line: self.line,
-                literal: value,
-            }
-            .into())
+            Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
+                literal: value
+            }).line(self.line))
         }
     }
 

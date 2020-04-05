@@ -4,7 +4,7 @@ extern crate rustyline;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
-fn main() -> piccolo::Result<()> {
+fn main() -> Result<(), Vec<piccolo::PiccoloError>> {
     let args = std::env::args();
 
     if args.len() == 1 {
@@ -38,10 +38,26 @@ fn main() -> piccolo::Result<()> {
                                 println!("****** result");
                                 println!("{:?}", vm.interpret());
                             } else {
-                                println!("{}", chunk.err().unwrap());
+                                let e = chunk.err().unwrap();
+                                if e.len() == 1 {
+                                    println!("Error {}", e[0])
+                                } else {
+                                    println!("{} Errors:", e.len());
+                                    for e in e.iter() {
+                                        println!("    {}", e);
+                                    }
+                                }
                             }
                         } else {
-                            println!("{}", tokens.err().unwrap());
+                            let e = tokens.err().unwrap();
+                            if e.len() == 1 {
+                                println!("Error {}", e[0])
+                            } else {
+                                println!("{} Errors:", e.len());
+                                for e in e.iter() {
+                                    println!("    {}", e);
+                                }
+                            }
                         }
                     }
 
@@ -51,7 +67,14 @@ fn main() -> piccolo::Result<()> {
                         if let Ok(v) = r {
                             println!("{:?}", v);
                         } else if let Err(e) = r {
-                            println!("{}", e);
+                            if e.len() == 1 {
+                                println!("Error {}", e[0])
+                            } else {
+                                println!("{} Errors:", e.len());
+                                for e in e.iter() {
+                                    println!("    {}", e);
+                                }
+                            }
                         }
                     }
                 }
@@ -80,7 +103,12 @@ fn main() -> piccolo::Result<()> {
             chunk.disassemble("file");
             let mut vm = Machine::new(chunk);
             println!("****** result");
-            println!("{}", vm.interpret()?.fmt(vm.heap()));
+            let result = vm.interpret();
+            if let Ok(result) = result {
+                println!("{}", result.fmt(vm.heap()));
+            } else {
+                println!("{}", result.unwrap_err());
+            }
         }
 
         #[cfg(not(feature = "pc-debug"))]
