@@ -173,7 +173,11 @@ impl<'a> Scanner<'a> {
         self.tokens.push(Token::new(TokenKind::Eof, "", self.line));
 
         if errors.is_empty() {
-            Ok(self.tokens.into_iter().filter(|t| t.kind != TokenKind::Newline).collect())
+            Ok(self
+                .tokens
+                .into_iter()
+                .filter(|t| t.kind != TokenKind::Newline)
+                .collect())
         } else {
             Err(errors)
         }
@@ -288,8 +292,9 @@ impl<'a> Scanner<'a> {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::UnexpectedToken {
                         exp: "=".into(),
-                        got: String::from_utf8([self.peek()].to_vec()).unwrap()
-                    }).line(self.line));
+                        got: String::from_utf8([self.peek()].to_vec()).unwrap(),
+                    })
+                    .line(self.line));
                 }
             }
 
@@ -387,8 +392,9 @@ impl<'a> Scanner<'a> {
                     }
                     c => {
                         return Err(PiccoloError::new(ErrorKind::UnknownFormatCode {
-                            code: c as char
-                        }).line(self.line));
+                            code: c as char,
+                        })
+                        .line(self.line));
                     }
                 }
             } else {
@@ -430,9 +436,10 @@ impl<'a> Scanner<'a> {
             self.add_token(TokenKind::Integer(i));
             Ok(())
         } else {
-            Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
-                literal: value
-            }).line(self.line))
+            Err(
+                PiccoloError::new(ErrorKind::InvalidNumberLiteral { literal: value })
+                    .line(self.line),
+            )
         }
     }
 
@@ -453,9 +460,10 @@ impl<'a> Scanner<'a> {
             self.add_token(TokenKind::Double(f));
             Ok(())
         } else {
-            Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
-                literal: value
-            }).line(self.line))
+            Err(
+                PiccoloError::new(ErrorKind::InvalidNumberLiteral { literal: value })
+                    .line(self.line),
+            )
         }
     }
 

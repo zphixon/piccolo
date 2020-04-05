@@ -226,7 +226,8 @@ impl<'a> Compiler<'a> {
             Err(PiccoloError::new(ErrorKind::UnexpectedToken {
                 exp: format!("{:?}", token),
                 got: format!("{}", self.current()),
-            }).line(self.previous().line))
+            })
+            .line(self.previous().line))
         } else {
             self.advance();
             Ok(())
@@ -326,7 +327,8 @@ impl<'a> Compiler<'a> {
         } else {
             return Err(PiccoloError::new(ErrorKind::MalformedExpression {
                 from: self.previous().lexeme.to_owned(),
-            }).line(self.previous().line));
+            })
+            .line(self.previous().line));
         }
         while prec <= *self.get_rule(&self.current().kind).2 {
             self.advance();
@@ -407,7 +409,8 @@ impl<'a> Compiler<'a> {
         } else {
             Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
                 literal: self.previous().lexeme.to_owned(),
-            }).line(self.previous().line))
+            })
+            .line(self.previous().line))
         }
     }
 
@@ -439,7 +442,8 @@ impl<'a> Compiler<'a> {
         if self.matches(TokenKind::Assign) {
             return Err(PiccoloError::new(ErrorKind::MalformedExpression {
                 from: token.lexeme.to_owned(),
-            }).line(self.previous().line));
+            })
+            .line(self.previous().line));
         } else {
             self.emit2(Opcode::GetGlobal, arg as u8);
         }
@@ -471,7 +475,7 @@ impl<'a> Compiler<'a> {
     ) -> (
         &'a Option<fn(&mut Compiler) -> Result<(), PiccoloError>>,
         &'a Option<fn(&mut Compiler) -> Result<(), PiccoloError>>,
-        &'a Precedence
+        &'a Precedence,
     ) {
         for (k, infix, prefix, precedence) in self.rules.iter() {
             let rule = (infix, prefix, precedence);
