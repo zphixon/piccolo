@@ -223,9 +223,10 @@ impl<'a> Compiler<'a> {
 
     fn consume(&mut self, token: TokenKind) -> Result<(), PiccoloError> {
         if self.current().kind != token {
+            self.advance();
             Err(PiccoloError::new(ErrorKind::UnexpectedToken {
                 exp: format!("{:?}", token),
-                got: format!("{}", self.current()),
+                got: format!("{}", self.previous()),
             })
             .line(self.previous().line))
         } else {
