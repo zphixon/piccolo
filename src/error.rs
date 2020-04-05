@@ -59,11 +59,17 @@ impl fmt::Display for PiccoloError {
 
 #[derive(Debug, Clone)]
 pub enum ErrorKind {
-    StackUnderflow { op: Opcode },
+    StackUnderflow {
+        op: Opcode,
+    },
     InvalidUTF8,
     UnterminatedString,
-    UnknownFormatCode { code: char },
-    InvalidNumberLiteral { literal: String },
+    UnknownFormatCode {
+        code: char,
+    },
+    InvalidNumberLiteral {
+        literal: String,
+    },
     UnexpectedToken {
         exp: String,
         got: String,
@@ -73,41 +79,37 @@ pub enum ErrorKind {
         got: String,
         op: Opcode,
     },
-    UndefinedVariable { name: String },
+    UndefinedVariable {
+        name: String,
+    },
     UnknownField {
         obj: String,
         name: String,
     },
-    MalformedExpression { from: String },
+    MalformedExpression {
+        from: String,
+    },
 }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ErrorKind::StackUnderflow { op } => {
-                write!(f, "Stack underflow due to {:?}", op)
-            }
-            ErrorKind::InvalidUTF8 => {
-                write!(f, "Invalid UTF-8 sequence")
-            }
-            ErrorKind::UnterminatedString => {
-                write!(f, "Unterminated string")
-            }
-            ErrorKind::UnknownFormatCode { code } => {
-                write!(f, "Unknown format code '\\{}'", code)
-            }
+            ErrorKind::StackUnderflow { op } => write!(f, "Stack underflow due to {:?}", op),
+            ErrorKind::InvalidUTF8 => write!(f, "Invalid UTF-8 sequence"),
+            ErrorKind::UnterminatedString => write!(f, "Unterminated string"),
+            ErrorKind::UnknownFormatCode { code } => write!(f, "Unknown format code '\\{}'", code),
             ErrorKind::InvalidNumberLiteral { literal } => {
                 write!(f, "Invalid number literal '{}'", literal)
             }
             ErrorKind::UnexpectedToken { exp, got } => {
                 write!(f, "Unexpected token: expected {}, got {}", exp, got)
             }
-            ErrorKind::IncorrectType { exp, got, op } => {
-                write!(f, "Incorrect type: expected {}, got {} for op {:?}", exp, got, op)
-            }
-            ErrorKind::UndefinedVariable { name } => {
-                write!(f, "Undefined variable '{}'", name)
-            }
+            ErrorKind::IncorrectType { exp, got, op } => write!(
+                f,
+                "Incorrect type: expected {}, got {} for op {:?}",
+                exp, got, op
+            ),
+            ErrorKind::UndefinedVariable { name } => write!(f, "Undefined variable '{}'", name),
             ErrorKind::UnknownField { obj, name } => {
                 write!(f, "Unknown field '{}' on {}", name, obj)
             }
