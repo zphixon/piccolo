@@ -1,5 +1,5 @@
 use crate::chunk::Chunk;
-use crate::error::PiccoloError;
+use crate::error::{ErrorKind, PiccoloError};
 use crate::op::Opcode;
 use crate::scanner::{Token, TokenKind};
 use crate::value::Value;
@@ -28,15 +28,21 @@ pub struct Compiler<'a> {
     tokens: &'a [Token<'a>],
     rules: &'a [(
         TokenKind,
-        Option<fn(&mut Compiler) -> crate::Result<()>>,
-        Option<fn(&mut Compiler) -> crate::Result<()>>,
+        Option<fn(&mut Compiler) -> Result<(), PiccoloError>>,
+        Option<fn(&mut Compiler) -> Result<(), PiccoloError>>,
         Precedence,
     )],
 }
 
+// TODO: We need some sort of error reporting struct
+// right now, when we encounter an error, we return all the way back up to
+// the main loop in compile where errors are collected sequentially.
+// what would make more sense is to have a flag that says whether or not
+// we should still be outputting bytecode, and still attempt to parse
+// the entire program regardless.
 impl<'a> Compiler<'a> {
     /// Parses and compiles a list of tokens. Uses a Pratt parser.
-    pub fn compile(chunk: Chunk, s: &[Token]) -> crate::Result<Chunk> {
+    pub fn compile(chunk: Chunk, s: &[Token]) -> Result<Chunk, Vec<PiccoloError>> {
         let mut compiler = Compiler {
             chunk,
             previous: 0,
@@ -199,20 +205,28 @@ impl<'a> Compiler<'a> {
             ],
         };
 
-        while !compiler.matches(TokenKind::Eof) {
-            compiler.declaration()?;
+        let mut errors = vec![];
+
+        while !compiler.is_at_end() && !compiler.matches(TokenKind::Eof) {
+            let result = compiler.declaration();
+            if result.is_err() {
+                errors.push(result.unwrap_err());
+            }
         }
-        Ok(compiler.chunk)
+
+        if errors.is_empty() {
+            Ok(compiler.chunk)
+        } else {
+            Err(errors)
+        }
     }
 
-    fn consume(&mut self, token: TokenKind) -> crate::Result<()> {
+    fn consume(&mut self, token: TokenKind) -> Result<(), PiccoloError> {
         if self.current().kind != token {
-            Err(PiccoloError::UnexpectedToken {
+            Err(PiccoloError::new(ErrorKind::UnexpectedToken {
                 exp: format!("{:?}", token),
                 got: format!("{}", self.current()),
-                line: self.previous().line,
-            }
-            .into())
+            }).line(self.previous().line))
         } else {
             self.advance();
             Ok(())
@@ -232,17 +246,21 @@ impl<'a> Compiler<'a> {
         self.current().kind == kind
     }
 
-    fn declaration(&mut self) -> crate::Result<()> {
-        if self.lookahead(1).kind == TokenKind::Declare {
+    fn is_at_end(&self) -> bool {
+        self.current == self.tokens.len()
+    }
+
+    fn declaration(&mut self) -> Result<(), PiccoloError> {
+        if self.can_lookahead(1) && self.lookahead(1).kind == TokenKind::Declare {
             self.var_declaration()
-        } else if self.lookahead(1).kind == TokenKind::Assign {
+        } else if self.can_lookahead(1) && self.lookahead(1).kind == TokenKind::Assign {
             self.var_assign()
         } else {
             self.statement()
         }
     }
 
-    fn var_declaration(&mut self) -> crate::Result<()> {
+    fn var_declaration(&mut self) -> Result<(), PiccoloError> {
         let global = self.parse_variable()?;
         self.consume(TokenKind::Declare)?;
         self.expression()?;
@@ -250,7 +268,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn var_assign(&mut self) -> crate::Result<()> {
+    fn var_assign(&mut self) -> Result<(), PiccoloError> {
         let global = self.parse_variable()?;
         self.consume(TokenKind::Assign)?;
         self.expression()?;
@@ -258,7 +276,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn parse_variable(&mut self) -> crate::Result<usize> {
+    fn parse_variable(&mut self) -> Result<usize, PiccoloError> {
         self.consume(TokenKind::Identifier)?;
         Ok(self.identifier_constant(&self.tokens[self.previous]))
     }
@@ -271,7 +289,7 @@ impl<'a> Compiler<'a> {
         self.emit2(Opcode::SetGlobal, var as u8);
     }
 
-    fn statement(&mut self) -> crate::Result<()> {
+    fn statement(&mut self) -> Result<(), PiccoloError> {
         if self.matches(TokenKind::Retn) {
             self.return_statement()
         } else {
@@ -279,24 +297,24 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn return_statement(&mut self) -> crate::Result<()> {
+    fn return_statement(&mut self) -> Result<(), PiccoloError> {
         self.expression()?;
         self.emit(Opcode::Return);
         Ok(())
     }
 
-    fn expression_statement(&mut self) -> crate::Result<()> {
+    fn expression_statement(&mut self) -> Result<(), PiccoloError> {
         self.expression()?;
         self.emit(Opcode::Pop);
         Ok(())
     }
 
-    fn expression(&mut self) -> crate::Result<()> {
+    fn expression(&mut self) -> Result<(), PiccoloError> {
         self.precedence(Precedence::Assignment)?;
         Ok(())
     }
 
-    fn precedence(&mut self, prec: Precedence) -> crate::Result<()> {
+    fn precedence(&mut self, prec: Precedence) -> Result<(), PiccoloError> {
         self.advance();
         if let (Some(prefix), _, _) = self.get_rule(&self.previous().kind) {
             // TODO: refactor to check if assignment is allowed
@@ -306,11 +324,9 @@ impl<'a> Compiler<'a> {
             //prefix(self, prec <= Precedence::Assignment)?;
             prefix(self)?;
         } else {
-            return Err(PiccoloError::MalformedExpression {
+            return Err(PiccoloError::new(ErrorKind::MalformedExpression {
                 from: self.previous().lexeme.to_owned(),
-                line: self.previous().line,
-            }
-            .into());
+            }).line(self.previous().line));
         }
         while prec <= *self.get_rule(&self.current().kind).2 {
             self.advance();
@@ -323,12 +339,12 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn grouping(&mut self) -> crate::Result<()> {
+    fn grouping(&mut self) -> Result<(), PiccoloError> {
         self.expression()?;
         self.consume(TokenKind::RightParen)
     }
 
-    fn unary(&mut self) -> crate::Result<()> {
+    fn unary(&mut self) -> Result<(), PiccoloError> {
         let kind = self.previous().kind.clone();
         self.precedence(Precedence::Unary)?;
         match kind {
@@ -339,7 +355,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn binary(&mut self) -> crate::Result<()> {
+    fn binary(&mut self) -> Result<(), PiccoloError> {
         let kind = self.previous().kind.clone();
         let (_, _, &prec) = self.get_rule(&kind);
         self.precedence(prec)?;
@@ -373,11 +389,15 @@ impl<'a> Compiler<'a> {
         &self.tokens[self.current]
     }
 
+    fn can_lookahead(&self, num: usize) -> bool {
+        self.tokens.len() > self.current + num
+    }
+
     fn lookahead(&self, num: usize) -> &Token {
         &self.tokens[self.current + num]
     }
 
-    fn number(&mut self) -> crate::Result<()> {
+    fn number(&mut self) -> Result<(), PiccoloError> {
         if let Ok(value) = self.previous().lexeme.parse::<i64>() {
             self.emit_constant(Value::Integer(value));
             Ok(())
@@ -385,15 +405,13 @@ impl<'a> Compiler<'a> {
             self.emit_constant(Value::Double(value));
             Ok(())
         } else {
-            Err(PiccoloError::InvalidNumberLiteral {
-                line: self.previous().line,
+            Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
                 literal: self.previous().lexeme.to_owned(),
-            }
-            .into())
+            }).line(self.previous().line))
         }
     }
 
-    fn literal(&mut self) -> crate::Result<()> {
+    fn literal(&mut self) -> Result<(), PiccoloError> {
         match self.previous().kind {
             TokenKind::Nil => self.emit(Opcode::Nil),
             TokenKind::True => self.emit(Opcode::True),
@@ -403,7 +421,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn string(&mut self) -> crate::Result<()> {
+    fn string(&mut self) -> Result<(), PiccoloError> {
         let s = match &self.previous().kind {
             TokenKind::String(s) => s.clone(),
             _ => unreachable!(),
@@ -412,18 +430,16 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn variable(&mut self) -> crate::Result<()> {
+    fn variable(&mut self) -> Result<(), PiccoloError> {
         self.named_variable(&self.tokens[self.previous])
     }
 
-    fn named_variable(&mut self, token: &Token) -> crate::Result<()> {
+    fn named_variable(&mut self, token: &Token) -> Result<(), PiccoloError> {
         let arg = self.identifier_constant(token);
         if self.matches(TokenKind::Assign) {
-            return Err(PiccoloError::MalformedExpression {
+            return Err(PiccoloError::new(ErrorKind::MalformedExpression {
                 from: token.lexeme.to_owned(),
-                line: self.previous().line,
-            }
-            .into());
+            }).line(self.previous().line));
         } else {
             self.emit2(Opcode::GetGlobal, arg as u8);
         }
@@ -453,9 +469,9 @@ impl<'a> Compiler<'a> {
         &'a self,
         kind: &TokenKind,
     ) -> (
-        &'a Option<fn(&mut Compiler) -> crate::Result<()>>,
-        &'a Option<fn(&mut Compiler) -> crate::Result<()>>,
-        &'a Precedence,
+        &'a Option<fn(&mut Compiler) -> Result<(), PiccoloError>>,
+        &'a Option<fn(&mut Compiler) -> Result<(), PiccoloError>>,
+        &'a Precedence
     ) {
         for (k, infix, prefix, precedence) in self.rules.iter() {
             let rule = (infix, prefix, precedence);

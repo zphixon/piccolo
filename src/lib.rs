@@ -3,10 +3,8 @@
 //! Piccolo is a small, light, high-pitched scripting language (eventually) intended
 //! for embedding in Rust projects.
 
-extern crate anyhow;
 extern crate downcast_rs;
 extern crate slotmap;
-extern crate thiserror;
 
 mod chunk;
 mod compiler;
@@ -26,26 +24,28 @@ pub use scanner::Token;
 #[cfg(feature = "pc-debug")]
 pub use scanner::print_tokens;
 
-pub use anyhow::Error;
-pub use anyhow::Result;
-
 /// Interprets a Piccolo source and returns its result.
 ///
 /// # Examples
 ///
 /// ```rust
-/// # fn main() -> Result<(), piccolo::Error> {
+/// # fn main() -> Result<(), Vec<piccolo::PiccoloError>> {
 /// let result = piccolo::interpret("1 + 2")?;
 /// assert_eq!(3, result.into::<i64>());
 /// # Ok(())
 /// # }
 /// ```
-pub fn interpret(src: &str) -> Result<value::Value> {
-    Machine::new(Compiler::compile(
+pub fn interpret(src: &str) -> Result<value::Value, Vec<error::PiccoloError>> {
+    let result = Machine::new(Compiler::compile(
         Chunk::default(),
         &Scanner::new(src).scan_tokens()?,
     )?)
-    .interpret()
+    .interpret();
+    if result.is_ok() {
+        Ok(result.unwrap())
+    } else {
+        Err(vec![result.unwrap_err()])
+    }
 }
 
 #[cfg(feature = "fuzzer")]
@@ -89,11 +89,11 @@ pub mod fuzzer {
         {
             compile_error!("fuzzer requires pc-debug feature")
         }
+        #[cfg(feature = "pc-debug")]
+        {
+            scanner::print_tokens(&v);
+        }
         if let Ok(c) = Compiler::compile(Chunk::default(), &v) {
-            #[cfg(feature = "pc-debug")]
-            {
-                scanner::print_tokens(&v);
-            }
             c.disassemble("");
             if let Ok(_) = Machine::new(c).interpret() {
                 panic!("possibly invalid program compiles and runs");

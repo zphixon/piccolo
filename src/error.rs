@@ -1,44 +1,119 @@
 use crate::op::Opcode;
+use std::fmt;
 
-use thiserror::Error;
+#[derive(Debug, Clone)]
+pub struct PiccoloError {
+    kind: ErrorKind,
+    line: Option<usize>,
+    file: Option<String>,
+}
 
-#[derive(Error, Debug, Clone)]
-pub enum PiccoloError {
-    #[error("{num} error(s):{err}")]
-    Lots { num: usize, err: String },
-    #[error("{err}")]
-    One { err: String },
-    #[error("Stack underflow - file a bug report! line {line}, {op:?}")]
-    StackUnderflow { line: usize, op: Opcode },
-    #[error("Invalid UTF8 on line {line}")]
-    InvalidUTF8 { line: usize },
-    #[error("Unterminated string starting on line {line}")]
-    UnterminatedString { line: usize },
-    #[error("Unknown format code '{code}' in string starting on line {line}")]
-    UnknownFormatCode { code: char, line: usize },
-    #[error("Invalid number literal {literal} on line {line}")]
-    InvalidNumberLiteral { line: usize, literal: String },
-    #[error("Expected {exp}, got {got} on line {line}")]
+impl PiccoloError {
+    pub fn new(kind: ErrorKind) -> Self {
+        PiccoloError {
+            kind,
+            line: None,
+            file: None,
+        }
+    }
+
+    pub fn line(self, line: usize) -> Self {
+        PiccoloError {
+            line: Some(line),
+            ..self
+        }
+    }
+
+    pub fn file(self, file: String) -> Self {
+        PiccoloError {
+            file: Some(file),
+            ..self
+        }
+    }
+}
+
+impl fmt::Display for PiccoloError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}{}{}{}",
+            if self.line.is_some() {
+                format!("at line {}", self.line.unwrap())
+            } else {
+                "".into()
+            },
+            if self.file.is_some() {
+                format!("in file {}", self.file.as_ref().unwrap())
+            } else {
+                "".into()
+            },
+            if self.line.is_some() || self.file.is_some() {
+                " - "
+            } else {
+                ""
+            },
+            self.kind
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ErrorKind {
+    StackUnderflow { op: Opcode },
+    InvalidUTF8,
+    UnterminatedString,
+    UnknownFormatCode { code: char },
+    InvalidNumberLiteral { literal: String },
     UnexpectedToken {
         exp: String,
         got: String,
-        line: usize,
     },
-    #[error("Expected type {exp}, got {got} for {op:?} on line {line}")]
     IncorrectType {
         exp: String,
         got: String,
         op: Opcode,
-        line: usize,
     },
-    #[error("Undefined variable '{name}' on line {line}")]
-    UndefinedVariable { name: String, line: usize },
-    #[error("Unknown field on '{obj}': '{name}' (line {line})")]
+    UndefinedVariable { name: String },
     UnknownField {
         obj: String,
         name: String,
-        line: usize,
     },
-    #[error("Malformed expression from {from} on line {line}")]
-    MalformedExpression { from: String, line: usize },
+    MalformedExpression { from: String },
+}
+
+impl fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ErrorKind::StackUnderflow { op } => {
+                write!(f, "Stack underflow due to {:?}", op)
+            }
+            ErrorKind::InvalidUTF8 => {
+                write!(f, "Invalid UTF-8 sequence")
+            }
+            ErrorKind::UnterminatedString => {
+                write!(f, "Unterminated string")
+            }
+            ErrorKind::UnknownFormatCode { code } => {
+                write!(f, "Unknown format code '\\{}'", code)
+            }
+            ErrorKind::InvalidNumberLiteral { literal } => {
+                write!(f, "Invalid number literal '{}'", literal)
+            }
+            ErrorKind::UnexpectedToken { exp, got } => {
+                write!(f, "Unexpected token: expected {}, got {}", exp, got)
+            }
+            ErrorKind::IncorrectType { exp, got, op } => {
+                write!(f, "Incorrect type: expected {}, got {} for op {:?}", exp, got, op)
+            }
+            ErrorKind::UndefinedVariable { name } => {
+                write!(f, "Undefined variable '{}'", name)
+            }
+            ErrorKind::UnknownField { obj, name } => {
+                write!(f, "Unknown field '{}' on {}", name, obj)
+            }
+            ErrorKind::MalformedExpression { from } => {
+                write!(f, "Malformed expression from {}", from)
+            }
+        }
+    }
 }
