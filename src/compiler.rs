@@ -315,8 +315,13 @@ impl<'a> Compiler<'a> {
     }
 
     fn expression(&mut self) -> Result<(), PiccoloError> {
-        self.precedence(Precedence::Assignment)?;
-        Ok(())
+        if self.check(TokenKind::Eof) {
+            Err(PiccoloError::new(ErrorKind::ExpectedExpression {
+                got: self.current().lexeme.to_owned()
+            }).line(self.previous().line))
+        } else {
+            self.precedence(Precedence::Assignment)
+        }
     }
 
     fn precedence(&mut self, prec: Precedence) -> Result<(), PiccoloError> {

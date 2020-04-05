@@ -89,6 +89,9 @@ pub enum ErrorKind {
     MalformedExpression {
         from: String,
     },
+    ExpectedExpression {
+        got: String,
+    },
 }
 
 impl fmt::Display for ErrorKind {
@@ -115,6 +118,9 @@ impl fmt::Display for ErrorKind {
             }
             ErrorKind::MalformedExpression { from } => {
                 write!(f, "Malformed expression from {}", from)
+            }
+            ErrorKind::ExpectedExpression { got } => {
+                write!(f, "Expected expression, got {}", got)
             }
         }
     }
