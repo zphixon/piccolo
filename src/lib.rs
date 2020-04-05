@@ -73,11 +73,19 @@ pub mod fuzzer {
         for n in 1..=n {
             let s = std::time::Instant::now();
             if let Some(_) = run(n, min_len, max_len) {
-                panic!("run {}: possibly invalid program compiled and executed successfully", n);
+                panic!(
+                    "run {}: possibly invalid program compiled and executed successfully",
+                    n
+                );
             }
             avg += (std::time::Instant::now() - s).as_secs_f64();
         }
-        println!("{} runs, in {:.8} sec ({:.8} avg per run)", n, (std::time::Instant::now() - start).as_secs_f64(), avg/n as f64);
+        println!(
+            "{} runs, in {:.8} sec ({:.8} avg per run)",
+            n,
+            (std::time::Instant::now() - start).as_secs_f64(),
+            avg / n as f64
+        );
     }
 
     // occasionally creates valid programs

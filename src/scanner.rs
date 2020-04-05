@@ -170,7 +170,8 @@ impl<'a> Scanner<'a> {
             }
         }
 
-        self.tokens.push(Token::new(TokenKind::Eof, "EOF", self.line));
+        self.tokens
+            .push(Token::new(TokenKind::Eof, "EOF", self.line));
 
         if errors.is_empty() {
             Ok(self

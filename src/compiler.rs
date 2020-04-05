@@ -317,8 +317,9 @@ impl<'a> Compiler<'a> {
     fn expression(&mut self) -> Result<(), PiccoloError> {
         if self.check(TokenKind::Eof) {
             Err(PiccoloError::new(ErrorKind::ExpectedExpression {
-                got: self.current().lexeme.to_owned()
-            }).line(self.previous().line))
+                got: self.current().lexeme.to_owned(),
+            })
+            .line(self.previous().line))
         } else {
             self.precedence(Precedence::Assignment)
         }
