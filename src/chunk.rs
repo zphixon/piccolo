@@ -2,7 +2,7 @@ use crate::value::Value;
 
 // TODO: change lines to a reasonable number type
 /// Stores a piece of compiled Piccolo bytecode.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Chunk {
     pub(crate) data: Vec<u8>,
     pub(crate) lines: Vec<usize>,
