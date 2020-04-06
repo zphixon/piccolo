@@ -182,8 +182,41 @@ mod tests {
     use crate::chunk::Chunk;
     use crate::compiler::Precedence;
     use crate::machine::Machine;
+    use crate::op::Opcode;
     use crate::{Compiler, Scanner};
     use std::io::Write;
+
+    #[test]
+    fn get_line_from_index() {
+        let mut c = Chunk::default();
+        c.write(Opcode::Return, 1); // 0
+        c.write(Opcode::Return, 1); // 1
+        c.write(Opcode::Return, 1); // 2
+        c.write(Opcode::Return, 1); // 3
+        c.write(Opcode::Return, 1); // 4
+        c.write(Opcode::Return, 1); // 5
+        c.write(Opcode::Return, 2); // 6
+        c.write(Opcode::Return, 2); // 7
+        c.write(Opcode::Return, 2); // 8
+        c.write(Opcode::Return, 2); // 9
+        c.write(Opcode::Return, 2); // 10
+        c.write(Opcode::Return, 3); // 11
+        c.write(Opcode::Return, 3); // 12
+        c.write(Opcode::Return, 3); // 13
+        c.write(Opcode::Return, 3); // 14
+        c.write(Opcode::Return, 4); // 15
+        c.write(Opcode::Return, 4); // 16
+        c.write(Opcode::Return, 4); // 17
+        c.write(Opcode::Return, 4); // 18
+        c.write(Opcode::Return, 5); // 19
+
+        assert_eq!(c.get_line_from_index(0), 1);
+        assert_eq!(c.get_line_from_index(5), 1);
+        assert_eq!(c.get_line_from_index(6), 2);
+        assert_eq!(c.get_line_from_index(10), 2);
+        assert_eq!(c.get_line_from_index(11), 3);
+        assert_eq!(c.get_line_from_index(14), 3);
+    }
 
     #[test]
     fn encode_decode() {
