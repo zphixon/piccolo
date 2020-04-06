@@ -166,7 +166,7 @@ pub mod fuzzer {
                 //43 => TokenKind::ShiftLeft,
                 //44 => TokenKind::ShiftRight,
                 21 => TokenKind::Identifier,
-                22 => TokenKind::String(String::from("yee")),
+                22 => TokenKind::String,
                 23 => TokenKind::True,
                 24 => TokenKind::False,
                 25 => TokenKind::Double(0.0),
@@ -182,11 +182,8 @@ mod tests {
     use crate::chunk::Chunk;
     use crate::compiler::Precedence;
     use crate::machine::Machine;
-    use crate::op::Opcode;
-    use crate::value::Value;
-    use std::time::Instant;
+    use crate::{Compiler, Scanner};
     use std::io::Write;
-    use crate::{Scanner, Compiler};
 
     #[test]
     fn encode_decode() {
@@ -248,8 +245,18 @@ mod tests {
     }
 
     #[test]
-    fn concat() {
-        assert!(crate::interpret("\"ye\" + \"et\" == \"yeet\"").unwrap().into::<bool>());
+    fn strings() {
+        assert!(
+            crate::interpret("\"hello \\\n           world\" == \"hello world\"")
+                .unwrap()
+                .into::<bool>()
+        );
+        assert!(crate::interpret("\"ye\" + \"et\" == \"yeet\"")
+            .unwrap()
+            .into::<bool>());
+        assert!(!crate::interpret("\"ye\" + \"et\" == \"\\\"yeet\\\"\"")
+            .unwrap()
+            .into::<bool>());
     }
 
     #[test]
