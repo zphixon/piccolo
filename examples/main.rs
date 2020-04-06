@@ -18,10 +18,7 @@ fn main() {
 
 #[cfg(not(feature = "pc-debug"))]
 fn file(contents: &str) {
-    let r = piccolo::interpret(contents);
-    if let Ok(v) = r {
-        println!("{:?}", v);
-    } else if let Err(e) = r {
+    if let Err(e) = piccolo::interpret(contents) {
         if e.len() == 1 {
             println!("Error {}", e[0])
         } else {
