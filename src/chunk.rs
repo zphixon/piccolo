@@ -1,5 +1,7 @@
 use crate::value::Value;
 
+use slotmap::DenseSlotMap;
+
 // TODO: change lines to a reasonable number type
 /// Stores a piece of compiled Piccolo bytecode.
 #[derive(Default, Debug)]
@@ -23,6 +25,12 @@ impl Chunk {
         } else {
             idx
         }
+    }
+
+    pub(crate) fn has_constant(&self, value: &Value) -> bool {
+        self.constants
+            .iter()
+            .any(|v| v.eq(value, &DenseSlotMap::with_capacity(0)).is_some())
     }
 
     #[cfg(feature = "pc-debug")]

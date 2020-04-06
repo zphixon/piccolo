@@ -462,7 +462,11 @@ impl<'a> Compiler<'a> {
     }
 
     fn identifier_constant(&mut self, token: &Token) -> usize {
-        if self.output {
+        if self.output
+            && !self
+                .chunk
+                .has_constant(&Value::String(token.lexeme.to_owned()))
+        {
             self.chunk
                 .make_constant(Value::String(token.lexeme.to_owned()))
         } else {
