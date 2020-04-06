@@ -173,25 +173,18 @@ mod tests {
     use crate::compiler::Precedence;
     use crate::machine::Machine;
     use crate::op::Opcode;
-    use crate::scanner::{Token, TokenKind};
-    use crate::value::{Object, Value};
-    use crate::{interpret, Compiler, Scanner};
-
-    use slotmap::{DefaultKey, DenseSlotMap};
-
-    use std::cell::RefCell;
-    use std::rc::Rc;
+    use crate::value::Value;
 
     #[test]
     fn comparison() {
-        assert!(interpret("1 < 2").unwrap().into::<bool>());
-        assert!(interpret("1 <= 2").unwrap().into::<bool>());
-        assert!(interpret("2 > 1").unwrap().into::<bool>());
-        assert!(interpret("2 >= 1").unwrap().into::<bool>());
-        assert!(interpret("2 == 2").unwrap().into::<bool>());
-        assert!(interpret("3 != 2").unwrap().into::<bool>());
-        assert!(interpret("\"a\" == \"a\"").unwrap().into::<bool>());
-        assert!(interpret("\"a\" != \"b\"").unwrap().into::<bool>());
+        assert!(crate::interpret("1 < 2").unwrap().into::<bool>());
+        assert!(crate::interpret("1 <= 2").unwrap().into::<bool>());
+        assert!(crate::interpret("2 > 1").unwrap().into::<bool>());
+        assert!(crate::interpret("2 >= 1").unwrap().into::<bool>());
+        assert!(crate::interpret("2 == 2").unwrap().into::<bool>());
+        assert!(crate::interpret("3 != 2").unwrap().into::<bool>());
+        assert!(crate::interpret("\"a\" == \"a\"").unwrap().into::<bool>());
+        assert!(crate::interpret("\"a\" != \"b\"").unwrap().into::<bool>());
     }
 
     #[test]
