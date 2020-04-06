@@ -53,12 +53,11 @@ impl Machine {
     }
 
     fn constant(&self) -> Result<&Value, PiccoloError> {
-        // equivalent to self.chunk.constants[self.chunk.data[self.ip] as usize]
-        self.chunk
-            .data
-            .get(self.ip)
-            .and_then(|idx| self.chunk.constants.get(*idx as usize))
-            .ok_or_else(|| panic!("Constant does not exist"))
+        self.chunk.data.get(self.ip).and_then(|low| {
+            self.chunk.data.get(self.ip + 1).and_then(|high| {
+                self.chunk.constants.get(crate::encode_bytes(*low, *high) as usize)
+            })
+        }).ok_or_else(|| panic!("constant does not exist"))
     }
 
     /// Interprets the machine's bytecode, returning a Value.
@@ -66,7 +65,7 @@ impl Machine {
         while self.ip < self.chunk.data.len() {
             #[cfg(feature = "pc-debug")]
             {
-                print!("┌─ {:?}\n└─ ", self.stack);
+                print!(" ┌─ {:?}\n └─ ", self.stack);
                 self.chunk.disassemble_instruction(self.ip);
             }
 
@@ -91,7 +90,7 @@ impl Machine {
                     self.globals
                         .insert(name, self.stack[self.stack.len() - 1].clone());
                     self.pop()?;
-                    self.ip += 1;
+                    self.ip += 2;
                 }
                 Opcode::GetGlobal => {
                     let name = self.constant()?.ref_string();
@@ -103,7 +102,7 @@ impl Machine {
                         })
                         .line(line));
                     }
-                    self.ip += 1;
+                    self.ip += 2;
                 }
                 Opcode::AssignGlobal => {
                     let name = self.constant()?.clone().into::<String>();
@@ -117,11 +116,11 @@ impl Machine {
                             },
                             |_| Ok(()),
                         )?;
-                    self.ip += 1;
+                    self.ip += 2;
                 }
                 Opcode::Constant => {
                     let c = self.constant()?.clone();
-                    self.ip += 1;
+                    self.ip += 2;
 
                     self.stack.push(c);
                 }
