@@ -45,11 +45,6 @@ pub fn interpret(src: &str) -> Result<value::Value, Vec<error::PiccoloError>> {
         Ok(v) => Ok(v),
         Err(e) => Err(vec![e]),
     }
-    //if result.is_ok() {
-    //    Ok(result.unwrap())
-    //} else {
-    //    Err(vec![result.unwrap_err()])
-    //}
 }
 
 #[cfg(feature = "fuzzer")]
