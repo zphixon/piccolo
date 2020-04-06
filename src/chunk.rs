@@ -30,12 +30,10 @@ impl Chunk {
     // TODO: retain to a hashmap in compiler
     // cause get and has_constant are slow
     pub(crate) fn has_constant(&self, value: &Value) -> bool {
-        self.constants
-            .iter()
-            .any(|v| {
-                let r = v.eq(value, &DenseSlotMap::with_capacity(0));
-                r.is_some() && r.unwrap()
-            })
+        self.constants.iter().any(|v| {
+            let r = v.eq(value, &DenseSlotMap::with_capacity(0));
+            r.is_some() && r.unwrap()
+        })
     }
 
     pub(crate) fn get_constant(&self, name: &str) -> u16 {

@@ -53,11 +53,17 @@ impl Machine {
     }
 
     fn constant(&self) -> Result<&Value, PiccoloError> {
-        self.chunk.data.get(self.ip).and_then(|low| {
-            self.chunk.data.get(self.ip + 1).and_then(|high| {
-                self.chunk.constants.get(crate::encode_bytes(*low, *high) as usize)
+        self.chunk
+            .data
+            .get(self.ip)
+            .and_then(|low| {
+                self.chunk.data.get(self.ip + 1).and_then(|high| {
+                    self.chunk
+                        .constants
+                        .get(crate::encode_bytes(*low, *high) as usize)
+                })
             })
-        }).ok_or_else(|| panic!("constant does not exist"))
+            .ok_or_else(|| panic!("constant does not exist"))
     }
 
     /// Interprets the machine's bytecode, returning a Value.
