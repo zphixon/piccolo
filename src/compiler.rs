@@ -282,17 +282,17 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn parse_variable(&mut self) -> Result<usize, PiccoloError> {
+    fn parse_variable(&mut self) -> Result<u16, PiccoloError> {
         self.consume(TokenKind::Identifier)?;
         Ok(self.identifier_constant(&self.tokens[self.previous]))
     }
 
-    fn define_variable(&mut self, var: usize) {
-        self.emit2(Opcode::DefineGlobal, var as u8);
+    fn define_variable(&mut self, var: u16) {
+        self.emit3(Opcode::DefineGlobal, var);
     }
 
-    fn set_variable(&mut self, var: usize) {
-        self.emit2(Opcode::AssignGlobal, var as u8);
+    fn set_variable(&mut self, var: u16) {
+        self.emit3(Opcode::AssignGlobal, var);
     }
 
     fn statement(&mut self) -> Result<(), PiccoloError> {
@@ -456,19 +456,18 @@ impl<'a> Compiler<'a> {
             })
             .line(self.previous().line));
         } else {
-            self.emit2(Opcode::GetGlobal, arg as u8);
+            self.emit3(Opcode::GetGlobal, arg);
         }
         Ok(())
     }
 
-    fn identifier_constant(&mut self, token: &Token) -> usize {
-        if self.output
-            && !self
-                .chunk
-                .has_constant(&Value::String(token.lexeme.to_owned()))
-        {
-            self.chunk
-                .make_constant(Value::String(token.lexeme.to_owned()))
+    fn identifier_constant(&mut self, token: &Token) -> u16 {
+        if self.output {
+            if !self.chunk.has_constant(&Value::String(token.lexeme.to_owned())) {
+                self.chunk.make_constant(Value::String(token.lexeme.to_owned()))
+            } else {
+                self.chunk.get_constant(token.lexeme)
+            }
         } else {
             0
         }
@@ -476,7 +475,7 @@ impl<'a> Compiler<'a> {
 
     fn emit_constant(&mut self, c: Value) {
         let c = self.chunk.make_constant(c);
-        self.emit2(Opcode::Constant, c as u8);
+        self.emit3(Opcode::Constant, c);
     }
 
     fn emit<T: Into<u8>>(&mut self, byte: T) {
@@ -489,6 +488,15 @@ impl<'a> Compiler<'a> {
         if self.output {
             self.chunk.write(byte1, self.previous().line);
             self.chunk.write(byte2, self.previous().line);
+        }
+    }
+
+    fn emit3<T: Into<u8>, U: Into<u16>>(&mut self, byte1: T, bytes: U) {
+        if self.output {
+            let (low, high) = crate::decode_bytes(bytes.into());
+            self.chunk.write(byte1, self.previous().line);
+            self.chunk.write(low, self.previous().line);
+            self.chunk.write(high, self.previous().line);
         }
     }
 

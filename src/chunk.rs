@@ -17,20 +17,38 @@ impl Chunk {
         self.lines.push(line);
     }
 
-    pub(crate) fn make_constant(&mut self, value: Value) -> usize {
+    pub(crate) fn make_constant(&mut self, value: Value) -> u16 {
         self.constants.push(value);
         let idx = self.constants.len() - 1;
-        if idx > std::u8::MAX as usize {
-            panic!("bounds check on constants - idx as u8 will fail");
+        if idx > std::u16::MAX as usize {
+            panic!("too many constants (>65k, fix your program)");
         } else {
-            idx
+            idx as u16
         }
     }
 
+    // TODO: retain to a hashmap in compiler
+    // cause get and has_constant are slow
     pub(crate) fn has_constant(&self, value: &Value) -> bool {
         self.constants
             .iter()
-            .any(|v| v.eq(value, &DenseSlotMap::with_capacity(0)).is_some())
+            .any(|v| {
+                let r = v.eq(value, &DenseSlotMap::with_capacity(0));
+                r.is_some() && r.unwrap()
+            })
+    }
+
+    pub(crate) fn get_constant(&self, name: &str) -> u16 {
+        for (idx, value) in self.constants.iter().enumerate() {
+            if value.is_string() && value.ref_string() == name {
+                return idx as u16;
+            }
+        }
+        panic!("constant does not exist: {}", name);
+    }
+
+    pub(crate) fn get_line_from_index(&self, idx: usize) -> usize {
+        self.lines[idx]
     }
 
     #[cfg(feature = "pc-debug")]
@@ -38,6 +56,11 @@ impl Chunk {
         use crate::op::Opcode;
 
         println!(" -- {} --", name);
+        println!(" ++ constants");
+        for (idx, constant) in self.constants.iter().enumerate() {
+            println!("{:04x} {:?}", idx, constant);
+        }
+        println!(" ++ code");
 
         let mut prev_line = 0;
         let mut offset = 0;
@@ -47,7 +70,7 @@ impl Chunk {
             let op = self.data[offset].into();
 
             print!(
-                "{:04} {} {:?}",
+                "{:04x} {} {:?}",
                 offset,
                 if line == prev_line {
                     String::from("   |")
@@ -60,12 +83,11 @@ impl Chunk {
             offset = match op {
                 Opcode::Return => offset + 1,
                 Opcode::Constant => {
-                    print!(
-                        "#{:04} {:?}",
-                        self.data[offset + 1],
-                        self.constants[self.data[offset + 1] as usize]
-                    );
-                    offset + 2
+                    let low = self.data[offset + 1];
+                    let high = self.data[offset + 2];
+                    let idx = crate::encode_bytes(low, high);
+                    print!("#{:04x} {:?}", idx, self.constants[idx as usize]);
+                    offset + 3
                 }
                 Opcode::Negate => offset + 1,
                 Opcode::Add => offset + 1,
@@ -81,34 +103,25 @@ impl Chunk {
                 Opcode::Less => offset + 1,
                 Opcode::Pop => offset + 1,
                 Opcode::DefineGlobal => {
-                    print!(
-                        "#{:04} {}",
-                        self.data[offset + 1],
-                        self.constants[self.data[offset + 1] as usize]
-                            .clone()
-                            .into::<String>(),
-                    );
-                    offset + 2
+                    let low = self.data[offset + 1];
+                    let high = self.data[offset + 2];
+                    let idx = crate::encode_bytes(low, high);
+                    print!("#{:04x} {:?}", idx, self.constants[idx as usize]);
+                    offset + 3
                 }
                 Opcode::GetGlobal => {
-                    print!(
-                        "#{:04} {}",
-                        self.data[offset + 1],
-                        self.constants[self.data[offset + 1] as usize]
-                            .clone()
-                            .into::<String>(),
-                    );
-                    offset + 2
+                    let low = self.data[offset + 1];
+                    let high = self.data[offset + 2];
+                    let idx = crate::encode_bytes(low, high);
+                    print!("#{:04x} {:?}", idx, self.constants[idx as usize]);
+                    offset + 3
                 }
                 Opcode::AssignGlobal => {
-                    print!(
-                        "#{:04} {}",
-                        self.data[offset + 1],
-                        self.constants[self.data[offset + 1] as usize]
-                            .clone()
-                            .into::<String>(),
-                    );
-                    offset + 2
+                    let low = self.data[offset + 1];
+                    let high = self.data[offset + 2];
+                    let idx = crate::encode_bytes(low, high);
+                    print!("#{:04x} {:?}", idx, self.constants[idx as usize]);
+                    offset + 3
                 }
             };
             println!();
@@ -134,9 +147,5 @@ impl Chunk {
             );
         }
         println!();
-    }
-
-    pub(crate) fn get_line_from_index(&self, idx: usize) -> usize {
-        self.lines[idx]
     }
 }
