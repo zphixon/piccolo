@@ -14,7 +14,7 @@ pub struct Chunk {
 impl Chunk {
     pub(crate) fn write<T: Into<u8>>(&mut self, byte: T, line: usize) {
         self.data.push(byte.into());
-        self.lines.push(line);
+        self.add_to_line(line);
     }
 
     pub(crate) fn make_constant(&mut self, value: Value) -> u16 {
@@ -46,7 +46,21 @@ impl Chunk {
     }
 
     pub(crate) fn get_line_from_index(&self, idx: usize) -> usize {
-        self.lines[idx]
+        let mut total_ops = 0;
+        for (offset_line, num_ops) in self.lines.iter().enumerate() {
+            total_ops += *num_ops;
+            if total_ops > idx {
+                return offset_line + 1;
+            }
+        }
+        panic!("no line for idx {}", idx);
+    }
+
+    fn add_to_line(&mut self, line: usize) {
+        while line - 1 >= self.lines.len() {
+            self.lines.push(0);
+        }
+        self.lines[line - 1] += 1;
     }
 
     #[cfg(feature = "pc-debug")]
