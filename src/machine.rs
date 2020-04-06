@@ -164,7 +164,7 @@ impl Machine {
                                 op,
                             })
                             .line(line)),
-                            |b| Ok(b),
+                            Ok,
                         )?,
                     ));
                 }
@@ -187,7 +187,7 @@ impl Machine {
                                 op,
                             })
                             .line(line)),
-                            |b| Ok(b),
+                            Ok,
                         )?,
                     ));
                 }
@@ -210,7 +210,7 @@ impl Machine {
                                 op,
                             })
                             .line(line)),
-                            |b| Ok(b),
+                            Ok,
                         )?,
                     ));
                 }
@@ -251,7 +251,7 @@ impl Machine {
                         }
                     } else if lhs.is_string() {
                         let mut lhs = lhs.into::<String>();
-                        lhs.push_str(&format!("{}", rhs.fmt(&self.heap)));
+                        lhs.push_str(&rhs.fmt(&self.heap).to_string());
                         self.stack.push(Value::String(lhs));
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {

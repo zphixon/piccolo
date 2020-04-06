@@ -36,16 +36,20 @@ pub use scanner::print_tokens;
 /// # }
 /// ```
 pub fn interpret(src: &str) -> Result<value::Value, Vec<error::PiccoloError>> {
-    let result = Machine::new(Compiler::compile(
+    match Machine::new(Compiler::compile(
         Chunk::default(),
         &Scanner::new(src).scan_tokens()?,
     )?)
-    .interpret();
-    if result.is_ok() {
-        Ok(result.unwrap())
-    } else {
-        Err(vec![result.unwrap_err()])
+    .interpret()
+    {
+        Ok(v) => Ok(v),
+        Err(e) => Err(vec![e]),
     }
+    //if result.is_ok() {
+    //    Ok(result.unwrap())
+    //} else {
+    //    Err(vec![result.unwrap_err()])
+    //}
 }
 
 #[cfg(feature = "fuzzer")]
