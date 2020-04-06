@@ -8,6 +8,11 @@ a = "z"
 b = c + a + b
 retn b + a
 
+x := "hello \
+      world"
+
+retn x == "hello world"
+
 # fn thing(arg_juan, arg_deux) is
 #     sum = arg_juan + arg_deux
 #     if sum == 23 do

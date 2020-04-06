@@ -519,8 +519,12 @@ impl<'a> Compiler<'a> {
 
     fn identifier_constant(&mut self, token: &Token) -> u16 {
         if self.output {
-            if !self.chunk.has_constant(&Value::String(token.lexeme.to_owned())) {
-                self.chunk.make_constant(Value::String(token.lexeme.to_owned()))
+            if !self
+                .chunk
+                .has_constant(&Value::String(token.lexeme.to_owned()))
+            {
+                self.chunk
+                    .make_constant(Value::String(token.lexeme.to_owned()))
             } else {
                 self.chunk.get_constant(token.lexeme)
             }

@@ -267,7 +267,9 @@ mod tests {
     #[test]
     fn math() {
         assert!(crate::interpret("1 + 2 == 3").unwrap().into::<bool>());
-        assert!(crate::interpret("0.1 + 0.2 == 0.30000000000000004").unwrap().into::<bool>());
+        assert!(crate::interpret("0.1 + 0.2 == 0.30000000000000004")
+            .unwrap()
+            .into::<bool>());
         assert!(crate::interpret("3 / 4. == 0.75").unwrap().into::<bool>());
     }
 }
