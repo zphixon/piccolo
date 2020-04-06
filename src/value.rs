@@ -38,15 +38,11 @@ impl Object for String {
     }
 
     fn gt(&self, other: &dyn Object) -> Option<bool> {
-        other
-            .downcast_ref::<String>()
-            .map_or(None, |s| Some(self > s))
+        other.downcast_ref::<String>().map(|s| self > s)
     }
 
     fn eq(&self, other: &dyn Object) -> Option<bool> {
-        other
-            .downcast_ref::<String>()
-            .map_or(None, |s| Some(self == s))
+        other.downcast_ref::<String>().map(|s| self == s)
     }
 
     fn get(&self, property: &str) -> Option<Value> {
@@ -150,7 +146,7 @@ impl Value {
 
     pub fn fmt(&self, map: &DenseSlotMap<DefaultKey, Box<dyn Object>>) -> String {
         match self {
-            Value::String(v) => format!("{}", v),
+            Value::String(v) => v.to_string(),
             Value::Bool(v) => format!("{}", v),
             Value::Integer(v) => format!("{}", v),
             Value::Double(v) => format!("{}", v),

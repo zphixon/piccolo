@@ -29,11 +29,13 @@ pub struct Compiler<'a> {
     output: bool,
     rules: &'a [(
         TokenKind,
-        Option<fn(&mut Compiler) -> Result<(), PiccoloError>>,
-        Option<fn(&mut Compiler) -> Result<(), PiccoloError>>,
+        Option<CompilerCallback>,
+        Option<CompilerCallback>,
         Precedence,
     )],
 }
+
+type CompilerCallback = fn(&mut Compiler) -> Result<(), PiccoloError>;
 
 // TODO: We need some sort of error reporting struct
 // right now, when we encounter an error, we return all the way back up to
@@ -210,9 +212,8 @@ impl<'a> Compiler<'a> {
         let mut errors = vec![];
 
         while !compiler.is_at_end() && !compiler.matches(TokenKind::Eof) {
-            let result = compiler.declaration();
-            if result.is_err() {
-                errors.push(result.unwrap_err());
+            if let Err(err) = compiler.declaration() {
+                errors.push(err);
                 compiler.output = false;
             }
         }
@@ -491,8 +492,8 @@ impl<'a> Compiler<'a> {
         &'a self,
         kind: &TokenKind,
     ) -> (
-        &'a Option<fn(&mut Compiler) -> Result<(), PiccoloError>>,
-        &'a Option<fn(&mut Compiler) -> Result<(), PiccoloError>>,
+        &'a Option<CompilerCallback>,
+        &'a Option<CompilerCallback>,
         &'a Precedence,
     ) {
         for (k, infix, prefix, precedence) in self.rules.iter() {
