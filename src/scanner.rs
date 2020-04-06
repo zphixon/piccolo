@@ -339,22 +339,9 @@ impl<'a> Scanner<'a> {
 
             if self.peek() == b'\\' {
                 self.advance();
-                if self.is_at_end() {
-                    return Err(PiccoloError::new(ErrorKind::UnterminatedString).line(line_start));
-                }
-                match self.advance() {
-                    b'\n' => {
-                        self.advance();
-                        while self.peek() == b' ' || self.peek() == b'\t' {
-                            self.advance();
-                        }
-                        self.reverse();
-                    }
-                    _ => {}
-                }
-            } else {
-                self.advance();
             }
+
+            self.advance();
         }
 
         if self.is_at_end() {
