@@ -37,25 +37,25 @@ pub(crate) enum TokenKind {
     Newline,        // \n
 
     // operators
-    Not,               // !
-    Plus,              // +
-    Minus,             // -
-    Multiply,          // *
-    Divide,            // /
-    Modulo,            // %
-    And,               // &&
-    Or,                // ||
-    BitwiseAnd,        // &
-    BitwiseOr,         // |
-    BitwiseXor,        // ^
-    Equals,            // ==
-    NotEquals,         // !=
-    LessThan,          // <
-    GreaterThan,       // >
-    LessThanEquals,    // <=
-    GreaterThanEquals, // >=
-    ShiftLeft,         // <<
-    ShiftRight,        // >>
+    Not,          // !
+    Plus,         // +
+    Minus,        // -
+    Multiply,     // *
+    Divide,       // /
+    Modulo,       // %
+    LogicalAnd,   // &&
+    LogicalOr,    // ||
+    BitwiseAnd,   // &
+    BitwiseOr,    // |
+    BitwiseXor,   // ^
+    Equal,        // ==
+    NotEqual,     // !=
+    Less,         // <
+    Greater,      // >
+    LessEqual,    // <=
+    GreaterEqual, // >=
+    ShiftLeft,    // <<
+    ShiftRight,   // >>
 
     // other syntax elements
     Identifier,
@@ -214,7 +214,7 @@ impl<'a> Scanner<'a> {
             b'&' => {
                 if self.peek() == b'&' {
                     self.advance();
-                    self.add_token(TokenKind::And);
+                    self.add_token(TokenKind::LogicalAnd);
                 } else {
                     self.add_token(TokenKind::BitwiseAnd);
                 }
@@ -223,7 +223,7 @@ impl<'a> Scanner<'a> {
             b'|' => {
                 if self.peek() == b'|' {
                     self.advance();
-                    self.add_token(TokenKind::Or);
+                    self.add_token(TokenKind::LogicalOr);
                 } else {
                     self.add_token(TokenKind::BitwiseOr);
                 }
@@ -246,7 +246,7 @@ impl<'a> Scanner<'a> {
             b'!' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    self.add_token(TokenKind::NotEquals);
+                    self.add_token(TokenKind::NotEqual);
                 } else {
                     self.add_token(TokenKind::Not);
                 }
@@ -255,7 +255,7 @@ impl<'a> Scanner<'a> {
             b'=' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    self.add_token(TokenKind::Equals);
+                    self.add_token(TokenKind::Equal);
                 } else {
                     self.add_token(TokenKind::Assign);
                 }
@@ -277,24 +277,24 @@ impl<'a> Scanner<'a> {
             b'>' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    self.add_token(TokenKind::GreaterThanEquals);
+                    self.add_token(TokenKind::GreaterEqual);
                 } else if self.peek() == b'>' {
                     self.advance();
                     self.add_token(TokenKind::ShiftRight);
                 } else {
-                    self.add_token(TokenKind::GreaterThan);
+                    self.add_token(TokenKind::Greater);
                 }
             }
 
             b'<' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    self.add_token(TokenKind::LessThanEquals);
+                    self.add_token(TokenKind::LessEqual);
                 } else if self.peek() == b'<' {
                     self.advance();
                     self.add_token(TokenKind::ShiftLeft);
                 } else {
-                    self.add_token(TokenKind::LessThan);
+                    self.add_token(TokenKind::Less);
                 }
             }
 

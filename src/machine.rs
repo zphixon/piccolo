@@ -105,7 +105,7 @@ impl Machine {
                     }
                     self.ip += 1;
                 }
-                Opcode::SetGlobal => {
+                Opcode::AssignGlobal => {
                     let name = self.constant()?.clone().into::<String>();
                     self.globals
                         // TODO: remove clone

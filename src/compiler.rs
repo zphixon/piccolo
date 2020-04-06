@@ -126,43 +126,43 @@ impl<'a> Compiler<'a> {
                     Some(|c| Compiler::binary(c)),
                     Precedence::Factor,
                 ),
-                (TokenKind::And, None, None, Precedence::None),
-                (TokenKind::Or, None, None, Precedence::None),
+                (TokenKind::LogicalAnd, None, None, Precedence::None),
+                (TokenKind::LogicalOr, None, None, Precedence::None),
                 (TokenKind::BitwiseAnd, None, None, Precedence::None),
                 (TokenKind::BitwiseOr, None, None, Precedence::None),
                 (TokenKind::BitwiseXor, None, None, Precedence::None),
                 (
-                    TokenKind::Equals,
+                    TokenKind::Equal,
                     None,
                     Some(|c| Compiler::binary(c)),
                     Precedence::Equality,
                 ),
                 (
-                    TokenKind::NotEquals,
+                    TokenKind::NotEqual,
                     None,
                     Some(|c| Compiler::binary(c)),
                     Precedence::Equality,
                 ),
                 (
-                    TokenKind::LessThan,
+                    TokenKind::Less,
                     None,
                     Some(|c| Compiler::binary(c)),
                     Precedence::Comparison,
                 ),
                 (
-                    TokenKind::GreaterThan,
+                    TokenKind::Greater,
                     None,
                     Some(|c| Compiler::binary(c)),
                     Precedence::Comparison,
                 ),
                 (
-                    TokenKind::LessThanEquals,
+                    TokenKind::LessEqual,
                     None,
                     Some(|c| Compiler::binary(c)),
                     Precedence::Comparison,
                 ),
                 (
-                    TokenKind::GreaterThanEquals,
+                    TokenKind::GreaterEqual,
                     None,
                     Some(|c| Compiler::binary(c)),
                     Precedence::Comparison,
@@ -292,7 +292,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn set_variable(&mut self, var: usize) {
-        self.emit2(Opcode::SetGlobal, var as u8);
+        self.emit2(Opcode::AssignGlobal, var as u8);
     }
 
     fn statement(&mut self) -> Result<(), PiccoloError> {
@@ -377,12 +377,12 @@ impl<'a> Compiler<'a> {
             TokenKind::Minus => self.emit(Opcode::Subtract),
             TokenKind::Divide => self.emit(Opcode::Divide),
             TokenKind::Multiply => self.emit(Opcode::Multiply),
-            TokenKind::Equals => self.emit(Opcode::Equal),
-            TokenKind::NotEquals => self.emit2(Opcode::Equal, Opcode::Not),
-            TokenKind::GreaterThan => self.emit(Opcode::Greater),
-            TokenKind::GreaterThanEquals => self.emit2(Opcode::Less, Opcode::Not),
-            TokenKind::LessThan => self.emit(Opcode::Less),
-            TokenKind::LessThanEquals => self.emit2(Opcode::Greater, Opcode::Not),
+            TokenKind::Equal => self.emit(Opcode::Equal),
+            TokenKind::NotEqual => self.emit2(Opcode::Equal, Opcode::Not),
+            TokenKind::Greater => self.emit(Opcode::Greater),
+            TokenKind::GreaterEqual => self.emit2(Opcode::Less, Opcode::Not),
+            TokenKind::Less => self.emit(Opcode::Less),
+            TokenKind::LessEqual => self.emit2(Opcode::Greater, Opcode::Not),
             _ => {}
         }
         Ok(())
