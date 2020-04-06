@@ -182,31 +182,6 @@ impl<'a> Scanner<'a> {
         } else {
             Err(errors)
         }
-        //if !errors.is_empty() {
-        //    if errors.len() > 1 {
-        //        let mut err_string = String::new();
-        //        for error in errors.iter() {
-        //            err_string.push_str(&format!("\n{}", error));
-        //        }
-        //        Err(ErrorKind::Lots {
-        //            num: errors.len(),
-        //            err: err_string,
-        //        }
-        //        .into())
-        //    } else {
-        //        Err(ErrorKind::One {
-        //            err: format!("{}", errors[0]),
-        //        }
-        //        .into())
-        //    }
-        //} else {
-        //    self.tokens = self
-        //        .tokens
-        //        .into_iter()
-        //        .filter(|t| t.kind != TokenKind::Newline)
-        //        .collect();
-        //    Ok(self.tokens)
-        //}
     }
 
     fn scan_token(&mut self) -> Result<(), PiccoloError> {
