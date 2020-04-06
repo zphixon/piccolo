@@ -92,7 +92,7 @@ impl Chunk {
                     );
                     offset + 2
                 }
-                Opcode::SetGlobal => {
+                Opcode::AssignGlobal => {
                     print!(
                         "#{:04} {}",
                         self.data[offset + 1],
