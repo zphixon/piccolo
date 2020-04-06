@@ -318,10 +318,10 @@ impl<'a> Scanner<'a> {
             self.advance();
         }
 
-        let value = String::from_utf8(self.source[self.start..self.current].to_vec())
-            .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
-
-        if let Some(tk) = into_keyword(&value) {
+        if let Some(tk) = into_keyword(
+            std::str::from_utf8(&self.source[self.start..self.current])
+                .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?,
+        ) {
             self.add_token(tk);
         } else {
             self.add_token(TokenKind::Identifier);
