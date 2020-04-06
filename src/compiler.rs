@@ -4,21 +4,6 @@ use crate::op::Opcode;
 use crate::scanner::{Token, TokenKind};
 use crate::value::Value;
 
-//#[derive(Debug, Clone, Copy, PartialOrd, PartialEq)]
-//pub(crate) enum Precedence {
-//    None,
-//    Assignment,
-//    Or,
-//    And,
-//    Equality,
-//    Comparison,
-//    Term,
-//    Factor,
-//    Unary,
-//    Call,
-//    Primary,
-//}
-
 macro_rules! prec {
     ($name:ident => $($item:ident = $num:expr,)*) => {
         #[derive(Debug, Clone, Copy, PartialOrd, PartialEq)]
