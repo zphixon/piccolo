@@ -189,7 +189,7 @@ impl<'a> Compiler<'a> {
                 ),
                 (TokenKind::Eof, None, None, Precedence::None),
                 (
-                    TokenKind::String(String::new()),
+                    TokenKind::String,
                     Some(|c| Compiler::string(c)),
                     None,
                     Precedence::None,
@@ -437,7 +437,63 @@ impl<'a> Compiler<'a> {
 
     fn string(&mut self) -> Result<(), PiccoloError> {
         let s = match &self.previous().kind {
-            TokenKind::String(s) => s.clone(),
+            TokenKind::String => {
+                let s = self.previous().lexeme;
+                let mut value = Vec::new();
+                let line_start = self.previous().line;
+                let mut line = line_start;
+
+                let mut i = 1;
+                while i < s.as_bytes().len() - 1 {
+                    let byte = s.as_bytes()[i];
+                    if byte == b'\n' {
+                        line += 1;
+                    }
+
+                    if byte == b'\\' {
+                        i += 1;
+                        let byte = s.as_bytes()[i];
+                        match byte {
+                            b'n' => {
+                                value.push(b'\n');
+                            }
+                            b'r' => {
+                                value.push(b'\r');
+                            }
+                            b'\\' => {
+                                value.push(b'\\');
+                            }
+                            b'"' => {
+                                value.push(b'"');
+                            }
+                            b't' => {
+                                value.push(b'\t');
+                            }
+                            b'\n' => {
+                                while i < s.as_bytes().len() - 1
+                                    && crate::scanner::is_whitespace(s.as_bytes()[i])
+                                {
+                                    i += 1;
+                                }
+                                i -= 1;
+                            }
+                            c => {
+                                return Err(PiccoloError::new(ErrorKind::UnknownFormatCode {
+                                    code: c as char,
+                                })
+                                .line(line));
+                            }
+                        }
+                    } else {
+                        value.push(byte);
+                    }
+
+                    i += 1;
+                }
+
+                String::from_utf8(value)
+                    .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(line))?
+            }
             _ => unreachable!(),
         };
         self.emit_constant(Value::String(s));
@@ -525,8 +581,8 @@ impl<'a> Compiler<'a> {
                     }
                 }
 
-                if let TokenKind::String(_) = kind {
-                    if let TokenKind::String(_) = k {
+                if let TokenKind::String = kind {
+                    if let TokenKind::String = k {
                         return rule;
                     }
                 }

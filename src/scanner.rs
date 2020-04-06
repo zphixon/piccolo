@@ -59,7 +59,7 @@ pub(crate) enum TokenKind {
 
     // other syntax elements
     Identifier,
-    String(String),
+    String,
     True,
     False,
     Double(f64),
@@ -85,7 +85,7 @@ impl<'a> Display for Token<'a> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match &self.kind {
             TokenKind::Identifier => write!(f, "{}", self.lexeme),
-            TokenKind::String(s) => write!(f, "string \"{}\"", s),
+            TokenKind::String => write!(f, "string \"{}\"", self.lexeme),
             TokenKind::Double(d) => write!(f, "double {}", d),
             TokenKind::Integer(i) => write!(f, "integer {}", i),
             k => write!(f, "{:?}", k),
@@ -331,7 +331,6 @@ impl<'a> Scanner<'a> {
     }
 
     fn string(&mut self) -> Result<(), PiccoloError> {
-        let mut value = Vec::new();
         let line_start = self.line;
         while self.peek() != b'"' && !self.is_at_end() {
             if self.peek() == b'\n' {
@@ -344,21 +343,6 @@ impl<'a> Scanner<'a> {
                     return Err(PiccoloError::new(ErrorKind::UnterminatedString).line(line_start));
                 }
                 match self.advance() {
-                    b'n' => {
-                        value.push(b'\n');
-                    }
-                    b'r' => {
-                        value.push(b'\r');
-                    }
-                    b'\\' => {
-                        value.push(b'\\');
-                    }
-                    b'"' => {
-                        value.push(b'"');
-                    }
-                    b't' => {
-                        value.push(b'\t');
-                    }
                     b'\n' => {
                         self.advance();
                         while self.peek() == b' ' || self.peek() == b'\t' {
@@ -366,15 +350,10 @@ impl<'a> Scanner<'a> {
                         }
                         self.reverse();
                     }
-                    c => {
-                        return Err(PiccoloError::new(ErrorKind::UnknownFormatCode {
-                            code: c as char,
-                        })
-                        .line(self.line));
-                    }
+                    _ => {}
                 }
             } else {
-                value.push(self.advance());
+                self.advance();
             }
         }
 
@@ -382,9 +361,7 @@ impl<'a> Scanner<'a> {
             Err(PiccoloError::new(ErrorKind::UnterminatedString).line(line_start))
         } else {
             self.advance();
-            self.add_token(TokenKind::String(
-                String::from_utf8(value).expect("invalid utf-8 sequence"),
-            ));
+            self.add_token(TokenKind::String);
             Ok(())
         }
     }
@@ -486,7 +463,7 @@ fn is_digit(c: u8) -> bool {
     b'0' <= c && c <= b'9'
 }
 
-fn is_whitespace(c: u8) -> bool {
+pub(crate) fn is_whitespace(c: u8) -> bool {
     c == 0x09        // tab
         || c == 0x0A // line feed
         || c == 0x0B // line tab
