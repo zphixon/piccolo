@@ -29,13 +29,13 @@ pub struct Compiler<'a> {
     output: bool,
     rules: &'a [(
         TokenKind,
-        Option<CompilerCallback>,
-        Option<CompilerCallback>,
+        Option<ParseRule>,
+        Option<ParseRule>,
         Precedence,
     )],
 }
 
-type CompilerCallback = fn(&mut Compiler) -> Result<(), PiccoloError>;
+type ParseRule = fn(&mut Compiler) -> Result<(), PiccoloError>;
 
 // TODO: We need some sort of error reporting struct
 // right now, when we encounter an error, we return all the way back up to
@@ -564,8 +564,8 @@ impl<'a> Compiler<'a> {
         &'a self,
         kind: &TokenKind,
     ) -> (
-        &'a Option<CompilerCallback>,
-        &'a Option<CompilerCallback>,
+        &'a Option<ParseRule>,
+        &'a Option<ParseRule>,
         &'a Precedence,
     ) {
         for (k, infix, prefix, precedence) in self.rules.iter() {
