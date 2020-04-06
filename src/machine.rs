@@ -64,8 +64,6 @@ impl Machine {
     /// Interprets the machine's bytecode, returning a Value.
     pub fn interpret(&mut self) -> Result<Value, PiccoloError> {
         while self.ip < self.chunk.data.len() {
-            use ErrorKind::StackUnderflow;
-
             #[cfg(feature = "pc-debug")]
             {
                 print!("┌─ {:?}\n└─ ", self.stack);
