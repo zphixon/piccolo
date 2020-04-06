@@ -75,12 +75,7 @@ pub struct Compiler<'a> {
     current: usize,
     tokens: &'a [Token<'a>],
     output: bool,
-    rules: &'a [(
-        TokenKind,
-        Option<ParseRule>,
-        Option<ParseRule>,
-        Precedence,
-    )],
+    rules: &'a [(TokenKind, Option<ParseRule>, Option<ParseRule>, Precedence)],
 }
 
 type ParseRule = fn(&mut Compiler) -> Result<(), PiccoloError>;
@@ -611,11 +606,7 @@ impl<'a> Compiler<'a> {
     fn get_rule(
         &'a self,
         kind: &TokenKind,
-    ) -> (
-        &'a Option<ParseRule>,
-        &'a Option<ParseRule>,
-        &'a Precedence,
-    ) {
+    ) -> (&'a Option<ParseRule>, &'a Option<ParseRule>, &'a Precedence) {
         for (k, infix, prefix, precedence) in self.rules.iter() {
             let rule = (infix, prefix, precedence);
             if k == kind {
