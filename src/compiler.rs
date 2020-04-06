@@ -4,20 +4,68 @@ use crate::op::Opcode;
 use crate::scanner::{Token, TokenKind};
 use crate::value::Value;
 
-#[derive(Debug, Clone, Copy, PartialOrd, PartialEq)]
-pub(crate) enum Precedence {
-    None,
-    Assignment,
-    Or,
-    And,
-    Equality,
-    Comparison,
-    Term,
-    Factor,
-    Unary,
-    Call,
-    Primary,
+//#[derive(Debug, Clone, Copy, PartialOrd, PartialEq)]
+//pub(crate) enum Precedence {
+//    None,
+//    Assignment,
+//    Or,
+//    And,
+//    Equality,
+//    Comparison,
+//    Term,
+//    Factor,
+//    Unary,
+//    Call,
+//    Primary,
+//}
+
+macro_rules! prec {
+    ($name:ident => $($item:ident = $num:expr,)*) => {
+        #[derive(Debug, Clone, Copy, PartialOrd, PartialEq)]
+        pub(crate) enum $name {
+            $($item = $num,)*
+        }
+
+        impl Into<u8> for $name {
+            fn into(self) -> u8 {
+                match self {
+                    $($name::$item => $num,)*
+                }
+            }
+        }
+
+        impl From<u8> for $name {
+            fn from(u: u8) -> $name {
+                match u {
+                    $($num => $name::$item,)*
+                    n => panic!("{} does not correspond to any item in {}", n, stringify!($name))
+                }
+            }
+        }
+
+        impl std::ops::Add<u8> for $name {
+            type Output = $name;
+            fn add(self, rhs: u8) -> $name {
+                let s: u8 = self.into();
+                (s + rhs).into()
+            }
+        }
+    };
 }
+
+prec!(Precedence =>
+    None = 0,
+    Assignment = 1,
+    Or = 2,
+    And = 3,
+    Equality = 4,
+    Comparison = 5,
+    Term = 6,
+    Factor = 7,
+    Unary = 8,
+    Call = 9,
+    Primary = 10,
+);
 
 /// Compiles a list of tokens to Piccolo bytecode.
 // TODO: scan on demand
@@ -371,7 +419,7 @@ impl<'a> Compiler<'a> {
     fn binary(&mut self) -> Result<(), PiccoloError> {
         let kind = self.previous().kind.clone();
         let (_, _, &prec) = self.get_rule(&kind);
-        self.precedence(prec)?;
+        self.precedence((prec as u8 + 1).into())?;
         match kind {
             TokenKind::Plus => self.emit(Opcode::Add),
             TokenKind::Minus => self.emit(Opcode::Subtract),
