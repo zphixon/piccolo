@@ -117,7 +117,6 @@ impl<'a> Compiler<'a> {
                 (TokenKind::InclusiveRange, None, None, Precedence::None),
                 (TokenKind::Assign, None, None, Precedence::None),
                 (TokenKind::Declare, None, None, Precedence::None),
-                (TokenKind::Newline, None, None, Precedence::None),
                 (
                     TokenKind::Not,
                     Some(|c| Compiler::unary(c)),

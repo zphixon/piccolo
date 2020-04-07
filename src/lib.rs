@@ -183,8 +183,34 @@ mod tests {
     use crate::compiler::Precedence;
     use crate::machine::Machine;
     use crate::op::Opcode;
-    use crate::{Compiler, Scanner};
+    use crate::scanner::TokenKind;
+    use crate::{Compiler, Scanner, Token};
     use std::io::Write;
+
+    #[test]
+    fn scanner() {
+        let mut scanner = Scanner::new("a := 3\nb := 4\nretn a + b");
+        assert_eq!(
+            scanner.next_token().unwrap(),
+            &Token::new(TokenKind::Identifier, "a", 1)
+        );
+        assert_eq!(
+            scanner.next_token().unwrap(),
+            &Token::new(TokenKind::Declare, ":=", 1)
+        );
+        assert_eq!(
+            scanner.previous(),
+            &Token::new(TokenKind::Identifier, "a", 1)
+        );
+        assert_eq!(
+            scanner.next_token().unwrap(),
+            &Token::new(TokenKind::Integer(3), "3", 1)
+        );
+        assert_eq!(
+            scanner.previous(),
+            &Token::new(TokenKind::Declare, ":=", 1)
+        );
+    }
 
     #[test]
     fn get_line_from_index() {
