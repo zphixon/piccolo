@@ -3,7 +3,7 @@ use crate::error::{ErrorKind, PiccoloError};
 use core::fmt;
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum TokenKind {
     // keywords
     Do,    // do
@@ -34,7 +34,6 @@ pub(crate) enum TokenKind {
     InclusiveRange, // ...
     Assign,         // =
     Declare,        // :=
-    Newline,        // \n
 
     // operators
     Not,          // !
@@ -68,7 +67,7 @@ pub(crate) enum TokenKind {
     Eof,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token<'a> {
     pub(crate) kind: TokenKind,
     pub(crate) lexeme: &'a str,
@@ -164,8 +163,7 @@ impl<'a> Scanner<'a> {
         let mut errors = Vec::new();
 
         while !self.is_at_end() {
-            self.start = self.current;
-            if let Err(e) = self.scan_token() {
+            if let Err(e) = self.next_token() {
                 errors.push(e);
             }
         }
@@ -174,58 +172,71 @@ impl<'a> Scanner<'a> {
             .push(Token::new(TokenKind::Eof, "EOF", self.line));
 
         if errors.is_empty() {
-            Ok(self
-                .tokens
-                .into_iter()
-                .filter(|t| t.kind != TokenKind::Newline)
-                .collect())
+            Ok(self.tokens)
         } else {
             Err(errors)
         }
     }
 
-    fn scan_token(&mut self) -> Result<(), PiccoloError> {
-        match self.advance() {
-            b'#' => {
-                while self.peek() != b'\n' && !self.is_at_end() {
+    pub(crate) fn current(&self) -> &Token {
+        &self.tokens[self.tokens.len() - 1]
+    }
+
+    pub(crate) fn previous(&self) -> &Token {
+        &self.tokens[self.tokens.len() - 2]
+    }
+
+    fn slurp_whitespace(&mut self) {
+        while self.peek() == b'#' || is_whitespace(self.peek()) {
+            if self.peek() == b'#' {
+                while self.peek() != b'\n' {
                     self.advance();
                 }
-            }
-
-            b'\n' => {
-                self.add_token(TokenKind::Newline);
                 self.line += 1;
             }
+            while is_whitespace(self.peek()) {
+                if self.advance() == b'\n' {
+                    self.line += 1;
+                }
+            }
+        }
+    }
 
-            b' ' | b'\t' | b'\r' => {}
+    pub(crate) fn next_token(&mut self) -> Result<&Token, PiccoloError> {
+        self.slurp_whitespace();
+        if self.is_at_end() {
+            return Ok(self.current());
+        }
 
-            b'[' => self.add_token(TokenKind::LeftBracket),
-            b']' => self.add_token(TokenKind::RightBracket),
-            b'(' => self.add_token(TokenKind::LeftParen),
-            b')' => self.add_token(TokenKind::RightParen),
-            b',' => self.add_token(TokenKind::Comma),
-            b'-' => self.add_token(TokenKind::Minus),
-            b'+' => self.add_token(TokenKind::Plus),
-            b'*' => self.add_token(TokenKind::Multiply),
-            b'/' => self.add_token(TokenKind::Divide),
-            b'^' => self.add_token(TokenKind::BitwiseXor),
-            b'%' => self.add_token(TokenKind::Modulo),
+        self.start = self.current;
+        let tk = match self.advance() {
+            b'[' => TokenKind::LeftBracket,
+            b']' => TokenKind::RightBracket,
+            b'(' => TokenKind::LeftParen,
+            b')' => TokenKind::RightParen,
+            b',' => TokenKind::Comma,
+            b'-' => TokenKind::Minus,
+            b'+' => TokenKind::Plus,
+            b'*' => TokenKind::Multiply,
+            b'/' => TokenKind::Divide,
+            b'^' => TokenKind::BitwiseXor,
+            b'%' => TokenKind::Modulo,
 
             b'&' => {
                 if self.peek() == b'&' {
                     self.advance();
-                    self.add_token(TokenKind::LogicalAnd);
+                    TokenKind::LogicalAnd
                 } else {
-                    self.add_token(TokenKind::BitwiseAnd);
+                    TokenKind::BitwiseAnd
                 }
             }
 
             b'|' => {
                 if self.peek() == b'|' {
                     self.advance();
-                    self.add_token(TokenKind::LogicalOr);
+                    TokenKind::LogicalOr
                 } else {
-                    self.add_token(TokenKind::BitwiseOr);
+                    TokenKind::BitwiseOr
                 }
             }
 
@@ -234,37 +245,37 @@ impl<'a> Scanner<'a> {
                     self.advance();
                     if self.peek() == b'.' {
                         self.advance();
-                        self.add_token(TokenKind::InclusiveRange);
+                        TokenKind::InclusiveRange
                     } else {
-                        self.add_token(TokenKind::ExclusiveRange);
+                        TokenKind::ExclusiveRange
                     }
                 } else {
-                    self.add_token(TokenKind::Period);
+                    TokenKind::Period
                 }
             }
 
             b'!' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    self.add_token(TokenKind::NotEqual);
+                    TokenKind::NotEqual
                 } else {
-                    self.add_token(TokenKind::Not);
+                    TokenKind::Not
                 }
             }
 
             b'=' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    self.add_token(TokenKind::Equal);
+                    TokenKind::Equal
                 } else {
-                    self.add_token(TokenKind::Assign);
+                    TokenKind::Assign
                 }
             }
 
             b':' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    self.add_token(TokenKind::Declare);
+                    TokenKind::Declare
                 } else {
                     return Err(PiccoloError::new(ErrorKind::UnexpectedToken {
                         exp: "=".into(),
@@ -277,43 +288,44 @@ impl<'a> Scanner<'a> {
             b'>' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    self.add_token(TokenKind::GreaterEqual);
+                    TokenKind::GreaterEqual
                 } else if self.peek() == b'>' {
                     self.advance();
-                    self.add_token(TokenKind::ShiftRight);
+                    TokenKind::ShiftRight
                 } else {
-                    self.add_token(TokenKind::Greater);
+                    TokenKind::Greater
                 }
             }
 
             b'<' => {
                 if self.peek() == b'=' {
                     self.advance();
-                    self.add_token(TokenKind::LessEqual);
+                    TokenKind::LessEqual
                 } else if self.peek() == b'<' {
                     self.advance();
-                    self.add_token(TokenKind::ShiftLeft);
+                    TokenKind::ShiftLeft
                 } else {
-                    self.add_token(TokenKind::Less);
+                    TokenKind::Less
                 }
             }
 
             b'"' => {
-                self.string()?;
+                self.string()?
             }
 
             c => {
                 if is_digit(c) {
-                    self.number()?;
+                    self.number()?
                 } else {
-                    self.identifier_or_keyword()?;
+                    self.identifier_or_keyword()?
                 }
             }
-        }
-        Ok(())
+        };
+        self.add_token(tk);
+        Ok(self.current())
     }
 
-    fn identifier_or_keyword(&mut self) -> Result<(), PiccoloError> {
+    fn identifier_or_keyword(&mut self) -> Result<TokenKind, PiccoloError> {
         while !is_non_identifier(self.peek()) {
             self.advance();
         }
@@ -322,15 +334,13 @@ impl<'a> Scanner<'a> {
             std::str::from_utf8(&self.source[self.start..self.current])
                 .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?,
         ) {
-            self.add_token(tk);
+            Ok(tk)
         } else {
-            self.add_token(TokenKind::Identifier);
+            Ok(TokenKind::Identifier)
         }
-
-        Ok(())
     }
 
-    fn string(&mut self) -> Result<(), PiccoloError> {
+    fn string(&mut self) -> Result<TokenKind, PiccoloError> {
         let line_start = self.line;
         while self.peek() != b'"' && !self.is_at_end() {
             if self.peek() == b'\n' {
@@ -348,12 +358,11 @@ impl<'a> Scanner<'a> {
             Err(PiccoloError::new(ErrorKind::UnterminatedString).line(line_start))
         } else {
             self.advance();
-            self.add_token(TokenKind::String);
-            Ok(())
+            Ok(TokenKind::String)
         }
     }
 
-    fn number(&mut self) -> Result<(), PiccoloError> {
+    fn number(&mut self) -> Result<TokenKind, PiccoloError> {
         while is_digit(self.peek()) {
             self.advance();
         }
@@ -373,8 +382,7 @@ impl<'a> Scanner<'a> {
         let value = std::str::from_utf8(&self.source[self.start..self.current])
             .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
         if let Ok(i) = value.parse::<i64>() {
-            self.add_token(TokenKind::Integer(i));
-            Ok(())
+            Ok(TokenKind::Integer(i))
         } else {
             Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
                 literal: value.to_owned(),
@@ -383,7 +391,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn float(&mut self) -> Result<(), PiccoloError> {
+    fn float(&mut self) -> Result<TokenKind, PiccoloError> {
         while is_digit(self.peek()) {
             self.advance();
         }
@@ -397,8 +405,7 @@ impl<'a> Scanner<'a> {
         let value = std::str::from_utf8(&self.source[self.start..self.current])
             .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
         if let Ok(f) = value.parse::<f64>() {
-            self.add_token(TokenKind::Double(f));
-            Ok(())
+            Ok(TokenKind::Double(f))
         } else {
             Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
                 literal: value.to_owned(),
