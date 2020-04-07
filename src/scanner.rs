@@ -370,16 +370,16 @@ impl<'a> Scanner<'a> {
             }
         }
 
-        let value = String::from_utf8(self.source[self.start..self.current].to_vec())
+        let value = std::str::from_utf8(&self.source[self.start..self.current])
             .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
         if let Ok(i) = value.parse::<i64>() {
             self.add_token(TokenKind::Integer(i));
             Ok(())
         } else {
-            Err(
-                PiccoloError::new(ErrorKind::InvalidNumberLiteral { literal: value })
-                    .line(self.line),
-            )
+            Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
+                literal: value.to_owned(),
+            })
+            .line(self.line))
         }
     }
 
@@ -394,16 +394,16 @@ impl<'a> Scanner<'a> {
             }
         }
 
-        let value = String::from_utf8(self.source[self.start..self.current].to_vec())
+        let value = std::str::from_utf8(&self.source[self.start..self.current])
             .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
         if let Ok(f) = value.parse::<f64>() {
             self.add_token(TokenKind::Double(f));
             Ok(())
         } else {
-            Err(
-                PiccoloError::new(ErrorKind::InvalidNumberLiteral { literal: value })
-                    .line(self.line),
-            )
+            Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
+                literal: value.to_owned(),
+            })
+            .line(self.line))
         }
     }
 
