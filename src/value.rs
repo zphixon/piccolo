@@ -25,6 +25,10 @@ pub trait Object: Downcast + Debug + Display {
     fn set(&mut self, _property: &str) -> Option<Value> {
         None
     }
+
+    fn try_clone(&self) -> Option<Box<dyn Object>> {
+        None
+    }
 }
 
 downcast_rs::impl_downcast!(Object);
@@ -51,6 +55,10 @@ impl Object for String {
 
     fn set(&mut self, _property: &str) -> Option<Value> {
         None
+    }
+
+    fn try_clone(&self) -> Option<Box<dyn Object>> {
+        Some(Box::new(self.clone()))
     }
 }
 
@@ -91,7 +99,11 @@ impl Value {
     pub fn try_clone(&self) -> Value {
         match self {
             Value::String(string) => Value::String(string.clone()),
-            Value::Object(_) => panic!("can't clone object"),
+            Value::Object(o) => Value::Object(
+                o.try_clone()
+                    .ok_or_else(|| panic!("cannot clone {}", o.type_name()))
+                    .unwrap(),
+            ),
             Value::Bool(bool) => Value::Bool(*bool),
             Value::Integer(i64) => Value::Integer(*i64),
             Value::Double(f64) => Value::Double(*f64),
