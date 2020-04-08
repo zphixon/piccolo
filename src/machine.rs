@@ -71,6 +71,87 @@ impl Machine {
             let inst = self.chunk.data[self.ip];
             self.ip += 1;
 
+            macro_rules! bin_op {
+                ($opcode:path, $op:tt) => {
+                    bin_op!($opcode, $op, false)
+                };
+                ($opcode:path, $op:tt, $concat:tt) => {
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
+                    if lhs.is_double() {
+                        let lhs = lhs.into::<f64>();
+                        if rhs.is_double() {
+                            let rhs = rhs.into::<f64>();
+                            self.stack.push(Value::Double(lhs $op rhs));
+                        } else if rhs.is_integer() {
+                            let rhs = rhs.into::<i64>();
+                            self.stack.push(Value::Double(lhs $op rhs as f64));
+                        } else {
+                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                exp: "integer or double".into(),
+                                got: format!("double {} {}", stringify!($op), rhs.type_name()),
+                                op: $opcode,
+                            })
+                            .line(line));
+                        }
+                    } else if lhs.is_integer() {
+                        let lhs = lhs.into::<i64>();
+                        if rhs.is_integer() {
+                            let rhs = rhs.into::<i64>();
+                            self.stack.push(Value::Integer(lhs $op rhs));
+                        } else if rhs.is_double() {
+                            let rhs = rhs.into::<f64>();
+                            self.stack.push(Value::Double(lhs as f64 $op rhs));
+                        } else {
+                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                exp: "integer or double".into(),
+                                got: format!("integer {} {}", stringify!($op), rhs.type_name()),
+                                op: $opcode,
+                            })
+                            .line(line));
+                        }
+                    } else if $concat && lhs.is_string() {
+                        let mut lhs = lhs.into::<String>();
+                        lhs.push_str(&rhs.fmt().to_string());
+                        self.stack.push(Value::String(lhs));
+                    } else {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                            exp: "integer or double".into(),
+                            got: format!("{} {} {}", lhs.type_name(), stringify!($op), rhs.type_name()),
+                            op: $opcode,
+                        })
+                        .line(line));
+                    }
+                };
+            }
+
+            macro_rules! cmp {
+                ($opcode:path, $negate:literal) => {
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
+                    if rhs.is_bool() || lhs.is_bool() {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                            exp: "that isn't bool".into(),
+                            got: "bool".into(),
+                            op: $opcode,
+                        })
+                        .line(line));
+                    }
+                    self.stack.push(Value::Bool(
+                        $negate
+                            ^ lhs.gt(&rhs).map_or(
+                                Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                    exp: lhs.type_name().to_owned(),
+                                    got: rhs.type_name().to_owned(),
+                                    op: $opcode,
+                                })
+                                .line(line)),
+                                Ok,
+                            )?,
+                    ));
+                };
+            }
+
             let op = inst.into();
             match op {
                 Opcode::Pop => {
@@ -172,230 +253,22 @@ impl Machine {
                     ));
                 }
                 Opcode::Greater => {
-                    let rhs = self.pop()?;
-                    let lhs = self.pop()?;
-                    if rhs.is_bool() || lhs.is_bool() {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "that isn't bool".into(),
-                            got: "bool".into(),
-                            op,
-                        })
-                        .line(line));
-                    }
-                    self.stack.push(Value::Bool(
-                        lhs.gt(&rhs).map_or(
-                            Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: lhs.type_name().to_owned(),
-                                got: rhs.type_name().to_owned(),
-                                op,
-                            })
-                            .line(line)),
-                            Ok,
-                        )?,
-                    ));
+                    cmp!(Opcode::Less, false);
                 }
                 Opcode::Less => {
-                    let rhs = self.pop()?;
-                    let lhs = self.pop()?;
-                    if rhs.is_bool() || lhs.is_bool() {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "that isn't bool".into(),
-                            got: "bool".into(),
-                            op,
-                        })
-                        .line(line));
-                    }
-                    self.stack.push(Value::Bool(
-                        rhs.gt(&lhs).map_or(
-                            Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: lhs.type_name().to_owned(),
-                                got: rhs.type_name().to_owned(),
-                                op,
-                            })
-                            .line(line)),
-                            Ok,
-                        )?,
-                    ));
+                    cmp!(Opcode::Less, true);
                 }
                 Opcode::Add => {
-                    let rhs = self.pop()?;
-                    let lhs = self.pop()?;
-                    if lhs.is_double() {
-                        let lhs = lhs.into::<f64>();
-                        if rhs.is_double() {
-                            let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs + rhs));
-                        } else if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Double(lhs + rhs as f64));
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: "integer, double, or string".into(),
-                                got: format!("double + {}", rhs.type_name()),
-                                op: Opcode::Add,
-                            })
-                            .line(line));
-                        }
-                    } else if lhs.is_integer() {
-                        let lhs = lhs.into::<i64>();
-                        if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Integer(lhs + rhs));
-                        } else if rhs.is_double() {
-                            let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs as f64 + rhs));
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: "integer, double, or string".into(),
-                                got: format!("integer + {}", rhs.type_name()),
-                                op: Opcode::Add,
-                            })
-                            .line(line));
-                        }
-                    } else if lhs.is_string() {
-                        let mut lhs = lhs.into::<String>();
-                        lhs.push_str(&rhs.fmt().to_string());
-                        self.stack.push(Value::String(lhs));
-                    } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "integer, double, or string".into(),
-                            got: format!("{} + {}", lhs.type_name(), rhs.type_name()),
-                            op: Opcode::Add,
-                        })
-                        .line(line));
-                    }
+                    bin_op!(Opcode::Add, +, true);
                 }
                 Opcode::Subtract => {
-                    let rhs = self.pop()?;
-                    let lhs = self.pop()?;
-                    if lhs.is_double() {
-                        let lhs = lhs.into::<f64>();
-                        if rhs.is_double() {
-                            let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs - rhs));
-                        } else if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Double(lhs - rhs as f64));
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: "integer or double".into(),
-                                got: format!("double - {}", rhs.type_name()),
-                                op: Opcode::Subtract,
-                            })
-                            .line(line));
-                        }
-                    } else if lhs.is_integer() {
-                        let lhs = lhs.into::<i64>();
-                        if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Integer(lhs - rhs));
-                        } else if rhs.is_double() {
-                            let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs as f64 - rhs));
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: "integer or double".into(),
-                                got: format!("integer - {}", rhs.type_name()),
-                                op: Opcode::Subtract,
-                            })
-                            .line(line));
-                        }
-                    } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "integer or double".into(),
-                            got: format!("{} - {}", lhs.type_name(), rhs.type_name()),
-                            op: Opcode::Subtract,
-                        })
-                        .line(line));
-                    }
+                    bin_op!(Opcode::Subtract, -);
                 }
                 Opcode::Multiply => {
-                    let rhs = self.pop()?;
-                    let lhs = self.pop()?;
-                    if lhs.is_double() {
-                        let lhs = lhs.into::<f64>();
-                        if rhs.is_double() {
-                            let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs * rhs));
-                        } else if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Double(lhs * rhs as f64));
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: "integer or double".into(),
-                                got: format!("double * {}", rhs.type_name()),
-                                op: Opcode::Multiply,
-                            })
-                            .line(line));
-                        }
-                    } else if lhs.is_integer() {
-                        let lhs = lhs.into::<i64>();
-                        if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Integer(lhs * rhs));
-                        } else if rhs.is_double() {
-                            let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs as f64 * rhs));
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: "integer or double".into(),
-                                got: format!("integer * {}", rhs.type_name()),
-                                op: Opcode::Multiply,
-                            })
-                            .line(line));
-                        }
-                    } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "integer or double".into(),
-                            got: format!("{} * {}", lhs.type_name(), rhs.type_name()),
-                            op: Opcode::Multiply,
-                        })
-                        .line(line));
-                    }
+                    bin_op!(Opcode::Multiply, *);
                 }
                 Opcode::Divide => {
-                    let rhs = self.pop()?;
-                    let lhs = self.pop()?;
-                    if lhs.is_double() {
-                        let lhs = lhs.into::<f64>();
-                        if rhs.is_double() {
-                            let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs / rhs));
-                        } else if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Double(lhs / rhs as f64));
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: "integer or double".into(),
-                                got: format!("double / {}", rhs.type_name()),
-                                op: Opcode::Divide,
-                            })
-                            .line(line));
-                        }
-                    } else if lhs.is_integer() {
-                        let lhs = lhs.into::<i64>();
-                        if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Integer(lhs / rhs));
-                        } else if rhs.is_double() {
-                            let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs as f64 / rhs));
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: "integer or double".into(),
-                                got: format!("integer / {}", rhs.type_name()),
-                                op: Opcode::Divide,
-                            })
-                            .line(line));
-                        }
-                    } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "integer or double".into(),
-                            got: format!("{} / {}", lhs.type_name(), rhs.type_name()),
-                            op: Opcode::Divide,
-                        })
-                        .line(line));
-                    }
+                    bin_op!(Opcode::Multiply, /);
                 }
             }
         }
