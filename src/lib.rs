@@ -206,10 +206,7 @@ mod tests {
             scanner.next_token().unwrap(),
             &Token::new(TokenKind::Integer(3), "3", 1)
         );
-        assert_eq!(
-            scanner.previous(),
-            &Token::new(TokenKind::Declare, ":=", 1)
-        );
+        assert_eq!(scanner.previous(), &Token::new(TokenKind::Declare, ":=", 1));
     }
 
     #[test]

@@ -259,11 +259,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer, double, or string".into(),
-                            got: format!(
-                                "{} + {}",
-                                lhs.type_name(),
-                                rhs.type_name()
-                            ),
+                            got: format!("{} + {}", lhs.type_name(), rhs.type_name()),
                             op: Opcode::Add,
                         })
                         .line(line));
@@ -307,11 +303,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!(
-                                "{} - {}",
-                                lhs.type_name(),
-                                rhs.type_name()
-                            ),
+                            got: format!("{} - {}", lhs.type_name(), rhs.type_name()),
                             op: Opcode::Subtract,
                         })
                         .line(line));
@@ -355,11 +347,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!(
-                                "{} * {}",
-                                lhs.type_name(),
-                                rhs.type_name()
-                            ),
+                            got: format!("{} * {}", lhs.type_name(), rhs.type_name()),
                             op: Opcode::Multiply,
                         })
                         .line(line));
@@ -403,11 +391,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!(
-                                "{} / {}",
-                                lhs.type_name(),
-                                rhs.type_name()
-                            ),
+                            got: format!("{} / {}", lhs.type_name(), rhs.type_name()),
                             op: Opcode::Divide,
                         })
                         .line(line));

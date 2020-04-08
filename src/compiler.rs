@@ -591,7 +591,11 @@ impl<'a> Compiler<'a> {
     fn get_rule(
         &'a self,
         kind: &TokenKind,
-    ) -> (&'a Option<PrefixRule>, &'a Option<InfixRule>, &'a Precedence) {
+    ) -> (
+        &'a Option<PrefixRule>,
+        &'a Option<InfixRule>,
+        &'a Precedence,
+    ) {
         for (k, prefix, infix, precedence) in self.rules.iter() {
             let rule = (prefix, infix, precedence);
             if k == kind {
