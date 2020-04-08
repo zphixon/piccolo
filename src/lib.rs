@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn very_long() {
-        let len = 1024;
+        let len = 2048;
 
         print!("generate... ");
         std::io::stdout().flush().unwrap();

@@ -25,24 +25,6 @@ impl Chunk {
         }
     }
 
-    // TODO: retain to a hashmap in compiler
-    // cause get and has_constant are slow
-    pub(crate) fn has_constant(&self, value: &Value) -> bool {
-        self.constants.iter().any(|v| {
-            let r = v.eq(value);
-            r.is_some() && r.unwrap()
-        })
-    }
-
-    pub(crate) fn get_constant(&self, name: &str) -> u16 {
-        for (idx, value) in self.constants.iter().enumerate() {
-            if value.is_string() && value.ref_string() == name {
-                return idx as u16;
-            }
-        }
-        panic!("constant does not exist: {}", name);
-    }
-
     pub(crate) fn get_line_from_index(&self, idx: usize) -> usize {
         let mut total_ops = 0;
         for (offset_line, num_ops) in self.lines.iter().enumerate() {
