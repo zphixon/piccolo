@@ -192,7 +192,6 @@ impl<'a> Scanner<'a> {
                 while self.peek() != b'\n' {
                     self.advance();
                 }
-                self.line += 1;
             }
             while is_whitespace(self.peek()) {
                 if self.advance() == b'\n' {
@@ -316,6 +315,8 @@ impl<'a> Scanner<'a> {
             c => {
                 if is_digit(c) {
                     self.number()?
+                } else if is_whitespace(c) {
+                    panic!("found whitespace where there shouldn't be any");
                 } else {
                     self.identifier_or_keyword()?
                 }
@@ -349,6 +350,7 @@ impl<'a> Scanner<'a> {
 
             if self.peek() == b'\\' {
                 self.advance();
+                self.line += 1;
             }
 
             self.advance();
