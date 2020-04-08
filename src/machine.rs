@@ -1,9 +1,7 @@
 use crate::chunk::Chunk;
 use crate::error::{ErrorKind, PiccoloError};
 use crate::op::Opcode;
-use crate::value::{Object, Value};
-
-use slotmap::{DefaultKey, DenseSlotMap};
+use crate::value::Value;
 
 use std::collections::HashMap;
 
@@ -15,7 +13,6 @@ pub struct Machine {
     //strings: HashSet<Intern<String>>, //idfk
     globals: HashMap<String, Value>,
     stack: Vec<Value>,
-    heap: DenseSlotMap<DefaultKey, Box<dyn Object>>,
 }
 
 impl Machine {
@@ -28,12 +25,7 @@ impl Machine {
             //strings: HashSet::new(),
             globals: HashMap::new(),
             stack: vec![],
-            heap: DenseSlotMap::new(),
         }
-    }
-
-    pub fn heap(&self) -> &DenseSlotMap<DefaultKey, Box<dyn Object>> {
-        &self.heap
     }
 
     // TODO: determine if self.ip - 1 is necessary
@@ -89,19 +81,23 @@ impl Machine {
                 }
                 Opcode::Return => {
                     let v = self.pop()?;
-                    println!("{}", v.fmt(&self.heap));
+                    println!("{}", v.fmt());
                 }
                 Opcode::DefineGlobal => {
-                    let name = self.constant()?.clone().into::<String>();
-                    self.globals
-                        .insert(name, self.stack[self.stack.len() - 1].clone());
-                    self.pop()?;
-                    self.ip += 2;
+                    if let Value::String(name) = self.constant()? {
+                        let name = name.clone();
+                        self.globals
+                            .insert(name, self.stack[self.stack.len() - 1].try_clone());
+                        self.pop()?;
+                        self.ip += 2;
+                    } else {
+                        panic!("defined global with non-string name");
+                    }
                 }
                 Opcode::GetGlobal => {
                     let name = self.constant()?.ref_string();
                     if let Some(var) = self.globals.get(name) {
-                        self.stack.push(var.clone());
+                        self.stack.push(var.try_clone());
                     } else {
                         return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                             name: name.to_owned(),
@@ -111,21 +107,22 @@ impl Machine {
                     self.ip += 2;
                 }
                 Opcode::AssignGlobal => {
-                    let name = self.constant()?.clone().into::<String>();
-                    self.globals
-                        // TODO: remove clone
-                        .insert(name.clone(), self.peek(0).unwrap().clone())
-                        .map_or_else(
-                            || {
-                                Err(PiccoloError::new(ErrorKind::UndefinedVariable { name })
-                                    .line(line))
-                            },
-                            |_| Ok(()),
-                        )?;
-                    self.ip += 2;
+                    if let Value::String(name) = self.constant()? {
+                        let name = name.clone();
+                        self.globals
+                            .insert(name.clone(), self.peek(0).unwrap().try_clone())
+                            .map_or_else(
+                                || {
+                                    Err(PiccoloError::new(ErrorKind::UndefinedVariable { name })
+                                        .line(line))
+                                },
+                                |_| Ok(()),
+                            )?;
+                        self.ip += 2;
+                    }
                 }
                 Opcode::Constant => {
-                    let c = self.constant()?.clone();
+                    let c = self.constant()?.try_clone();
                     self.ip += 2;
 
                     self.stack.push(c);
@@ -144,7 +141,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: v.type_name(&self.heap).to_owned(),
+                            got: v.type_name().to_owned(),
                             op: Opcode::Negate,
                         })
                         .line(line));
@@ -162,10 +159,10 @@ impl Machine {
                     let a = self.pop()?;
                     let b = self.pop()?;
                     self.stack.push(Value::Bool(
-                        a.eq(&b, &self.heap).map_or(
+                        a.eq(&b).map_or(
                             Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: a.type_name(&self.heap).to_owned(),
-                                got: b.type_name(&self.heap).to_owned(),
+                                exp: a.type_name().to_owned(),
+                                got: b.type_name().to_owned(),
                                 op,
                             })
                             .line(line)),
@@ -185,10 +182,10 @@ impl Machine {
                         .line(line));
                     }
                     self.stack.push(Value::Bool(
-                        lhs.gt(&rhs, &self.heap).map_or(
+                        lhs.gt(&rhs).map_or(
                             Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: lhs.type_name(&self.heap).to_owned(),
-                                got: rhs.type_name(&self.heap).to_owned(),
+                                exp: lhs.type_name().to_owned(),
+                                got: rhs.type_name().to_owned(),
                                 op,
                             })
                             .line(line)),
@@ -208,10 +205,10 @@ impl Machine {
                         .line(line));
                     }
                     self.stack.push(Value::Bool(
-                        rhs.gt(&lhs, &self.heap).map_or(
+                        rhs.gt(&lhs).map_or(
                             Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: lhs.type_name(&self.heap).to_owned(),
-                                got: rhs.type_name(&self.heap).to_owned(),
+                                exp: lhs.type_name().to_owned(),
+                                got: rhs.type_name().to_owned(),
                                 op,
                             })
                             .line(line)),
@@ -233,7 +230,7 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer, double, or string".into(),
-                                got: format!("double + {}", rhs.type_name(&self.heap)),
+                                got: format!("double + {}", rhs.type_name()),
                                 op: Opcode::Add,
                             })
                             .line(line));
@@ -249,22 +246,22 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer, double, or string".into(),
-                                got: format!("integer + {}", rhs.type_name(&self.heap)),
+                                got: format!("integer + {}", rhs.type_name()),
                                 op: Opcode::Add,
                             })
                             .line(line));
                         }
                     } else if lhs.is_string() {
                         let mut lhs = lhs.into::<String>();
-                        lhs.push_str(&rhs.fmt(&self.heap).to_string());
+                        lhs.push_str(&rhs.fmt().to_string());
                         self.stack.push(Value::String(lhs));
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer, double, or string".into(),
                             got: format!(
                                 "{} + {}",
-                                lhs.type_name(&self.heap),
-                                rhs.type_name(&self.heap)
+                                lhs.type_name(),
+                                rhs.type_name()
                             ),
                             op: Opcode::Add,
                         })
@@ -285,7 +282,7 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer or double".into(),
-                                got: format!("double - {}", rhs.type_name(&self.heap)),
+                                got: format!("double - {}", rhs.type_name()),
                                 op: Opcode::Subtract,
                             })
                             .line(line));
@@ -301,7 +298,7 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer or double".into(),
-                                got: format!("integer - {}", rhs.type_name(&self.heap)),
+                                got: format!("integer - {}", rhs.type_name()),
                                 op: Opcode::Subtract,
                             })
                             .line(line));
@@ -311,8 +308,8 @@ impl Machine {
                             exp: "integer or double".into(),
                             got: format!(
                                 "{} - {}",
-                                lhs.type_name(&self.heap),
-                                rhs.type_name(&self.heap)
+                                lhs.type_name(),
+                                rhs.type_name()
                             ),
                             op: Opcode::Subtract,
                         })
@@ -333,7 +330,7 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer or double".into(),
-                                got: format!("double * {}", rhs.type_name(&self.heap)),
+                                got: format!("double * {}", rhs.type_name()),
                                 op: Opcode::Multiply,
                             })
                             .line(line));
@@ -349,7 +346,7 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer or double".into(),
-                                got: format!("integer * {}", rhs.type_name(&self.heap)),
+                                got: format!("integer * {}", rhs.type_name()),
                                 op: Opcode::Multiply,
                             })
                             .line(line));
@@ -359,8 +356,8 @@ impl Machine {
                             exp: "integer or double".into(),
                             got: format!(
                                 "{} * {}",
-                                lhs.type_name(&self.heap),
-                                rhs.type_name(&self.heap)
+                                lhs.type_name(),
+                                rhs.type_name()
                             ),
                             op: Opcode::Multiply,
                         })
@@ -381,7 +378,7 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer or double".into(),
-                                got: format!("double / {}", rhs.type_name(&self.heap)),
+                                got: format!("double / {}", rhs.type_name()),
                                 op: Opcode::Divide,
                             })
                             .line(line));
@@ -397,7 +394,7 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer or double".into(),
-                                got: format!("integer / {}", rhs.type_name(&self.heap)),
+                                got: format!("integer / {}", rhs.type_name()),
                                 op: Opcode::Divide,
                             })
                             .line(line));
@@ -407,8 +404,8 @@ impl Machine {
                             exp: "integer or double".into(),
                             got: format!(
                                 "{} / {}",
-                                lhs.type_name(&self.heap),
-                                rhs.type_name(&self.heap)
+                                lhs.type_name(),
+                                rhs.type_name()
                             ),
                             op: Opcode::Divide,
                         })

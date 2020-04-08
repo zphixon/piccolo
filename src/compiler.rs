@@ -58,6 +58,7 @@ pub struct Compiler<'a> {
     chunk: Chunk,
     previous: usize,
     current: usize,
+    output: bool,
     tokens: &'a [Token<'a>],
     rules: &'a [(TokenKind, Option<PrefixRule>, Option<InfixRule>, Precedence)],
 }
@@ -78,6 +79,7 @@ impl<'a> Compiler<'a> {
             chunk,
             previous: 0,
             current: 0,
+            output: true,
             tokens: s,
             rules: &[
                 // token, prefix, infix, precedence

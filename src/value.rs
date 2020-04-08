@@ -1,12 +1,9 @@
 #![allow(non_snake_case)]
 
 use downcast_rs::Downcast;
-use slotmap::DefaultKey;
-use slotmap::DenseSlotMap;
 
 use std::fmt::{Debug, Display};
 
-// TODO: get/set needs access to the interpreter's heap so it can allocate objects
 /// Trait for Piccolo objects.
 pub trait Object: Downcast + Debug + Display {
     fn type_name(&self) -> &'static str {
@@ -58,13 +55,13 @@ impl Object for String {
 }
 
 /// Wrapper type for piccolo values.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Value {
     String(String),
     Bool(bool),
     Integer(i64),
     Double(f64),
-    Object(DefaultKey),
+    Object(Box<dyn Object>),
     Nil,
 }
 
@@ -88,6 +85,17 @@ impl Value {
         match self {
             Value::String(s) => s,
             _ => panic!("tried to take reference to inner string - file a bug report!"),
+        }
+    }
+
+    pub fn try_clone(&self) -> Value {
+        match self {
+            Value::String(string) => Value::String(string.clone()),
+            Value::Object(_) => panic!("can't clone object"),
+            Value::Bool(bool) => Value::Bool(*bool),
+            Value::Integer(i64) => Value::Integer(*i64),
+            Value::Double(f64) => Value::Double(*f64),
+            Value::Nil => Value::Nil,
         }
     }
 
@@ -133,24 +141,24 @@ impl Value {
         }
     }
 
-    pub fn type_name(&self, map: &DenseSlotMap<DefaultKey, Box<dyn Object>>) -> &'static str {
+    pub fn type_name(&self) -> &'static str {
         match self {
             Value::String(_) => "string",
             Value::Bool(_) => "bool",
             Value::Integer(_) => "integer",
             Value::Double(_) => "double",
-            Value::Object(v) => map.get(*v).unwrap().type_name(),
+            Value::Object(v) => v.type_name(),
             Value::Nil => "nil",
         }
     }
 
-    pub fn fmt(&self, map: &DenseSlotMap<DefaultKey, Box<dyn Object>>) -> String {
+    pub fn fmt(&self) -> String {
         match self {
             Value::String(v) => v.to_string(),
             Value::Bool(v) => format!("{}", v),
             Value::Integer(v) => format!("{}", v),
             Value::Double(v) => format!("{}", v),
-            Value::Object(v) => format!("{}", map.get(*v).unwrap()),
+            Value::Object(v) => format!("{}", v),
             Value::Nil => String::new(),
         }
     }
@@ -158,7 +166,6 @@ impl Value {
     pub fn eq(
         &self,
         other: &Value,
-        map: &DenseSlotMap<DefaultKey, Box<dyn Object>>,
     ) -> Option<bool> {
         match self {
             Value::String(l) => match other {
@@ -180,7 +187,7 @@ impl Value {
                 _ => None,
             },
             Value::Object(l) => match other {
-                Value::Object(r) => map.get(*l).unwrap().eq(map.get(*r).unwrap().as_ref()),
+                Value::Object(r) => l.eq(r.as_ref()),
                 _ => None,
             },
             _ => None,
@@ -190,7 +197,6 @@ impl Value {
     pub fn gt(
         &self,
         other: &Value,
-        map: &DenseSlotMap<DefaultKey, Box<dyn Object>>,
     ) -> Option<bool> {
         match self {
             Value::Integer(l) => match other {
@@ -208,7 +214,7 @@ impl Value {
                 _ => None,
             },
             Value::Object(l) => match other {
-                Value::Object(r) => map.get(*l).unwrap().gt(map.get(*r).unwrap().as_ref()),
+                Value::Object(r) => l.gt(r.as_ref()),
                 _ => None,
             },
             _ => None,
