@@ -4,6 +4,8 @@ use crate::op::Opcode;
 use crate::scanner::{Token, TokenKind};
 use crate::value::Value;
 
+use std::collections::HashMap;
+
 macro_rules! prec {
     ($name:ident => $($item:ident = $num:expr,)*) => {
         #[derive(Debug, Clone, Copy, PartialOrd, PartialEq)]
@@ -59,6 +61,8 @@ pub struct Compiler<'a> {
     previous: usize,
     current: usize,
     output: bool,
+    identifiers: HashMap<&'a str, u16>,
+    strings: HashMap<String, u16>,
     tokens: &'a [Token<'a>],
     rules: &'a [(TokenKind, Option<PrefixRule>, Option<InfixRule>, Precedence)],
 }
@@ -80,6 +84,8 @@ impl<'a> Compiler<'a> {
             previous: 0,
             current: 0,
             output: true,
+            identifiers: HashMap::new(),
+            strings: HashMap::new(),
             tokens: s,
             rules: &[
                 // token, prefix, infix, precedence
@@ -524,7 +530,14 @@ impl<'a> Compiler<'a> {
             }
             _ => unreachable!(),
         };
-        self.emit_constant(Value::String(s));
+
+        if let Some(&idx) = self.strings.get(&s) {
+            self.emit3(Opcode::Constant, idx);
+        } else {
+            let idx = self.chunk.make_constant(Value::String(s.clone()));
+            self.emit3(Opcode::Constant, idx);
+            self.strings.insert(s, idx);
+        }
         Ok(())
     }
 
@@ -532,7 +545,7 @@ impl<'a> Compiler<'a> {
         self.named_variable(&self.tokens[self.previous])
     }
 
-    fn named_variable(&mut self, token: &Token) -> Result<(), PiccoloError> {
+    fn named_variable(&mut self, token: &Token<'a>) -> Result<(), PiccoloError> {
         let arg = self.identifier_constant(token);
         if self.matches(TokenKind::Assign) {
             return Err(PiccoloError::new(ErrorKind::MalformedExpression {
@@ -545,25 +558,27 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn identifier_constant(&mut self, token: &Token) -> u16 {
+    fn identifier_constant(&mut self, token: &Token<'a>) -> u16 {
         if self.output {
-            if !self
-                .chunk
-                .has_constant(&Value::String(token.lexeme.to_owned()))
-            {
-                self.chunk
-                    .make_constant(Value::String(token.lexeme.to_owned()))
-            } else {
-                self.chunk.get_constant(token.lexeme)
-            }
+            self.identifiers.get(token.lexeme)
+                .map(|idx| {
+                    *idx
+                })
+                .unwrap_or_else(|| {
+                    let idx = self.chunk.make_constant(Value::String(token.lexeme.to_owned()));
+                    self.identifiers.insert(token.lexeme, idx);
+                    idx
+                })
         } else {
             0
         }
     }
 
     fn emit_constant(&mut self, c: Value) {
-        let c = self.chunk.make_constant(c);
-        self.emit3(Opcode::Constant, c);
+        if self.output {
+            let c = self.chunk.make_constant(c);
+            self.emit3(Opcode::Constant, c);
+        }
     }
 
     fn emit<T: Into<u8>>(&mut self, byte: T) {
