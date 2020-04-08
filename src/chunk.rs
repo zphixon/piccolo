@@ -1,7 +1,5 @@
 use crate::value::Value;
 
-use slotmap::DenseSlotMap;
-
 // TODO: change lines to a reasonable number type
 /// Stores a piece of compiled Piccolo bytecode.
 #[derive(Default, Debug)]
@@ -31,7 +29,7 @@ impl Chunk {
     // cause get and has_constant are slow
     pub(crate) fn has_constant(&self, value: &Value) -> bool {
         self.constants.iter().any(|v| {
-            let r = v.eq(value, &DenseSlotMap::with_capacity(0));
+            let r = v.eq(value);
             r.is_some() && r.unwrap()
         })
     }
