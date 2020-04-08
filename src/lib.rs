@@ -119,7 +119,7 @@ pub mod fuzzer {
 
     impl Distribution<TokenKind> for Standard {
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> TokenKind {
-            match rng.gen_range(0, 25) {
+            match rng.gen_range(0, 26) {
                 //0 => TokenKind::Do,
                 //1 => TokenKind::End,
                 //2 => TokenKind::Fn,
@@ -145,32 +145,31 @@ pub mod fuzzer {
                 //22 => TokenKind::InclusiveRange,
                 4 => TokenKind::Assign,
                 5 => TokenKind::Declare,
-                6 => TokenKind::Newline,
-                7 => TokenKind::Not,
-                8 => TokenKind::Plus,
-                9 => TokenKind::Minus,
-                10 => TokenKind::Multiply,
-                11 => TokenKind::Divide,
-                12 => TokenKind::Modulo,
-                13 => TokenKind::LogicalAnd,
-                14 => TokenKind::LogicalOr,
+                6 => TokenKind::Not,
+                7 => TokenKind::Plus,
+                8 => TokenKind::Minus,
+                9 => TokenKind::Multiply,
+                10 => TokenKind::Divide,
+                11 => TokenKind::Modulo,
+                12 => TokenKind::LogicalAnd,
+                13 => TokenKind::LogicalOr,
                 //34 => TokenKind::BitwiseAnd,
                 //35 => TokenKind::BitwiseOr,
                 //36 => TokenKind::BitwiseXor,
-                15 => TokenKind::Equal,
-                16 => TokenKind::NotEqual,
-                17 => TokenKind::Less,
-                18 => TokenKind::Greater,
-                19 => TokenKind::LessEqual,
-                20 => TokenKind::GreaterEqual,
+                14 => TokenKind::Equal,
+                15 => TokenKind::NotEqual,
+                16 => TokenKind::Less,
+                17 => TokenKind::Greater,
+                18 => TokenKind::LessEqual,
+                19 => TokenKind::GreaterEqual,
                 //43 => TokenKind::ShiftLeft,
                 //44 => TokenKind::ShiftRight,
-                21 => TokenKind::Identifier,
-                22 => TokenKind::String,
-                23 => TokenKind::True,
-                24 => TokenKind::False,
-                25 => TokenKind::Double(0.0),
-                26 => TokenKind::Integer(1),
+                20 => TokenKind::Identifier,
+                21 => TokenKind::String,
+                22 => TokenKind::True,
+                23 => TokenKind::False,
+                24 => TokenKind::Double(0.0),
+                25 => TokenKind::Integer(1),
                 _ => TokenKind::Nil, //_ => TokenKind::Eof,
             }
         }
@@ -254,8 +253,7 @@ mod tests {
 
     #[test]
     fn very_long() {
-        // any larger takes wayyyy too long
-        let len = 256;
+        let len = 1024;
 
         print!("generate... ");
         std::io::stdout().flush().unwrap();
@@ -264,13 +262,13 @@ mod tests {
             source.push_str(&format!("a{:04x}:=\"{}\"\n", i, i));
         }
         for i in 0..len {
-            source.push_str(&format!("retn a{:04x}\n", i));
-        }
-        for i in 0..len {
             source.push_str(&format!("b{:04x}:=a{:04x}\n", i, i));
         }
         for i in 0..len {
-            source.push_str(&format!("a{:04x}:=b{:04x}\n", 65_536 - i, i));
+            source.push_str(&format!("a{:04x}=b{:04x}\n", len - i - 1, i));
+        }
+        for i in 0..len {
+            source.push_str(&format!("retn a{:04x}\n", i));
         }
 
         print!("done\nscan... ");
