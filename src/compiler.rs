@@ -59,11 +59,11 @@ pub struct Compiler<'a> {
     previous: usize,
     current: usize,
     tokens: &'a [Token<'a>],
-    output: bool,
-    rules: &'a [(TokenKind, Option<ParseRule>, Option<ParseRule>, Precedence)],
+    rules: &'a [(TokenKind, Option<PrefixRule>, Option<InfixRule>, Precedence)],
 }
 
-type ParseRule = fn(&mut Compiler) -> Result<(), PiccoloError>;
+type PrefixRule = fn(&mut Compiler) -> Result<(), PiccoloError>;
+type InfixRule = fn(&mut Compiler) -> Result<(), PiccoloError>;
 
 // TODO: We need some sort of error reporting struct
 // right now, when we encounter an error, we return all the way back up to
@@ -79,7 +79,6 @@ impl<'a> Compiler<'a> {
             previous: 0,
             current: 0,
             tokens: s,
-            output: true,
             rules: &[
                 // token, prefix, infix, precedence
                 (TokenKind::Do, None, None, Precedence::None),
@@ -590,9 +589,9 @@ impl<'a> Compiler<'a> {
     fn get_rule(
         &'a self,
         kind: &TokenKind,
-    ) -> (&'a Option<ParseRule>, &'a Option<ParseRule>, &'a Precedence) {
-        for (k, infix, prefix, precedence) in self.rules.iter() {
-            let rule = (infix, prefix, precedence);
+    ) -> (&'a Option<PrefixRule>, &'a Option<InfixRule>, &'a Precedence) {
+        for (k, prefix, infix, precedence) in self.rules.iter() {
+            let rule = (prefix, infix, precedence);
             if k == kind {
                 return rule;
             } else {
