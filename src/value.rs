@@ -175,10 +175,7 @@ impl Value {
         }
     }
 
-    pub fn eq(
-        &self,
-        other: &Value,
-    ) -> Option<bool> {
+    pub fn eq(&self, other: &Value) -> Option<bool> {
         match self {
             Value::String(l) => match other {
                 Value::String(r) => Some(l == r),
@@ -206,10 +203,7 @@ impl Value {
         }
     }
 
-    pub fn gt(
-        &self,
-        other: &Value,
-    ) -> Option<bool> {
+    pub fn gt(&self, other: &Value) -> Option<bool> {
         match self {
             Value::Integer(l) => match other {
                 Value::Integer(r) => Some(l > r),

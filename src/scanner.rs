@@ -308,9 +308,7 @@ impl<'a> Scanner<'a> {
                 }
             }
 
-            b'"' => {
-                self.string()?
-            }
+            b'"' => self.string()?,
 
             c => {
                 if is_digit(c) {
