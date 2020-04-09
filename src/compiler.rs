@@ -60,10 +60,10 @@ prec!(Precedence =>
 pub struct Compiler<'a> {
     chunk: Chunk,
     output: bool,
+    assign: bool,
     scanner: Scanner<'a>,
     identifiers: HashMap<&'a str, u16>,
     strings: HashMap<String, u16>,
-    //tokens: &'a [Token<'a>],
     rules: Vec<(TokenKind, Option<PrefixRule>, Option<InfixRule>, Precedence)>,
 }
 
@@ -74,12 +74,11 @@ pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError
     let mut compiler = Compiler {
         chunk,
         output: true,
+        assign: false,
         scanner,
         identifiers: HashMap::new(),
         strings: HashMap::new(),
-        //tokens: s,
         rules: vec![
-            // token, prefix, infix, precedence
             (TokenKind::Do, None, None, Precedence::None),
             (TokenKind::End, None, None, Precedence::None),
             (TokenKind::Fn, None, None, Precedence::None),
@@ -114,12 +113,7 @@ pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError
             (TokenKind::Period, None, None, Precedence::None),
             (TokenKind::ExclusiveRange, None, None, Precedence::None),
             (TokenKind::InclusiveRange, None, None, Precedence::None),
-            (
-                TokenKind::Assign,
-                None, None,
-                //Some(|c| Compiler::var_assign(c)),
-                Precedence::Primary,
-            ),
+            (TokenKind::Assign, None, None, Precedence::None),
             (
                 TokenKind::Not,
                 Some(|c, _can_assign| Compiler::unary(c)),
@@ -241,7 +235,6 @@ pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError
 
     let mut errors = vec![];
 
-    //compiler.scanner.next_token();
     compiler.advance();
     while !compiler.matches(TokenKind::Eof) {
         if let Err(err) = compiler.declaration() {
@@ -294,17 +287,12 @@ impl<'a> Compiler<'a> {
     }
 
     fn declaration(&mut self) -> Result<(), PiccoloError> {
-        // if self.can_lookahead(1) && self.lookahead(1).kind == TokenKind::Declare {
-        //     self.var_declaration()
-        // } else if self.can_lookahead(1) && self.lookahead(1).kind == TokenKind::Assign {
-        //     self.var_assign()
-        // } else {
+        // TODO: implement lookahead to change syntax back to :=
         if self.matches(TokenKind::Let) {
             self.var_declaration()
         } else {
             self.statement()
         }
-        // }
     }
 
     fn var_declaration(&mut self) -> Result<(), PiccoloError> {
@@ -329,10 +317,12 @@ impl<'a> Compiler<'a> {
 
     fn statement(&mut self) -> Result<(), PiccoloError> {
         if self.matches(TokenKind::Retn) {
-            self.return_statement()
+            self.return_statement()?;
         } else {
-            self.expression_statement()
+            self.expression_statement()?;
         }
+        self.assign = false;
+        Ok(())
     }
 
     fn return_statement(&mut self) -> Result<(), PiccoloError> {
@@ -526,8 +516,15 @@ impl<'a> Compiler<'a> {
         let arg = self.identifier_constant(token);
         if self.matches(TokenKind::Assign) {
             if can_assign {
-                self.expression()?;
-                self.emit3(Opcode::AssignGlobal, arg);
+                if !self.assign {
+                    self.assign = true;
+                    self.expression()?;
+                    self.emit3(Opcode::AssignGlobal, arg);
+                } else {
+                    return Err(PiccoloError::new(ErrorKind::ExpectedExpression {
+                        got: String::from("= (Assignment is not an expression)")
+                    }))
+                }
             } else {
                 return Err(PiccoloError::new(ErrorKind::MalformedExpression {
                     from: token.lexeme.to_owned(),
