@@ -467,3 +467,62 @@ fn is_non_identifier(c: u8) -> bool {
         || c == b'<'
         || c == b'"'
 }
+
+#[cfg(feature = "fuzzer")]
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TokenKind::Do => write!(f, "do"),
+            TokenKind::End => write!(f, "end"),
+            TokenKind::Fn => write!(f, "fn"),
+            TokenKind::If => write!(f, "if"),
+            TokenKind::Else => write!(f, "else"),
+            TokenKind::While => write!(f, "while"),
+            TokenKind::For => write!(f, "for"),
+            TokenKind::In => write!(f, "in"),
+            TokenKind::Data => write!(f, "data"),
+            TokenKind::Let => write!(f, "let"),
+            TokenKind::Is => write!(f, "is"),
+            TokenKind::Me => write!(f, "me"),
+            TokenKind::New => write!(f, "new"),
+            TokenKind::Err => write!(f, "err"),
+            TokenKind::Retn => write!(f, "retn"),
+            TokenKind::Nil => write!(f, "nil"),
+            TokenKind::LeftBracket => write!(f, "["),
+            TokenKind::RightBracket => write!(f, "]"),
+            TokenKind::LeftParen => write!(f, "("),
+            TokenKind::RightParen => write!(f, ")"),
+            TokenKind::Comma => write!(f, ","),
+            TokenKind::Period => write!(f, "."),
+            TokenKind::ExclusiveRange => write!(f, ".."),
+            TokenKind::InclusiveRange => write!(f, "..."),
+            TokenKind::Assign => write!(f, "="),
+            TokenKind::Not => write!(f, "!"),
+            TokenKind::Plus => write!(f, "+"),
+            TokenKind::Minus => write!(f, "-"),
+            TokenKind::Multiply => write!(f, "*"),
+            TokenKind::Divide => write!(f, "/"),
+            TokenKind::Modulo => write!(f, "%"),
+            TokenKind::LogicalAnd => write!(f, "&&"),
+            TokenKind::LogicalOr => write!(f, "||"),
+            TokenKind::BitwiseAnd => write!(f, "&"),
+            TokenKind::BitwiseOr => write!(f, "|"),
+            TokenKind::BitwiseXor => write!(f, "^"),
+            TokenKind::Equal => write!(f, "=="),
+            TokenKind::NotEqual => write!(f, "!="),
+            TokenKind::Less => write!(f, "<"),
+            TokenKind::Greater => write!(f, ">"),
+            TokenKind::LessEqual => write!(f, "<="),
+            TokenKind::GreaterEqual => write!(f, ">="),
+            TokenKind::ShiftLeft => write!(f, "<<"),
+            TokenKind::ShiftRight => write!(f, ">>"),
+            TokenKind::Identifier => write!(f, "ident"),
+            TokenKind::String => write!(f, "\"str\""),
+            TokenKind::True => write!(f, "true"),
+            TokenKind::False => write!(f, "false"),
+            TokenKind::Double(f64) => write!(f, "{}", f64),
+            TokenKind::Integer(i64) => write!(f, "{}", i64),
+            TokenKind::Eof => write!(f, ""),
+        }
+    }
+}

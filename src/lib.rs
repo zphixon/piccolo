@@ -99,22 +99,16 @@ pub mod fuzzer {
 
     // occasionally creates valid programs
     fn run(n: usize, min_len: usize, max_len: usize) -> Option<()> {
-        //let dummy_lexeme = "id";
-        //let mut tokens: Vec<Token> = Vec::new();
-
         let mut src = String::new();
         let mut r = rand::thread_rng();
         let lines = r.gen_range(min_len, max_len);
         for (_, line) in (1..lines).enumerate() {
             let tk: TokenKind = r.gen();
-            src.push_str(&format!("{}", tk));
-            //tokens.push(Token::new(r.gen(), dummy_lexeme, line));
+            src.push_str(&format!("{} ", tk).to_lowercase());
         }
-        //tokens.push(Token::new(TokenKind::Eof, dummy_lexeme, lines));
 
         if let Ok(chunk) = crate::compile(Chunk::default(), Scanner::new(&src)) {
             println!("----- run {} compiles -----", n);
-            //scanner::print_tokens(&tokens);
             chunk.disassemble("");
             Machine::new(chunk).interpret().ok().map(|_| {})
         } else {
@@ -124,58 +118,58 @@ pub mod fuzzer {
 
     impl Distribution<TokenKind> for Standard {
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> TokenKind {
-            match rng.gen_range(0, 26) {
-                //0 => TokenKind::Do,
-                //1 => TokenKind::End,
-                //2 => TokenKind::Fn,
-                //3 => TokenKind::If,
-                //4 => TokenKind::Else,
-                //5 => TokenKind::While,
-                //6 => TokenKind::For,
-                //7 => TokenKind::In,
-                //8 => TokenKind::Data,
-                //9 => TokenKind::Is,
-                //10 => TokenKind::Me,
-                //11 => TokenKind::New,
-                //12 => TokenKind::Err,
-                1 => TokenKind::Retn,
-                //14 => TokenKind::Nil,
-                //15 => TokenKind::LeftBracket,
-                //16 => TokenKind::RightBracket,
-                2 => TokenKind::LeftParen,
-                3 => TokenKind::RightParen,
-                //19 => TokenKind::Comma,
-                //20 => TokenKind::Period,
-                //21 => TokenKind::ExclusiveRange,
-                //22 => TokenKind::InclusiveRange,
-                4 => TokenKind::Assign,
-                5 => TokenKind::Declare,
-                6 => TokenKind::Not,
-                7 => TokenKind::Plus,
-                8 => TokenKind::Minus,
-                9 => TokenKind::Multiply,
-                10 => TokenKind::Divide,
-                11 => TokenKind::Modulo,
-                12 => TokenKind::LogicalAnd,
-                13 => TokenKind::LogicalOr,
-                //34 => TokenKind::BitwiseAnd,
-                //35 => TokenKind::BitwiseOr,
-                //36 => TokenKind::BitwiseXor,
-                14 => TokenKind::Equal,
-                15 => TokenKind::NotEqual,
-                16 => TokenKind::Less,
-                17 => TokenKind::Greater,
-                18 => TokenKind::LessEqual,
-                19 => TokenKind::GreaterEqual,
-                //43 => TokenKind::ShiftLeft,
-                //44 => TokenKind::ShiftRight,
-                20 => TokenKind::Identifier,
-                21 => TokenKind::String,
-                22 => TokenKind::True,
-                23 => TokenKind::False,
-                24 => TokenKind::Double(0.0),
-                25 => TokenKind::Integer(1),
-                _ => TokenKind::Nil, //_ => TokenKind::Eof,
+            match rng.gen_range(0, 50) {
+                // 0 => TokenKind::Do,
+                // 1 => TokenKind::End,
+                // 2 => TokenKind::Fn,
+                // 3 => TokenKind::If,
+                // 4 => TokenKind::Else,
+                // 5 => TokenKind::While,
+                // 6 => TokenKind::For,
+                // 7 => TokenKind::In,
+                // 8 => TokenKind::Data,
+                9 => TokenKind::Let,
+                // 10 => TokenKind::Is,
+                // 11 => TokenKind::Me,
+                // 12 => TokenKind::New,
+                // 13 => TokenKind::Err,
+                14 => TokenKind::Retn,
+                15 => TokenKind::Nil,
+                // 16 => TokenKind::LeftBracket,
+                // 17 => TokenKind::RightBracket,
+                18 => TokenKind::LeftParen,
+                19 => TokenKind::RightParen,
+                // 20 => TokenKind::Comma,
+                // 21 => TokenKind::Period,
+                // 22 => TokenKind::ExclusiveRange,
+                // 23 => TokenKind::InclusiveRange,
+                24 => TokenKind::Assign,
+                25 => TokenKind::Not,
+                26 => TokenKind::Plus,
+                27 => TokenKind::Minus,
+                28 => TokenKind::Multiply,
+                29 => TokenKind::Divide,
+                30 => TokenKind::Modulo,
+                // 31 => TokenKind::LogicalAnd,
+                // 32 => TokenKind::LogicalOr,
+                // 33 => TokenKind::BitwiseAnd,
+                // 34 => TokenKind::BitwiseOr,
+                // 35 => TokenKind::BitwiseXor,
+                36 => TokenKind::Equal,
+                37 => TokenKind::NotEqual,
+                38 => TokenKind::Less,
+                39 => TokenKind::Greater,
+                40 => TokenKind::LessEqual,
+                41 => TokenKind::GreaterEqual,
+                // 42 => TokenKind::ShiftLeft,
+                // 43 => TokenKind::ShiftRight,
+                44 => TokenKind::Identifier,
+                45 => TokenKind::String,
+                46 => TokenKind::True,
+                47 => TokenKind::False,
+                48 => TokenKind::Double(0.0),
+                49 => TokenKind::Integer(1),
+                _ => TokenKind::Nil,
             }
         }
     }
