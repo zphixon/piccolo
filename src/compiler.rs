@@ -242,10 +242,18 @@ pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError
         }
     }
 
-    #[cfg(feature = "pc-debug")]
+    #[cfg(all(feature = "pc-debug", not(feature = "fuzzer")))]
     {
         crate::scanner::print_tokens(compiler.scanner.tokens());
     }
+
+    #[cfg(all(feature = "pc-debug", featur = "fuzzer"))]
+    {
+        if !errors.is_empty() {
+            crate::scanner::print_tokens(compiler.scanner.tokens());
+        }
+    }
+
 
     if errors.is_empty() {
         Ok(compiler.chunk)
