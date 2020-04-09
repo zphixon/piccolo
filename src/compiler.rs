@@ -235,8 +235,8 @@ pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError
 
     let mut errors = vec![];
 
-    compiler.advance();
-    while !compiler.matches(TokenKind::Eof) {
+    compiler.advance().map_err(|e| vec![e])?;
+    while !compiler.matches(TokenKind::Eof).map_err(|e| vec![e])? {
         if let Err(err) = compiler.declaration() {
             errors.push(err);
             compiler.output = false;
@@ -261,24 +261,24 @@ impl<'a> Compiler<'a> {
     /// Parses and compiles a list of tokens. Uses a Pratt parser.
     fn consume(&mut self, token: TokenKind) -> Result<(), PiccoloError> {
         if self.scanner.current().kind != token {
-            self.advance();
+            self.advance()?;
             Err(PiccoloError::new(ErrorKind::UnexpectedToken {
                 exp: format!("{:?}", token),
                 got: format!("{}", self.scanner.previous()),
             })
             .line(self.scanner.previous().line))
         } else {
-            self.advance();
+            self.advance()?;
             Ok(())
         }
     }
 
-    fn matches(&mut self, kind: TokenKind) -> bool {
+    fn matches(&mut self, kind: TokenKind) -> Result<bool, PiccoloError> {
         if !self.check(kind) {
-            false
+            Ok(false)
         } else {
-            self.advance();
-            true
+            self.advance()?;
+            Ok(true)
         }
     }
 
@@ -288,7 +288,7 @@ impl<'a> Compiler<'a> {
 
     fn declaration(&mut self) -> Result<(), PiccoloError> {
         // TODO: implement lookahead to change syntax back to :=
-        if self.matches(TokenKind::Let) {
+        if self.matches(TokenKind::Let)? {
             self.var_declaration()
         } else {
             self.statement()
@@ -297,7 +297,7 @@ impl<'a> Compiler<'a> {
 
     fn var_declaration(&mut self) -> Result<(), PiccoloError> {
         let global = self.parse_variable()?;
-        if self.matches(TokenKind::Assign) {
+        if self.matches(TokenKind::Assign)? {
             self.expression()?;
         } else {
             self.emit(Opcode::Nil);
@@ -316,7 +316,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn statement(&mut self) -> Result<(), PiccoloError> {
-        if self.matches(TokenKind::Retn) {
+        if self.matches(TokenKind::Retn)? {
             self.return_statement()?;
         } else {
             self.expression_statement()?;
@@ -349,7 +349,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn precedence(&mut self, prec: Precedence) -> Result<(), PiccoloError> {
-        self.advance();
+        self.advance()?;
         let can_assign = prec <= Precedence::Assignment;
         if let (Some(prefix), _, _) = self.get_rule(&self.scanner.previous().kind) {
             prefix(self, can_assign)?;
@@ -360,7 +360,7 @@ impl<'a> Compiler<'a> {
             .line(self.scanner.previous().line));
         }
         while prec <= *self.get_rule(&self.scanner.current().kind).2 {
-            self.advance();
+            self.advance()?;
             if let (_, Some(infix), _) = self.get_rule(&self.scanner.previous().kind) {
                 infix(self, can_assign)?;
             } else {
@@ -406,9 +406,8 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn advance(&mut self) {
-        // TODO: propagate
-        self.scanner.next_token().unwrap();
+    fn advance(&mut self) -> Result<&Token, PiccoloError> {
+        self.scanner.next_token()
     }
 
     fn number(&mut self) -> Result<(), PiccoloError> {
@@ -514,7 +513,7 @@ impl<'a> Compiler<'a> {
 
     fn named_variable<'b>(&'b mut self, token: &Token<'a>, can_assign: bool) -> Result<(), PiccoloError> {
         let arg = self.identifier_constant(token);
-        if self.matches(TokenKind::Assign) {
+        if self.matches(TokenKind::Assign)? {
             if can_assign {
                 if !self.assign {
                     self.assign = true;
