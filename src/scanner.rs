@@ -15,6 +15,7 @@ pub(crate) enum TokenKind {
     For,   // for
     In,    // in
     Data,  // data
+    Let,
     Is,    // is
     Me,    // me
     New,   // new
@@ -33,7 +34,6 @@ pub(crate) enum TokenKind {
     ExclusiveRange, // ..
     InclusiveRange, // ...
     Assign,         // =
-    Declare,        // :=
 
     // operators
     Not,          // !
@@ -125,6 +125,7 @@ fn into_keyword(s: &str) -> Option<TokenKind> {
         "for" => Some(TokenKind::For),
         "in" => Some(TokenKind::In),
         "data" => Some(TokenKind::Data),
+        "let" => Some(TokenKind::Let),
         "is" => Some(TokenKind::Is),
         "me" => Some(TokenKind::Me),
         "new" => Some(TokenKind::New),
@@ -158,31 +159,11 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    /// Creates a list of tokens.
-    pub fn scan_tokens(mut self) -> Result<Vec<Token<'a>>, Vec<PiccoloError>> {
-        let mut errors = Vec::new();
-
-        while !self.is_at_end() {
-            if let Err(e) = self.next_token() {
-                errors.push(e);
-            }
-        }
-
-        self.tokens
-            .push(Token::new(TokenKind::Eof, "EOF", self.line));
-
-        if errors.is_empty() {
-            Ok(self.tokens)
-        } else {
-            Err(errors)
-        }
-    }
-
-    pub(crate) fn current(&self) -> &Token {
+    pub(crate) fn current(&self) -> &Token<'a> {
         &self.tokens[self.tokens.len() - 1]
     }
 
-    pub(crate) fn previous(&self) -> &Token {
+    pub(crate) fn previous(&self) -> &Token<'a> {
         &self.tokens[self.tokens.len() - 2]
     }
 
@@ -204,6 +185,7 @@ impl<'a> Scanner<'a> {
     pub(crate) fn next_token(&mut self) -> Result<&Token, PiccoloError> {
         self.slurp_whitespace();
         if self.is_at_end() {
+            self.add_token(TokenKind::Eof);
             return Ok(self.current());
         }
 
@@ -268,19 +250,6 @@ impl<'a> Scanner<'a> {
                     TokenKind::Equal
                 } else {
                     TokenKind::Assign
-                }
-            }
-
-            b':' => {
-                if self.peek() == b'=' {
-                    self.advance();
-                    TokenKind::Declare
-                } else {
-                    return Err(PiccoloError::new(ErrorKind::UnexpectedToken {
-                        exp: "=".into(),
-                        got: String::from_utf8([self.peek()].to_vec()).unwrap(),
-                    })
-                    .line(self.line));
                 }
             }
 

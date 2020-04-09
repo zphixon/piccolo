@@ -199,7 +199,7 @@ impl Machine {
                                 },
                                 |_| Ok(()),
                             )?;
-                        self.pop()?;
+                        //self.pop()?;
                         self.ip += 2;
                     }
                 }

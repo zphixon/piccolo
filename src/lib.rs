@@ -15,7 +15,7 @@ mod scanner;
 pub mod value;
 
 pub use chunk::Chunk;
-pub use compiler::Compiler;
+pub use compiler::compile;
 pub use error::PiccoloError;
 pub use machine::Machine;
 pub use scanner::Scanner;
@@ -36,9 +36,10 @@ pub use scanner::print_tokens;
 /// # }
 /// ```
 pub fn interpret(src: &str) -> Result<value::Value, Vec<error::PiccoloError>> {
-    match Machine::new(Compiler::compile(
+    match Machine::new(compile(
         Chunk::default(),
-        &Scanner::new(src).scan_tokens()?,
+        Scanner::new(src),
+        //&Scanner::new(src).scan_tokens()?,
     )?)
     .interpret()
     {
@@ -62,9 +63,8 @@ pub mod fuzzer {
     extern crate rand;
 
     use crate::chunk::Chunk;
-    use crate::compiler::Compiler;
     use crate::machine::Machine;
-    use crate::scanner;
+    use crate::{scanner, Scanner};
     use crate::scanner::Token;
     use crate::scanner::TokenKind;
 
@@ -99,17 +99,22 @@ pub mod fuzzer {
 
     // occasionally creates valid programs
     fn run(n: usize, min_len: usize, max_len: usize) -> Option<()> {
-        let dummy_lexeme = "id";
-        let mut tokens: Vec<Token> = Vec::new();
+        //let dummy_lexeme = "id";
+        //let mut tokens: Vec<Token> = Vec::new();
+
+        let mut src = String::new();
         let mut r = rand::thread_rng();
         let lines = r.gen_range(min_len, max_len);
         for (_, line) in (1..lines).enumerate() {
-            tokens.push(Token::new(r.gen(), dummy_lexeme, line));
+            let tk: TokenKind = r.gen();
+            src.push_str(&format!("{}", tk));
+            //tokens.push(Token::new(r.gen(), dummy_lexeme, line));
         }
-        tokens.push(Token::new(TokenKind::Eof, dummy_lexeme, lines));
-        if let Ok(chunk) = Compiler::compile(Chunk::default(), &tokens) {
+        //tokens.push(Token::new(TokenKind::Eof, dummy_lexeme, lines));
+
+        if let Ok(chunk) = crate::compile(Chunk::default(), Scanner::new(&src)) {
             println!("----- run {} compiles -----", n);
-            scanner::print_tokens(&tokens);
+            //scanner::print_tokens(&tokens);
             chunk.disassemble("");
             Machine::new(chunk).interpret().ok().map(|_| {})
         } else {
@@ -183,29 +188,29 @@ mod tests {
     use crate::machine::Machine;
     use crate::op::Opcode;
     use crate::scanner::TokenKind;
-    use crate::{Compiler, Scanner, Token};
+    use crate::{Scanner, Token};
     use std::io::Write;
 
     #[test]
     fn scanner() {
-        let mut scanner = Scanner::new("a := 3\nb := 4\nretn a + b");
+        let mut scanner = Scanner::new("let a = 3\nlet b = 4\nretn a + b");
         assert_eq!(
             scanner.next_token().unwrap(),
-            &Token::new(TokenKind::Identifier, "a", 1)
+            &Token::new(TokenKind::Let, "let", 1)
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            &Token::new(TokenKind::Declare, ":=", 1)
+            &Token::new(TokenKind::Identifier, "a", 1)
         );
         assert_eq!(
             scanner.previous(),
-            &Token::new(TokenKind::Identifier, "a", 1)
+            &Token::new(TokenKind::Let, "let", 1)
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            &Token::new(TokenKind::Integer(3), "3", 1)
+            &Token::new(TokenKind::Assign, "=", 1)
         );
-        assert_eq!(scanner.previous(), &Token::new(TokenKind::Declare, ":=", 1));
+        assert_eq!(scanner.previous(), &Token::new(TokenKind::Identifier, "a", 1));
     }
 
     #[test]
@@ -259,10 +264,10 @@ mod tests {
         std::io::stdout().flush().unwrap();
         let mut source = String::new();
         for i in 0..len {
-            source.push_str(&format!("a{:04x}:=\"{}\"\n", i, i));
+            source.push_str(&format!("let a{:04x}=\"{}\"\n", i, i));
         }
         for i in 0..len {
-            source.push_str(&format!("b{:04x}:=a{:04x}\n", i, i));
+            source.push_str(&format!("let b{:04x}=a{:04x}\n", i, i));
         }
         for i in 0..len {
             source.push_str(&format!("a{:04x}=b{:04x}\n", len - i - 1, i));
@@ -271,13 +276,9 @@ mod tests {
             source.push_str(&format!("retn a{:04x}\n", i));
         }
 
-        print!("done\nscan... ");
-        std::io::stdout().flush().unwrap();
-        let tokens = Scanner::new(&source).scan_tokens().unwrap();
-
         print!("done\ncompile... ");
         std::io::stdout().flush().unwrap();
-        let chunk = Compiler::compile(Chunk::default(), &tokens).unwrap();
+        let chunk = crate::compile(Chunk::default(), Scanner::new(&source)).unwrap();
 
         print!("done\nrun... ");
         std::io::stdout().flush().unwrap();

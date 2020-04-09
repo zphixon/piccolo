@@ -22,3 +22,4 @@ This branch is a bytecode interpreter rewrite of the previous AST-walking versio
 * Strict or weak typing with math/logic operators
 * Lua-style userdata
 * Split chunk constants and the Value type
+* Whether or not you can declare uninitialized variables
