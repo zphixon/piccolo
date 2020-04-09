@@ -15,7 +15,7 @@ pub(crate) enum TokenKind {
     For,   // for
     In,    // in
     Data,  // data
-    Let,
+    Let,   // let
     Is,    // is
     Me,    // me
     New,   // new
@@ -157,6 +157,11 @@ impl<'a> Scanner<'a> {
             current: 0,
             line: 1,
         }
+    }
+
+    #[cfg(feature = "pc-debug")]
+    pub(crate) fn tokens(&self) -> &[Token] {
+        &self.tokens
     }
 
     pub(crate) fn current(&self) -> &Token<'a> {

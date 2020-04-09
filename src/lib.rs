@@ -189,7 +189,6 @@ mod tests {
     use crate::op::Opcode;
     use crate::scanner::TokenKind;
     use crate::{Scanner, Token};
-    use std::io::Write;
 
     #[test]
     fn scanner() {
@@ -259,9 +258,6 @@ mod tests {
     #[test]
     fn very_long() {
         let len = 2048;
-
-        print!("generate... ");
-        std::io::stdout().flush().unwrap();
         let mut source = String::new();
         for i in 0..len {
             source.push_str(&format!("let a{:04x}=\"{}\"\n", i, i));
@@ -275,16 +271,8 @@ mod tests {
         for i in 0..len {
             source.push_str(&format!("retn a{:04x}\n", i));
         }
-
-        print!("done\ncompile... ");
-        std::io::stdout().flush().unwrap();
         let chunk = crate::compile(Chunk::default(), Scanner::new(&source)).unwrap();
-
-        print!("done\nrun... ");
-        std::io::stdout().flush().unwrap();
         Machine::new(chunk).interpret().unwrap();
-
-        println!("done");
     }
 
     #[test]

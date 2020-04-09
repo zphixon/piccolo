@@ -55,8 +55,6 @@ prec!(Precedence =>
     Primary = 10,
 );
 
-/// Compiles a list of tokens to Piccolo bytecode.
-// TODO: scan on demand
 pub struct Compiler<'a> {
     chunk: Chunk,
     output: bool,
@@ -244,6 +242,10 @@ pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError
         }
     }
 
+    #[cfg(feature = "pc-debug")] {
+        crate::scanner::print_tokens(compiler.scanner.tokens());
+    }
+
     if errors.is_empty() {
         Ok(compiler.chunk)
     } else {
@@ -258,7 +260,6 @@ pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError
 // we should still be outputting bytecode, and still attempt to parse
 // the entire program regardless.
 impl<'a> Compiler<'a> {
-    /// Parses and compiles a list of tokens. Uses a Pratt parser.
     fn consume(&mut self, token: TokenKind) -> Result<(), PiccoloError> {
         if self.scanner.current().kind != token {
             self.advance()?;
