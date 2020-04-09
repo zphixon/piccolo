@@ -66,38 +66,24 @@ fn repl() {
 #[cfg(feature = "pc-debug")]
 fn file(contents: &str) {
     use piccolo::Chunk;
-    use piccolo::Compiler;
     use piccolo::Machine;
     use piccolo::Scanner;
 
-    let tokens = Scanner::new(contents).scan_tokens();
-    println!("****** tokens");
-    if let Ok(tokens) = tokens {
-        piccolo::print_tokens(&tokens);
-        println!("****** compiler");
-        let chunk = Compiler::compile(Chunk::default(), &tokens);
-        if let Ok(chunk) = chunk {
-            println!("****** chunk");
-            chunk.disassemble("file");
-            let mut vm = Machine::new(chunk);
-            println!("****** result");
-            let result = vm.interpret();
-            if let Err(result) = result {
-                println!("{}", result);
-            } else {
-                println!("****** ok");
-            }
+    println!("****** compiler");
+    let chunk = piccolo::compile(Chunk::default(), Scanner::new(&contents));
+    if let Ok(chunk) = chunk {
+        println!("****** chunk");
+        chunk.disassemble("file");
+        let mut vm = Machine::new(chunk);
+        println!("****** result");
+        let result = vm.interpret();
+        if let Err(result) = result {
+            println!("{}", result);
         } else {
-            let _: Vec<_> = chunk
-                .unwrap_err()
-                .iter()
-                .map(|err| {
-                    println!("{}", err);
-                })
-                .collect();
+            println!("****** ok");
         }
     } else {
-        let _: Vec<_> = tokens
+        let _: Vec<_> = chunk
             .unwrap_err()
             .iter()
             .map(|err| {
@@ -110,7 +96,6 @@ fn file(contents: &str) {
 #[cfg(feature = "pc-debug")]
 fn repl() {
     use piccolo::Chunk;
-    use piccolo::Compiler;
     use piccolo::Machine;
     use piccolo::Scanner;
 
@@ -124,31 +109,16 @@ fn repl() {
             Ok(line) => {
                 rl.add_history_entry(&line);
 
-                let tokens = Scanner::new(&line).scan_tokens();
-                if let Ok(tokens) = tokens {
-                    println!("****** tokens");
-                    piccolo::print_tokens(&tokens);
-                    println!("****** compiler");
-                    let chunk = Compiler::compile(Chunk::default(), &tokens);
-                    if let Ok(chunk) = chunk {
-                        println!("****** chunk");
-                        chunk.disassemble("line");
-                        let mut vm = Machine::new(chunk);
-                        println!("****** result");
-                        println!("{:?}", vm.interpret());
-                    } else {
-                        let e = chunk.err().unwrap();
-                        if e.len() == 1 {
-                            println!("Error {}", e[0])
-                        } else {
-                            println!("{} Errors:", e.len());
-                            for e in e.iter() {
-                                println!("    {}", e);
-                            }
-                        }
-                    }
+                println!("****** compiler");
+                let chunk = piccolo::compile(Chunk::default(), Scanner::new(&line));
+                if let Ok(chunk) = chunk {
+                    println!("****** chunk");
+                    chunk.disassemble("line");
+                    let mut vm = Machine::new(chunk);
+                    println!("****** result");
+                    println!("{:?}", vm.interpret());
                 } else {
-                    let e = tokens.err().unwrap();
+                    let e = chunk.err().unwrap();
                     if e.len() == 1 {
                         println!("Error {}", e[0])
                     } else {
