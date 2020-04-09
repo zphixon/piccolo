@@ -64,9 +64,9 @@ pub mod fuzzer {
 
     use crate::chunk::Chunk;
     use crate::machine::Machine;
-    use crate::{scanner, Scanner};
     use crate::scanner::Token;
     use crate::scanner::TokenKind;
+    use crate::{scanner, Scanner};
 
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
@@ -201,15 +201,15 @@ mod tests {
             scanner.next_token().unwrap(),
             &Token::new(TokenKind::Identifier, "a", 1)
         );
-        assert_eq!(
-            scanner.previous(),
-            &Token::new(TokenKind::Let, "let", 1)
-        );
+        assert_eq!(scanner.previous(), &Token::new(TokenKind::Let, "let", 1));
         assert_eq!(
             scanner.next_token().unwrap(),
             &Token::new(TokenKind::Assign, "=", 1)
         );
-        assert_eq!(scanner.previous(), &Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(
+            scanner.previous(),
+            &Token::new(TokenKind::Identifier, "a", 1)
+        );
     }
 
     #[test]

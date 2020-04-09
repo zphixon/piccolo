@@ -242,7 +242,8 @@ pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError
         }
     }
 
-    #[cfg(feature = "pc-debug")] {
+    #[cfg(feature = "pc-debug")]
+    {
         crate::scanner::print_tokens(compiler.scanner.tokens());
     }
 
@@ -512,7 +513,11 @@ impl<'a> Compiler<'a> {
         self.named_variable(&self.scanner.previous().clone(), can_assign)
     }
 
-    fn named_variable<'b>(&'b mut self, token: &Token<'a>, can_assign: bool) -> Result<(), PiccoloError> {
+    fn named_variable<'b>(
+        &'b mut self,
+        token: &Token<'a>,
+        can_assign: bool,
+    ) -> Result<(), PiccoloError> {
         let arg = self.identifier_constant(token);
         if self.matches(TokenKind::Assign)? {
             if can_assign {
@@ -522,13 +527,14 @@ impl<'a> Compiler<'a> {
                     self.emit3(Opcode::AssignGlobal, arg);
                 } else {
                     return Err(PiccoloError::new(ErrorKind::ExpectedExpression {
-                        got: String::from("= (Assignment is not an expression)")
-                    }))
+                        got: String::from("= (Assignment is not an expression)"),
+                    }));
                 }
             } else {
                 return Err(PiccoloError::new(ErrorKind::MalformedExpression {
                     from: token.lexeme.to_owned(),
-                }).line(token.line));
+                })
+                .line(token.line));
             }
         } else {
             self.emit3(Opcode::GetGlobal, arg);
@@ -582,14 +588,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn get_rule(
-        &self,
-        kind: &TokenKind,
-    ) -> (
-        &Option<PrefixRule>,
-        &Option<InfixRule>,
-        &Precedence,
-    ) {
+    fn get_rule(&self, kind: &TokenKind) -> (&Option<PrefixRule>, &Option<InfixRule>, &Precedence) {
         for (k, prefix, infix, precedence) in self.rules.iter() {
             let rule = (prefix, infix, precedence);
             if k == kind {
