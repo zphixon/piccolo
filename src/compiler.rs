@@ -254,7 +254,6 @@ pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError
         }
     }
 
-
     if errors.is_empty() {
         Ok(compiler.chunk)
     } else {
