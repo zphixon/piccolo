@@ -428,18 +428,15 @@ impl<'a> Compiler<'a> {
     }
 
     fn number(&mut self) -> Result<(), PiccoloError> {
-        if let Ok(value) = self.previous().lexeme.parse::<i64>() {
+        if let TokenKind::Integer(value) = self.previous().kind {
             self.emit_constant(Value::Integer(value));
-            Ok(())
-        } else if let Ok(value) = self.previous().lexeme.parse::<f64>() {
+        } else if let TokenKind::Double(value) = self.previous().kind {
             self.emit_constant(Value::Double(value));
-            Ok(())
         } else {
-            Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
-                literal: self.previous().lexeme.to_owned(),
-            })
-            .line(self.previous().line))
+            unreachable!("number literal that isn't a number");
         }
+
+        Ok(())
     }
 
     fn literal(&mut self) -> Result<(), PiccoloError> {
