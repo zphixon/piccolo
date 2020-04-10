@@ -21,6 +21,7 @@ pub(crate) enum TokenKind {
     New,   // new
     Err,   // err
     Retn,  // retn
+    Assert,   // nil
     Nil,   // nil
 
     // syntax
@@ -131,6 +132,7 @@ fn into_keyword(s: &str) -> Option<TokenKind> {
         "new" => Some(TokenKind::New),
         "err" => Some(TokenKind::Err),
         "retn" => Some(TokenKind::Retn),
+        "assert" => Some(TokenKind::Assert),
         "true" => Some(TokenKind::True),
         "false" => Some(TokenKind::False),
         "nil" => Some(TokenKind::Nil),
@@ -483,6 +485,7 @@ impl fmt::Display for TokenKind {
             TokenKind::New => write!(f, "new"),
             TokenKind::Err => write!(f, "err"),
             TokenKind::Retn => write!(f, "retn"),
+            TokenKind::Assert => write!(f, "assert"),
             TokenKind::Nil => write!(f, "nil"),
             TokenKind::LeftBracket => write!(f, "["),
             TokenKind::RightBracket => write!(f, "]"),

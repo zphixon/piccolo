@@ -77,6 +77,7 @@ impl Chunk {
 
             offset = match op {
                 Opcode::Return => offset + 1,
+                Opcode::Assert => offset + 1,
                 Opcode::Constant => {
                     let low = self.data[offset + 1];
                     let high = self.data[offset + 2];

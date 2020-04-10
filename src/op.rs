@@ -45,4 +45,5 @@ opcodes!(Opcode =>
     DefineGlobal = 15,
     GetGlobal = 16,
     AssignGlobal = 17,
+    Assert = 18,
 );

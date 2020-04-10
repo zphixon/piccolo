@@ -347,6 +347,8 @@ impl<'a> Compiler<'a> {
     fn statement(&mut self) -> Result<(), PiccoloError> {
         if self.matches(TokenKind::Retn)? {
             self.return_statement()?;
+        } else if self.matches(TokenKind::Assert)? {
+            self.assert_statement()?;
         } else {
             self.expression_statement()?;
         }
@@ -357,6 +359,12 @@ impl<'a> Compiler<'a> {
     fn return_statement(&mut self) -> Result<(), PiccoloError> {
         self.expression()?;
         self.emit(Opcode::Return);
+        Ok(())
+    }
+
+    fn assert_statement(&mut self) -> Result<(), PiccoloError> {
+        self.expression()?;
+        self.emit(Opcode::Assert);
         Ok(())
     }
 
