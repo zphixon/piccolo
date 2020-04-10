@@ -69,7 +69,6 @@ fn file(contents: &str) {
     use piccolo::Machine;
     use piccolo::Scanner;
 
-
     println!("****** tokens");
     let tokens = Scanner::new(contents).scan_tokens();
     if let Ok(tokens) = tokens {
