@@ -92,6 +92,7 @@ pub enum ErrorKind {
     ExpectedExpression {
         got: String,
     },
+    AssertFailed,
 }
 
 impl fmt::Display for ErrorKind {
@@ -120,6 +121,7 @@ impl fmt::Display for ErrorKind {
                 write!(f, "Malformed expression from {}", from)
             }
             ErrorKind::ExpectedExpression { got } => write!(f, "Expected expression, got {}", got),
+            ErrorKind::AssertFailed => write!(f, "Assertion failed"),
         }
     }
 }
