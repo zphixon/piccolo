@@ -159,17 +159,13 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    #[cfg(feature = "pc-debug")]
-    pub(crate) fn tokens(&self) -> &[Token] {
-        &self.tokens
+    pub fn scan_tokens(mut self) -> Result<Vec<Token<'a>>, PiccoloError> {
+        while self.next_token()?.kind != TokenKind::Eof {}
+        Ok(self.tokens)
     }
 
     pub(crate) fn current(&self) -> &Token<'a> {
         &self.tokens[self.tokens.len() - 1]
-    }
-
-    pub(crate) fn previous(&self) -> &Token<'a> {
-        &self.tokens[self.tokens.len() - 2]
     }
 
     fn slurp_whitespace(&mut self) {

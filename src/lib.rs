@@ -38,8 +38,7 @@ pub use scanner::print_tokens;
 pub fn interpret(src: &str) -> Result<value::Value, Vec<error::PiccoloError>> {
     match Machine::new(compile(
         Chunk::default(),
-        Scanner::new(src),
-        //&Scanner::new(src).scan_tokens()?,
+        &Scanner::new(src).scan_tokens().map_err(|e| vec![e])?,
     )?)
     .interpret()
     {
@@ -185,28 +184,6 @@ mod tests {
     use crate::{Scanner, Token};
 
     #[test]
-    fn scanner() {
-        let mut scanner = Scanner::new("let a = 3\nlet b = 4\nretn a + b");
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            &Token::new(TokenKind::Let, "let", 1)
-        );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            &Token::new(TokenKind::Identifier, "a", 1)
-        );
-        assert_eq!(scanner.previous(), &Token::new(TokenKind::Let, "let", 1));
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            &Token::new(TokenKind::Assign, "=", 1)
-        );
-        assert_eq!(
-            scanner.previous(),
-            &Token::new(TokenKind::Identifier, "a", 1)
-        );
-    }
-
-    #[test]
     fn get_line_from_index() {
         let mut c = Chunk::default();
         c.write(Opcode::Return, 1); // 0
@@ -265,7 +242,7 @@ mod tests {
         for i in 0..len {
             source.push_str(&format!("retn a{:04x}\n", i));
         }
-        let chunk = crate::compile(Chunk::default(), Scanner::new(&source)).unwrap();
+        let chunk = crate::compile(Chunk::default(), &Scanner::new(&source).scan_tokens().unwrap()).unwrap();
         Machine::new(chunk).interpret().unwrap();
     }
 
