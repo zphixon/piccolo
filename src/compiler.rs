@@ -95,6 +95,7 @@ pub fn compile(chunk: Chunk, tokens: &[Token]) -> Result<Chunk, Vec<PiccoloError
             (TokenKind::New, None, None, Precedence::None),
             (TokenKind::Err, None, None, Precedence::None),
             (TokenKind::Retn, None, None, Precedence::None),
+            (TokenKind::Assert, None, None, Precedence::None),
             (
                 TokenKind::Nil,
                 Some(|c, _can_assign| Compiler::literal(c)),
@@ -236,7 +237,6 @@ pub fn compile(chunk: Chunk, tokens: &[Token]) -> Result<Chunk, Vec<PiccoloError
 
     let mut errors = vec![];
 
-    //compiler.advance().map_err(|e| vec![e])?;
     while !compiler.matches(TokenKind::Eof).map_err(|e| vec![e])? {
         if let Err(err) = compiler.declaration() {
             errors.push(err);
