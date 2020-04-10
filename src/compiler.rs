@@ -606,7 +606,7 @@ impl<'a> Compiler<'a> {
             // and self.strings just to save a hash table
             self.identifiers
                 .get(self.previous().lexeme)
-                .map(|idx| *idx)
+                .copied()
                 .unwrap_or_else(|| {
                     let idx = self
                         .chunk

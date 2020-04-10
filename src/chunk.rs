@@ -40,7 +40,7 @@ impl Chunk {
 
     // add one opcode to a line
     fn add_to_line(&mut self, line: usize) {
-        while line - 1 >= self.lines.len() {
+        while line > self.lines.len() {
             self.lines.push(0);
         }
         self.lines[line - 1] += 1;
