@@ -4,7 +4,6 @@ use crate::op::Opcode;
 use crate::scanner::{Token, TokenKind};
 use crate::value::Value;
 
-use crate::Scanner;
 use std::collections::HashMap;
 
 macro_rules! prec {
@@ -59,7 +58,9 @@ pub struct Compiler<'a> {
     chunk: Chunk,
     output: bool,
     assign: bool,
-    scanner: Scanner<'a>,
+    current: usize,
+    previous: usize,
+    tokens: &'a [Token<'a>],
     identifiers: HashMap<&'a str, u16>,
     strings: HashMap<String, u16>,
     rules: Vec<(TokenKind, Option<PrefixRule>, Option<InfixRule>, Precedence)>,
@@ -68,12 +69,14 @@ pub struct Compiler<'a> {
 type PrefixRule = fn(&mut Compiler, bool) -> Result<(), PiccoloError>;
 type InfixRule = fn(&mut Compiler, bool) -> Result<(), PiccoloError>;
 
-pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError>> {
+pub fn compile(chunk: Chunk, tokens: &[Token]) -> Result<Chunk, Vec<PiccoloError>> {
     let mut compiler = Compiler {
         chunk,
         output: true,
         assign: false,
-        scanner,
+        current: 0,
+        previous: 0,
+        tokens,
         identifiers: HashMap::new(),
         strings: HashMap::new(),
         rules: vec![
@@ -233,24 +236,12 @@ pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError
 
     let mut errors = vec![];
 
-    compiler.advance().map_err(|e| vec![e])?;
+    //compiler.advance().map_err(|e| vec![e])?;
     while !compiler.matches(TokenKind::Eof).map_err(|e| vec![e])? {
         if let Err(err) = compiler.declaration() {
             errors.push(err);
             compiler.output = false;
             break;
-        }
-    }
-
-    #[cfg(all(feature = "pc-debug", not(feature = "fuzzer")))]
-    {
-        crate::scanner::print_tokens(compiler.scanner.tokens());
-    }
-
-    #[cfg(all(feature = "pc-debug", featur = "fuzzer"))]
-    {
-        if !errors.is_empty() {
-            crate::scanner::print_tokens(compiler.scanner.tokens());
         }
     }
 
@@ -269,13 +260,13 @@ pub fn compile(chunk: Chunk, scanner: Scanner) -> Result<Chunk, Vec<PiccoloError
 // the entire program regardless.
 impl<'a> Compiler<'a> {
     fn consume(&mut self, token: TokenKind) -> Result<(), PiccoloError> {
-        if self.scanner.current().kind != token {
+        if self.current().kind != token {
             self.advance()?;
             Err(PiccoloError::new(ErrorKind::UnexpectedToken {
                 exp: format!("{:?}", token),
-                got: format!("{}", self.scanner.previous()),
+                got: format!("{}", self.previous()),
             })
-            .line(self.scanner.previous().line))
+            .line(self.previous().line))
         } else {
             self.advance()?;
             Ok(())
@@ -292,7 +283,28 @@ impl<'a> Compiler<'a> {
     }
 
     fn check(&self, kind: TokenKind) -> bool {
-        self.scanner.current().kind == kind
+        self.current().kind == kind
+    }
+
+    fn advance(&mut self) -> Result<(), PiccoloError> {
+        self.previous = self.current;
+        self.current += 1;
+        if self.current <= self.tokens.len() {
+            Ok(())
+        } else {
+            Err(PiccoloError::new(ErrorKind::MalformedExpression {
+                from: self.previous().lexeme.to_owned(),
+            })
+            .line(self.previous().line))
+        }
+    }
+
+    fn current(&self) -> &Token<'a> {
+        &self.tokens[self.current]
+    }
+
+    fn previous(&self) -> &Token<'a> {
+        &self.tokens[self.current - 1]
     }
 
     fn declaration(&mut self) -> Result<(), PiccoloError> {
@@ -317,7 +329,7 @@ impl<'a> Compiler<'a> {
 
     fn parse_variable(&mut self) -> Result<u16, PiccoloError> {
         self.consume(TokenKind::Identifier)?;
-        Ok(self.identifier_constant(&self.scanner.previous().clone()))
+        Ok(self.identifier_constant(/*self.previous()*/))
     }
 
     fn define_variable(&mut self, var: u16) {
@@ -349,9 +361,9 @@ impl<'a> Compiler<'a> {
     fn expression(&mut self) -> Result<(), PiccoloError> {
         if self.check(TokenKind::Eof) {
             Err(PiccoloError::new(ErrorKind::ExpectedExpression {
-                got: self.scanner.current().lexeme.to_owned(),
+                got: self.current().lexeme.to_owned(),
             })
-            .line(self.scanner.previous().line))
+            .line(self.previous().line))
         } else {
             self.precedence(Precedence::Assignment)
         }
@@ -360,20 +372,20 @@ impl<'a> Compiler<'a> {
     fn precedence(&mut self, prec: Precedence) -> Result<(), PiccoloError> {
         self.advance()?;
         let can_assign = prec <= Precedence::Assignment;
-        if let (Some(prefix), _, _) = self.get_rule(self.scanner.previous().kind) {
+        if let (Some(prefix), _, _) = self.get_rule(self.previous().kind) {
             prefix(self, can_assign)?;
         } else {
             return Err(PiccoloError::new(ErrorKind::MalformedExpression {
-                from: self.scanner.previous().lexeme.to_owned(),
+                from: self.previous().lexeme.to_owned(),
             })
-            .line(self.scanner.previous().line));
+            .line(self.previous().line));
         }
-        while prec <= self.get_rule(self.scanner.current().kind).2 {
+        while prec <= self.get_rule(self.current().kind).2 {
             self.advance()?;
-            if let (_, Some(infix), _) = self.get_rule(self.scanner.previous().kind) {
+            if let (_, Some(infix), _) = self.get_rule(self.previous().kind) {
                 infix(self, can_assign)?;
             } else {
-                panic!("no infix rule for {:?}", self.scanner.previous().kind);
+                panic!("no infix rule for {:?}", self.previous().kind);
             }
         }
         Ok(())
@@ -385,7 +397,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn unary(&mut self) -> Result<(), PiccoloError> {
-        let kind = self.scanner.previous().kind.clone();
+        let kind = self.previous().kind;
         self.precedence(Precedence::Unary)?;
         match kind {
             TokenKind::Minus => self.emit(Opcode::Negate),
@@ -396,7 +408,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn binary(&mut self) -> Result<(), PiccoloError> {
-        let kind = self.scanner.previous().kind.clone();
+        let kind = self.previous().kind;
         let (_, _, prec) = self.get_rule(kind);
         self.precedence((prec as u8 + 1).into())?;
         match kind {
@@ -415,27 +427,23 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn advance(&mut self) -> Result<&Token, PiccoloError> {
-        self.scanner.next_token()
-    }
-
     fn number(&mut self) -> Result<(), PiccoloError> {
-        if let Ok(value) = self.scanner.previous().lexeme.parse::<i64>() {
+        if let Ok(value) = self.previous().lexeme.parse::<i64>() {
             self.emit_constant(Value::Integer(value));
             Ok(())
-        } else if let Ok(value) = self.scanner.previous().lexeme.parse::<f64>() {
+        } else if let Ok(value) = self.previous().lexeme.parse::<f64>() {
             self.emit_constant(Value::Double(value));
             Ok(())
         } else {
             Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
-                literal: self.scanner.previous().lexeme.to_owned(),
+                literal: self.previous().lexeme.to_owned(),
             })
-            .line(self.scanner.previous().line))
+            .line(self.previous().line))
         }
     }
 
     fn literal(&mut self) -> Result<(), PiccoloError> {
-        match self.scanner.previous().kind {
+        match self.previous().kind {
             TokenKind::Nil => self.emit(Opcode::Nil),
             TokenKind::True => self.emit(Opcode::True),
             TokenKind::False => self.emit(Opcode::False),
@@ -445,11 +453,11 @@ impl<'a> Compiler<'a> {
     }
 
     fn string(&mut self) -> Result<(), PiccoloError> {
-        let s = match &self.scanner.previous().kind {
+        let s = match self.previous().kind {
             TokenKind::String => {
-                let s = self.scanner.previous().lexeme;
+                let s = self.previous().lexeme;
                 let mut value = Vec::new();
-                let line_start = self.scanner.previous().line;
+                let line_start = self.previous().line;
                 let mut line = line_start;
 
                 let mut i = 1;
@@ -517,15 +525,15 @@ impl<'a> Compiler<'a> {
     }
 
     fn variable(&mut self, can_assign: bool) -> Result<(), PiccoloError> {
-        self.named_variable(&self.scanner.previous().clone(), can_assign)
+        self.named_variable(/*self.previous(),*/ can_assign)
     }
 
     fn named_variable<'b>(
         &'b mut self,
-        token: &Token<'a>,
+        //token: &Token<'a>,
         can_assign: bool,
     ) -> Result<(), PiccoloError> {
-        let arg = self.identifier_constant(token);
+        let arg = self.identifier_constant(/*token*/);
         if self.matches(TokenKind::Assign)? {
             if can_assign {
                 if !self.assign {
@@ -539,9 +547,9 @@ impl<'a> Compiler<'a> {
                 }
             } else {
                 return Err(PiccoloError::new(ErrorKind::MalformedExpression {
-                    from: token.lexeme.to_owned(),
+                    from: self.previous().lexeme.to_owned(),
                 })
-                .line(token.line));
+                .line(self.previous().line));
             }
         } else {
             self.emit3(Opcode::GetGlobal, arg);
@@ -549,16 +557,16 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn identifier_constant<'b>(&'b mut self, token: &Token<'a>) -> u16 {
+    fn identifier_constant<'b>(&'b mut self/*, token: &Token<'a>*/) -> u16 {
         if self.output {
             self.identifiers
-                .get(token.lexeme)
+                .get(self.previous().lexeme)
                 .map(|idx| *idx)
                 .unwrap_or_else(|| {
                     let idx = self
                         .chunk
-                        .make_constant(Value::String(token.lexeme.to_owned()));
-                    self.identifiers.insert(token.lexeme, idx);
+                        .make_constant(Value::String(self.previous().lexeme.to_owned()));
+                    self.identifiers.insert(self.previous().lexeme, idx);
                     idx
                 })
         } else {
@@ -575,23 +583,23 @@ impl<'a> Compiler<'a> {
 
     fn emit<T: Into<u8>>(&mut self, byte: T) {
         if self.output {
-            self.chunk.write(byte, self.scanner.previous().line);
+            self.chunk.write(byte, self.previous().line);
         }
     }
 
     fn emit2<T: Into<u8>, U: Into<u8>>(&mut self, byte1: T, byte2: U) {
         if self.output {
-            self.chunk.write(byte1, self.scanner.previous().line);
-            self.chunk.write(byte2, self.scanner.previous().line);
+            self.chunk.write(byte1, self.previous().line);
+            self.chunk.write(byte2, self.previous().line);
         }
     }
 
     fn emit3<T: Into<u8>, U: Into<u16>>(&mut self, byte1: T, bytes: U) {
         if self.output {
             let (low, high) = crate::decode_bytes(bytes.into());
-            self.chunk.write(byte1, self.scanner.previous().line);
-            self.chunk.write(low, self.scanner.previous().line);
-            self.chunk.write(high, self.scanner.previous().line);
+            self.chunk.write(byte1, self.previous().line);
+            self.chunk.write(low, self.previous().line);
+            self.chunk.write(high, self.previous().line);
         }
     }
 
