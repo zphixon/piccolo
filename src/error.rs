@@ -38,17 +38,17 @@ impl fmt::Display for PiccoloError {
             f,
             "{}{}{}{}",
             if self.line.is_some() {
-                format!("at line {}", self.line.unwrap())
+                format!("at line {} ", self.line.unwrap())
             } else {
                 "".into()
             },
             if self.file.is_some() {
-                format!("in file {}", self.file.as_ref().unwrap())
+                format!("in file {} ", self.file.as_ref().unwrap())
             } else {
                 "".into()
             },
             if self.line.is_some() || self.file.is_some() {
-                " - "
+                "- "
             } else {
                 ""
             },
