@@ -81,20 +81,18 @@ pub mod fuzzer {
     use rand::Rng;
 
     /// Run `n` tests of random tokens.
-    ///
-    /// Panics:
-    ///
-    /// Panics if an invalid program compiles and runs without an error.
-    pub fn fuzz(n: usize, min_len: usize, max_len: usize) {
+    pub fn fuzz(n: usize, min_len: usize, max_len: usize) -> Option<Vec<usize>>{
+        let mut ok = None;
         let start = std::time::Instant::now();
         let mut avg = 0.0;
         for n in 1..=n {
             let s = std::time::Instant::now();
             if let Some(_) = run(n, min_len, max_len) {
-                panic!(
-                    "run {}: possibly invalid program compiled and executed successfully",
-                    n
-                );
+                if ok.is_none() {
+                    ok = Some(vec![n]);
+                } else {
+                    ok.as_mut().unwrap().push(n);
+                }
             }
             avg += (std::time::Instant::now() - s).as_secs_f64();
         }
@@ -104,6 +102,7 @@ pub mod fuzzer {
             (std::time::Instant::now() - start).as_secs_f64(),
             avg / n as f64
         );
+        ok
     }
 
     // occasionally creates valid programs
@@ -121,7 +120,9 @@ pub mod fuzzer {
             println!("----- run {} compiles -----", n);
             crate::scanner::print_tokens(&tokens);
             chunk.disassemble("");
-            Machine::new(chunk).interpret().ok().map(|_| {})
+            Machine::new(chunk).interpret().ok().map(|_| {
+                println!("----- run {} executes -----", n);
+            })
         } else {
             None
         }

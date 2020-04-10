@@ -12,7 +12,7 @@ fn main() {
 fn run() -> Result<(), ()> {
     extern crate piccolo;
     extern crate clap;
-    use clap::{App, Arg, SubCommand};
+    use clap::{App, Arg};
 
     let matches = App::new("Piccolo fuzzer")
         .arg(
@@ -73,7 +73,13 @@ fn run() -> Result<(), ()> {
     };
 
     if min < max {
-        piccolo::fuzzer::fuzz(runs, min, max);
+        if let Some(runs) = piccolo::fuzzer::fuzz(runs, min, max) {
+            print!("{} programs completed successfully: ", runs.len());
+            for run in runs {
+                print!("{}, ", run);
+            }
+            println!("may be invalid");
+        }
         Ok(())
     } else {
         println!("Expected min < max");
