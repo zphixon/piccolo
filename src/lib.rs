@@ -47,6 +47,17 @@ pub fn interpret(src: &str) -> Result<value::Value, Vec<error::PiccoloError>> {
     }
 }
 
+pub fn do_file(
+    file: &std::path::Path,
+) -> Result<Result<value::Value, Vec<error::PiccoloError>>, std::io::Error> {
+    let contents = std::fs::read_to_string(file)?;
+    Ok(interpret(&contents).map_err(|v| {
+        v.into_iter()
+            .map(|e| e.file(file.to_str().unwrap().clone().to_string()))
+            .collect()
+    }))
+}
+
 pub(crate) fn encode_bytes(low: u8, high: u8) -> u16 {
     ((high as u16) << 8) | (low as u16)
 }
@@ -106,7 +117,9 @@ pub mod fuzzer {
             src.push_str(&format!("{} ", tk).to_lowercase());
         }
 
-        if let Ok(chunk) = crate::compile(Chunk::default(), &Scanner::new(&src).scan_tokens().unwrap()) {
+        if let Ok(chunk) =
+            crate::compile(Chunk::default(), &Scanner::new(&src).scan_tokens().unwrap())
+        {
             println!("----- run {} compiles -----", n);
             chunk.disassemble("");
             Machine::new(chunk).interpret().ok().map(|_| {})
