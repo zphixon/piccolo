@@ -292,10 +292,10 @@ impl<'a> Compiler<'a> {
         if self.current <= self.tokens.len() {
             Ok(())
         } else {
-            Err(PiccoloError::new(ErrorKind::MalformedExpression {
-                from: self.previous().lexeme.to_owned(),
-            })
-            .line(self.previous().line))
+            Err(
+                PiccoloError::new(ErrorKind::ExpectedExpression { got: "EOF".into() })
+                    .line(self.previous().line),
+            )
         }
     }
 
@@ -329,7 +329,7 @@ impl<'a> Compiler<'a> {
 
     fn parse_variable(&mut self) -> Result<u16, PiccoloError> {
         self.consume(TokenKind::Identifier)?;
-        Ok(self.identifier_constant(/*self.previous()*/))
+        Ok(self.identifier_constant())
     }
 
     fn define_variable(&mut self, var: u16) {
@@ -525,15 +525,11 @@ impl<'a> Compiler<'a> {
     }
 
     fn variable(&mut self, can_assign: bool) -> Result<(), PiccoloError> {
-        self.named_variable(/*self.previous(),*/ can_assign)
+        self.named_variable(can_assign)
     }
 
-    fn named_variable<'b>(
-        &'b mut self,
-        //token: &Token<'a>,
-        can_assign: bool,
-    ) -> Result<(), PiccoloError> {
-        let arg = self.identifier_constant(/*token*/);
+    fn named_variable(&mut self, can_assign: bool) -> Result<(), PiccoloError> {
+        let arg = self.identifier_constant();
         if self.matches(TokenKind::Assign)? {
             if can_assign {
                 if !self.assign {
@@ -557,7 +553,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn identifier_constant<'b>(&'b mut self/*, token: &Token<'a>*/) -> u16 {
+    fn identifier_constant(&mut self) -> u16 {
         if self.output {
             self.identifiers
                 .get(self.previous().lexeme)

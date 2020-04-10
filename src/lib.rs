@@ -242,7 +242,11 @@ mod tests {
         for i in 0..len {
             source.push_str(&format!("retn a{:04x}\n", i));
         }
-        let chunk = crate::compile(Chunk::default(), &Scanner::new(&source).scan_tokens().unwrap()).unwrap();
+        let chunk = crate::compile(
+            Chunk::default(),
+            &Scanner::new(&source).scan_tokens().unwrap(),
+        )
+        .unwrap();
         Machine::new(chunk).interpret().unwrap();
     }
 
