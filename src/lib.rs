@@ -106,7 +106,7 @@ pub mod fuzzer {
             src.push_str(&format!("{} ", tk).to_lowercase());
         }
 
-        if let Ok(chunk) = crate::compile(Chunk::default(), Scanner::new(&src)) {
+        if let Ok(chunk) = crate::compile(Chunk::default(), &Scanner::new(&src).scan_tokens().unwrap()) {
             println!("----- run {} compiles -----", n);
             chunk.disassemble("");
             Machine::new(chunk).interpret().ok().map(|_| {})

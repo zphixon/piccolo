@@ -259,6 +259,7 @@ pub fn compile(chunk: Chunk, tokens: &[Token]) -> Result<Chunk, Vec<PiccoloError
 // we should still be outputting bytecode, and still attempt to parse
 // the entire program regardless.
 impl<'a> Compiler<'a> {
+    // consumes one token, reports an error if it isn't the token we wanted
     fn consume(&mut self, token: TokenKind) -> Result<(), PiccoloError> {
         if self.current().kind != token {
             self.advance()?;
@@ -273,6 +274,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    // checks if the next token matches, advances if it does
     fn matches(&mut self, kind: TokenKind) -> Result<bool, PiccoloError> {
         if !self.check(kind) {
             Ok(false)
@@ -282,10 +284,12 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    // peeks at the next token
     fn check(&self, kind: TokenKind) -> bool {
         self.current().kind == kind
     }
 
+    // unconditionally advances, except at EOF
     fn advance(&mut self) -> Result<(), PiccoloError> {
         self.previous = self.current;
         self.current += 1;
@@ -316,17 +320,20 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    // declaration always is a statement, it will never be entered from the parsing table
     fn var_declaration(&mut self) -> Result<(), PiccoloError> {
         let global = self.parse_variable()?;
         if self.matches(TokenKind::Assign)? {
             self.expression()?;
         } else {
+            // assign nil to a variable if no value is specified
             self.emit(Opcode::Nil);
         }
         self.define_variable(global);
         Ok(())
     }
 
+    // parses a variable reference
     fn parse_variable(&mut self) -> Result<u16, PiccoloError> {
         self.consume(TokenKind::Identifier)?;
         Ok(self.identifier_constant())
@@ -336,6 +343,7 @@ impl<'a> Compiler<'a> {
         self.emit3(Opcode::DefineGlobal, var);
     }
 
+    // matches the beginning of statements, e.g. data, fn, retn, declaration
     fn statement(&mut self) -> Result<(), PiccoloError> {
         if self.matches(TokenKind::Retn)? {
             self.return_statement()?;
@@ -358,6 +366,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
+    // matches an expression, returns an error if at EOF
     fn expression(&mut self) -> Result<(), PiccoloError> {
         if self.check(TokenKind::Eof) {
             Err(PiccoloError::new(ErrorKind::ExpectedExpression {
@@ -369,10 +378,20 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    // parse an expression by operators of decreasing precedence starting from prec
     fn precedence(&mut self, prec: Precedence) -> Result<(), PiccoloError> {
         self.advance()?;
+
+        // we can do assignment if there aren't any tokens to the left with a higher
+        // precedence than assignment. this is only the case if we are currently to
+        // the right of any operand other than assignment itself.
         let can_assign = prec <= Precedence::Assignment;
+        //let can_assign = prec <= Precedence::Or; // TODO
+
         if let (Some(prefix), _, _) = self.get_rule(self.previous().kind) {
+            // if there exists a prefix rule for the previous token, we execute it.
+            // this will always be an operator like logical/mathematical/bitwise negation,
+            // string/number literals, or variable references.
             prefix(self, can_assign)?;
         } else {
             return Err(PiccoloError::new(ErrorKind::MalformedExpression {
@@ -380,6 +399,8 @@ impl<'a> Compiler<'a> {
             })
             .line(self.previous().line));
         }
+
+        // recurse while there is a token with higher precedence than the current, return if not
         while prec <= self.get_rule(self.current().kind).2 {
             self.advance()?;
             if let (_, Some(infix), _) = self.get_rule(self.previous().kind) {
@@ -391,14 +412,23 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
+    // parses parenthetical expressions
     fn grouping(&mut self) -> Result<(), PiccoloError> {
+        // we've already advanced past the left paren in `precedence`,
+        // now we're in the prefix rule for TokenKind::LeftParen
         self.expression()?;
         self.consume(TokenKind::RightParen)
     }
 
     fn unary(&mut self) -> Result<(), PiccoloError> {
+        // we've already advanced past the unary operator, we're here
+        // from the call to `prefix` in `precedence`
         let kind = self.previous().kind;
+
+        // parse any operators to the right with a higher precedence and emit their opcode
         self.precedence(Precedence::Unary)?;
+
+        // emit the correct opcode
         match kind {
             TokenKind::Minus => self.emit(Opcode::Negate),
             TokenKind::Not => self.emit(Opcode::Not),
@@ -408,9 +438,15 @@ impl<'a> Compiler<'a> {
     }
 
     fn binary(&mut self) -> Result<(), PiccoloError> {
+        // we've already advanced past the left operand and the operator
+        // the call to `infix` brought us here
         let kind = self.previous().kind;
         let (_, _, prec) = self.get_rule(kind);
+
+        // parse operators to the right with the next higher precedence and emit their opcodes
         self.precedence((prec as u8 + 1).into())?;
+
+        // emit our own opcode
         match kind {
             TokenKind::Plus => self.emit(Opcode::Add),
             TokenKind::Minus => self.emit(Opcode::Subtract),
@@ -449,6 +485,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
+    // parses string escapes
     fn string(&mut self) -> Result<(), PiccoloError> {
         let s = match self.previous().kind {
             TokenKind::String => {
@@ -511,6 +548,7 @@ impl<'a> Compiler<'a> {
             _ => unreachable!(),
         };
 
+        // intern the string constant
         if let Some(&idx) = self.strings.get(&s) {
             self.emit3(Opcode::Constant, idx);
         } else {
@@ -525,10 +563,13 @@ impl<'a> Compiler<'a> {
         self.named_variable(can_assign)
     }
 
+    // parse variable assignment and reference
     fn named_variable(&mut self, can_assign: bool) -> Result<(), PiccoloError> {
         let arg = self.identifier_constant();
         if self.matches(TokenKind::Assign)? {
+            // if the target is valid (say, setting a property on an instance)
             if can_assign {
+                // TODO: maybe unnecessary if we check against a precedence <= or in `precedence`
                 if !self.assign {
                     self.assign = true;
                     self.expression()?;
@@ -550,8 +591,11 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
+    // emit identifier constant
     fn identifier_constant(&mut self) -> u16 {
         if self.output {
+            // intern identifier constants - we might want to unify self.identifiers
+            // and self.strings just to save a hash table
             self.identifiers
                 .get(self.previous().lexeme)
                 .map(|idx| *idx)
