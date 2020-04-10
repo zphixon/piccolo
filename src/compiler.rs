@@ -463,9 +463,9 @@ impl<'a> Compiler<'a> {
             TokenKind::Equal => self.emit(Opcode::Equal),
             TokenKind::NotEqual => self.emit2(Opcode::Equal, Opcode::Not),
             TokenKind::Greater => self.emit(Opcode::Greater),
-            TokenKind::GreaterEqual => self.emit2(Opcode::Less, Opcode::Not),
+            TokenKind::GreaterEqual => self.emit(Opcode::GreaterEqual),
             TokenKind::Less => self.emit(Opcode::Less),
-            TokenKind::LessEqual => self.emit2(Opcode::Greater, Opcode::Not),
+            TokenKind::LessEqual => self.emit(Opcode::LessEqual),
             _ => {}
         }
         Ok(())
