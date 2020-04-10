@@ -360,7 +360,7 @@ impl<'a> Compiler<'a> {
     fn precedence(&mut self, prec: Precedence) -> Result<(), PiccoloError> {
         self.advance()?;
         let can_assign = prec <= Precedence::Assignment;
-        if let (Some(prefix), _, _) = self.get_rule(&self.scanner.previous().kind) {
+        if let (Some(prefix), _, _) = self.get_rule(self.scanner.previous().kind) {
             prefix(self, can_assign)?;
         } else {
             return Err(PiccoloError::new(ErrorKind::MalformedExpression {
@@ -368,9 +368,9 @@ impl<'a> Compiler<'a> {
             })
             .line(self.scanner.previous().line));
         }
-        while prec <= *self.get_rule(&self.scanner.current().kind).2 {
+        while prec <= self.get_rule(self.scanner.current().kind).2 {
             self.advance()?;
-            if let (_, Some(infix), _) = self.get_rule(&self.scanner.previous().kind) {
+            if let (_, Some(infix), _) = self.get_rule(self.scanner.previous().kind) {
                 infix(self, can_assign)?;
             } else {
                 panic!("no infix rule for {:?}", self.scanner.previous().kind);
@@ -397,7 +397,7 @@ impl<'a> Compiler<'a> {
 
     fn binary(&mut self) -> Result<(), PiccoloError> {
         let kind = self.scanner.previous().kind.clone();
-        let (_, _, &prec) = self.get_rule(&kind);
+        let (_, _, prec) = self.get_rule(kind);
         self.precedence((prec as u8 + 1).into())?;
         match kind {
             TokenKind::Plus => self.emit(Opcode::Add),
@@ -595,10 +595,10 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn get_rule(&self, kind: &TokenKind) -> (&Option<PrefixRule>, &Option<InfixRule>, &Precedence) {
+    fn get_rule(&self, kind: TokenKind) -> (&Option<PrefixRule>, &Option<InfixRule>, Precedence) {
         for (k, prefix, infix, precedence) in self.rules.iter() {
-            let rule = (prefix, infix, precedence);
-            if k == kind {
+            let rule = (prefix, infix, *precedence);
+            if *k == kind {
                 return rule;
             } else {
                 if let TokenKind::Double(_) = kind {
