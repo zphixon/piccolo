@@ -171,6 +171,10 @@ impl Machine {
                     let v = self.pop()?;
                     println!("{}", v.fmt());
                 }
+                Opcode::Assert => {
+                    let v = self.pop()?;
+                    assert!(v.is_truthy());
+                }
                 Opcode::DefineGlobal => {
                     if let Value::String(name) = self.constant()? {
                         let name = name.clone();
