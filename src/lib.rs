@@ -53,7 +53,7 @@ pub fn do_file(
     let contents = std::fs::read_to_string(file)?;
     Ok(interpret(&contents).map_err(|v| {
         v.into_iter()
-            .map(|e| e.file(file.to_str().unwrap().clone().to_string()))
+            .map(|e| e.file(file.to_str().unwrap().to_owned()))
             .collect()
     }))
 }
@@ -74,9 +74,8 @@ pub mod fuzzer {
 
     use crate::chunk::Chunk;
     use crate::machine::Machine;
-    use crate::scanner::Token;
     use crate::scanner::TokenKind;
-    use crate::{scanner, Scanner};
+    use crate::Scanner;
 
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
@@ -112,15 +111,15 @@ pub mod fuzzer {
         let mut src = String::new();
         let mut r = rand::thread_rng();
         let lines = r.gen_range(min_len, max_len);
-        for (_, line) in (1..lines).enumerate() {
+        for _ in 1..lines {
             let tk: TokenKind = r.gen();
             src.push_str(&format!("{} ", tk).to_lowercase());
         }
 
-        if let Ok(chunk) =
-            crate::compile(Chunk::default(), &Scanner::new(&src).scan_tokens().unwrap())
-        {
+        let tokens = Scanner::new(&src).scan_tokens().ok()?;
+        if let Ok(chunk) = crate::compile(Chunk::default(), &tokens) {
             println!("----- run {} compiles -----", n);
+            crate::scanner::print_tokens(&tokens);
             chunk.disassemble("");
             Machine::new(chunk).interpret().ok().map(|_| {})
         } else {
@@ -193,8 +192,7 @@ mod tests {
     use crate::compiler::Precedence;
     use crate::machine::Machine;
     use crate::op::Opcode;
-    use crate::scanner::TokenKind;
-    use crate::{Scanner, Token};
+    use crate::Scanner;
 
     #[test]
     fn get_line_from_index() {
