@@ -44,7 +44,11 @@ impl Machine {
         self.stack.get(self.stack.len() - dist - 1)
     }
 
+    // get a constant from the chunk
     fn constant(&self) -> Result<&Value, PiccoloError> {
+        // Opcode::Constant takes a two-byte operand, meaning it's necessary
+        // to decode the high and low bytes. the machine is little-endian with
+        // constant addresses.
         self.chunk
             .data
             .get(self.ip)
@@ -71,6 +75,7 @@ impl Machine {
             let inst = self.chunk.data[self.ip];
             self.ip += 1;
 
+            // boolean argument to enable/disable string concatenation
             macro_rules! bin_op {
                 ($opcode:path, $op:tt) => {
                     bin_op!($opcode, $op, false)
@@ -125,6 +130,8 @@ impl Machine {
                 };
             }
 
+            // disallows comparison to booleans. it's possible to make this a compiler error
+            // instead of a runtime error but parsing is hard...
             macro_rules! cmp {
                 ($opcode:path, $negate:literal) => {
                     let rhs = self.pop()?;
@@ -199,7 +206,6 @@ impl Machine {
                                 },
                                 |_| Ok(()),
                             )?;
-                        //self.pop()?;
                         self.ip += 2;
                     }
                 }

@@ -15,6 +15,7 @@ impl Chunk {
         self.add_to_line(line);
     }
 
+    // allows for duplicate constants, non-duplicates are checked in the compiler
     pub(crate) fn make_constant(&mut self, value: Value) -> u16 {
         self.constants.push(value);
         let idx = self.constants.len() - 1;
@@ -25,6 +26,7 @@ impl Chunk {
         }
     }
 
+    // get a line number from a byte offset using run-length encoding
     pub(crate) fn get_line_from_index(&self, idx: usize) -> usize {
         let mut total_ops = 0;
         for (offset_line, num_ops) in self.lines.iter().enumerate() {
@@ -36,6 +38,7 @@ impl Chunk {
         panic!("no line for idx {}", idx);
     }
 
+    // add one opcode to a line
     fn add_to_line(&mut self, line: usize) {
         while line - 1 >= self.lines.len() {
             self.lines.push(0);
