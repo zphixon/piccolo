@@ -173,7 +173,9 @@ impl Machine {
                 }
                 Opcode::Assert => {
                     let v = self.pop()?;
-                    assert!(v.is_truthy());
+                    if !v.is_truthy() {
+                        return Err(PiccoloError::new(ErrorKind::AssertFailed).line(line));
+                    }
                 }
                 Opcode::DefineGlobal => {
                     if let Value::String(name) = self.constant()? {
