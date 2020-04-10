@@ -25,7 +25,6 @@ macro_rules! opcodes {
     };
 }
 
-// TODO: multi-byte constant opcode
 opcodes!(Opcode =>
     Return = 0,
     Constant = 1,
@@ -41,9 +40,11 @@ opcodes!(Opcode =>
     Equal = 11,
     Greater = 12,
     Less = 13,
-    Pop = 14,
-    DefineGlobal = 15,
-    GetGlobal = 16,
-    AssignGlobal = 17,
-    Assert = 18,
+    GreaterEqual = 14,
+    LessEqual = 15,
+    Pop = 16,
+    DefineGlobal = 17,
+    GetGlobal = 18,
+    AssignGlobal = 19,
+    Assert = 20,
 );

@@ -97,6 +97,8 @@ impl Chunk {
                 Opcode::Equal => offset + 1,
                 Opcode::Greater => offset + 1,
                 Opcode::Less => offset + 1,
+                Opcode::GreaterEqual => offset + 1,
+                Opcode::LessEqual => offset + 1,
                 Opcode::Pop => offset + 1,
                 Opcode::DefineGlobal => {
                     let low = self.data[offset + 1];

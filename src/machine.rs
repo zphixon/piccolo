@@ -130,35 +130,6 @@ impl Machine {
                 };
             }
 
-            // disallows comparison to booleans. it's possible to make this a compiler error
-            // instead of a runtime error but parsing is hard...
-            macro_rules! cmp {
-                ($opcode:path, $negate:literal) => {
-                    let rhs = self.pop()?;
-                    let lhs = self.pop()?;
-                    if rhs.is_bool() || lhs.is_bool() {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "that isn't bool".into(),
-                            got: "bool".into(),
-                            op: $opcode,
-                        })
-                        .line(line));
-                    }
-                    self.stack.push(Value::Bool(
-                        $negate
-                            ^ lhs.gt(&rhs).map_or(
-                                Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: lhs.type_name().to_owned(),
-                                    got: rhs.type_name().to_owned(),
-                                    op: $opcode,
-                                })
-                                .line(line)),
-                                Ok,
-                            )?,
-                    ));
-                };
-            }
-
             let op = inst.into();
             match op {
                 Opcode::Pop => {
@@ -265,10 +236,96 @@ impl Machine {
                     ));
                 }
                 Opcode::Greater => {
-                    cmp!(Opcode::Less, false);
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
+                    if rhs.is_bool() || lhs.is_bool() {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                            exp: "that isn't bool".into(),
+                            got: "bool".into(),
+                            op,
+                        })
+                        .line(line));
+                    }
+                    self.stack.push(Value::Bool(
+                        lhs.gt(&rhs).map_or(
+                            Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                exp: lhs.type_name().to_owned(),
+                                got: rhs.type_name().to_owned(),
+                                op,
+                            })
+                            .line(line)),
+                            Ok,
+                        )?,
+                    ));
                 }
                 Opcode::Less => {
-                    cmp!(Opcode::Less, true);
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
+                    if rhs.is_bool() || lhs.is_bool() {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                            exp: "that isn't bool".into(),
+                            got: "bool".into(),
+                            op,
+                        })
+                        .line(line));
+                    }
+                    self.stack.push(Value::Bool(
+                        lhs.lt(&rhs).map_or(
+                            Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                exp: lhs.type_name().to_owned(),
+                                got: rhs.type_name().to_owned(),
+                                op,
+                            })
+                            .line(line)),
+                            Ok,
+                        )?,
+                    ));
+                }
+                Opcode::GreaterEqual => {
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
+                    if rhs.is_bool() || lhs.is_bool() {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                            exp: "that isn't bool".into(),
+                            got: "bool".into(),
+                            op,
+                        })
+                        .line(line));
+                    }
+                    self.stack.push(Value::Bool(
+                        !lhs.lt(&rhs).map_or(
+                            Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                exp: lhs.type_name().to_owned(),
+                                got: rhs.type_name().to_owned(),
+                                op,
+                            })
+                            .line(line)),
+                            Ok,
+                        )?,
+                    ));
+                }
+                Opcode::LessEqual => {
+                    let rhs = self.pop()?;
+                    let lhs = self.pop()?;
+                    if rhs.is_bool() || lhs.is_bool() {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                            exp: "that isn't bool".into(),
+                            got: "bool".into(),
+                            op,
+                        })
+                        .line(line));
+                    }
+                    self.stack.push(Value::Bool(
+                        !lhs.gt(&rhs).map_or(
+                            Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                exp: lhs.type_name().to_owned(),
+                                got: rhs.type_name().to_owned(),
+                                op,
+                            })
+                            .line(line)),
+                            Ok,
+                        )?,
+                    ));
                 }
                 Opcode::Add => {
                     bin_op!(Opcode::Add, +, true);

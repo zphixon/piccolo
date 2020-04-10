@@ -14,6 +14,10 @@ pub trait Object: Downcast + Debug + Display {
         None
     }
 
+    fn lt(&self, _other: &dyn Object) -> Option<bool> {
+        None
+    }
+
     fn eq(&self, _other: &dyn Object) -> Option<bool> {
         None
     }
@@ -36,6 +40,10 @@ downcast_rs::impl_downcast!(Object);
 impl Object for String {
     fn type_name(&self) -> &'static str {
         "string"
+    }
+
+    fn lt(&self, other: &dyn Object) -> Option<bool> {
+        other.downcast_ref::<String>().map(|s| self < s)
     }
 
     fn gt(&self, other: &dyn Object) -> Option<bool> {
@@ -197,6 +205,30 @@ impl Value {
             },
             Value::Object(l) => match other {
                 Value::Object(r) => l.eq(r.as_ref()),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    pub fn lt(&self, other: &Value) -> Option<bool> {
+        match self {
+            Value::Integer(l) => match other {
+                Value::Integer(r) => Some(l < r),
+                Value::Double(r) => Some((*l as f64) < *r),
+                _ => None,
+            },
+            Value::Double(l) => match other {
+                Value::Integer(r) => Some(*l < *r as f64),
+                Value::Double(r) => Some(l < r),
+                _ => None,
+            },
+            Value::String(l) => match other {
+                Value::String(r) => Some(l < r),
+                _ => None,
+            },
+            Value::Object(l) => match other {
+                Value::Object(r) => l.lt(r.as_ref()),
                 _ => None,
             },
             _ => None,
