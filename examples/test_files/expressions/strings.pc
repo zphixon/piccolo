@@ -1,0 +1,4 @@
+assert "ye" + "et" == "yeet"
+assert "ye" + "et" != "\"yeet\""
+assert "hello \
+           world" == "hello world"

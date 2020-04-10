@@ -10,20 +10,17 @@ fn main() -> io::Result<()> {
 
     println!("found {} tests", files.len());
 
-    let mut file_and_errors = vec![];
+    let mut file_tokens_errors = vec![];
     for item in files {
         println!(" -- '{}'", item.display());
-
-        piccolo::do_file(&item).map(|value_or_pc_errors| {
-            let _ = value_or_pc_errors.map_err(|pc_errors| {
-                file_and_errors.push((item.display().to_string(), pc_errors));
-            });
-        })?;
+        let _ = piccolo::do_file(&item)?.map_err(|errs| {
+            file_tokens_errors.push((item.display().to_string(), errs));
+        });
     }
 
-    println!("\nreported {} failures", file_and_errors.len());
+    println!("\nreported {} failures", file_tokens_errors.len());
 
-    for (file, errors) in file_and_errors {
+    for (file, errors) in file_tokens_errors {
         println!(" -- test '{}' failed", file);
         if errors.len() == 1 {
             println!("        Error {}", errors[0])

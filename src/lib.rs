@@ -264,43 +264,7 @@ mod tests {
     }
 
     #[test]
-    fn comparison() {
-        assert!(crate::interpret("1 < 2").unwrap().into::<bool>());
-        assert!(crate::interpret("1 <= 2").unwrap().into::<bool>());
-        assert!(crate::interpret("2 > 1").unwrap().into::<bool>());
-        assert!(crate::interpret("2 >= 1").unwrap().into::<bool>());
-        assert!(crate::interpret("2 == 2").unwrap().into::<bool>());
-        assert!(crate::interpret("3 != 2").unwrap().into::<bool>());
-        assert!(crate::interpret("\"a\" == \"a\"").unwrap().into::<bool>());
-        assert!(crate::interpret("\"a\" != \"b\"").unwrap().into::<bool>());
-    }
-
-    #[test]
-    fn strings() {
-        assert!(
-            crate::interpret("\"hello \\\n           world\" == \"hello world\"")
-                .unwrap()
-                .into::<bool>()
-        );
-        assert!(crate::interpret("\"ye\" + \"et\" == \"yeet\"")
-            .unwrap()
-            .into::<bool>());
-        assert!(!crate::interpret("\"ye\" + \"et\" == \"\\\"yeet\\\"\"")
-            .unwrap()
-            .into::<bool>());
-    }
-
-    #[test]
     fn precedence_ord() {
         assert!(Precedence::And > Precedence::Or);
-    }
-
-    #[test]
-    fn math() {
-        assert!(crate::interpret("1 + 2 == 3").unwrap().into::<bool>());
-        assert!(crate::interpret("0.1 + 0.2 == 0.30000000000000004")
-            .unwrap()
-            .into::<bool>());
-        assert!(crate::interpret("3 / 4. == 0.75").unwrap().into::<bool>());
     }
 }
