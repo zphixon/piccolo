@@ -6,9 +6,10 @@
 pub extern crate downcast_rs;
 pub extern crate slotmap;
 
-mod compiler;
-mod error;
-mod runtime;
+pub mod ast;
+pub mod compiler;
+pub mod error;
+pub mod runtime;
 
 pub use compiler::emitter::compile;
 pub use compiler::scanner::{Scanner, Token, TokenKind};
