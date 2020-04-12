@@ -1,8 +1,6 @@
-use crate::chunk::Chunk;
+use crate::compiler::scanner::{Token, TokenKind};
 use crate::error::{ErrorKind, PiccoloError};
-use crate::op::Opcode;
-use crate::scanner::{Token, TokenKind};
-use crate::value::Value;
+use crate::runtime::{chunk::Chunk, op::Opcode, value::Value};
 
 use std::collections::HashMap;
 
@@ -530,7 +528,7 @@ impl<'a> Compiler<'a> {
                             }
                             b'\n' => {
                                 while i < s.as_bytes().len() - 1
-                                    && crate::scanner::is_whitespace(s.as_bytes()[i])
+                                    && crate::compiler::scanner::is_whitespace(s.as_bytes()[i])
                                 {
                                     i += 1;
                                 }
