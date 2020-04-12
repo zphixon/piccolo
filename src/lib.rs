@@ -183,7 +183,79 @@ pub mod fuzzer {
 mod tests {
     use crate::compiler::emitter::Precedence;
     use crate::runtime::op::Opcode;
-    use crate::{Chunk, Machine, Scanner};
+    use crate::{Chunk, Machine, Scanner, Token, TokenKind};
+    use crate::ast::stmt::Stmt;
+    use crate::ast::expr::{Expr, Literal};
+    use crate::ast::{Arity, AstPrinter};
+
+    #[test]
+    fn ast_print() {
+        let source = "x := 3\ny := x - 4\nif x > y then\n  io.prln(3)\nend\n";
+        let tokens = vec![
+            Token::new(TokenKind::Identifier, &source[0..1], 1),     //  0 x
+            Token::new(TokenKind::Assign, &source[2..4], 1),     //  1 :=
+            Token::new(TokenKind::Integer(3), &source[5..6], 1),     //  2 3
+            Token::new(TokenKind::Identifier, &source[7..8], 2),     //  3 y
+            Token::new(TokenKind::Assign, &source[9..11], 2),    //  4 :=
+            Token::new(TokenKind::Identifier, &source[12..13], 2),   //  5 x
+            Token::new(TokenKind::Minus, &source[14..15], 2),   //  6 -
+            Token::new(TokenKind::Integer(3), &source[16..17], 2),   //  7 4
+            Token::new(TokenKind::If, &source[18..19], 3),   //  8 if
+            Token::new(TokenKind::Identifier, &source[21..22], 3),   //  9 x
+            Token::new(TokenKind::Greater, &source[23..24], 3),   // 10 >
+            Token::new(TokenKind::Identifier, &source[25..26], 3),   // 11 y
+            Token::new(TokenKind::Nil, &source[27..31], 3),   // 12 then
+            Token::new(TokenKind::Identifier, &source[34..36], 4),   // 13 io
+            Token::new(TokenKind::Period, &source[36..37], 4),   // 14 .
+            Token::new(TokenKind::Identifier, &source[37..41], 4),   // 15 prln
+            Token::new(TokenKind::LeftParen, &source[41..42], 4),   // 16 (
+            Token::new(TokenKind::Integer(3), &source[42..43], 4),   // 17 3
+            Token::new(TokenKind::RightParen, &source[43..44], 4),   // 18 )
+            Token::new(TokenKind::End, &source[45..48], 5),   // 19 end
+        ];
+
+        let ast = vec![
+            Stmt::Assignment {
+                name: &tokens[0],
+                value: Expr::Literal(Literal::Integer(3)),
+            },
+            Stmt::Assignment {
+                name: &tokens[3],
+                value: Expr::Binary {
+                    lhs: Box::new(Expr::Variable { name: &tokens[5] }),
+                    op: &tokens[6],
+                    rhs: Box::new(Expr::Literal(Literal::Integer(4))),
+                },
+            },
+            Stmt::If {
+                cond: Expr::Binary {
+                    lhs: Box::new(Expr::Variable { name: &tokens[9] }),
+                    op: &tokens[10],
+                    rhs: Box::new(Expr::Variable { name: &tokens[11] }),
+                },
+                then: vec![
+                    Stmt::StmtExpr {
+                        expr: Expr::Call {
+                            callee: Box::new(Expr::Get {
+                                object: Box::new(Expr::Variable {
+                                    name: &tokens[13],
+                                }),
+                                name: &tokens[15],
+                            }),
+                            paren: &tokens[16],
+                            arity: Arity::Some(1),
+                            args: vec![
+                                Expr::Literal(Literal::Integer(3)),
+                            ],
+                        },
+                    }
+                ],
+                else_: None,
+            },
+        ];
+
+        println!("{}", AstPrinter.print(&ast));
+    }
 
     #[test]
     fn get_line_from_index() {
