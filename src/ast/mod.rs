@@ -106,15 +106,16 @@ impl stmt::StmtVisitor for AstPrinter {
         self.parenthesize("expr", &[&s])
     }
 
-    fn visit_if(&mut self, cond: &expr::Expr, then: &[stmt::Stmt], else_: Option<&Vec<stmt::Stmt>>) -> String {
+    fn visit_if(
+        &mut self,
+        cond: &expr::Expr,
+        then: &[stmt::Stmt],
+        else_: Option<&Vec<stmt::Stmt>>,
+    ) -> String {
         if else_.is_none() {
             self.parenthesize_list("if", Some(cond), then)
         } else {
-            self.parenthesize_lists(
-                "if-else",
-                Some(cond),
-                &[then, else_.unwrap()],
-            )
+            self.parenthesize_lists("if-else", Some(cond), &[then, else_.unwrap()])
         }
     }
 
@@ -135,7 +136,14 @@ impl stmt::StmtVisitor for AstPrinter {
         self.parenthesize_list(&name2, Some(iter), body)
     }
 
-    fn visit_func(&mut self, name: &Token, args: &[&Token], _arity: Arity, body: &[stmt::Stmt], _method: bool) -> String {
+    fn visit_func(
+        &mut self,
+        name: &Token,
+        args: &[&Token],
+        _arity: Arity,
+        body: &[stmt::Stmt],
+        _method: bool,
+    ) -> String {
         let mut name_ = String::from("fn ");
         name_.push_str(name.lexeme);
         name_.push_str(" (");
@@ -152,13 +160,16 @@ impl stmt::StmtVisitor for AstPrinter {
     fn visit_retn(&mut self, _keyword: &Token, value: Option<&expr::Expr>) -> String {
         self.parenthesize(
             "retn",
-            &[
-                value.unwrap_or(&expr::Expr::Literal(expr::Literal::Nil)),
-            ],
+            &[value.unwrap_or(&expr::Expr::Literal(expr::Literal::Nil))],
         )
     }
 
-    fn visit_data(&mut self, _name: &Token, _methods: &[stmt::Stmt], _fields: &[(&Token, expr::Expr)]) -> String {
+    fn visit_data(
+        &mut self,
+        _name: &Token,
+        _methods: &[stmt::Stmt],
+        _fields: &[(&Token, expr::Expr)],
+    ) -> String {
         self.parenthesize("data", &[])
     }
 }
@@ -199,7 +210,13 @@ impl expr::ExprVisitor for AstPrinter {
         String::from(name.lexeme)
     }
 
-    fn visit_call(&mut self, callee: &expr::Expr, _paren: &Token, _arity: Arity, args: &[expr::Expr]) -> String {
+    fn visit_call(
+        &mut self,
+        callee: &expr::Expr,
+        _paren: &Token,
+        _arity: Arity,
+        args: &[expr::Expr],
+    ) -> String {
         let mut name = String::from("call ");
         name.push_str(&callee.accept(&mut *self));
         let args: Vec<&expr::Expr> = args.iter().map(|arg| arg).collect();
@@ -230,7 +247,14 @@ impl expr::ExprVisitor for AstPrinter {
         self.parenthesize(&name, &[object])
     }
 
-    fn visit_func(&mut self, name: &Token, args: &[&Token], _arity: Arity, body: &[stmt::Stmt], _method: bool) -> String {
+    fn visit_func(
+        &mut self,
+        name: &Token,
+        args: &[&Token],
+        _arity: Arity,
+        body: &[stmt::Stmt],
+        _method: bool,
+    ) -> String {
         let mut name_ = String::from("fn ");
         name_.push_str(name.lexeme);
         name_.push_str(" (");

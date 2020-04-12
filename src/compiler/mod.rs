@@ -1,8 +1,8 @@
-use crate::error::{ErrorKind, PiccoloError};
-use crate::compiler::scanner::{Token, TokenKind};
-
 pub mod emitter;
 pub mod scanner;
+
+use crate::compiler::scanner::{Token, TokenKind};
+use crate::error::{ErrorKind, PiccoloError};
 
 #[allow(dead_code)]
 pub(crate) fn escape_string(t: &Token) -> Result<String, PiccoloError> {
@@ -51,7 +51,7 @@ pub(crate) fn escape_string(t: &Token) -> Result<String, PiccoloError> {
                             return Err(PiccoloError::new(ErrorKind::UnknownFormatCode {
                                 code: c as char,
                             })
-                                .line(line));
+                            .line(line));
                         }
                     }
                 } else {

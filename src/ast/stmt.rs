@@ -14,9 +14,21 @@ pub trait StmtVisitor {
     fn visit_if(&mut self, cond: &Expr, then: &[Stmt], else_: Option<&Vec<Stmt>>) -> Self::Output;
     fn visit_while(&mut self, cond: &Expr, body: &[Stmt]) -> Self::Output;
     fn visit_for(&mut self, name: &Token, iter: &Expr, body: &[Stmt]) -> Self::Output;
-    fn visit_func(&mut self, name: &Token, args: &[&Token], arity: super::Arity, body: &[Stmt], method: bool) -> Self::Output;
+    fn visit_func(
+        &mut self,
+        name: &Token,
+        args: &[&Token],
+        arity: super::Arity,
+        body: &[Stmt],
+        method: bool,
+    ) -> Self::Output;
     fn visit_retn(&mut self, keyword: &Token, value: Option<&Expr>) -> Self::Output;
-    fn visit_data(&mut self, name: &Token, methods: &[Stmt], fields: &[(&Token, Expr)]) -> Self::Output;
+    fn visit_data(
+        &mut self,
+        name: &Token,
+        methods: &[Stmt],
+        fields: &[(&Token, Expr)],
+    ) -> Self::Output;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -43,7 +55,7 @@ pub enum Stmt<'a: 'b, 'b> {
     For {
         name: &'b Token<'a>,
         iter: Expr<'a, 'b>,
-        body: Vec<Stmt<'a , 'b>>,
+        body: Vec<Stmt<'a, 'b>>,
     },
     Func {
         name: &'b Token<'a>,
@@ -54,12 +66,12 @@ pub enum Stmt<'a: 'b, 'b> {
     },
     Retn {
         keyword: &'b Token<'a>,
-        value: Option<Expr<'a, 'b>>
+        value: Option<Expr<'a, 'b>>,
     },
     Data {
         name: &'b Token<'a>,
         methods: Vec<Stmt<'a, 'b>>,
-        fields: Vec<(&'b Token<'a>, Expr<'a, 'b>)>
+        fields: Vec<(&'b Token<'a>, Expr<'a, 'b>)>,
     },
 }
 
@@ -72,9 +84,19 @@ impl StmtAccept for Stmt<'_, '_> {
             Stmt::If { cond, then, else_ } => v.visit_if(cond, then, else_.as_ref()),
             Stmt::While { cond, body } => v.visit_while(cond, body),
             Stmt::For { name, iter, body } => v.visit_for(name, iter, body),
-            Stmt::Func { name, args, arity, body, method } => v.visit_func(name, args, *arity, body, *method),
+            Stmt::Func {
+                name,
+                args,
+                arity,
+                body,
+                method,
+            } => v.visit_func(name, args, *arity, body, *method),
             Stmt::Retn { keyword, value } => v.visit_retn(keyword, value.as_ref()),
-            Stmt::Data { name, methods, fields } => v.visit_data(name, methods, fields),
+            Stmt::Data {
+                name,
+                methods,
+                fields,
+            } => v.visit_data(name, methods, fields),
         }
     }
 }
