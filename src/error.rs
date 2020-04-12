@@ -7,6 +7,7 @@ pub struct PiccoloError {
     kind: ErrorKind,
     line: Option<usize>,
     file: Option<String>,
+    msg: Option<String>,
 }
 
 impl PiccoloError {
@@ -15,6 +16,7 @@ impl PiccoloError {
             kind,
             line: None,
             file: None,
+            msg: None,
         }
     }
 
@@ -28,6 +30,20 @@ impl PiccoloError {
     pub fn file(self, file: String) -> Self {
         PiccoloError {
             file: Some(file),
+            ..self
+        }
+    }
+
+    pub fn msg(self, msg: &str) -> Self {
+        PiccoloError {
+            msg: Some(String::from(msg)),
+            ..self
+        }
+    }
+
+    pub fn msg_string(self, msg: String) -> Self {
+        PiccoloError {
+            msg: Some(msg),
             ..self
         }
     }
@@ -94,6 +110,7 @@ pub enum ErrorKind {
         got: String,
     },
     AssertFailed,
+    SyntaxError,
 }
 
 impl fmt::Display for ErrorKind {
@@ -123,6 +140,7 @@ impl fmt::Display for ErrorKind {
             }
             ErrorKind::ExpectedExpression { got } => write!(f, "Expected expression, got {}", got),
             ErrorKind::AssertFailed => write!(f, "Assertion failed"),
+            ErrorKind::SyntaxError => write!(f, "Syntax error"),
         }
     }
 }
