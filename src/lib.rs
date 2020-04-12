@@ -3,26 +3,20 @@
 //! Piccolo is a small, light, high-pitched scripting language (eventually) intended
 //! for embedding in Rust projects.
 
-extern crate downcast_rs;
-extern crate slotmap;
+pub extern crate downcast_rs;
+pub extern crate slotmap;
 
-mod chunk;
 mod compiler;
 mod error;
-mod machine;
-mod op;
-mod scanner;
-pub mod value;
+mod runtime;
 
-pub use chunk::Chunk;
-pub use compiler::compile;
+pub use compiler::emitter::compile;
+pub use compiler::scanner::{Scanner, Token};
 pub use error::PiccoloError;
-pub use machine::Machine;
-pub use scanner::Scanner;
-pub use scanner::Token;
+pub use runtime::{chunk::Chunk, value::Value, vm::Machine};
 
 #[cfg(feature = "pc-debug")]
-pub use scanner::print_tokens;
+pub use compiler::scanner::print_tokens;
 
 /// Interprets a Piccolo source and returns its result.
 ///
@@ -35,7 +29,7 @@ pub use scanner::print_tokens;
 /// # Ok(())
 /// # }
 /// ```
-pub fn interpret(src: &str) -> Result<value::Value, Vec<error::PiccoloError>> {
+pub fn interpret(src: &str) -> Result<Value, Vec<error::PiccoloError>> {
     match Machine::new(compile(
         Chunk::default(),
         &Scanner::new(src).scan_tokens().map_err(|e| vec![e])?,
@@ -49,7 +43,7 @@ pub fn interpret(src: &str) -> Result<value::Value, Vec<error::PiccoloError>> {
 
 pub fn do_file(
     file: &std::path::Path,
-) -> Result<Result<value::Value, Vec<error::PiccoloError>>, std::io::Error> {
+) -> Result<Result<Value, Vec<error::PiccoloError>>, std::io::Error> {
     let contents = std::fs::read_to_string(file)?;
     Ok(interpret(&contents).map_err(|v| {
         v.into_iter()
@@ -72,16 +66,13 @@ pub(crate) fn decode_bytes(bytes: u16) -> (u8, u8) {
 pub mod fuzzer {
     extern crate rand;
 
-    use crate::chunk::Chunk;
-    use crate::machine::Machine;
-    use crate::scanner::TokenKind;
-    use crate::Scanner;
-
+    use crate::compiler::scanner::TokenKind;
+    use crate::{Chunk, Machine, Scanner};
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
 
     /// Run `n` tests of random tokens.
-    pub fn fuzz(n: usize, min_len: usize, max_len: usize) -> Option<Vec<usize>>{
+    pub fn fuzz(n: usize, min_len: usize, max_len: usize) -> Option<Vec<usize>> {
         let mut ok = None;
         let start = std::time::Instant::now();
         let mut avg = 0.0;
@@ -189,11 +180,9 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod tests {
-    use crate::chunk::Chunk;
-    use crate::compiler::Precedence;
-    use crate::machine::Machine;
-    use crate::op::Opcode;
-    use crate::Scanner;
+    use crate::compiler::emitter::Precedence;
+    use crate::runtime::op::Opcode;
+    use crate::{Chunk, Machine, Scanner};
 
     #[test]
     fn get_line_from_index() {

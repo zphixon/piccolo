@@ -1,7 +1,6 @@
 use crate::error::{ErrorKind, PiccoloError};
 
 use core::fmt;
-use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum TokenKind {
@@ -81,8 +80,8 @@ impl<'a> Token<'a> {
     }
 }
 
-impl<'a> Display for Token<'a> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+impl<'a> fmt::Display for Token<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.kind {
             TokenKind::Identifier => write!(f, "{}", self.lexeme),
             TokenKind::String => write!(f, "string \"{}\"", self.lexeme),
@@ -302,7 +301,7 @@ impl<'a> Scanner<'a> {
         }
 
         if let Some(tk) = into_keyword(
-            std::str::from_utf8(&self.source[self.start..self.current])
+            core::str::from_utf8(&self.source[self.start..self.current])
                 .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?,
         ) {
             Ok(tk)
@@ -351,7 +350,7 @@ impl<'a> Scanner<'a> {
             }
         }
 
-        let value = std::str::from_utf8(&self.source[self.start..self.current])
+        let value = core::str::from_utf8(&self.source[self.start..self.current])
             .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
         if let Ok(i) = value.parse::<i64>() {
             Ok(TokenKind::Integer(i))
@@ -374,7 +373,7 @@ impl<'a> Scanner<'a> {
             }
         }
 
-        let value = std::str::from_utf8(&self.source[self.start..self.current])
+        let value = core::str::from_utf8(&self.source[self.start..self.current])
             .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
         if let Ok(f) = value.parse::<f64>() {
             Ok(TokenKind::Double(f))
@@ -389,7 +388,7 @@ impl<'a> Scanner<'a> {
     fn add_token(&mut self, kind: TokenKind) {
         self.tokens.push(Token::new(
             kind,
-            std::str::from_utf8(&self.source[self.start..self.current]).unwrap(),
+            core::str::from_utf8(&self.source[self.start..self.current]).unwrap(),
             self.line,
         ));
     }

@@ -1,5 +1,6 @@
-use crate::op::Opcode;
-use std::fmt;
+use crate::runtime::op::Opcode;
+
+use core::fmt;
 
 #[derive(Debug, Clone)]
 pub struct PiccoloError {

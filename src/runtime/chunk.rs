@@ -1,4 +1,4 @@
-use crate::value::Value;
+use crate::runtime::value::Value;
 
 // TODO: change lines to a reasonable number type
 /// Stores a piece of compiled Piccolo bytecode.
@@ -19,7 +19,7 @@ impl Chunk {
     pub(crate) fn make_constant(&mut self, value: Value) -> u16 {
         self.constants.push(value);
         let idx = self.constants.len() - 1;
-        if idx > std::u16::MAX as usize {
+        if idx > core::u16::MAX as usize {
             panic!("too many constants (>65k, fix your program)");
         } else {
             idx as u16
@@ -48,7 +48,7 @@ impl Chunk {
 
     #[cfg(feature = "pc-debug")]
     pub fn disassemble(&self, name: &str) {
-        use crate::op::Opcode;
+        use crate::runtime::op::Opcode;
 
         println!(" -- {} --", name);
         println!(" ++ constants");
@@ -130,7 +130,7 @@ impl Chunk {
 
     #[cfg(feature = "pc-debug")]
     pub(crate) fn disassemble_instruction(&self, offset: usize) {
-        use crate::op::Opcode;
+        use crate::runtime::op::Opcode;
 
         let line = self.get_line_from_index(offset);
 

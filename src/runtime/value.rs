@@ -2,10 +2,10 @@
 
 use downcast_rs::Downcast;
 
-use std::fmt::{Debug, Display};
+use core::fmt;
 
 /// Trait for Piccolo objects.
-pub trait Object: Downcast + Debug + Display {
+pub trait Object: Downcast + fmt::Debug + fmt::Display {
     fn type_name(&self) -> &'static str {
         "object"
     }
@@ -42,12 +42,12 @@ impl Object for String {
         "string"
     }
 
-    fn lt(&self, other: &dyn Object) -> Option<bool> {
-        other.downcast_ref::<String>().map(|s| self < s)
-    }
-
     fn gt(&self, other: &dyn Object) -> Option<bool> {
         other.downcast_ref::<String>().map(|s| self > s)
+    }
+
+    fn lt(&self, other: &dyn Object) -> Option<bool> {
+        other.downcast_ref::<String>().map(|s| self < s)
     }
 
     fn eq(&self, other: &dyn Object) -> Option<bool> {
@@ -94,7 +94,7 @@ impl Value {
     where
         Value: Into<T>,
     {
-        std::convert::Into::<T>::into(self)
+        core::convert::Into::<T>::into(self)
     }
 
     pub fn ref_string(&self) -> &String {
