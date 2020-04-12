@@ -15,12 +15,25 @@ pub trait ExprVisitor {
     fn visit_variable(&mut self, name: &Token) -> Self::Output;
     fn visit_assign(&mut self, name: &Token, value: &Expr) -> Self::Output;
     fn visit_logical(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
-    fn visit_call(&mut self, callee: &Expr, paren: &Token, arity: super::Arity, args: &[Expr]) -> Self::Output;
+    fn visit_call(
+        &mut self,
+        callee: &Expr,
+        paren: &Token,
+        arity: super::Arity,
+        args: &[Expr],
+    ) -> Self::Output;
     fn visit_new(&mut self, name: &Token, args: &Vec<(&Token, Box<Expr>)>) -> Self::Output;
     fn visit_get(&mut self, object: &Expr, name: &Token) -> Self::Output;
     fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> Self::Output;
     fn visit_index(&mut self, rb: &Token, object: &Expr, idx: &Expr) -> Self::Output;
-    fn visit_func(&mut self, name: &Token, args: &[&Token], arity: super::Arity, body: &[Stmt], method: bool) -> Self::Output;
+    fn visit_func(
+        &mut self,
+        name: &Token,
+        args: &[&Token],
+        arity: super::Arity,
+        body: &[Stmt],
+        method: bool,
+    ) -> Self::Output;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -73,7 +86,7 @@ pub enum Expr<'a: 'b, 'b> {
     },
     New {
         name: &'b Token<'a>,
-        args: Vec<(&'b Token<'a>, Box<Expr<'a, 'b>>)>
+        args: Vec<(&'b Token<'a>, Box<Expr<'a, 'b>>)>,
     },
     Get {
         object: Box<Expr<'a, 'b>>,
@@ -108,12 +121,27 @@ impl ExprAccept for Expr<'_, '_> {
             Expr::Variable { name } => v.visit_variable(name),
             Expr::Assignment { name, value } => v.visit_assign(name, value),
             Expr::Logical { lhs, op, rhs } => v.visit_logical(lhs, op, rhs),
-            Expr::Call { callee, paren, arity, args } => v.visit_call(callee, paren, *arity, args),
+            Expr::Call {
+                callee,
+                paren,
+                arity,
+                args,
+            } => v.visit_call(callee, paren, *arity, args),
             Expr::New { name, args } => v.visit_new(name, args),
             Expr::Get { object, name } => v.visit_get(object, name),
-            Expr::Set { object, name, value } => v.visit_set(object, name, value),
-            Expr::Index{ rb, object, idx } => v.visit_index(rb, object, idx),
-            Expr::Func { name, args, arity, body, method } => v.visit_func(name, args, *arity, body, *method),
+            Expr::Set {
+                object,
+                name,
+                value,
+            } => v.visit_set(object, name, value),
+            Expr::Index { rb, object, idx } => v.visit_index(rb, object, idx),
+            Expr::Func {
+                name,
+                args,
+                arity,
+                body,
+                method,
+            } => v.visit_func(name, args, *arity, body, *method),
         }
     }
 }
