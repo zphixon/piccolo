@@ -3,7 +3,7 @@ use crate::error::{ErrorKind, PiccoloError};
 use core::fmt;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) enum TokenKind {
+pub enum TokenKind {
     // keywords
     Do,     // do
     End,    // end
@@ -75,7 +75,7 @@ pub struct Token<'a> {
 }
 
 impl<'a> Token<'a> {
-    pub(crate) fn new(kind: TokenKind, lexeme: &'a str, line: usize) -> Self {
+    pub fn new(kind: TokenKind, lexeme: &'a str, line: usize) -> Self {
         Token { kind, lexeme, line }
     }
 }

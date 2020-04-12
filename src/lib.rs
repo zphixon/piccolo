@@ -11,7 +11,7 @@ mod error;
 mod runtime;
 
 pub use compiler::emitter::compile;
-pub use compiler::scanner::{Scanner, Token};
+pub use compiler::scanner::{Scanner, Token, TokenKind};
 pub use error::PiccoloError;
 pub use runtime::{chunk::Chunk, value::Value, vm::Machine};
 
