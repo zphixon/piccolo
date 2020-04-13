@@ -30,15 +30,12 @@ pub use compiler::print_tokens;
 /// # }
 /// ```
 pub fn interpret(src: &str) -> Result<Value, Vec<error::PiccoloError>> {
-    match Machine::new(compile(
+    Machine::new(compile(
         Chunk::default(),
         &Scanner::new(src).scan_tokens().map_err(|e| vec![e])?,
     )?)
     .interpret()
-    {
-        Ok(v) => Ok(v),
-        Err(e) => Err(vec![e]),
-    }
+    .map_err(|e| vec![e])
 }
 
 pub fn do_file(

@@ -112,10 +112,10 @@ impl stmt::StmtVisitor for AstPrinter {
         then: &[stmt::Stmt],
         else_: Option<&Vec<stmt::Stmt>>,
     ) -> String {
-        if else_.is_none() {
-            self.parenthesize_list("if", Some(cond), then)
+        if let Some(else_) = else_ {
+            self.parenthesize_lists("if-else", Some(cond), &[then, else_])
         } else {
-            self.parenthesize_lists("if-else", Some(cond), &[then, else_.unwrap()])
+            self.parenthesize_list("if", Some(cond), then)
         }
     }
 
@@ -151,7 +151,7 @@ impl stmt::StmtVisitor for AstPrinter {
             if n + 1 != args.len() {
                 name_.push_str(&format!("{} ", arg.lexeme));
             } else {
-                name_.push_str(&format!("{}", arg.lexeme));
+                name_.push_str(arg.lexeme);
             }
         }
         name_.push_str(")");
@@ -223,7 +223,7 @@ impl expr::ExprVisitor for AstPrinter {
         self.parenthesize(&name, &args)
     }
 
-    fn visit_new(&mut self, name: &Token, args: &Vec<(&Token, Box<expr::Expr>)>) -> String {
+    fn visit_new(&mut self, name: &Token, args: &[(&Token, Box<expr::Expr>)]) -> String {
         let mut name_ = String::from("new ");
         name_.push_str(name.lexeme);
         let args: Vec<&expr::Expr> = args.iter().map(|tb| tb.1.as_ref()).collect();
@@ -262,7 +262,7 @@ impl expr::ExprVisitor for AstPrinter {
             if n + 1 != args.len() {
                 name_.push_str(&format!("{} ", arg.lexeme));
             } else {
-                name_.push_str(&format!("{}", arg.lexeme));
+                name_.push_str(arg.lexeme);
             }
         }
         name_.push_str(")");
