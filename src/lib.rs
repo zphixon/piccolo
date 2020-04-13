@@ -11,8 +11,8 @@ pub mod compiler;
 pub mod error;
 pub mod runtime;
 
-pub use compiler::emitter::compile;
-pub use compiler::scanner::{Scanner, Token, TokenKind};
+pub use compiler::compile;
+pub use compiler::{scanner::Scanner, Token, TokenKind};
 pub use error::PiccoloError;
 pub use runtime::{chunk::Chunk, value::Value, vm::Machine};
 
@@ -67,7 +67,7 @@ pub(crate) fn decode_bytes(bytes: u16) -> (u8, u8) {
 pub mod fuzzer {
     extern crate rand;
 
-    use crate::compiler::scanner::TokenKind;
+    use crate::compiler::TokenKind;
     use crate::{Chunk, Machine, Scanner};
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;

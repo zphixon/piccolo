@@ -1,6 +1,7 @@
-use crate::compiler::scanner::{Token, TokenKind};
 use crate::error::{ErrorKind, PiccoloError};
 use crate::runtime::{chunk::Chunk, op::Opcode, value::Value};
+
+use super::{Token, TokenKind};
 
 use std::collections::HashMap;
 
@@ -52,7 +53,7 @@ prec!(Precedence =>
     Primary = 10,
 );
 
-pub struct Compiler<'a> {
+pub struct Emitter<'a> {
     chunk: Chunk,
     output: bool,
     assign: bool,
@@ -64,191 +65,8 @@ pub struct Compiler<'a> {
     rules: Vec<(TokenKind, Option<PrefixRule>, Option<InfixRule>, Precedence)>,
 }
 
-type PrefixRule = fn(&mut Compiler, bool) -> Result<(), PiccoloError>;
-type InfixRule = fn(&mut Compiler, bool) -> Result<(), PiccoloError>;
-
-pub fn compile(chunk: Chunk, tokens: &[Token]) -> Result<Chunk, Vec<PiccoloError>> {
-    let mut compiler = Compiler {
-        chunk,
-        output: true,
-        assign: false,
-        current: 0,
-        previous: 0,
-        tokens,
-        identifiers: HashMap::new(),
-        strings: HashMap::new(),
-        rules: vec![
-            (TokenKind::Do, None, None, Precedence::None),
-            (TokenKind::End, None, None, Precedence::None),
-            (TokenKind::Fn, None, None, Precedence::None),
-            (TokenKind::If, None, None, Precedence::None),
-            (TokenKind::Else, None, None, Precedence::None),
-            (TokenKind::While, None, None, Precedence::None),
-            (TokenKind::For, None, None, Precedence::None),
-            (TokenKind::In, None, None, Precedence::None),
-            (TokenKind::Data, None, None, Precedence::None),
-            (TokenKind::Let, None, None, Precedence::None),
-            (TokenKind::Is, None, None, Precedence::None),
-            (TokenKind::Me, None, None, Precedence::None),
-            (TokenKind::New, None, None, Precedence::None),
-            (TokenKind::Err, None, None, Precedence::None),
-            (TokenKind::Retn, None, None, Precedence::None),
-            (TokenKind::Assert, None, None, Precedence::None),
-            (
-                TokenKind::Nil,
-                Some(|c, _can_assign| Compiler::literal(c)),
-                None,
-                Precedence::None,
-            ),
-            (TokenKind::LeftBracket, None, None, Precedence::None),
-            (TokenKind::RightBracket, None, None, Precedence::None),
-            (
-                TokenKind::LeftParen,
-                Some(|c, _can_assign| Compiler::grouping(c)),
-                None,
-                Precedence::None,
-            ),
-            (TokenKind::RightParen, None, None, Precedence::None),
-            (TokenKind::Comma, None, None, Precedence::None),
-            (TokenKind::Period, None, None, Precedence::None),
-            (TokenKind::ExclusiveRange, None, None, Precedence::None),
-            (TokenKind::InclusiveRange, None, None, Precedence::None),
-            (TokenKind::Assign, None, None, Precedence::None),
-            (
-                TokenKind::Not,
-                Some(|c, _can_assign| Compiler::unary(c)),
-                None,
-                Precedence::None,
-            ),
-            (
-                TokenKind::Plus,
-                None,
-                Some(|c, _can_assign| Compiler::binary(c)),
-                Precedence::Term,
-            ),
-            (
-                TokenKind::Minus,
-                Some(|c, _can_assign| Compiler::unary(c)),
-                Some(|c, _can_assign| Compiler::binary(c)),
-                Precedence::Term,
-            ),
-            (
-                TokenKind::Multiply,
-                None,
-                Some(|c, _can_assign| Compiler::binary(c)),
-                Precedence::Factor,
-            ),
-            (
-                TokenKind::Divide,
-                None,
-                Some(|c, _can_assign| Compiler::binary(c)),
-                Precedence::Factor,
-            ),
-            (
-                TokenKind::Modulo,
-                None,
-                Some(|c, _can_assign| Compiler::binary(c)),
-                Precedence::Factor,
-            ),
-            (TokenKind::LogicalAnd, None, None, Precedence::None),
-            (TokenKind::LogicalOr, None, None, Precedence::None),
-            (TokenKind::BitwiseAnd, None, None, Precedence::None),
-            (TokenKind::BitwiseOr, None, None, Precedence::None),
-            (TokenKind::BitwiseXor, None, None, Precedence::None),
-            (
-                TokenKind::Equal,
-                None,
-                Some(|c, _can_assign| Compiler::binary(c)),
-                Precedence::Equality,
-            ),
-            (
-                TokenKind::NotEqual,
-                None,
-                Some(|c, _can_assign| Compiler::binary(c)),
-                Precedence::Equality,
-            ),
-            (
-                TokenKind::Less,
-                None,
-                Some(|c, _can_assign| Compiler::binary(c)),
-                Precedence::Comparison,
-            ),
-            (
-                TokenKind::Greater,
-                None,
-                Some(|c, _can_assign| Compiler::binary(c)),
-                Precedence::Comparison,
-            ),
-            (
-                TokenKind::LessEqual,
-                None,
-                Some(|c, _can_assign| Compiler::binary(c)),
-                Precedence::Comparison,
-            ),
-            (
-                TokenKind::GreaterEqual,
-                None,
-                Some(|c, _can_assign| Compiler::binary(c)),
-                Precedence::Comparison,
-            ),
-            (TokenKind::ShiftLeft, None, None, Precedence::None),
-            (TokenKind::ShiftRight, None, None, Precedence::None),
-            (
-                TokenKind::Identifier,
-                Some(|c, can_assign| Compiler::variable(c, can_assign)),
-                None,
-                Precedence::None,
-            ),
-            (
-                TokenKind::True,
-                Some(|c, _can_assign| Compiler::literal(c)),
-                None,
-                Precedence::None,
-            ),
-            (
-                TokenKind::False,
-                Some(|c, _can_assign| Compiler::literal(c)),
-                None,
-                Precedence::None,
-            ),
-            (TokenKind::Eof, None, None, Precedence::None),
-            (
-                TokenKind::String,
-                Some(|c, _can_assign| Compiler::string(c)),
-                None,
-                Precedence::None,
-            ),
-            (
-                TokenKind::Double(0.0),
-                Some(|c, _can_assign| Compiler::number(c)),
-                None,
-                Precedence::None,
-            ),
-            (
-                TokenKind::Integer(0),
-                Some(|c, _can_assign| Compiler::number(c)),
-                None,
-                Precedence::None,
-            ),
-        ],
-    };
-
-    let mut errors = vec![];
-
-    while !compiler.matches(TokenKind::Eof).map_err(|e| vec![e])? {
-        if let Err(err) = compiler.declaration() {
-            errors.push(err);
-            compiler.output = false;
-            break;
-        }
-    }
-
-    if errors.is_empty() {
-        Ok(compiler.chunk)
-    } else {
-        Err(errors)
-    }
-}
+type PrefixRule = fn(&mut Emitter, bool) -> Result<(), PiccoloError>;
+type InfixRule = fn(&mut Emitter, bool) -> Result<(), PiccoloError>;
 
 // TODO: We need some sort of error reporting struct
 // right now, when we encounter an error, we return all the way back up to
@@ -256,7 +74,182 @@ pub fn compile(chunk: Chunk, tokens: &[Token]) -> Result<Chunk, Vec<PiccoloError
 // what would make more sense is to have a flag that says whether or not
 // we should still be outputting bytecode, and still attempt to parse
 // the entire program regardless.
-impl<'a> Compiler<'a> {
+impl<'a> Emitter<'a> {
+    pub fn new(chunk: Chunk, tokens: &'a [Token<'a>]) -> Emitter<'a> {
+        Emitter {
+            chunk,
+            output: true,
+            assign: false,
+            current: 0,
+            previous: 0,
+            tokens,
+            identifiers: HashMap::new(),
+            strings: HashMap::new(),
+            rules: vec![
+                (TokenKind::Do, None, None, Precedence::None),
+                (TokenKind::End, None, None, Precedence::None),
+                (TokenKind::Fn, None, None, Precedence::None),
+                (TokenKind::If, None, None, Precedence::None),
+                (TokenKind::Else, None, None, Precedence::None),
+                (TokenKind::While, None, None, Precedence::None),
+                (TokenKind::For, None, None, Precedence::None),
+                (TokenKind::In, None, None, Precedence::None),
+                (TokenKind::Data, None, None, Precedence::None),
+                (TokenKind::Let, None, None, Precedence::None),
+                (TokenKind::Is, None, None, Precedence::None),
+                (TokenKind::Me, None, None, Precedence::None),
+                (TokenKind::New, None, None, Precedence::None),
+                (TokenKind::Err, None, None, Precedence::None),
+                (TokenKind::Retn, None, None, Precedence::None),
+                (TokenKind::Assert, None, None, Precedence::None),
+                (
+                    TokenKind::Nil,
+                    Some(|c, _can_assign| Emitter::literal(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (TokenKind::LeftBracket, None, None, Precedence::None),
+                (TokenKind::RightBracket, None, None, Precedence::None),
+                (
+                    TokenKind::LeftParen,
+                    Some(|c, _can_assign| Emitter::grouping(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (TokenKind::RightParen, None, None, Precedence::None),
+                (TokenKind::Comma, None, None, Precedence::None),
+                (TokenKind::Period, None, None, Precedence::None),
+                (TokenKind::ExclusiveRange, None, None, Precedence::None),
+                (TokenKind::InclusiveRange, None, None, Precedence::None),
+                (TokenKind::Assign, None, None, Precedence::None),
+                (
+                    TokenKind::Not,
+                    Some(|c, _can_assign| Emitter::unary(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (
+                    TokenKind::Plus,
+                    None,
+                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Precedence::Term,
+                ),
+                (
+                    TokenKind::Minus,
+                    Some(|c, _can_assign| Emitter::unary(c)),
+                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Precedence::Term,
+                ),
+                (
+                    TokenKind::Multiply,
+                    None,
+                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Precedence::Factor,
+                ),
+                (
+                    TokenKind::Divide,
+                    None,
+                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Precedence::Factor,
+                ),
+                (
+                    TokenKind::Modulo,
+                    None,
+                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Precedence::Factor,
+                ),
+                (TokenKind::LogicalAnd, None, None, Precedence::None),
+                (TokenKind::LogicalOr, None, None, Precedence::None),
+                (TokenKind::BitwiseAnd, None, None, Precedence::None),
+                (TokenKind::BitwiseOr, None, None, Precedence::None),
+                (TokenKind::BitwiseXor, None, None, Precedence::None),
+                (
+                    TokenKind::Equal,
+                    None,
+                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Precedence::Equality,
+                ),
+                (
+                    TokenKind::NotEqual,
+                    None,
+                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Precedence::Equality,
+                ),
+                (
+                    TokenKind::Less,
+                    None,
+                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Precedence::Comparison,
+                ),
+                (
+                    TokenKind::Greater,
+                    None,
+                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Precedence::Comparison,
+                ),
+                (
+                    TokenKind::LessEqual,
+                    None,
+                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Precedence::Comparison,
+                ),
+                (
+                    TokenKind::GreaterEqual,
+                    None,
+                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Precedence::Comparison,
+                ),
+                (TokenKind::ShiftLeft, None, None, Precedence::None),
+                (TokenKind::ShiftRight, None, None, Precedence::None),
+                (
+                    TokenKind::Identifier,
+                    Some(|c, can_assign| Emitter::variable(c, can_assign)),
+                    None,
+                    Precedence::None,
+                ),
+                (
+                    TokenKind::True,
+                    Some(|c, _can_assign| Emitter::literal(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (
+                    TokenKind::False,
+                    Some(|c, _can_assign| Emitter::literal(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (TokenKind::Eof, None, None, Precedence::None),
+                (
+                    TokenKind::String,
+                    Some(|c, _can_assign| Emitter::string(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (
+                    TokenKind::Double(0.0),
+                    Some(|c, _can_assign| Emitter::number(c)),
+                    None,
+                    Precedence::None,
+                ),
+                (
+                    TokenKind::Integer(0),
+                    Some(|c, _can_assign| Emitter::number(c)),
+                    None,
+                    Precedence::None,
+                ),
+            ],
+        }
+    }
+
+    pub(super) fn stop_output(&mut self) {
+        self.output = false;
+    }
+
+    pub(super) fn chunk(self) -> Chunk {
+        self.chunk
+    }
+
     // consumes one token, reports an error if it isn't the token we wanted
     fn consume(&mut self, token: TokenKind) -> Result<(), PiccoloError> {
         if self.current().kind != token {
@@ -273,7 +266,7 @@ impl<'a> Compiler<'a> {
     }
 
     // checks if the next token matches, advances if it does
-    fn matches(&mut self, kind: TokenKind) -> Result<bool, PiccoloError> {
+    pub(super) fn matches(&mut self, kind: TokenKind) -> Result<bool, PiccoloError> {
         if !self.check(kind) {
             Ok(false)
         } else {
@@ -309,7 +302,7 @@ impl<'a> Compiler<'a> {
         &self.tokens[self.current - 1]
     }
 
-    fn declaration(&mut self) -> Result<(), PiccoloError> {
+    pub(super) fn declaration(&mut self) -> Result<(), PiccoloError> {
         // TODO: implement lookahead to change syntax back to :=
         if self.matches(TokenKind::Let)? {
             self.var_declaration()
