@@ -22,7 +22,7 @@ pub trait ExprVisitor {
         arity: super::Arity,
         args: &[Expr],
     ) -> Self::Output;
-    fn visit_new(&mut self, name: &Token, args: &Vec<(&Token, Box<Expr>)>) -> Self::Output;
+    fn visit_new(&mut self, name: &Token, args: &[(&Token, Box<Expr>)]) -> Self::Output;
     fn visit_get(&mut self, object: &Expr, name: &Token) -> Self::Output;
     fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> Self::Output;
     fn visit_index(&mut self, rb: &Token, object: &Expr, idx: &Expr) -> Self::Output;
