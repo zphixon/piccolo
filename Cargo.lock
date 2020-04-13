@@ -201,7 +201,6 @@ dependencies = [
  "downcast-rs",
  "rand",
  "rustyline",
- "slotmap",
 ]
 
 [[package]]
@@ -297,12 +296,6 @@ dependencies = [
  "utf8parse",
  "winapi",
 ]
-
-[[package]]
-name = "slotmap"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c46a3482db8f247956e464d783693ece164ca056e6e67563ee5505bdb86452cd"
 
 [[package]]
 name = "strsim"

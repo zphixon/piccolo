@@ -4,7 +4,6 @@
 //! for embedding in Rust projects.
 
 pub extern crate downcast_rs;
-pub extern crate slotmap;
 
 pub mod ast;
 pub mod compiler;
@@ -17,7 +16,7 @@ pub use error::PiccoloError;
 pub use runtime::{chunk::Chunk, value::Value, vm::Machine};
 
 #[cfg(feature = "pc-debug")]
-pub use compiler::scanner::print_tokens;
+pub use compiler::print_tokens;
 
 /// Interprets a Piccolo source and returns its result.
 ///
@@ -69,6 +68,7 @@ pub mod fuzzer {
 
     use crate::compiler::TokenKind;
     use crate::{Chunk, Machine, Scanner};
+
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
 
@@ -110,7 +110,7 @@ pub mod fuzzer {
         let tokens = Scanner::new(&src).scan_tokens().ok()?;
         if let Ok(chunk) = crate::compile(Chunk::default(), &tokens) {
             println!("----- run {} compiles -----", n);
-            crate::scanner::print_tokens(&tokens);
+            crate::print_tokens(&tokens);
             chunk.disassemble("");
             Machine::new(chunk).interpret().ok().map(|_| {
                 println!("----- run {} executes -----", n);
