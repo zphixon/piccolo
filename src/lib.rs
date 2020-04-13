@@ -248,7 +248,10 @@ mod tests {
             },
         ];
 
-        println!("{}", AstPrinter.print(&ast));
+        assert_eq!(
+            "(= x Integer(3))\n(= y (- x Integer(4)))\n(if (> x y) (expr (call (get prln io) Integer(3))))\n",
+            AstPrinter.print(&ast)
+        );
     }
 
     #[test]
