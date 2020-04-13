@@ -10,7 +10,7 @@ pub enum Arity {
     Some(usize),
 }
 
-use crate::compiler::scanner::Token;
+use crate::compiler::Token;
 use expr::ExprAccept;
 use stmt::StmtAccept;
 

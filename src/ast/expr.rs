@@ -1,4 +1,4 @@
-use crate::compiler::scanner::Token;
+use crate::compiler::Token;
 
 use super::stmt::Stmt;
 

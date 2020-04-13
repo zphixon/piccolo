@@ -1,6 +1,6 @@
 use crate::error::{ErrorKind, PiccoloError};
-use crate::runtime::op::Opcode;
-use crate::runtime::{chunk::Chunk, value::Value};
+
+use super::{chunk::Chunk, op::Opcode, value::Value};
 
 use std::collections::HashMap;
 
