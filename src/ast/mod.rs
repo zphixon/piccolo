@@ -11,23 +11,24 @@ pub enum Arity {
     Some(usize),
 }
 
+use crate::runtime::value::Value;
 use crate::compiler::Token;
-use expr::ExprAccept;
-use stmt::StmtAccept;
+use expr::{Expr, ExprAccept, ExprVisitor};
+use stmt::{Stmt, StmtAccept, StmtVisitor};
 
 #[derive(Copy, Clone)]
 pub struct AstPrinter;
 
 impl AstPrinter {
-    pub fn print_expr(&mut self, expr: &expr::Expr) -> String {
+    pub fn print_expr(&mut self, expr: &Expr) -> String {
         expr.accept(&mut *self)
     }
 
-    pub fn print_stmt(&mut self, stmt: &stmt::Stmt) -> String {
+    pub fn print_stmt(&mut self, stmt: &Stmt) -> String {
         stmt.accept(&mut *self)
     }
 
-    pub fn print(&mut self, ast: &[stmt::Stmt]) -> String {
+    pub fn print(&mut self, ast: &[Stmt]) -> String {
         let mut s = String::new();
         for stmt in ast.iter() {
             s.push_str(&stmt.accept(&mut *self));
@@ -36,7 +37,7 @@ impl AstPrinter {
         s
     }
 
-    fn parenthesize(&mut self, name: &str, expressions: &[&expr::Expr]) -> String {
+    fn parenthesize(&mut self, name: &str, expressions: &[&Expr]) -> String {
         let mut s = format!("({}", name);
         for expr in expressions {
             s.push_str(" ");
@@ -49,8 +50,8 @@ impl AstPrinter {
     fn parenthesize_list(
         &mut self,
         name: &str,
-        expr: Option<&expr::Expr>,
-        stmts: &[stmt::Stmt],
+        expr: Option<&Expr>,
+        stmts: &[Stmt],
     ) -> String {
         let mut s = format!("({}", name);
         if expr.is_some() {
@@ -68,8 +69,8 @@ impl AstPrinter {
     fn parenthesize_lists(
         &mut self,
         name: &str,
-        e: Option<&expr::Expr>,
-        stmts: &[&[stmt::Stmt]],
+        e: Option<&Expr>,
+        stmts: &[&[Stmt]],
     ) -> String {
         let mut s = format!("({}", name);
         if e.is_some() {
@@ -87,18 +88,18 @@ impl AstPrinter {
     }
 }
 
-impl stmt::StmtVisitor for AstPrinter {
+impl StmtVisitor for AstPrinter {
     type Output = String;
 
-    fn visit_expr(&mut self, expr: &expr::Expr) -> String {
+    fn visit_expr(&mut self, expr: &Expr) -> String {
         self.parenthesize("expr", &[&expr])
     }
 
-    fn visit_assignment(&mut self, name: &Token, value: &expr::Expr) -> String {
+    fn visit_assignment(&mut self, name: &Token, value: &Expr) -> String {
         self.parenthesize(&format!("= {}", name.lexeme), &[value])
     }
 
-    fn visit_block(&mut self, stmts: &[stmt::Stmt]) -> String {
+    fn visit_block(&mut self, stmts: &[Stmt]) -> String {
         let mut s = String::from("(block");
         for stmt in stmts.iter() {
             s.push_str(" ");
@@ -110,9 +111,9 @@ impl stmt::StmtVisitor for AstPrinter {
 
     fn visit_if(
         &mut self,
-        cond: &expr::Expr,
-        then: &[stmt::Stmt],
-        else_: Option<&Vec<stmt::Stmt>>,
+        cond: &Expr,
+        then: &[Stmt],
+        else_: Option<&Vec<Stmt>>,
     ) -> String {
         if let Some(else_) = else_ {
             self.parenthesize_lists("if-else", Some(cond), &[then, else_])
@@ -121,11 +122,11 @@ impl stmt::StmtVisitor for AstPrinter {
         }
     }
 
-    fn visit_while(&mut self, cond: &expr::Expr, body: &[stmt::Stmt]) -> String {
+    fn visit_while(&mut self, cond: &Expr, body: &[Stmt]) -> String {
         self.parenthesize_list("while", Some(cond), body)
     }
 
-    fn visit_for(&mut self, name: &Token, iter: &expr::Expr, body: &[stmt::Stmt]) -> String {
+    fn visit_for(&mut self, name: &Token, iter: &Expr, body: &[Stmt]) -> String {
         self.parenthesize_list(&format!("for {} in ", name.lexeme), Some(iter), body)
     }
 
@@ -134,7 +135,7 @@ impl stmt::StmtVisitor for AstPrinter {
         name: &Token,
         args: &[&Token],
         _arity: Arity,
-        body: &[stmt::Stmt],
+        body: &[Stmt],
         _method: bool,
     ) -> String {
         let mut s = format!("fn {} (", name.lexeme);
@@ -148,42 +149,39 @@ impl stmt::StmtVisitor for AstPrinter {
         s.push_str(")");
         self.parenthesize_list(&s, None, body)
     }
-    fn visit_retn(&mut self, _keyword: &Token, value: Option<&expr::Expr>) -> String {
+    fn visit_retn(&mut self, _keyword: &Token, value: Option<&Expr>) -> String {
         self.parenthesize(
             "retn",
-            &[value.unwrap_or(&expr::Expr::Literal(expr::Literal::Nil))],
+            &[value.unwrap_or(&Expr::Atom(Value::Nil))],
         )
     }
 
     fn visit_data(
         &mut self,
         _name: &Token,
-        _methods: &[stmt::Stmt],
-        _fields: &[(&Token, expr::Expr)],
+        _methods: &[Stmt],
+        _fields: &[(&Token, Expr)],
     ) -> String {
         self.parenthesize("data", &[])
     }
 }
 
-impl expr::ExprVisitor for AstPrinter {
+impl ExprVisitor for AstPrinter {
     type Output = String;
 
-    fn visit_literal(&mut self, literal: &expr::Literal) -> String {
-        match literal {
-            &expr::Literal::Nil => "nil".into(),
-            expr => format!("{:?}", expr),
-        }
+    fn visit_value(&mut self, literal: &Value) -> String {
+        format!("{:?}", literal)
     }
 
-    fn visit_unary(&mut self, op: &Token, rhs: &expr::Expr) -> String {
+    fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> String {
         self.parenthesize(op.lexeme, &[rhs])
     }
 
-    fn visit_binary(&mut self, lhs: &expr::Expr, op: &Token, rhs: &expr::Expr) -> String {
+    fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> String {
         self.parenthesize(op.lexeme, &[lhs, rhs])
     }
 
-    fn visit_paren(&mut self, value: &expr::Expr) -> String {
+    fn visit_paren(&mut self, value: &Expr) -> String {
         self.parenthesize("paren", &[value])
     }
 
@@ -191,40 +189,40 @@ impl expr::ExprVisitor for AstPrinter {
         String::from(name.lexeme)
     }
 
-    fn visit_assign(&mut self, name: &Token, value: &expr::Expr) -> String {
+    fn visit_assign(&mut self, name: &Token, value: &Expr) -> String {
         self.parenthesize(&format!("= {}", name.lexeme), &[value])
     }
 
-    fn visit_logical(&mut self, lhs: &expr::Expr, op: &Token, rhs: &expr::Expr) -> String {
+    fn visit_logical(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> String {
         self.parenthesize(op.lexeme, &[lhs, rhs])
     }
 
     fn visit_call(
         &mut self,
-        callee: &expr::Expr,
+        callee: &Expr,
         _paren: &Token,
         _arity: Arity,
-        args: &[expr::Expr],
+        args: &[Expr],
     ) -> String {
         let s = format!("call {}", callee.accept(&mut *self));
-        let args: Vec<&expr::Expr> = args.iter().map(|arg| arg).collect();
+        let args: Vec<&Expr> = args.iter().map(|arg| arg).collect();
         self.parenthesize(&s, &args)
     }
 
-    fn visit_new(&mut self, name: &Token, args: &[(&Token, Box<expr::Expr>)]) -> String {
-        let args: Vec<&expr::Expr> = args.iter().map(|tb| tb.1.as_ref()).collect();
+    fn visit_new(&mut self, name: &Token, args: &[(&Token, Box<Expr>)]) -> String {
+        let args: Vec<&Expr> = args.iter().map(|tb| tb.1.as_ref()).collect();
         self.parenthesize(&format!("new {}", name.lexeme), &args)
     }
 
-    fn visit_get(&mut self, object: &expr::Expr, name: &Token) -> String {
+    fn visit_get(&mut self, object: &Expr, name: &Token) -> String {
         self.parenthesize(&format!("get {}", name.lexeme), &[object])
     }
 
-    fn visit_set(&mut self, object: &expr::Expr, name: &Token, _value: &expr::Expr) -> String {
+    fn visit_set(&mut self, object: &Expr, name: &Token, _value: &Expr) -> String {
         self.parenthesize(&format!("set {}", name.lexeme), &[object])
     }
 
-    fn visit_index(&mut self, _rb: &Token, object: &expr::Expr, idx: &expr::Expr) -> String {
+    fn visit_index(&mut self, _rb: &Token, object: &Expr, idx: &Expr) -> String {
         self.parenthesize(&format!("index {:?}", idx), &[object])
     }
 
@@ -233,7 +231,7 @@ impl expr::ExprVisitor for AstPrinter {
         name: &Token,
         args: &[&Token],
         _arity: Arity,
-        body: &[stmt::Stmt],
+        body: &[Stmt],
         _method: bool,
     ) -> String {
         let mut s = format!("fn {} (", name.lexeme);
