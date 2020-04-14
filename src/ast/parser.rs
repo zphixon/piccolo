@@ -18,15 +18,11 @@ impl<'a, 'b> Parser<'a, 'b> {
     pub fn parse(mut self) -> Result<Vec<Stmt<'a, 'b>>, Vec<PiccoloError>> {
         let stmts = vec![
             Stmt::Retn {
-                keyword: self.scanner.next_token().unwrap(),
+                keyword: self.scanner.current(),
                 value: None,
             }
         ];
 
         Ok(stmts)
-    }
-
-    fn current(&self) -> &Token {
-        self.scanner.current()
     }
 }
