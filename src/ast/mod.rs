@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 pub mod expr;
+pub mod parser;
 pub mod stmt;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
