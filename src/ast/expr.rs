@@ -8,10 +8,10 @@ pub trait ExprAccept {
 
 pub trait ExprVisitor {
     type Output;
-    fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
-    fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output;
-    fn visit_paren(&mut self, value: &Expr) -> Self::Output;
     fn visit_literal(&mut self, e: &Literal) -> Self::Output;
+    fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output;
+    fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
+    fn visit_paren(&mut self, value: &Expr) -> Self::Output;
     fn visit_variable(&mut self, name: &Token) -> Self::Output;
     fn visit_assign(&mut self, name: &Token, value: &Expr) -> Self::Output;
     fn visit_logical(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
@@ -53,16 +53,16 @@ impl ExprAccept for Literal {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr<'a: 'b, 'b> {
+    Literal(Literal),
+    Unary {
+        op: &'b Token<'a>,
+        rhs: Box<Expr<'a, 'b>>,
+    },
     Binary {
         lhs: Box<Expr<'a, 'b>>,
         op: &'b Token<'a>,
         rhs: Box<Expr<'a, 'b>>,
     },
-    Unary {
-        op: &'b Token<'a>,
-        rhs: Box<Expr<'a, 'b>>,
-    },
-    Literal(Literal),
     Paren {
         value: Box<Expr<'a, 'b>>,
     },
@@ -114,9 +114,9 @@ pub enum Expr<'a: 'b, 'b> {
 impl ExprAccept for Expr<'_, '_> {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         match self {
-            Expr::Binary { lhs, op, rhs } => v.visit_binary(lhs, op, rhs),
-            Expr::Unary { op, rhs } => v.visit_unary(op, rhs),
             Expr::Literal(ref e) => e.accept(v),
+            Expr::Unary { op, rhs } => v.visit_unary(op, rhs),
+            Expr::Binary { lhs, op, rhs } => v.visit_binary(lhs, op, rhs),
             Expr::Paren { value } => v.visit_paren(value),
             Expr::Variable { name } => v.visit_variable(name),
             Expr::Assignment { name, value } => v.visit_assign(name, value),

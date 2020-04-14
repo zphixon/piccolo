@@ -230,7 +230,7 @@ mod tests {
                     op: &tokens[10],
                     rhs: Box::new(Expr::Variable { name: &tokens[11] }),
                 },
-                then: vec![Stmt::StmtExpr {
+                then: vec![Stmt::Expr {
                     expr: Expr::Call {
                         callee: Box::new(Expr::Get {
                             object: Box::new(Expr::Variable { name: &tokens[13] }),
