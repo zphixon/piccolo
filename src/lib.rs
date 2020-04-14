@@ -178,12 +178,21 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::expr::{Expr, Literal};
+    use crate::ast::expr::Expr;
     use crate::ast::stmt::Stmt;
     use crate::ast::{Arity, AstPrinter};
     use crate::compiler::emitter::Precedence;
-    use crate::runtime::op::Opcode;
+    use crate::runtime::{op::Opcode, value::Value};
     use crate::{Chunk, Machine, Scanner, Token, TokenKind};
+    use crate::ast::parser::Parser;
+
+    #[test]
+    fn parser() {
+        let mut s = Scanner::new("a=b+c");
+        let mut p = Parser::new(&mut s);
+        let ast = p.parse().unwrap();
+        println!("{:?}", AstPrinter.print(&ast));
+    }
 
     #[test]
     fn ast_print() {
@@ -214,14 +223,14 @@ mod tests {
         let ast = vec![
             Stmt::Assignment {
                 name: &tokens[0],
-                value: Expr::Literal(Literal::Integer(3)),
+                value: Expr::Atom(Value::Integer(3)),
             },
             Stmt::Assignment {
                 name: &tokens[3],
                 value: Expr::Binary {
                     lhs: Box::new(Expr::Variable { name: &tokens[5] }),
                     op: &tokens[6],
-                    rhs: Box::new(Expr::Literal(Literal::Integer(4))),
+                    rhs: Box::new(Expr::Atom(Value::Integer(4))),
                 },
             },
             Stmt::If {
@@ -238,7 +247,7 @@ mod tests {
                         }),
                         paren: &tokens[16],
                         arity: Arity::Some(1),
-                        args: vec![Expr::Literal(Literal::Integer(3))],
+                        args: vec![Expr::Atom(Value::Integer(3))],
                     },
                 }],
                 else_: None,

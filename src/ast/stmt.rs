@@ -31,7 +31,7 @@ pub trait StmtVisitor {
     ) -> Self::Output;
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq)]
 pub enum Stmt<'a: 'b, 'b> {
     Expr {
         expr: Expr<'a, 'b>,

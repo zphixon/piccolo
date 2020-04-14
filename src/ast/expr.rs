@@ -1,4 +1,5 @@
 use crate::compiler::Token;
+use crate::runtime::value::Value;
 
 use super::stmt::Stmt;
 
@@ -8,7 +9,7 @@ pub trait ExprAccept {
 
 pub trait ExprVisitor {
     type Output;
-    fn visit_literal(&mut self, e: &Literal) -> Self::Output;
+    fn visit_value(&mut self, value: &Value) -> Self::Output;
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output;
     fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
     fn visit_paren(&mut self, value: &Expr) -> Self::Output;
@@ -36,24 +37,15 @@ pub trait ExprVisitor {
     ) -> Self::Output;
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Literal {
-    Bool(bool),
-    Integer(i64),
-    Float(f64),
-    String(String),
-    Nil,
-}
-
-impl ExprAccept for Literal {
+impl ExprAccept for Value {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_literal(self)
+        v.visit_value(self)
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq)]
 pub enum Expr<'a: 'b, 'b> {
-    Literal(Literal),
+    Atom(Value),
     Unary {
         op: &'b Token<'a>,
         rhs: Box<Expr<'a, 'b>>,
@@ -114,7 +106,7 @@ pub enum Expr<'a: 'b, 'b> {
 impl ExprAccept for Expr<'_, '_> {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         match self {
-            Expr::Literal(ref e) => e.accept(v),
+            Expr::Atom(ref e) => e.accept(v),
             Expr::Unary { op, rhs } => v.visit_unary(op, rhs),
             Expr::Binary { lhs, op, rhs } => v.visit_binary(lhs, op, rhs),
             Expr::Paren { value } => v.visit_paren(value),
