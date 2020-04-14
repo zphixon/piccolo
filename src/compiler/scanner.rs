@@ -47,7 +47,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub(crate) fn next_token(&mut self) -> Result<&Token, PiccoloError> {
+    pub(crate) fn next_token<'b>(&'b mut self) -> Result<&'b Token<'a>, PiccoloError> {
         self.slurp_whitespace();
         if self.is_at_end() {
             self.add_token(TokenKind::Eof);
