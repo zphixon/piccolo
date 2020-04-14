@@ -33,7 +33,7 @@ pub trait StmtVisitor {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Stmt<'a: 'b, 'b> {
-    StmtExpr {
+    Expr {
         expr: Expr<'a, 'b>,
     },
     Assignment {
@@ -78,7 +78,7 @@ pub enum Stmt<'a: 'b, 'b> {
 impl StmtAccept for Stmt<'_, '_> {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
         match self {
-            Stmt::StmtExpr { expr } => v.visit_expr(expr),
+            Stmt::Expr { expr } => v.visit_expr(expr),
             Stmt::Assignment { name, value } => v.visit_assignment(name, value),
             Stmt::Block { stmts } => v.visit_block(stmts),
             Stmt::If { cond, then, else_ } => v.visit_if(cond, then, else_.as_ref()),
