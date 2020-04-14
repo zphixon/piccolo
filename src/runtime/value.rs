@@ -260,6 +260,12 @@ impl Value {
     }
 }
 
+impl PartialEq for Value {
+    fn eq(&self, rhs: &Value) -> bool {
+        Value::eq(self, rhs).unwrap()
+    }
+}
+
 impl Into<String> for Value {
     fn into(self) -> String {
         match self {
