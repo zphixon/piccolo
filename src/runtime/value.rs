@@ -315,25 +315,25 @@ impl Into<f64> for Value {
 }
 
 impl From<String> for Value {
-    fn from(String: String) -> Self {
-        Value::String(String)
+    fn from(v: String) -> Self {
+        Value::String(v)
     }
 }
 
 impl From<bool> for Value {
-    fn from(Bool: bool) -> Self {
-        Value::Bool(Bool)
+    fn from(v: bool) -> Self {
+        Value::Bool(v)
     }
 }
 
 impl From<i64> for Value {
-    fn from(Integer: i64) -> Self {
-        Value::Integer(Integer)
+    fn from(v: i64) -> Self {
+        Value::Integer(v)
     }
 }
 
 impl From<f64> for Value {
-    fn from(Double: f64) -> Self {
-        Value::Double(Double)
+    fn from(v: f64) -> Self {
+        Value::Double(v)
     }
 }
