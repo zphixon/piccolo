@@ -274,6 +274,12 @@ impl Value {
     }
 }
 
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", Value::fmt(self))
+    }
+}
+
 impl PartialEq for Value {
     fn eq(&self, rhs: &Value) -> bool {
         Value::eq(self, rhs).unwrap()

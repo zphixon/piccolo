@@ -139,7 +139,7 @@ impl Machine {
                 }
                 Opcode::Return => {
                     let v = self.pop()?;
-                    println!("{}", v.fmt());
+                    println!("{}", v);
                 }
                 Opcode::Assert => {
                     let v = self.pop()?;
