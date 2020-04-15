@@ -17,7 +17,7 @@ pub trait StmtVisitor {
     fn visit_func(
         &mut self,
         name: &Token,
-        args: &[&Token],
+        args: &[Token],
         arity: super::Arity,
         body: &[Stmt],
         method: bool,
@@ -27,55 +27,55 @@ pub trait StmtVisitor {
         &mut self,
         name: &Token,
         methods: &[Stmt],
-        fields: &[(&Token, Expr)],
+        fields: &[(Token, Expr)],
     ) -> Self::Output;
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Stmt<'a: 'b, 'b> {
+pub enum Stmt<'a> {
     Expr {
-        expr: Expr<'a, 'b>,
+        expr: Expr<'a>,
     },
     Assignment {
-        name: &'b Token<'a>,
-        value: Expr<'a, 'b>,
+        name: Token<'a>,
+        value: Expr<'a>,
     },
     Block {
-        stmts: Vec<Stmt<'a, 'b>>,
+        stmts: Vec<Stmt<'a>>,
     },
     If {
-        cond: Expr<'a, 'b>,
-        then: Vec<Stmt<'a, 'b>>,
-        else_: Option<Vec<Stmt<'a, 'b>>>,
+        cond: Expr<'a>,
+        then: Vec<Stmt<'a>>,
+        else_: Option<Vec<Stmt<'a>>>,
     },
     While {
-        cond: Expr<'a, 'b>,
-        body: Vec<Stmt<'a, 'b>>,
+        cond: Expr<'a>,
+        body: Vec<Stmt<'a>>,
     },
     For {
-        name: &'b Token<'a>,
-        iter: Expr<'a, 'b>,
-        body: Vec<Stmt<'a, 'b>>,
+        name: Token<'a>,
+        iter: Expr<'a>,
+        body: Vec<Stmt<'a>>,
     },
     Func {
-        name: &'b Token<'a>,
-        args: Vec<&'b Token<'a>>,
+        name: Token<'a>,
+        args: Vec<Token<'a>>,
         arity: super::Arity,
-        body: Vec<Stmt<'a, 'b>>,
+        body: Vec<Stmt<'a>>,
         method: bool,
     },
     Retn {
-        keyword: &'b Token<'a>,
-        value: Option<Expr<'a, 'b>>,
+        keyword: Token<'a>,
+        value: Option<Expr<'a>>,
     },
     Data {
-        name: &'b Token<'a>,
-        methods: Vec<Stmt<'a, 'b>>,
-        fields: Vec<(&'b Token<'a>, Expr<'a, 'b>)>,
+        name: Token<'a>,
+        methods: Vec<Stmt<'a>>,
+        fields: Vec<(Token<'a>, Expr<'a>)>,
     },
 }
 
-impl StmtAccept for Stmt<'_, '_> {
+impl StmtAccept for Stmt<'_> {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
         match self {
             Stmt::Expr { expr } => v.visit_expr(expr),
