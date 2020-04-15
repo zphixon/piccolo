@@ -53,6 +53,8 @@ prec!(Precedence =>
     Primary = 10,
 );
 
+/// Struct that ad-hoc parses and compiles Piccolo source code into a Chunk.
+/// This will be replaced by a more formal parser and AST-walking compiler.
 pub struct Emitter<'a> {
     chunk: Chunk,
     output: bool,

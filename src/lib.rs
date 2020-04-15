@@ -37,6 +37,7 @@ pub fn interpret(src: &str) -> Result<Value, Vec<error::PiccoloError>> {
     .map_err(|e| vec![e])
 }
 
+/// Reads a file and interprets its contents.
 pub fn do_file(
     file: &std::path::Path,
 ) -> Result<Result<Value, Vec<error::PiccoloError>>, std::io::Error> {

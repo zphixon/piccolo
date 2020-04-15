@@ -1,6 +1,5 @@
 use super::value::Value;
 
-// TODO: change lines to a reasonable number type
 /// Stores a piece of compiled Piccolo bytecode.
 #[derive(Default, Debug)]
 pub struct Chunk {

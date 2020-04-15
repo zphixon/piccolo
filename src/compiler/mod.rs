@@ -6,6 +6,7 @@ use crate::{Chunk, ErrorKind, PiccoloError};
 
 use core::fmt;
 
+/// Compile some Piccolo source code into a chunk.
 pub fn compile(chunk: Chunk, tokens: &[Token]) -> Result<Chunk, Vec<PiccoloError>> {
     let mut emitter = Emitter::new(chunk, tokens);
 

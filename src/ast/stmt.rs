@@ -2,10 +2,17 @@ use crate::Token;
 
 use super::expr::Expr;
 
+/// A visitor tells some node in an AST to accept the visitor, and that node
+/// tells the visitor to visit its own node and its child nodes.
+///
+/// Only Piccolo AST nodes will implement this trait, but you will need to use it
+/// in order to walk the AST.
 pub trait StmtAccept {
     fn accept<T: StmtVisitor>(&self, visitor: &mut T) -> T::Output;
 }
 
+/// A struct wishing to walk the AST will need to implement StmtVisitor. This allows the
+/// AST to tell the visitor to visit each node.
 pub trait StmtVisitor {
     type Output;
     fn visit_expr(&mut self, expr: &Expr) -> Self::Output;
@@ -31,6 +38,7 @@ pub trait StmtVisitor {
     ) -> Self::Output;
 }
 
+/// Piccolo AST node. Roughly corresponds to statements.
 #[derive(Debug, PartialEq)]
 pub enum Stmt<'a> {
     Expr {
