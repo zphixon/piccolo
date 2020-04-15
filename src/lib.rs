@@ -184,15 +184,6 @@ mod tests {
     use crate::compiler::emitter::Precedence;
     use crate::runtime::{op::Opcode, value::Value};
     use crate::{Chunk, Machine, Scanner, Token, TokenKind};
-    //use crate::ast::parser::Parser;
-
-    //#[test]
-    //fn parser() {
-    //    let mut s = Scanner::new("a=b+c");
-    //    let mut p = Parser::new(&mut s);
-    //    let ast = p.().unwrap();
-    //    println!("{:?}", AstPrinter.print(&ast));
-    //}
 
     #[test]
     fn scanner() {
@@ -204,6 +195,18 @@ mod tests {
         assert_eq!(scanner.next_token().unwrap(), &Token::new(TokenKind::Assign, "=", 1));
         assert_eq!(scanner.current(), &Token::new(TokenKind::Assign, "=", 1));
         assert_eq!(scanner.previous(), &Token::new(TokenKind::Identifier, "a", 1));
+    }
+
+    #[test]
+    fn scanner_take() {
+        let src = "a = 3\nio.prln(a)\n";
+        let mut scanner = Scanner::new(src);
+        assert_eq!(scanner.next_token().unwrap(), &Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(scanner.take_current(), Token::new(TokenKind::Identifier, "a", 1));
+
+        assert_eq!(scanner.next_token().unwrap(), &Token::new(TokenKind::Assign, "=", 1));
+        assert_eq!(scanner.take_current(), Token::new(TokenKind::Assign, "=", 1));
+        //assert_eq!(scanner.previous(), &Token::new(TokenKind::Identifier, "a", 1));
     }
 
     #[test]
