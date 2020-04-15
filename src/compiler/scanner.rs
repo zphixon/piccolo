@@ -32,6 +32,10 @@ impl<'a> Scanner<'a> {
         &self.tokens[self.tokens.len() - 1]
     }
 
+    pub(crate) fn previous(&self) -> &Token<'a> {
+        &self.tokens[self.tokens.len() - 2]
+    }
+
     fn slurp_whitespace(&mut self) {
         while self.peek() == b'#' || is_whitespace(self.peek()) {
             if self.peek() == b'#' {

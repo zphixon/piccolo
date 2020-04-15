@@ -187,11 +187,15 @@ mod tests {
     use crate::ast::parser::Parser;
 
     #[test]
-    fn parser() {
-        let mut s = Scanner::new("a=b+c");
-        let mut p = Parser::new(&mut s);
-        let ast = p.parse().unwrap();
-        println!("{:?}", AstPrinter.print(&ast));
+    fn scanner() {
+        let src = "a = 3\nio.prln(a)\n";
+        let mut scanner = Scanner::new(src);
+        assert_eq!(scanner.next_token().unwrap(), &Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(scanner.current(), &Token::new(TokenKind::Identifier, "a", 1));
+
+        assert_eq!(scanner.next_token().unwrap(), &Token::new(TokenKind::Assign, "=", 1));
+        assert_eq!(scanner.current(), &Token::new(TokenKind::Assign, "=", 1));
+        assert_eq!(scanner.previous(), &Token::new(TokenKind::Identifier, "a", 1));
     }
 
     #[test]
