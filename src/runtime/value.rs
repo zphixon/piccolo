@@ -1,8 +1,9 @@
-#![allow(non_snake_case)]
+use crate::compiler::{Token, TokenKind};
 
 use downcast_rs::Downcast;
 
 use core::fmt;
+use crate::PiccoloError;
 
 /// Trait for Piccolo objects.
 pub trait Object: Downcast + fmt::Debug + fmt::Display {
@@ -117,6 +118,17 @@ impl Value {
             Value::Double(f64) => Value::Double(*f64),
             Value::Nil => Value::Nil,
         }
+    }
+
+    pub(crate) fn try_from(token: Token) -> Result<Value, PiccoloError> {
+        Ok(match token.kind {
+            TokenKind::Integer(v) => Value::Integer(v),
+            TokenKind::True => Value::Bool(true),
+            TokenKind::False => Value::Bool(false),
+            TokenKind::Double(v) => Value::Double(v),
+            TokenKind::String => Value::String(crate::compiler::escape_string(&token)?),
+            _ => panic!("cannot create value from token {:?}", token)
+        })
     }
 
     pub fn is_string(&self) -> bool {

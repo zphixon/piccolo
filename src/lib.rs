@@ -184,7 +184,15 @@ mod tests {
     use crate::compiler::emitter::Precedence;
     use crate::runtime::{op::Opcode, value::Value};
     use crate::{Chunk, Machine, Scanner, Token, TokenKind};
-    use crate::ast::parser::Parser;
+    //use crate::ast::parser::Parser;
+
+    //#[test]
+    //fn parser() {
+    //    let mut s = Scanner::new("a=b+c");
+    //    let mut p = Parser::new(&mut s);
+    //    let ast = p.().unwrap();
+    //    println!("{:?}", AstPrinter.print(&ast));
+    //}
 
     #[test]
     fn scanner() {
@@ -201,55 +209,55 @@ mod tests {
     #[test]
     fn ast_print() {
         let source = "x := 3\ny := x - 4\nif x > y then\n  io.prln(3)\nend\n";
-        let tokens = vec![
-            Token::new(TokenKind::Identifier, &source[0..1], 1),
-            Token::new(TokenKind::Assign, &source[2..4], 1),
-            Token::new(TokenKind::Integer(3), &source[5..6], 1),
-            Token::new(TokenKind::Identifier, &source[7..8], 2),
-            Token::new(TokenKind::Assign, &source[9..11], 2),
-            Token::new(TokenKind::Identifier, &source[12..13], 2),
-            Token::new(TokenKind::Minus, &source[14..15], 2),
-            Token::new(TokenKind::Integer(3), &source[16..17], 2),
-            Token::new(TokenKind::If, &source[18..19], 3),
-            Token::new(TokenKind::Identifier, &source[21..22], 3),
-            Token::new(TokenKind::Greater, &source[23..24], 3),
-            Token::new(TokenKind::Identifier, &source[25..26], 3),
-            Token::new(TokenKind::Nil, &source[27..31], 3),
-            Token::new(TokenKind::Identifier, &source[34..36], 4),
-            Token::new(TokenKind::Period, &source[36..37], 4),
-            Token::new(TokenKind::Identifier, &source[37..41], 4),
-            Token::new(TokenKind::LeftParen, &source[41..42], 4),
-            Token::new(TokenKind::Integer(3), &source[42..43], 4),
-            Token::new(TokenKind::RightParen, &source[43..44], 4),
-            Token::new(TokenKind::End, &source[45..48], 5),
+        let mut tokens = vec![
+            Some(Token::new(TokenKind::Identifier, &source[0..1], 1)),
+            Some(Token::new(TokenKind::Assign, &source[2..4], 1)),
+            Some(Token::new(TokenKind::Integer(3), &source[5..6], 1)),
+            Some(Token::new(TokenKind::Identifier, &source[7..8], 2)),
+            Some(Token::new(TokenKind::Assign, &source[9..11], 2)),
+            Some(Token::new(TokenKind::Identifier, &source[12..13], 2)),
+            Some(Token::new(TokenKind::Minus, &source[14..15], 2)),
+            Some(Token::new(TokenKind::Integer(3), &source[16..17], 2)),
+            Some(Token::new(TokenKind::If, &source[18..19], 3)),
+            Some(Token::new(TokenKind::Identifier, &source[21..22], 3)),
+            Some(Token::new(TokenKind::Greater, &source[23..24], 3)),
+            Some(Token::new(TokenKind::Identifier, &source[25..26], 3)),
+            Some(Token::new(TokenKind::Nil, &source[27..31], 3)),
+            Some(Token::new(TokenKind::Identifier, &source[34..36], 4)),
+            Some(Token::new(TokenKind::Period, &source[36..37], 4)),
+            Some(Token::new(TokenKind::Identifier, &source[37..41], 4)),
+            Some(Token::new(TokenKind::LeftParen, &source[41..42], 4)),
+            Some(Token::new(TokenKind::Integer(3), &source[42..43], 4)),
+            Some(Token::new(TokenKind::RightParen, &source[43..44], 4)),
+            Some(Token::new(TokenKind::End, &source[45..48], 5)),
         ];
 
         let ast = vec![
             Stmt::Assignment {
-                name: &tokens[0],
+                name: tokens[0].take().unwrap(),
                 value: Expr::Atom(Value::Integer(3)),
             },
             Stmt::Assignment {
-                name: &tokens[3],
+                name: tokens[3].take().unwrap(),
                 value: Expr::Binary {
-                    lhs: Box::new(Expr::Variable { name: &tokens[5] }),
-                    op: &tokens[6],
+                    lhs: Box::new(Expr::Variable { name: tokens[5].take().unwrap() }),
+                    op: tokens[6].take().unwrap(),
                     rhs: Box::new(Expr::Atom(Value::Integer(4))),
                 },
             },
             Stmt::If {
                 cond: Expr::Binary {
-                    lhs: Box::new(Expr::Variable { name: &tokens[9] }),
-                    op: &tokens[10],
-                    rhs: Box::new(Expr::Variable { name: &tokens[11] }),
+                    lhs: Box::new(Expr::Variable { name: tokens[9].take().unwrap() }),
+                    op: tokens[10].take().unwrap(),
+                    rhs: Box::new(Expr::Variable { name: tokens[11].take().unwrap() }),
                 },
                 then: vec![Stmt::Expr {
                     expr: Expr::Call {
                         callee: Box::new(Expr::Get {
-                            object: Box::new(Expr::Variable { name: &tokens[13] }),
-                            name: &tokens[15],
+                            object: Box::new(Expr::Variable { name: tokens[13].take().unwrap() }),
+                            name: tokens[15].take().unwrap(),
                         }),
-                        paren: &tokens[16],
+                        paren: tokens[16].take().unwrap(),
                         arity: Arity::Some(1),
                         args: vec![Expr::Atom(Value::Integer(3))],
                     },

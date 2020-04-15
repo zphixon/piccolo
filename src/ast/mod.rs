@@ -133,7 +133,7 @@ impl StmtVisitor for AstPrinter {
     fn visit_func(
         &mut self,
         name: &Token,
-        args: &[&Token],
+        args: &[Token],
         _arity: Arity,
         body: &[Stmt],
         _method: bool,
@@ -160,7 +160,7 @@ impl StmtVisitor for AstPrinter {
         &mut self,
         _name: &Token,
         _methods: &[Stmt],
-        _fields: &[(&Token, Expr)],
+        _fields: &[(Token, Expr)],
     ) -> String {
         self.parenthesize("data", &[])
     }
@@ -209,7 +209,7 @@ impl ExprVisitor for AstPrinter {
         self.parenthesize(&s, &args)
     }
 
-    fn visit_new(&mut self, name: &Token, args: &[(&Token, Box<Expr>)]) -> String {
+    fn visit_new(&mut self, name: &Token, args: &[(Token, Box<Expr>)]) -> String {
         let args: Vec<&Expr> = args.iter().map(|tb| tb.1.as_ref()).collect();
         self.parenthesize(&format!("new {}", name.lexeme), &args)
     }
@@ -229,7 +229,7 @@ impl ExprVisitor for AstPrinter {
     fn visit_func(
         &mut self,
         name: &Token,
-        args: &[&Token],
+        args: &[Token],
         _arity: Arity,
         body: &[Stmt],
         _method: bool,

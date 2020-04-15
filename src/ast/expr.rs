@@ -23,14 +23,14 @@ pub trait ExprVisitor {
         arity: super::Arity,
         args: &[Expr],
     ) -> Self::Output;
-    fn visit_new(&mut self, name: &Token, args: &[(&Token, Box<Expr>)]) -> Self::Output;
+    fn visit_new(&mut self, name: &Token, args: &[(Token, Box<Expr>)]) -> Self::Output;
     fn visit_get(&mut self, object: &Expr, name: &Token) -> Self::Output;
     fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> Self::Output;
     fn visit_index(&mut self, rb: &Token, object: &Expr, idx: &Expr) -> Self::Output;
     fn visit_func(
         &mut self,
         name: &Token,
-        args: &[&Token],
+        args: &[Token],
         arity: super::Arity,
         body: &[Stmt],
         method: bool,
@@ -44,66 +44,66 @@ impl ExprAccept for Value {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Expr<'a: 'b, 'b> {
+pub enum Expr<'a> {
     Atom(Value),
     Unary {
-        op: &'b Token<'a>,
-        rhs: Box<Expr<'a, 'b>>,
+        op: Token<'a>,
+        rhs: Box<Expr<'a>>,
     },
     Binary {
-        lhs: Box<Expr<'a, 'b>>,
-        op: &'b Token<'a>,
-        rhs: Box<Expr<'a, 'b>>,
+        lhs: Box<Expr<'a>>,
+        op: Token<'a>,
+        rhs: Box<Expr<'a>>,
     },
     Paren {
-        value: Box<Expr<'a, 'b>>,
+        value: Box<Expr<'a>>,
     },
     Variable {
-        name: &'b Token<'a>,
+        name: Token<'a>,
     },
     Assignment {
-        name: &'b Token<'a>,
-        value: Box<Expr<'a, 'b>>,
+        name: Token<'a>,
+        value: Box<Expr<'a>>,
     },
     Logical {
-        lhs: Box<Expr<'a, 'b>>,
-        op: &'b Token<'a>,
-        rhs: Box<Expr<'a, 'b>>,
+        lhs: Box<Expr<'a>>,
+        op: Token<'a>,
+        rhs: Box<Expr<'a>>,
     },
     Call {
-        callee: Box<Expr<'a, 'b>>,
-        paren: &'b Token<'a>,
+        callee: Box<Expr<'a>>,
+        paren: Token<'a>,
         arity: super::Arity,
-        args: Vec<Expr<'a, 'b>>,
+        args: Vec<Expr<'a>>,
     },
     New {
-        name: &'b Token<'a>,
-        args: Vec<(&'b Token<'a>, Box<Expr<'a, 'b>>)>,
+        name: Token<'a>,
+        args: Vec<(Token<'a>, Box<Expr<'a>>)>,
     },
     Get {
-        object: Box<Expr<'a, 'b>>,
-        name: &'b Token<'a>,
+        object: Box<Expr<'a>>,
+        name: Token<'a>,
     },
     Set {
-        object: Box<Expr<'a, 'b>>,
-        name: &'b Token<'a>,
-        value: Box<Expr<'a, 'b>>,
+        object: Box<Expr<'a>>,
+        name: Token<'a>,
+        value: Box<Expr<'a>>,
     },
     Index {
-        rb: &'b Token<'a>,
-        object: Box<Expr<'a, 'b>>,
-        idx: Box<Expr<'a, 'b>>,
+        rb: Token<'a>,
+        object: Box<Expr<'a>>,
+        idx: Box<Expr<'a>>,
     },
     Func {
-        name: &'b Token<'a>,
-        args: Vec<&'b Token<'a>>,
+        name: Token<'a>,
+        args: Vec<Token<'a>>,
         arity: super::Arity,
-        body: Vec<Stmt<'a, 'b>>,
+        body: Vec<Stmt<'a>>,
         method: bool,
     },
 }
 
-impl ExprAccept for Expr<'_, '_> {
+impl ExprAccept for Expr<'_> {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         match self {
             Expr::Atom(ref e) => e.accept(v),
