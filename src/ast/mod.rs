@@ -15,18 +15,12 @@ use crate::{Token, Value};
 use expr::{Expr, ExprAccept, ExprVisitor};
 use stmt::{Stmt, StmtAccept, StmtVisitor};
 
+/// Pretty-prints a Piccolo AST using the ExprVisitor and StmtVisitor traits.
 #[derive(Copy, Clone)]
 pub struct AstPrinter;
 
 impl AstPrinter {
-    pub fn print_expr(&mut self, expr: &Expr) -> String {
-        expr.accept(self)
-    }
-
-    pub fn print_stmt(&mut self, stmt: &Stmt) -> String {
-        stmt.accept(self)
-    }
-
+    /// Pretty-print a full AST.
     pub fn print(&mut self, ast: &[Stmt]) -> String {
         let mut s = String::new();
         for stmt in ast.iter() {
@@ -34,6 +28,16 @@ impl AstPrinter {
             s.push_str("\n");
         }
         s
+    }
+
+    /// Pretty-print a single expression.
+    pub fn print_expr(&mut self, expr: &Expr) -> String {
+        expr.accept(self)
+    }
+
+    /// Pretty-print a single statement.
+    pub fn print_stmt(&mut self, stmt: &Stmt) -> String {
+        stmt.accept(self)
     }
 
     fn parenthesize(&mut self, name: &str, expressions: &[&Expr]) -> String {
@@ -133,6 +137,7 @@ impl StmtVisitor for AstPrinter {
         s.push_str(")");
         self.parenthesize_list(&s, None, body)
     }
+
     fn visit_retn(&mut self, _keyword: &Token, value: Option<&Expr>) -> String {
         self.parenthesize("retn", &[value.unwrap_or(&Expr::Atom(Value::Nil))])
     }
@@ -143,6 +148,7 @@ impl StmtVisitor for AstPrinter {
         _methods: &[Stmt],
         _fields: &[(Token, Expr)],
     ) -> String {
+        // TODO
         self.parenthesize("data", &[])
     }
 }

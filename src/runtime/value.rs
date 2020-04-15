@@ -6,30 +6,38 @@ use crate::{Token, TokenKind};
 
 /// Trait for Piccolo objects.
 pub trait Object: Downcast + fmt::Debug + fmt::Display {
+    /// Return the name of the type of the object. Used for runtime type comparison inside
+    /// Piccolo via the `type()` builtin function.
     fn type_name(&self) -> &'static str {
         "object"
     }
 
+    /// Compare self to another object. Returns `None` if incomparable.
     fn gt(&self, _other: &dyn Object) -> Option<bool> {
         None
     }
 
+    /// Compare self to another object. Returns `None` if incomparable.
     fn lt(&self, _other: &dyn Object) -> Option<bool> {
         None
     }
 
+    /// Compare self to another object. Returns `None` if incomparable.
     fn eq(&self, _other: &dyn Object) -> Option<bool> {
         None
     }
 
+    /// Get the named property from the object. Returns `None` if it doesn't exist.
     fn get(&self, _property: &str) -> Option<Value> {
         None
     }
 
+    /// Sets the named property on the object. Returns `None` if it doesn't exist.
     fn set(&mut self, _property: &str) -> Option<Value> {
         None
     }
 
+    /// Attempts to clone the object. Returns `None` if it is not possible.
     fn try_clone(&self) -> Option<Box<dyn Object>> {
         None
     }
@@ -82,6 +90,8 @@ pub enum Value {
 }
 
 impl Value {
+    /// A value is only false-y if it is of type bool and false, or of type nil.
+    /// All other values are truth-y.
     pub fn is_truthy(&self) -> bool {
         match self {
             Value::Bool(b) => *b,
@@ -90,6 +100,7 @@ impl Value {
         }
     }
 
+    /// Converts the value into a type T for which Value implements Into<T>.
     pub fn into<T>(self) -> T
     where
         Value: Into<T>,
@@ -97,6 +108,7 @@ impl Value {
         core::convert::Into::<T>::into(self)
     }
 
+    /// Takes a reference to the inner string. Panics if the value is not a string.
     pub fn ref_string(&self) -> &String {
         match self {
             Value::String(s) => s,
@@ -104,7 +116,9 @@ impl Value {
         }
     }
 
+    /// Attempts to clone a value. Panics if it doesn't succeed.
     pub fn try_clone(&self) -> Value {
+        // TODO: -> Option<Value>
         match self {
             Value::String(string) => Value::String(string.clone()),
             Value::Object(o) => Value::Object(
@@ -172,6 +186,7 @@ impl Value {
         }
     }
 
+    /// Returns the type name of a value.
     pub fn type_name(&self) -> &'static str {
         match self {
             Value::String(_) => "string",
@@ -183,6 +198,7 @@ impl Value {
         }
     }
 
+    /// Formats the value.
     pub fn fmt(&self) -> String {
         match self {
             Value::String(v) => v.to_string(),
@@ -194,6 +210,7 @@ impl Value {
         }
     }
 
+    /// Tests a value for equality. Returns `None` if incomparable.
     pub fn eq(&self, other: &Value) -> Option<bool> {
         match self {
             Value::String(l) => match other {
