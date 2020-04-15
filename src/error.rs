@@ -109,6 +109,9 @@ pub enum ErrorKind {
     ExpectedExpression {
         got: String,
     },
+    CannotClone {
+        ty: String,
+    },
     AssertFailed,
     SyntaxError,
 }
@@ -139,6 +142,7 @@ impl fmt::Display for ErrorKind {
                 write!(f, "Malformed expression from {}", from)
             }
             ErrorKind::ExpectedExpression { got } => write!(f, "Expected expression, got {}", got),
+            ErrorKind::CannotClone { ty } => write!(f, "Cannot clone type {}", ty),
             ErrorKind::AssertFailed => write!(f, "Assertion failed"),
             ErrorKind::SyntaxError => write!(f, "Syntax error"),
         }

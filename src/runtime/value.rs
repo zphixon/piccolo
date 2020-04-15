@@ -117,20 +117,15 @@ impl Value {
     }
 
     /// Attempts to clone a value. Panics if it doesn't succeed.
-    pub fn try_clone(&self) -> Value {
-        // TODO: -> Option<Value>
-        match self {
+    pub fn try_clone(&self) -> Option<Value> {
+        Some(match self {
             Value::String(string) => Value::String(string.clone()),
-            Value::Object(o) => Value::Object(
-                o.try_clone()
-                    .ok_or_else(|| panic!("cannot clone {}", o.type_name()))
-                    .unwrap(),
-            ),
+            Value::Object(o) => Value::Object(o.try_clone()?),
             Value::Bool(bool) => Value::Bool(*bool),
             Value::Integer(i64) => Value::Integer(*i64),
             Value::Double(f64) => Value::Double(*f64),
             Value::Nil => Value::Nil,
-        }
+        })
     }
 
     pub(crate) fn try_from(token: Token) -> Option<Value> {

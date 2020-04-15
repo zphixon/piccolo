@@ -88,7 +88,7 @@ impl super::ExprVisitor for NewEmitter {
     type Output = ();
 
     fn visit_value(&mut self, value: &Value) -> Self::Output {
-        let i = self.0.make_constant(value.try_clone());
+        let i = self.0.make_constant(value.try_clone().unwrap());
         let (low, high) = crate::decode_bytes(i);
         self.0.write(Opcode::Constant, 1);
         self.0.write(low, 1);
