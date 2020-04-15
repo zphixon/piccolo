@@ -10,9 +10,8 @@ pub mod compiler;
 pub mod error;
 pub mod runtime;
 
-pub use compiler::compile;
-pub use compiler::{scanner::Scanner, Token, TokenKind};
-pub use error::PiccoloError;
+pub use compiler::{compile, scanner::Scanner, Token, TokenKind};
+pub use error::{PiccoloError, ErrorKind};
 pub use runtime::{chunk::Chunk, value::Value, vm::Machine};
 
 #[cfg(feature = "pc-debug")]

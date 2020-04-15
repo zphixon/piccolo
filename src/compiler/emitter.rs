@@ -1,5 +1,5 @@
-use crate::error::{ErrorKind, PiccoloError};
-use crate::runtime::{chunk::Chunk, op::Opcode, value::Value};
+use crate::{Chunk, Value, ErrorKind, PiccoloError};
+use crate::runtime::op::Opcode;
 
 use super::{Token, TokenKind};
 

@@ -1,6 +1,6 @@
-use crate::error::{ErrorKind, PiccoloError};
+use crate::{Token, TokenKind, ErrorKind, PiccoloError};
 
-use super::{is_digit, is_whitespace, Token, TokenKind};
+use super::{is_digit, is_whitespace};
 
 /// Converts a piccolo source into a list of tokens.
 pub struct Scanner<'a> {

@@ -1,15 +1,18 @@
-use crate::ast::expr::Expr;
-use crate::ast::stmt::Stmt;
-use crate::compiler::{scanner::Scanner, Token, TokenKind};
-use crate::error::PiccoloError;
-use crate::Value;
+use crate::{Value, Scanner, Token, TokenKind, ErrorKind, PiccoloError};
+
+use super::expr::Expr;
+use super::stmt::Stmt;
 
 fn expr_bp<'a>(scanner: &mut Scanner<'a>, min_bp: u8) -> Result<Expr<'a>, PiccoloError> {
     scanner.next_token()?;
     let lhs_token = scanner.take_previous();
-    let mut lhs = match lhs_token.kind {
+    let lhs_token_kind = lhs_token.kind;
+    let mut lhs = match lhs_token_kind {
         TokenKind::Identifier => unimplemented!("prefix variable"),
-        _ => Expr::Atom(Value::try_from(lhs_token)?),
+        _ => Expr::Atom(Value::try_from(lhs_token).ok_or_else(|| {
+            PiccoloError::new(ErrorKind::SyntaxError)
+                .msg_string(format!("Expected literal, got {:?}", lhs_token_kind))
+        })?),
     };
 
     loop {

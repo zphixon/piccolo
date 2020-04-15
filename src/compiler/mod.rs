@@ -2,8 +2,7 @@ pub mod emitter;
 pub mod scanner;
 
 use crate::compiler::emitter::Emitter;
-use crate::error::{ErrorKind, PiccoloError};
-use crate::Chunk;
+use crate::{Chunk, ErrorKind, PiccoloError};
 
 use core::fmt;
 

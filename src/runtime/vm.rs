@@ -1,4 +1,4 @@
-use crate::error::{ErrorKind, PiccoloError};
+use crate::{ErrorKind, PiccoloError};
 
 use super::{chunk::Chunk, op::Opcode, value::Value};
 
