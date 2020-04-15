@@ -206,7 +206,8 @@ impl ExprVisitor for AstPrinter {
     }
 
     fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> String {
-        self.parenthesize(&format!("set {} = {}", name.lexeme, value.accept(self)), &[object])
+        let s = format!("set {} = {}", name.lexeme, value.accept(self));
+        self.parenthesize(&s, &[object])
     }
 
     fn visit_index(&mut self, _rb: &Token, object: &Expr, idx: &Expr) -> String {
