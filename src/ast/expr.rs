@@ -1,5 +1,4 @@
-use crate::compiler::Token;
-use crate::runtime::value::Value;
+use crate::{Value, Token};
 
 use super::stmt::Stmt;
 

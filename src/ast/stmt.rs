@@ -1,4 +1,4 @@
-use crate::compiler::Token;
+use crate::Token;
 
 use super::expr::Expr;
 

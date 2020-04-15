@@ -11,8 +11,7 @@ pub enum Arity {
     Some(usize),
 }
 
-use crate::compiler::Token;
-use crate::runtime::value::Value;
+use crate::{Token, Value};
 use expr::{Expr, ExprAccept, ExprVisitor};
 use stmt::{Stmt, StmtAccept, StmtVisitor};
 
