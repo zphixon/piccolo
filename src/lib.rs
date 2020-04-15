@@ -189,24 +189,47 @@ mod tests {
     fn scanner() {
         let src = "a = 3\nio.prln(a)\n";
         let mut scanner = Scanner::new(src);
-        assert_eq!(scanner.next_token().unwrap(), &Token::new(TokenKind::Identifier, "a", 1));
-        assert_eq!(scanner.current(), &Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(
+            scanner.next_token().unwrap(),
+            &Token::new(TokenKind::Identifier, "a", 1)
+        );
+        assert_eq!(
+            scanner.current(),
+            &Token::new(TokenKind::Identifier, "a", 1)
+        );
 
-        assert_eq!(scanner.next_token().unwrap(), &Token::new(TokenKind::Assign, "=", 1));
+        assert_eq!(
+            scanner.next_token().unwrap(),
+            &Token::new(TokenKind::Assign, "=", 1)
+        );
         assert_eq!(scanner.current(), &Token::new(TokenKind::Assign, "=", 1));
-        assert_eq!(scanner.previous(), &Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(
+            scanner.previous(),
+            &Token::new(TokenKind::Identifier, "a", 1)
+        );
     }
 
     #[test]
     fn scanner_take() {
         let src = "a = 3\nio.prln(a)\n";
         let mut scanner = Scanner::new(src);
-        assert_eq!(scanner.next_token().unwrap(), &Token::new(TokenKind::Identifier, "a", 1));
-        assert_eq!(scanner.take_current(), Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(
+            scanner.next_token().unwrap(),
+            &Token::new(TokenKind::Identifier, "a", 1)
+        );
+        assert_eq!(
+            scanner.take_current(),
+            Token::new(TokenKind::Identifier, "a", 1)
+        );
 
-        assert_eq!(scanner.next_token().unwrap(), &Token::new(TokenKind::Assign, "=", 1));
-        assert_eq!(scanner.take_current(), Token::new(TokenKind::Assign, "=", 1));
-        //assert_eq!(scanner.previous(), &Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(
+            scanner.next_token().unwrap(),
+            &Token::new(TokenKind::Assign, "=", 1)
+        );
+        assert_eq!(
+            scanner.take_current(),
+            Token::new(TokenKind::Assign, "=", 1)
+        );
     }
 
     #[test]
@@ -243,21 +266,29 @@ mod tests {
             Stmt::Assignment {
                 name: tokens[3].take().unwrap(),
                 value: Expr::Binary {
-                    lhs: Box::new(Expr::Variable { name: tokens[5].take().unwrap() }),
+                    lhs: Box::new(Expr::Variable {
+                        name: tokens[5].take().unwrap(),
+                    }),
                     op: tokens[6].take().unwrap(),
                     rhs: Box::new(Expr::Atom(Value::Integer(4))),
                 },
             },
             Stmt::If {
                 cond: Expr::Binary {
-                    lhs: Box::new(Expr::Variable { name: tokens[9].take().unwrap() }),
+                    lhs: Box::new(Expr::Variable {
+                        name: tokens[9].take().unwrap(),
+                    }),
                     op: tokens[10].take().unwrap(),
-                    rhs: Box::new(Expr::Variable { name: tokens[11].take().unwrap() }),
+                    rhs: Box::new(Expr::Variable {
+                        name: tokens[11].take().unwrap(),
+                    }),
                 },
                 then: vec![Stmt::Expr {
                     expr: Expr::Call {
                         callee: Box::new(Expr::Get {
-                            object: Box::new(Expr::Variable { name: tokens[13].take().unwrap() }),
+                            object: Box::new(Expr::Variable {
+                                name: tokens[13].take().unwrap(),
+                            }),
                             name: tokens[15].take().unwrap(),
                         }),
                         paren: tokens[16].take().unwrap(),

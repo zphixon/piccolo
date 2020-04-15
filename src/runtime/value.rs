@@ -2,8 +2,8 @@ use downcast_rs::Downcast;
 
 use core::fmt;
 
-use crate::error::{ErrorKind, PiccoloError};
 use crate::compiler::{Token, TokenKind};
+use crate::error::{ErrorKind, PiccoloError};
 
 /// Trait for Piccolo objects.
 pub trait Object: Downcast + fmt::Debug + fmt::Display {
@@ -127,7 +127,8 @@ impl Value {
             TokenKind::False => Value::Bool(false),
             TokenKind::Double(v) => Value::Double(v),
             TokenKind::String => Value::String(crate::compiler::escape_string(&token)?),
-            kind => Err(PiccoloError::new(ErrorKind::SyntaxError).msg_string(format!("Expected literal, got {:?}", kind)))?
+            kind => Err(PiccoloError::new(ErrorKind::SyntaxError)
+                .msg_string(format!("Expected literal, got {:?}", kind)))?,
         })
     }
 
@@ -222,7 +223,7 @@ impl Value {
             Value::Nil => match other {
                 Value::Nil => Some(true),
                 _ => Some(false),
-            }
+            },
         }
     }
 

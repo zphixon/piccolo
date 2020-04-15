@@ -11,8 +11,8 @@ pub enum Arity {
     Some(usize),
 }
 
-use crate::runtime::value::Value;
 use crate::compiler::Token;
+use crate::runtime::value::Value;
 use expr::{Expr, ExprAccept, ExprVisitor};
 use stmt::{Stmt, StmtAccept, StmtVisitor};
 
@@ -47,12 +47,7 @@ impl AstPrinter {
         s
     }
 
-    fn parenthesize_list(
-        &mut self,
-        name: &str,
-        expr: Option<&Expr>,
-        stmts: &[Stmt],
-    ) -> String {
+    fn parenthesize_list(&mut self, name: &str, expr: Option<&Expr>, stmts: &[Stmt]) -> String {
         let mut s = format!("({}", name);
         if expr.is_some() {
             s.push_str(" ");
@@ -66,12 +61,7 @@ impl AstPrinter {
         s
     }
 
-    fn parenthesize_lists(
-        &mut self,
-        name: &str,
-        e: Option<&Expr>,
-        stmts: &[&[Stmt]],
-    ) -> String {
+    fn parenthesize_lists(&mut self, name: &str, e: Option<&Expr>, stmts: &[&[Stmt]]) -> String {
         let mut s = format!("({}", name);
         if e.is_some() {
             s.push_str(" ");
@@ -109,12 +99,7 @@ impl StmtVisitor for AstPrinter {
         s
     }
 
-    fn visit_if(
-        &mut self,
-        cond: &Expr,
-        then: &[Stmt],
-        else_: Option<&Vec<Stmt>>,
-    ) -> String {
+    fn visit_if(&mut self, cond: &Expr, then: &[Stmt], else_: Option<&Vec<Stmt>>) -> String {
         if let Some(else_) = else_ {
             self.parenthesize_lists("if-else", Some(cond), &[then, else_])
         } else {
@@ -150,10 +135,7 @@ impl StmtVisitor for AstPrinter {
         self.parenthesize_list(&s, None, body)
     }
     fn visit_retn(&mut self, _keyword: &Token, value: Option<&Expr>) -> String {
-        self.parenthesize(
-            "retn",
-            &[value.unwrap_or(&Expr::Atom(Value::Nil))],
-        )
+        self.parenthesize("retn", &[value.unwrap_or(&Expr::Atom(Value::Nil))])
     }
 
     fn visit_data(
