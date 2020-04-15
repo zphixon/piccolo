@@ -223,7 +223,6 @@ impl Value {
                 Value::Nil => Some(true),
                 _ => Some(false),
             }
-            _ => None,
         }
     }
 
