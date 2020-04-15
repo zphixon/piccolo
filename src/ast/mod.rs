@@ -21,17 +21,17 @@ pub struct AstPrinter;
 
 impl AstPrinter {
     pub fn print_expr(&mut self, expr: &Expr) -> String {
-        expr.accept(&mut *self)
+        expr.accept(self)
     }
 
     pub fn print_stmt(&mut self, stmt: &Stmt) -> String {
-        stmt.accept(&mut *self)
+        stmt.accept(self)
     }
 
     pub fn print(&mut self, ast: &[Stmt]) -> String {
         let mut s = String::new();
         for stmt in ast.iter() {
-            s.push_str(&stmt.accept(&mut *self));
+            s.push_str(&stmt.accept(self));
             s.push_str("\n");
         }
         s
@@ -41,7 +41,7 @@ impl AstPrinter {
         let mut s = format!("({}", name);
         for expr in expressions {
             s.push_str(" ");
-            s.push_str(&expr.accept(&mut *self));
+            s.push_str(&expr.accept(self));
         }
         s.push_str(")");
         s
@@ -56,11 +56,11 @@ impl AstPrinter {
         let mut s = format!("({}", name);
         if expr.is_some() {
             s.push_str(" ");
-            s.push_str(&expr.as_ref().unwrap().accept(&mut *self));
+            s.push_str(&expr.as_ref().unwrap().accept(self));
         }
         for stmt in stmts {
             s.push_str(" ");
-            s.push_str(&stmt.accept(&mut *self));
+            s.push_str(&stmt.accept(self));
         }
         s.push_str(")");
         s
@@ -75,12 +75,12 @@ impl AstPrinter {
         let mut s = format!("({}", name);
         if e.is_some() {
             s.push_str(" ");
-            s.push_str(&e.as_ref().unwrap().accept(&mut *self));
+            s.push_str(&e.as_ref().unwrap().accept(self));
         }
         for stmt_list in stmts.iter() {
             for stmt in stmt_list.iter() {
                 s.push_str(" ");
-                s.push_str(&stmt.accept(&mut *self));
+                s.push_str(&stmt.accept(self));
             }
         }
         s.push_str(")");
@@ -103,7 +103,7 @@ impl StmtVisitor for AstPrinter {
         let mut s = String::from("(block");
         for stmt in stmts.iter() {
             s.push_str(" ");
-            s.push_str(&stmt.accept(&mut *self));
+            s.push_str(&stmt.accept(self));
         }
         s.push_str(")");
         s
@@ -204,7 +204,7 @@ impl ExprVisitor for AstPrinter {
         _arity: Arity,
         args: &[Expr],
     ) -> String {
-        let s = format!("call {}", callee.accept(&mut *self));
+        let s = format!("call {}", callee.accept(self));
         let args: Vec<&Expr> = args.iter().map(|arg| arg).collect();
         self.parenthesize(&s, &args)
     }
