@@ -340,6 +340,6 @@ impl Machine {
                 }
             }
         }
-        Ok(Value::Nil)
+        Ok(self.stack.pop().unwrap_or(Value::Nil))
     }
 }

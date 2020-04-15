@@ -219,6 +219,10 @@ impl Value {
                 Value::Object(r) => l.eq(r.as_ref()),
                 _ => None,
             },
+            Value::Nil => match other {
+                Value::Nil => Some(true),
+                _ => Some(false),
+            }
             _ => None,
         }
     }
