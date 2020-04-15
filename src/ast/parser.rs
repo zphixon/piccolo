@@ -50,9 +50,12 @@ impl/*<'a, 'b>*/ Parser/*<'a, 'b>*/ {
 */
 
 fn expr_bp<'a>(scanner: &mut Scanner<'a>, min_bp: u8) -> Result<Expr<'a>, PiccoloError> {
-    let lhs = Value::try_from(scanner.next_token()?.clone())?;
-    let op = scanner.next_token()?.clone();
-    let rhs = Value::try_from(scanner.next_token()?.clone())?;
+    let _ = scanner.next_token()?;
+    let lhs = Value::try_from(scanner.take_current())?;
+    let _ = scanner.next_token()?;
+    let op = scanner.take_current();
+    let _ = scanner.next_token()?;
+    let rhs = Value::try_from(scanner.take_current())?;
     Ok(Expr::Binary {
         lhs: Box::new(Expr::Atom(lhs)),
         op,
@@ -66,4 +69,15 @@ fn infix_binding_power(op: TokenKind) -> (u8, u8) {
         TokenKind::Multiply | TokenKind::Divide => (3, 4),
         _ => panic!("ibp {:?}", op),
     }
+}
+
+#[test]
+fn take() {
+    let src = "1+2";
+    let expr = expr_bp(&mut Scanner::new(src), 0).unwrap();
+    assert_eq!(expr, Expr::Binary {
+        lhs: Box::new(Expr::Atom(Value::Integer(1))),
+        op: Token::new(TokenKind::Plus, "+", 1),
+        rhs: Box::new(Expr::Atom(Value::Integer(2))),
+    })
 }

@@ -5,7 +5,7 @@ use super::{is_digit, is_whitespace, Token, TokenKind};
 /// Converts a piccolo source into a list of tokens.
 pub struct Scanner<'a> {
     source: &'a [u8],
-    tokens: Vec<Token<'a>>,
+    tokens: Vec<Option<Token<'a>>>,
     start: usize,
     current: usize,
     line: usize,
@@ -25,15 +25,25 @@ impl<'a> Scanner<'a> {
 
     pub fn scan_tokens(mut self) -> Result<Vec<Token<'a>>, PiccoloError> {
         while self.next_token()?.kind != TokenKind::Eof {}
-        Ok(self.tokens)
+        Ok(self.tokens.into_iter().map(Option::unwrap).collect())
     }
 
     pub(crate) fn current(&self) -> &Token<'a> {
-        &self.tokens[self.tokens.len() - 1]
+        self.tokens[self.tokens.len() - 1].as_ref().unwrap()
     }
 
     pub(crate) fn previous(&self) -> &Token<'a> {
-        &self.tokens[self.tokens.len() - 2]
+        self.tokens[self.tokens.len() - 2].as_ref().unwrap()
+    }
+
+    pub(crate) fn take_current(&mut self) -> Token<'a> {
+        let l = self.tokens.len() - 1;
+        self.tokens[l].take().unwrap()
+    }
+
+    pub(crate) fn take_previous(&mut self) -> Token<'a> {
+        let l = self.tokens.len() - 2;
+        self.tokens[l].take().unwrap()
     }
 
     fn slurp_whitespace(&mut self) {
@@ -253,11 +263,11 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_token(&mut self, kind: TokenKind) {
-        self.tokens.push(Token::new(
+        self.tokens.push(Some(Token::new(
             kind,
             core::str::from_utf8(&self.source[self.start..self.current]).unwrap(),
             self.line,
-        ));
+        )));
     }
 
     fn is_at_end(&self) -> bool {
