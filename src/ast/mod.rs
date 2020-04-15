@@ -157,7 +157,7 @@ impl ExprVisitor for AstPrinter {
     type Output = String;
 
     fn visit_value(&mut self, literal: &Value) -> String {
-        format!("{:?}", literal)
+        format!("{}", literal)
     }
 
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> String {
@@ -205,12 +205,13 @@ impl ExprVisitor for AstPrinter {
         self.parenthesize(&format!("get {}", name.lexeme), &[object])
     }
 
-    fn visit_set(&mut self, object: &Expr, name: &Token, _value: &Expr) -> String {
-        self.parenthesize(&format!("set {}", name.lexeme), &[object])
+    fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> String {
+        self.parenthesize(&format!("set {} = {}", name.lexeme, value.accept(self)), &[object])
     }
 
     fn visit_index(&mut self, _rb: &Token, object: &Expr, idx: &Expr) -> String {
-        self.parenthesize(&format!("index {:?}", idx), &[object])
+        let s = format!("index {}", idx.accept(self));
+        self.parenthesize(&s, &[object])
     }
 
     fn visit_func(
