@@ -70,7 +70,7 @@ fn file(contents: &str) {
     use piccolo::Scanner;
 
     println!("****** tokens");
-    let tokens = Scanner::new(contents).scan_tokens();
+    let tokens = Scanner::at_once(contents);
     if let Ok(tokens) = tokens {
         piccolo::print_tokens(&tokens);
         println!("****** compiler");
@@ -117,7 +117,7 @@ fn repl() {
                 rl.add_history_entry(&line);
 
                 println!("****** tokens");
-                let tokens = Scanner::new(&line).scan_tokens();
+                let tokens = Scanner::at_once(&line);
                 if let Ok(tokens) = tokens {
                     piccolo::print_tokens(&tokens);
                     println!("****** compiler");

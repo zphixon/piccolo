@@ -3,47 +3,62 @@ use crate::{Token, TokenKind, ErrorKind, PiccoloError};
 use super::{is_digit, is_whitespace};
 
 /// Converts a piccolo source into a list of tokens.
+#[derive(Debug)]
 pub struct Scanner<'a> {
     source: &'a [u8],
-    tokens: Vec<Option<Token<'a>>>,
+    tokens: Vec<Token<'a>>,
     start: usize,
     current: usize,
     line: usize,
+    on_demand: bool,
 }
 
+// TODO: break scanner into on-demand and all at once
 impl<'a> Scanner<'a> {
-    /// Create a new scanner from a source.
-    pub fn new(source: &'a str) -> Self {
-        Scanner {
+    pub fn on_demand(source: &'a str) -> Result<Self, PiccoloError> {
+        let mut scanner = Scanner {
             source: source.as_bytes(),
             tokens: Vec::new(),
             start: 0,
             current: 0,
             line: 1,
-        }
+            on_demand: true,
+        };
+
+        scanner.scan_all()?;
+        scanner.tokens.reverse();
+
+        Ok(scanner)
     }
 
-    pub fn scan_tokens(mut self) -> Result<Vec<Token<'a>>, PiccoloError> {
-        while self.next_token()?.kind != TokenKind::Eof {}
-        Ok(self.tokens.into_iter().map(Option::unwrap).collect())
+    pub fn at_once(source: &'a str) -> Result<Vec<Token<'a>>, PiccoloError> {
+        let mut scanner = Scanner {
+            source: source.as_bytes(),
+            tokens: Vec::new(),
+            start: 0,
+            current: 0,
+            line: 1,
+            on_demand: false,
+        };
+
+        scanner.scan_all()?;
+
+        Ok(scanner.tokens)
     }
 
-    pub(crate) fn current(&self) -> &Token<'a> {
-        self.tokens[self.tokens.len() - 1].as_ref().unwrap()
+    fn scan_all(&mut self) -> Result<(), PiccoloError> {
+        while self.next()?.kind != TokenKind::Eof {}
+        Ok(())
     }
 
-    pub(crate) fn previous(&self) -> &Token<'a> {
-        self.tokens[self.tokens.len() - 2].as_ref().unwrap()
+    pub fn next_token(&mut self) -> Token<'a> {
+        assert!(self.on_demand);
+        self.tokens.pop().unwrap_or_else(|| Token::new(TokenKind::Eof, "", self.line))
     }
 
-    pub(crate) fn take_current(&mut self) -> Token<'a> {
-        let l = self.tokens.len() - 1;
-        self.tokens[l].take().unwrap()
-    }
-
-    pub(crate) fn take_previous(&mut self) -> Token<'a> {
-        let l = self.tokens.len() - 2;
-        self.tokens[l].take().unwrap()
+    pub fn peek_token<'b>(&'b self, idx: usize) -> &'b Token<'a> {
+        assert!(self.on_demand);
+        &self.tokens[self.tokens.len() - 1 - idx]
     }
 
     fn slurp_whitespace(&mut self) {
@@ -61,11 +76,11 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub(crate) fn next_token<'b>(&'b mut self) -> Result<&'b Token<'a>, PiccoloError> {
+    fn next<'b>(&'b mut self) -> Result<&'b Token<'a>, PiccoloError> {
         self.slurp_whitespace();
         if self.is_at_end() {
             self.add_token(TokenKind::Eof);
-            return Ok(self.current());
+            return Ok(&self.tokens[self.tokens.len() - 1]);
         }
 
         self.start = self.current;
@@ -169,7 +184,7 @@ impl<'a> Scanner<'a> {
             }
         };
         self.add_token(tk);
-        Ok(self.current())
+        Ok(&self.tokens[self.tokens.len() - 1])
     }
 
     fn identifier_or_keyword(&mut self) -> Result<TokenKind, PiccoloError> {
@@ -263,11 +278,11 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_token(&mut self, kind: TokenKind) {
-        self.tokens.push(Some(Token::new(
+        self.tokens.push(Token::new(
             kind,
             core::str::from_utf8(&self.source[self.start..self.current]).unwrap(),
             self.line,
-        )));
+        ));
     }
 
     fn is_at_end(&self) -> bool {

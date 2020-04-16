@@ -4,39 +4,7 @@ use super::expr::Expr;
 use super::stmt::Stmt;
 
 fn expr_bp<'a>(scanner: &mut Scanner<'a>, min_bp: u8) -> Result<Expr<'a>, PiccoloError> {
-    scanner.next_token()?;
-    let lhs_token = scanner.take_previous();
-    let lhs_token_kind = lhs_token.kind;
-    let mut lhs = match lhs_token_kind {
-        TokenKind::Identifier => unimplemented!("prefix variable"),
-        _ => Expr::Atom(Value::try_from(lhs_token).ok_or_else(|| {
-            PiccoloError::new(ErrorKind::SyntaxError)
-                .msg_string(format!("Expected literal, got {:?}", lhs_token_kind))
-        })?),
-    };
-
-    loop {
-        //scanner.next_token()?;
-        let op_token = scanner.current();
-        if op_token.kind == TokenKind::Eof {
-            break;
-        }
-        let (lbp, rbp) = infix_binding_power(op_token.kind);
-        if lbp < min_bp {
-            break;
-        }
-
-        scanner.next_token()?;
-        let op = scanner.take_previous();
-        let rhs = expr_bp(scanner, rbp)?;
-        lhs = Expr::Binary {
-            lhs: Box::new(lhs),
-            op,
-            rhs: Box::new(rhs),
-        }
-    }
-
-    Ok(lhs)
+    unimplemented!()
 }
 
 fn infix_binding_power(op: TokenKind) -> (u8, u8) {
@@ -50,8 +18,8 @@ fn infix_binding_power(op: TokenKind) -> (u8, u8) {
 #[test]
 fn visitor_emitter() {
     let src = "1+2*3+4";
-    let mut scanner = Scanner::new(src);
-    scanner.next_token().unwrap();
+    let mut scanner = Scanner::on_demand(src).unwrap();
+    scanner.next_token();//.unwrap();
     let expr = expr_bp(&mut scanner, 0).unwrap();
     assert_eq!(
         expr,
