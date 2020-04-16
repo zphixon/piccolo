@@ -342,6 +342,10 @@ impl<'a> Emitter<'a> {
             self.return_statement()?;
         } else if self.matches(TokenKind::Assert)? {
             self.assert_statement()?;
+            // } else if matches identifier {
+            // if matches assign or declare
+            //     make variable
+            // else reverse, expression statement
         } else {
             self.expression_statement()?;
         }
