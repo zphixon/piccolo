@@ -2,11 +2,13 @@ use crate::{Token, TokenKind, ErrorKind, PiccoloError};
 
 use super::{is_digit, is_whitespace};
 
+use std::collections::VecDeque;
+
 /// Converts a piccolo source into a list of tokens.
 #[derive(Debug)]
 pub struct Scanner<'a> {
     source: &'a [u8],
-    tokens: Vec<Token<'a>>,
+    tokens: VecDeque<Token<'a>>,
     start: usize,
     current: usize,
     line: usize,
@@ -18,7 +20,7 @@ impl<'a> Scanner<'a> {
     pub fn on_demand(source: &'a str) -> Result<Self, PiccoloError> {
         let mut scanner = Scanner {
             source: source.as_bytes(),
-            tokens: Vec::new(),
+            tokens: VecDeque::new(),
             start: 0,
             current: 0,
             line: 1,
@@ -26,7 +28,7 @@ impl<'a> Scanner<'a> {
         };
 
         scanner.scan_all()?;
-        scanner.tokens.reverse();
+        println!("{:?}", scanner.tokens);
 
         Ok(scanner)
     }
@@ -34,7 +36,7 @@ impl<'a> Scanner<'a> {
     pub fn at_once(source: &'a str) -> Result<Vec<Token<'a>>, PiccoloError> {
         let mut scanner = Scanner {
             source: source.as_bytes(),
-            tokens: Vec::new(),
+            tokens: VecDeque::new(),
             start: 0,
             current: 0,
             line: 1,
@@ -43,7 +45,7 @@ impl<'a> Scanner<'a> {
 
         scanner.scan_all()?;
 
-        Ok(scanner.tokens)
+        Ok(scanner.tokens.drain(0..).collect())
     }
 
     fn scan_all(&mut self) -> Result<(), PiccoloError> {
@@ -53,12 +55,12 @@ impl<'a> Scanner<'a> {
 
     pub fn next_token(&mut self) -> Token<'a> {
         assert!(self.on_demand);
-        self.tokens.pop().unwrap_or_else(|| Token::new(TokenKind::Eof, "", self.line))
+        self.tokens.pop_front().unwrap_or_else(|| Token::new(TokenKind::Eof, "", self.line))
     }
 
     pub fn peek_token<'b>(&'b self, idx: usize) -> &'b Token<'a> {
         assert!(self.on_demand);
-        &self.tokens[self.tokens.len() - 1 - idx]
+        &self.tokens[idx]
     }
 
     fn slurp_whitespace(&mut self) {
@@ -278,7 +280,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_token(&mut self, kind: TokenKind) {
-        self.tokens.push(Token::new(
+        self.tokens.push_back(Token::new(
             kind,
             core::str::from_utf8(&self.source[self.start..self.current]).unwrap(),
             self.line,
