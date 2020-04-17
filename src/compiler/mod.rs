@@ -169,6 +169,7 @@ pub enum TokenKind {
     ExclusiveRange, // ..
     InclusiveRange, // ...
     Assign,         // =
+    Declare,        // =:
 
     // operators
     Not,          // !
@@ -304,6 +305,7 @@ impl fmt::Display for TokenKind {
             TokenKind::ExclusiveRange => write!(f, ".."),
             TokenKind::InclusiveRange => write!(f, "..."),
             TokenKind::Assign => write!(f, "="),
+            TokenKind::Declare => write!(f, "=:"),
             TokenKind::Not => write!(f, "!"),
             TokenKind::Plus => write!(f, "+"),
             TokenKind::Minus => write!(f, "-"),

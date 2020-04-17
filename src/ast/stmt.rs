@@ -16,7 +16,7 @@ pub trait StmtAccept {
 pub trait StmtVisitor {
     type Output;
     fn visit_expr(&mut self, expr: &Expr) -> Self::Output;
-    fn visit_assignment(&mut self, name: &Token, value: &Expr) -> Self::Output;
+    fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output;
     fn visit_block(&mut self, stmts: &[Stmt]) -> Self::Output;
     fn visit_if(&mut self, cond: &Expr, then: &[Stmt], else_: Option<&Vec<Stmt>>) -> Self::Output;
     fn visit_while(&mut self, cond: &Expr, body: &[Stmt]) -> Self::Output;
@@ -46,6 +46,7 @@ pub enum Stmt<'a> {
     },
     Assignment {
         name: Token<'a>,
+        op: Token<'a>,
         value: Expr<'a>,
     },
     Block {
@@ -87,7 +88,7 @@ impl StmtAccept for Stmt<'_> {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
         match self {
             Stmt::Expr { expr } => v.visit_expr(expr),
-            Stmt::Assignment { name, value } => v.visit_assignment(name, value),
+            Stmt::Assignment { name, op, value } => v.visit_assignment(name, op, value),
             Stmt::Block { stmts } => v.visit_block(stmts),
             Stmt::If { cond, then, else_ } => v.visit_if(cond, then, else_.as_ref()),
             Stmt::While { cond, body } => v.visit_while(cond, body),

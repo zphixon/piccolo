@@ -88,8 +88,8 @@ impl StmtVisitor for AstPrinter {
         self.parenthesize("expr", &[&expr])
     }
 
-    fn visit_assignment(&mut self, name: &Token, value: &Expr) -> String {
-        self.parenthesize(&format!("= {}", name.lexeme), &[value])
+    fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> String {
+        self.parenthesize(&format!("{} {}", op.lexeme, name.lexeme), &[value])
     }
 
     fn visit_block(&mut self, stmts: &[Stmt]) -> String {

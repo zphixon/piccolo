@@ -136,6 +136,9 @@ impl<'a> Scanner<'a> {
                 if self.peek_char() == b'=' {
                     self.advance_char();
                     TokenKind::Equal
+                } else if self.peek_char() == b':' {
+                    self.advance_char();
+                    TokenKind::Declare
                 } else {
                     TokenKind::Assign
                 }
