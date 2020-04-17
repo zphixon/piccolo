@@ -189,16 +189,33 @@ mod tests {
     fn scanner() {
         let src = "a = 3\nio.prln(a)\n";
         let mut scanner = Scanner::on_demand(src).unwrap();
-        assert_eq!(scanner.peek_token(0), &Token::new(TokenKind::Identifier, "a", 1));
-        assert_eq!(scanner.peek_token(1), &Token::new(TokenKind::Assign, "=", 1));
+        assert_eq!(scanner.peek_token(0).unwrap(), &Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(scanner.peek_token(1).unwrap(), &Token::new(TokenKind::Assign, "=", 1));
         assert_eq!(scanner.next_token(), Token::new(TokenKind::Identifier, "a", 1));
 
-        assert_eq!(scanner.peek_token(0), &Token::new(TokenKind::Assign, "=", 1));
+        assert_eq!(scanner.peek_token(0).unwrap(), &Token::new(TokenKind::Assign, "=", 1));
         assert_eq!(scanner.next_token(), Token::new(TokenKind::Assign, "=", 1));
         assert_eq!(scanner.next_token(), Token::new(TokenKind::Integer(3), "3", 1));
         assert_eq!(scanner.next_token(), Token::new(TokenKind::Identifier, "io", 2));
         assert_eq!(scanner.next_token(), Token::new(TokenKind::Period, ".", 2));
         assert_eq!(scanner.next_token(), Token::new(TokenKind::Identifier, "prln", 2));
+    }
+
+    #[test]
+    fn scanner2() {
+        //               0 1 2  3 45   678
+        let src = "a = 3\nio.prln(a)\n";
+        let mut scanner = Scanner::on_demand(src).unwrap();
+
+        assert_eq!(scanner.peek_token(0).unwrap(), &Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(scanner.peek_token(1).unwrap(), &Token::new(TokenKind::Assign, "=", 1));
+        assert_eq!(scanner.peek_token(6).unwrap(), &Token::new(TokenKind::LeftParen, "(", 2));
+        assert_eq!(scanner.peek_token(8).unwrap(), &Token::new(TokenKind::RightParen, ")", 2));
+
+        assert_eq!(scanner.next_token(), Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(scanner.next_token(), Token::new(TokenKind::Assign, "=", 1));
+        assert_eq!(scanner.next_token(), Token::new(TokenKind::Integer(3), "3", 1));
+        assert_eq!(scanner.next_token(), Token::new(TokenKind::Identifier, "io", 2));
     }
 
     #[test]
