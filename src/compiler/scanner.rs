@@ -12,11 +12,11 @@ pub struct Scanner<'a> {
     start: usize,
     current: usize,
     line: usize,
-    on_demand: bool,
 }
 
 // TODO: break scanner into on-demand and all at once
 impl<'a> Scanner<'a> {
+    /// Provides a Scanner with access to next_token and peek_token.
     pub fn on_demand(source: &'a str) -> Result<Self, PiccoloError> {
         let mut scanner = Scanner {
             source: source.as_bytes(),
@@ -24,15 +24,14 @@ impl<'a> Scanner<'a> {
             start: 0,
             current: 0,
             line: 1,
-            on_demand: true,
         };
 
         scanner.scan_all()?;
-        println!("{:?}", scanner.tokens);
 
         Ok(scanner)
     }
 
+    /// Scans all tokens at once from source.
     pub fn at_once(source: &'a str) -> Result<Vec<Token<'a>>, PiccoloError> {
         let mut scanner = Scanner {
             source: source.as_bytes(),
@@ -40,7 +39,6 @@ impl<'a> Scanner<'a> {
             start: 0,
             current: 0,
             line: 1,
-            on_demand: false,
         };
 
         scanner.scan_all()?;
@@ -53,13 +51,14 @@ impl<'a> Scanner<'a> {
         Ok(())
     }
 
+    /// Unconditionally take the next token from the scanner. Panics if there are no tokens left.
     pub fn next_token(&mut self) -> Token<'a> {
-        assert!(self.on_demand);
-        self.tokens.pop_front().unwrap_or_else(|| Token::new(TokenKind::Eof, "", self.line))
+        self.tokens.pop_front().unwrap()
     }
 
+    /// Looks ahead in the token stream. Generates tokens if they do not exist. Duplicates
+    /// TokenKind::Eof if necessary.
     pub fn peek_token<'b>(&'b mut self, mut idx: usize) -> Result<&'b Token<'a>, PiccoloError> {
-        assert!(self.on_demand);
         while idx >= self.tokens.len() {
             self.next()?;
             idx -= 1;
@@ -68,14 +67,14 @@ impl<'a> Scanner<'a> {
     }
 
     fn slurp_whitespace(&mut self) {
-        while self.peek() == b'#' || is_whitespace(self.peek()) {
-            if self.peek() == b'#' {
-                while self.peek() != b'\n' {
-                    self.advance();
+        while self.peek_char() == b'#' || is_whitespace(self.peek_char()) {
+            if self.peek_char() == b'#' {
+                while self.peek_char() != b'\n' {
+                    self.advance_char();
                 }
             }
-            while is_whitespace(self.peek()) {
-                if self.advance() == b'\n' {
+            while is_whitespace(self.peek_char()) {
+                if self.advance_char() == b'\n' {
                     self.line += 1;
                 }
             }
@@ -90,7 +89,7 @@ impl<'a> Scanner<'a> {
         }
 
         self.start = self.current;
-        let tk = match self.advance() {
+        let tk = match self.advance_char() {
             b'[' => TokenKind::LeftBracket,
             b']' => TokenKind::RightBracket,
             b'(' => TokenKind::LeftParen,
@@ -104,8 +103,8 @@ impl<'a> Scanner<'a> {
             b'%' => TokenKind::Modulo,
 
             b'&' => {
-                if self.peek() == b'&' {
-                    self.advance();
+                if self.peek_char() == b'&' {
+                    self.advance_char();
                     TokenKind::LogicalAnd
                 } else {
                     TokenKind::BitwiseAnd
@@ -113,8 +112,8 @@ impl<'a> Scanner<'a> {
             }
 
             b'|' => {
-                if self.peek() == b'|' {
-                    self.advance();
+                if self.peek_char() == b'|' {
+                    self.advance_char();
                     TokenKind::LogicalOr
                 } else {
                     TokenKind::BitwiseOr
@@ -122,10 +121,10 @@ impl<'a> Scanner<'a> {
             }
 
             b'.' => {
-                if self.peek() == b'.' {
-                    self.advance();
-                    if self.peek() == b'.' {
-                        self.advance();
+                if self.peek_char() == b'.' {
+                    self.advance_char();
+                    if self.peek_char() == b'.' {
+                        self.advance_char();
                         TokenKind::InclusiveRange
                     } else {
                         TokenKind::ExclusiveRange
@@ -136,8 +135,8 @@ impl<'a> Scanner<'a> {
             }
 
             b'!' => {
-                if self.peek() == b'=' {
-                    self.advance();
+                if self.peek_char() == b'=' {
+                    self.advance_char();
                     TokenKind::NotEqual
                 } else {
                     TokenKind::Not
@@ -145,8 +144,8 @@ impl<'a> Scanner<'a> {
             }
 
             b'=' => {
-                if self.peek() == b'=' {
-                    self.advance();
+                if self.peek_char() == b'=' {
+                    self.advance_char();
                     TokenKind::Equal
                 } else {
                     TokenKind::Assign
@@ -154,11 +153,11 @@ impl<'a> Scanner<'a> {
             }
 
             b'>' => {
-                if self.peek() == b'=' {
-                    self.advance();
+                if self.peek_char() == b'=' {
+                    self.advance_char();
                     TokenKind::GreaterEqual
-                } else if self.peek() == b'>' {
-                    self.advance();
+                } else if self.peek_char() == b'>' {
+                    self.advance_char();
                     TokenKind::ShiftRight
                 } else {
                     TokenKind::Greater
@@ -166,22 +165,22 @@ impl<'a> Scanner<'a> {
             }
 
             b'<' => {
-                if self.peek() == b'=' {
-                    self.advance();
+                if self.peek_char() == b'=' {
+                    self.advance_char();
                     TokenKind::LessEqual
-                } else if self.peek() == b'<' {
-                    self.advance();
+                } else if self.peek_char() == b'<' {
+                    self.advance_char();
                     TokenKind::ShiftLeft
                 } else {
                     TokenKind::Less
                 }
             }
 
-            b'"' => self.string()?,
+            b'"' => self.scan_string()?,
 
             c => {
                 if is_digit(c) {
-                    self.number()?
+                    self.scan_number()?
                 } else if is_whitespace(c) {
                     panic!("found whitespace where there shouldn't be any");
                 } else {
@@ -194,8 +193,8 @@ impl<'a> Scanner<'a> {
     }
 
     fn identifier_or_keyword(&mut self) -> Result<TokenKind, PiccoloError> {
-        while !super::is_non_identifier(self.peek()) {
-            self.advance();
+        while !super::is_non_identifier(self.peek_char()) {
+            self.advance_char();
         }
 
         if let Some(tk) = super::into_keyword(
@@ -208,43 +207,43 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn string(&mut self) -> Result<TokenKind, PiccoloError> {
+    fn scan_string(&mut self) -> Result<TokenKind, PiccoloError> {
         let line_start = self.line;
-        while self.peek() != b'"' && !self.is_at_end() {
-            if self.peek() == b'\n' {
+        while self.peek_char() != b'"' && !self.is_at_end() {
+            if self.peek_char() == b'\n' {
                 self.line += 1;
             }
 
-            if self.peek() == b'\\' {
-                self.advance();
+            if self.peek_char() == b'\\' {
+                self.advance_char();
                 self.line += 1;
             }
 
-            self.advance();
+            self.advance_char();
         }
 
         if self.is_at_end() {
             Err(PiccoloError::new(ErrorKind::UnterminatedString).line(line_start))
         } else {
-            self.advance();
+            self.advance_char();
             Ok(TokenKind::String)
         }
     }
 
-    fn number(&mut self) -> Result<TokenKind, PiccoloError> {
-        while is_digit(self.peek()) {
-            self.advance();
+    fn scan_number(&mut self) -> Result<TokenKind, PiccoloError> {
+        while is_digit(self.peek_char()) {
+            self.advance_char();
         }
 
-        if self.peek() == b'.' {
-            let range = self.lookahead(1) == b'.';
+        if self.peek_char() == b'.' {
+            let range = self.lookahead_char(1) == b'.';
 
-            while self.current != 0 && is_digit(self.peek()) {
-                self.reverse();
+            while self.current != 0 && is_digit(self.peek_char()) {
+                self.reverse_char();
             }
 
             if !range {
-                return self.float();
+                return self.scan_float();
             }
         }
 
@@ -260,14 +259,14 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn float(&mut self) -> Result<TokenKind, PiccoloError> {
-        while is_digit(self.peek()) {
-            self.advance();
+    fn scan_float(&mut self) -> Result<TokenKind, PiccoloError> {
+        while is_digit(self.peek_char()) {
+            self.advance_char();
         }
-        if self.peek() == b'.' {
-            self.advance();
-            while is_digit(self.peek()) {
-                self.advance();
+        if self.peek_char() == b'.' {
+            self.advance_char();
+            while is_digit(self.peek_char()) {
+                self.advance_char();
             }
         }
 
@@ -295,17 +294,17 @@ impl<'a> Scanner<'a> {
         self.current >= self.source.len()
     }
 
-    fn advance(&mut self) -> u8 {
+    fn advance_char(&mut self) -> u8 {
         self.current += 1;
         self.source[self.current - 1]
     }
 
-    fn reverse(&mut self) -> u8 {
+    fn reverse_char(&mut self) -> u8 {
         self.current -= 1;
         self.source[self.current]
     }
 
-    fn peek(&mut self) -> u8 {
+    fn peek_char(&mut self) -> u8 {
         if self.is_at_end() {
             b'\0'
         } else {
@@ -313,7 +312,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn lookahead(&mut self, n: usize) -> u8 {
+    fn lookahead_char(&mut self, n: usize) -> u8 {
         if self.is_at_end() || self.current + n >= self.source.len() {
             b'\0'
         } else {
