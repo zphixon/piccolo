@@ -523,7 +523,8 @@ impl<'a> Emitter<'a> {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::ExpectedExpression {
                         got: String::from("= (Assignment is not an expression)"),
-                    }));
+                    })
+                    .line(self.previous().line));
                 }
             } else {
                 return Err(PiccoloError::new(ErrorKind::MalformedExpression {

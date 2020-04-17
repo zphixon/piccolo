@@ -158,6 +158,7 @@ impl Machine {
                                     PiccoloError::new(ErrorKind::CannotClone {
                                         ty: self.peek(0).unwrap().type_name().to_owned(),
                                     })
+                                    .line(line)
                                 })?,
                         );
                         self.pop()?;
@@ -173,6 +174,8 @@ impl Machine {
                             PiccoloError::new(ErrorKind::CannotClone {
                                 ty: var.type_name().to_owned(),
                             })
+                            .line(line)
+                            .msg_string(format!("global {}", name))
                         })?);
                     } else {
                         return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
@@ -192,6 +195,8 @@ impl Machine {
                                     PiccoloError::new(ErrorKind::CannotClone {
                                         ty: self.peek(0).unwrap().type_name().to_owned(),
                                     })
+                                    .line(line)
+                                    .msg_string(format!("global {}", name))
                                 })?,
                             )
                             .map_or_else(
@@ -210,6 +215,7 @@ impl Machine {
                         PiccoloError::new(ErrorKind::CannotClone {
                             ty: c.type_name().to_owned(),
                         })
+                        .line(line)
                     })?;
                     self.ip += 2;
 
