@@ -58,9 +58,13 @@ impl<'a> Scanner<'a> {
         self.tokens.pop_front().unwrap_or_else(|| Token::new(TokenKind::Eof, "", self.line))
     }
 
-    pub fn peek_token<'b>(&'b self, idx: usize) -> &'b Token<'a> {
+    pub fn peek_token<'b>(&'b mut self, mut idx: usize) -> Result<&'b Token<'a>, PiccoloError> {
         assert!(self.on_demand);
-        &self.tokens[idx]
+        while idx >= self.tokens.len() {
+            self.next()?;
+            idx -= 1;
+        }
+        Ok(&self.tokens[idx])
     }
 
     fn slurp_whitespace(&mut self) {
