@@ -1,4 +1,4 @@
-use crate::{Token, TokenKind, ErrorKind, PiccoloError};
+use crate::{ErrorKind, PiccoloError, Token, TokenKind};
 
 use super::{is_digit, is_whitespace};
 

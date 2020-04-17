@@ -1,4 +1,4 @@
-use crate::{Value, Scanner, Token, TokenKind, ErrorKind, PiccoloError};
+use crate::{ErrorKind, PiccoloError, Scanner, Token, TokenKind, Value};
 
 use super::expr::Expr;
 use super::stmt::Stmt;
@@ -12,10 +12,14 @@ fn expr_bp<'a>(scanner: &mut Scanner<'a>, min_bp: u8) -> Result<Expr<'a>, Piccol
 
     loop {
         let op_token = scanner.peek_token(0)?;
-        if op_token.kind == TokenKind::Eof { break }
+        if op_token.kind == TokenKind::Eof {
+            break;
+        }
 
         let (lbp, rbp) = infix_binding_power(op_token.kind);
-        if lbp < min_bp { break }
+        if lbp < min_bp {
+            break;
+        }
 
         let op = scanner.next_token();
         let rhs = expr_bp(scanner, rbp)?;

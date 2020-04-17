@@ -11,7 +11,7 @@ pub mod error;
 pub mod runtime;
 
 pub use compiler::{compile, scanner::Scanner, Token, TokenKind};
-pub use error::{PiccoloError, ErrorKind};
+pub use error::{ErrorKind, PiccoloError};
 pub use runtime::{chunk::Chunk, value::Value, vm::Machine};
 
 #[cfg(feature = "pc-debug")]
@@ -189,16 +189,37 @@ mod tests {
     fn scanner() {
         let src = "a = 3\nio.prln(a)\n";
         let mut scanner = Scanner::on_demand(src).unwrap();
-        assert_eq!(scanner.peek_token(0).unwrap(), &Token::new(TokenKind::Identifier, "a", 1));
-        assert_eq!(scanner.peek_token(1).unwrap(), &Token::new(TokenKind::Assign, "=", 1));
-        assert_eq!(scanner.next_token(), Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(
+            scanner.peek_token(0).unwrap(),
+            &Token::new(TokenKind::Identifier, "a", 1)
+        );
+        assert_eq!(
+            scanner.peek_token(1).unwrap(),
+            &Token::new(TokenKind::Assign, "=", 1)
+        );
+        assert_eq!(
+            scanner.next_token(),
+            Token::new(TokenKind::Identifier, "a", 1)
+        );
 
-        assert_eq!(scanner.peek_token(0).unwrap(), &Token::new(TokenKind::Assign, "=", 1));
+        assert_eq!(
+            scanner.peek_token(0).unwrap(),
+            &Token::new(TokenKind::Assign, "=", 1)
+        );
         assert_eq!(scanner.next_token(), Token::new(TokenKind::Assign, "=", 1));
-        assert_eq!(scanner.next_token(), Token::new(TokenKind::Integer(3), "3", 1));
-        assert_eq!(scanner.next_token(), Token::new(TokenKind::Identifier, "io", 2));
+        assert_eq!(
+            scanner.next_token(),
+            Token::new(TokenKind::Integer(3), "3", 1)
+        );
+        assert_eq!(
+            scanner.next_token(),
+            Token::new(TokenKind::Identifier, "io", 2)
+        );
         assert_eq!(scanner.next_token(), Token::new(TokenKind::Period, ".", 2));
-        assert_eq!(scanner.next_token(), Token::new(TokenKind::Identifier, "prln", 2));
+        assert_eq!(
+            scanner.next_token(),
+            Token::new(TokenKind::Identifier, "prln", 2)
+        );
     }
 
     #[test]
@@ -207,15 +228,36 @@ mod tests {
         let src = "a = 3\nio.prln(a)\n";
         let mut scanner = Scanner::on_demand(src).unwrap();
 
-        assert_eq!(scanner.peek_token(0).unwrap(), &Token::new(TokenKind::Identifier, "a", 1));
-        assert_eq!(scanner.peek_token(1).unwrap(), &Token::new(TokenKind::Assign, "=", 1));
-        assert_eq!(scanner.peek_token(6).unwrap(), &Token::new(TokenKind::LeftParen, "(", 2));
-        assert_eq!(scanner.peek_token(8).unwrap(), &Token::new(TokenKind::RightParen, ")", 2));
+        assert_eq!(
+            scanner.peek_token(0).unwrap(),
+            &Token::new(TokenKind::Identifier, "a", 1)
+        );
+        assert_eq!(
+            scanner.peek_token(1).unwrap(),
+            &Token::new(TokenKind::Assign, "=", 1)
+        );
+        assert_eq!(
+            scanner.peek_token(6).unwrap(),
+            &Token::new(TokenKind::LeftParen, "(", 2)
+        );
+        assert_eq!(
+            scanner.peek_token(8).unwrap(),
+            &Token::new(TokenKind::RightParen, ")", 2)
+        );
 
-        assert_eq!(scanner.next_token(), Token::new(TokenKind::Identifier, "a", 1));
+        assert_eq!(
+            scanner.next_token(),
+            Token::new(TokenKind::Identifier, "a", 1)
+        );
         assert_eq!(scanner.next_token(), Token::new(TokenKind::Assign, "=", 1));
-        assert_eq!(scanner.next_token(), Token::new(TokenKind::Integer(3), "3", 1));
-        assert_eq!(scanner.next_token(), Token::new(TokenKind::Identifier, "io", 2));
+        assert_eq!(
+            scanner.next_token(),
+            Token::new(TokenKind::Integer(3), "3", 1)
+        );
+        assert_eq!(
+            scanner.next_token(),
+            Token::new(TokenKind::Identifier, "io", 2)
+        );
     }
 
     #[test]
@@ -351,11 +393,7 @@ mod tests {
         for i in 0..len {
             source.push_str(&format!("retn a{:04x}\n", i));
         }
-        let chunk = crate::compile(
-            Chunk::default(),
-            &Scanner::at_once(&source).unwrap(),
-        )
-        .unwrap();
+        let chunk = crate::compile(Chunk::default(), &Scanner::at_once(&source).unwrap()).unwrap();
         Machine::new(chunk).interpret().unwrap();
     }
 
