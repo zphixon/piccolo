@@ -4,7 +4,7 @@ use super::expr::Expr;
 use super::stmt::Stmt;
 
 fn expr_bp<'a>(scanner: &mut Scanner<'a>, min_bp: u8) -> Result<Expr<'a>, PiccoloError> {
-    let lhs_token = scanner.next_token();
+    let lhs_token = scanner.next_token()?;
     let mut lhs = match lhs_token.kind {
         TokenKind::Identifier => unimplemented!("prefix variable"),
         _ => Expr::Atom(Value::try_from(lhs_token).unwrap()),
@@ -21,7 +21,7 @@ fn expr_bp<'a>(scanner: &mut Scanner<'a>, min_bp: u8) -> Result<Expr<'a>, Piccol
             break;
         }
 
-        let op = scanner.next_token();
+        let op = scanner.next_token()?;
         let rhs = expr_bp(scanner, rbp)?;
         lhs = Expr::Binary {
             lhs: Box::new(lhs),

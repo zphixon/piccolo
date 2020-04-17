@@ -30,14 +30,13 @@ impl<'a> Scanner<'a> {
         Ok(self.tokens.drain(0..).collect())
     }
 
-    // TODO: fwd errors
-    /// Unconditionally take the next token from the scanner. Panics if there are no tokens left.
-    pub fn next_token(&mut self) -> Token<'a> {
+    /// Take the next token from the scanner.
+    pub fn next_token(&mut self) -> Result<Token<'a>, PiccoloError> {
         if self.tokens.len() == 0 {
-            self.next().unwrap();
+            self.next()?;
         }
 
-        self.tokens.pop_front().unwrap()
+        Ok(self.tokens.pop_front().unwrap())
     }
 
     /// Looks ahead in the token stream. Generates tokens if they do not exist. Duplicates
