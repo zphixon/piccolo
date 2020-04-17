@@ -44,7 +44,7 @@ fn infix_binding_power(op: TokenKind) -> (u8, u8) {
 #[test]
 fn visitor_emitter() {
     let src = "1+2*3+4";
-    let mut scanner = Scanner::on_demand(src).unwrap();
+    let mut scanner = Scanner::new(src);
     let expr = expr_bp(&mut scanner, 0).unwrap();
     assert_eq!(
         expr,

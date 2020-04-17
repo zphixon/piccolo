@@ -10,7 +10,7 @@ pub mod compiler;
 pub mod error;
 pub mod runtime;
 
-pub use compiler::{compile, scanner::Scanner, Token, TokenKind};
+pub use compiler::{compile, scan_all, scanner::Scanner, Token, TokenKind};
 pub use error::{ErrorKind, PiccoloError};
 pub use runtime::{chunk::Chunk, value::Value, vm::Machine};
 
@@ -31,7 +31,7 @@ pub use compiler::print_tokens;
 pub fn interpret(src: &str) -> Result<Value, Vec<error::PiccoloError>> {
     Machine::new(compile(
         Chunk::default(),
-        &Scanner::at_once(src).map_err(|e| vec![e])?,
+        &compiler::scan_all(src).map_err(|e| vec![e])?,
     )?)
     .interpret()
     .map_err(|e| vec![e])
@@ -64,7 +64,7 @@ pub mod fuzzer {
     extern crate rand;
 
     use crate::compiler::TokenKind;
-    use crate::{Chunk, Machine, Scanner};
+    use crate::{Chunk, Machine};
 
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
@@ -104,7 +104,7 @@ pub mod fuzzer {
             src.push_str(&format!("{} ", tk).to_lowercase());
         }
 
-        let tokens = Scanner::new(&src).scan_tokens().ok()?;
+        let tokens = crate::compiler::scan_all(&src).ok()?;
         if let Ok(chunk) = crate::compile(Chunk::default(), &tokens) {
             println!("----- run {} compiles -----", n);
             crate::print_tokens(&tokens);
@@ -188,7 +188,7 @@ mod tests {
     #[test]
     fn scanner() {
         let src = "a = 3\nio.prln(a)\n";
-        let mut scanner = Scanner::on_demand(src).unwrap();
+        let mut scanner = Scanner::new(src);
         assert_eq!(
             scanner.peek_token(0).unwrap(),
             &Token::new(TokenKind::Identifier, "a", 1)
@@ -226,7 +226,7 @@ mod tests {
     fn scanner2() {
         //               0 1 2  3 45   678
         let src = "a = 3\nio.prln(a)\n";
-        let mut scanner = Scanner::on_demand(src).unwrap();
+        let mut scanner = Scanner::new(src);
 
         assert_eq!(
             scanner.peek_token(0).unwrap(),
@@ -393,7 +393,11 @@ mod tests {
         for i in 0..len {
             source.push_str(&format!("retn a{:04x}\n", i));
         }
-        let chunk = crate::compile(Chunk::default(), &Scanner::at_once(&source).unwrap()).unwrap();
+        let chunk = crate::compile(
+            Chunk::default(),
+            &crate::compiler::scan_all(&source).unwrap(),
+        )
+        .unwrap();
         Machine::new(chunk).interpret().unwrap();
     }
 

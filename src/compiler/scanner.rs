@@ -14,55 +14,45 @@ pub struct Scanner<'a> {
     line: usize,
 }
 
-// TODO: break scanner into on-demand and all at once
 impl<'a> Scanner<'a> {
-    /// Provides a Scanner with access to next_token and peek_token.
-    pub fn on_demand(source: &'a str) -> Result<Self, PiccoloError> {
-        let mut scanner = Scanner {
+    pub fn new(source: &'a str) -> Self {
+        Scanner {
             source: source.as_bytes(),
             tokens: VecDeque::new(),
             start: 0,
             current: 0,
             line: 1,
-        };
-
-        scanner.scan_all()?;
-
-        Ok(scanner)
+        }
     }
 
-    /// Scans all tokens at once from source.
-    pub fn at_once(source: &'a str) -> Result<Vec<Token<'a>>, PiccoloError> {
-        let mut scanner = Scanner {
-            source: source.as_bytes(),
-            tokens: VecDeque::new(),
-            start: 0,
-            current: 0,
-            line: 1,
-        };
-
-        scanner.scan_all()?;
-
-        Ok(scanner.tokens.drain(0..).collect())
-    }
-
-    fn scan_all(&mut self) -> Result<(), PiccoloError> {
+    pub(super) fn scan_all(mut self) -> Result<Vec<Token<'a>>, PiccoloError> {
         while self.next()?.kind != TokenKind::Eof {}
-        Ok(())
+        Ok(self.tokens.drain(0..).collect())
     }
 
+    // TODO: fwd errors
     /// Unconditionally take the next token from the scanner. Panics if there are no tokens left.
     pub fn next_token(&mut self) -> Token<'a> {
+        if self.tokens.len() == 0 {
+            self.next().unwrap();
+        }
+
         self.tokens.pop_front().unwrap()
     }
 
     /// Looks ahead in the token stream. Generates tokens if they do not exist. Duplicates
     /// TokenKind::Eof if necessary.
-    pub fn peek_token<'b>(&'b mut self, mut idx: usize) -> Result<&'b Token<'a>, PiccoloError> {
-        while idx >= self.tokens.len() {
+    pub fn peek_token<'b>(&'b mut self, idx: usize) -> Result<&'b Token<'a>, PiccoloError> {
+        if self.tokens.len() == 0 {
             self.next()?;
-            idx -= 1;
         }
+
+        if self.tokens.len() <= idx {
+            while self.tokens.len() <= idx {
+                self.next()?;
+            }
+        }
+
         Ok(&self.tokens[idx])
     }
 
