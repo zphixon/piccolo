@@ -170,13 +170,15 @@ impl Machine {
                 Opcode::GetGlobal => {
                     let name = self.constant()?.ref_string();
                     if let Some(var) = self.globals.get(name) {
-                        self.stack.push(var.try_clone().ok_or_else(|| {
-                            PiccoloError::new(ErrorKind::CannotClone {
+                        if let Some(var) = var.try_clone() {
+                            self.stack.push(var);
+                        } else {
+                            return Err(PiccoloError::new(ErrorKind::CannotClone {
                                 ty: var.type_name().to_owned(),
                             })
                             .line(line)
-                            .msg_string(format!("global {}", name))
-                        })?);
+                            .msg_string(format!("global {}", name)));
+                        }
                     } else {
                         return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                             name: name.to_owned(),
