@@ -333,7 +333,7 @@ impl<'a> Emitter<'a> {
     }
 
     fn define_variable(&mut self, var: u16) {
-        self.emit3(Opcode::DefineGlobal, var);
+        self.emit3(Opcode::DeclareGlobal, var);
     }
 
     // matches the beginning of statements, e.g. data, fn, retn, declaration

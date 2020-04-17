@@ -99,7 +99,7 @@ impl Chunk {
                 Opcode::GreaterEqual => offset + 1,
                 Opcode::LessEqual => offset + 1,
                 Opcode::Pop => offset + 1,
-                Opcode::DefineGlobal => {
+                Opcode::DeclareGlobal => {
                     let low = self.data[offset + 1];
                     let high = self.data[offset + 2];
                     let idx = crate::encode_bytes(low, high);

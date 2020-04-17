@@ -26,9 +26,14 @@ impl<'a> Parser<'a> {
     fn declaration<'b>(&mut self, scanner: &'b mut Scanner<'a>) -> Result<(), PiccoloError> {
         if scanner.peek_token(1)?.kind == TokenKind::Assign {
             let name = scanner.next_token()?;
-            let _assign = scanner.next_token()?;
+            let op = scanner.next_token()?;
             let value = self.expr_bp(scanner, 0)?;
-            self.ast.push(Stmt::Assignment { name, value });
+            self.ast.push(Stmt::Assignment { name, op, value });
+        } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
+            let name = scanner.next_token()?;
+            let op = scanner.next_token()?;
+            let value = self.expr_bp(scanner, 0)?;
+            self.ast.push(Stmt::Assignment { name, op, value });
         } else {
             let expr = self.expr_bp(scanner, 0)?;
             self.ast.push(Stmt::Expr { expr });
@@ -84,9 +89,8 @@ fn infix_binding_power(op: TokenKind) -> (u8, u8) {
 }
 
 #[test]
-#[should_panic] // TODO
 fn idk() {
-    let src = "a=1+2";
+    let src = "a=:1+2";
     let mut scanner = Scanner::new(src);
     let ast = Parser::new().parse(&mut scanner).unwrap();
     println!("{}", super::AstPrinter.print(&ast));
@@ -244,13 +248,21 @@ impl StmtVisitor for NewEmitter {
         expr.accept(self);
         self.0.write(Opcode::Pop, 1); // TODO: line
     }
-    fn visit_assignment(&mut self, name: &Token, value: &Expr) -> Self::Output {
+    fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
         value.accept(self);
-        let idx = self.0.make_constant(Value::String(name.lexeme.to_owned()));
-        let (low, high) = crate::decode_bytes(idx);
-        self.0.write(Opcode::AssignGlobal, name.line);
-        self.0.write(low, name.line);
-        self.0.write(high, name.line);
+        if op.kind == TokenKind::Assign {
+            let idx = self.0.make_constant(Value::String(name.lexeme.to_owned()));
+            let (low, high) = crate::decode_bytes(idx);
+            self.0.write(Opcode::AssignGlobal, name.line);
+            self.0.write(low, name.line);
+            self.0.write(high, name.line);
+        } else if op.kind == TokenKind::Declare {
+            let idx = self.0.make_constant(Value::String(name.lexeme.to_owned()));
+            let (low, high) = crate::decode_bytes(idx);
+            self.0.write(Opcode::DeclareGlobal, name.line);
+            self.0.write(low, name.line);
+            self.0.write(high, name.line);
+        }
     }
     fn visit_block(&mut self, _stmts: &[Stmt]) -> Self::Output {
         unimplemented!("visit_block")

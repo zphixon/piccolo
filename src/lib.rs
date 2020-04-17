@@ -271,13 +271,13 @@ mod tests {
 
     #[test]
     fn ast_print() {
-        let source = "x := 3\ny := x - 4\nif x > y then\n  io.prln(3)\nend\n";
+        let source = "x =: 3\ny =: x - 4\nif x > y then\n  io.prln(3)\nend\n";
         let mut tokens = vec![
             Some(Token::new(TokenKind::Identifier, &source[0..1], 1)),
-            Some(Token::new(TokenKind::Assign, &source[2..4], 1)),
+            Some(Token::new(TokenKind::Declare, &source[2..4], 1)),
             Some(Token::new(TokenKind::Integer(3), &source[5..6], 1)),
             Some(Token::new(TokenKind::Identifier, &source[7..8], 2)),
-            Some(Token::new(TokenKind::Assign, &source[9..11], 2)),
+            Some(Token::new(TokenKind::Declare, &source[9..11], 2)),
             Some(Token::new(TokenKind::Identifier, &source[12..13], 2)),
             Some(Token::new(TokenKind::Minus, &source[14..15], 2)),
             Some(Token::new(TokenKind::Integer(3), &source[16..17], 2)),
@@ -298,10 +298,12 @@ mod tests {
         let ast = vec![
             Stmt::Assignment {
                 name: tokens[0].take().unwrap(),
+                op: tokens[1].take().unwrap(),
                 value: Expr::Atom(Value::Integer(3)),
             },
             Stmt::Assignment {
                 name: tokens[3].take().unwrap(),
+                op: tokens[4].take().unwrap(),
                 value: Expr::Binary {
                     lhs: Box::new(Expr::Variable {
                         name: tokens[5].take().unwrap(),
@@ -338,7 +340,7 @@ mod tests {
         ];
 
         assert_eq!(
-            "(= x 3)\n(= y (- x 4))\n(if (> x y) (expr (call (get prln io) 3)))\n",
+            "(=: x 3)\n(=: y (- x 4))\n(if (> x y) (expr (call (get prln io) 3)))\n",
             AstPrinter.print(&ast)
         );
     }

@@ -147,7 +147,7 @@ impl Machine {
                         return Err(PiccoloError::new(ErrorKind::AssertFailed).line(line));
                     }
                 }
-                Opcode::DefineGlobal => {
+                Opcode::DeclareGlobal => {
                     if let Value::String(name) = self.constant()? {
                         let name = name.clone();
                         self.globals.insert(
