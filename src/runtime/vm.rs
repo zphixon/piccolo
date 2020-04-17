@@ -150,8 +150,16 @@ impl Machine {
                 Opcode::DefineGlobal => {
                     if let Value::String(name) = self.constant()? {
                         let name = name.clone();
-                        self.globals
-                            .insert(name, self.stack[self.stack.len() - 1].try_clone().ok_or_else(|| PiccoloError::new(ErrorKind::CannotClone { ty: self.peek(0).unwrap().type_name().to_owned() }))?);
+                        self.globals.insert(
+                            name,
+                            self.stack[self.stack.len() - 1]
+                                .try_clone()
+                                .ok_or_else(|| {
+                                    PiccoloError::new(ErrorKind::CannotClone {
+                                        ty: self.peek(0).unwrap().type_name().to_owned(),
+                                    })
+                                })?,
+                        );
                         self.pop()?;
                         self.ip += 2;
                     } else {
@@ -161,7 +169,11 @@ impl Machine {
                 Opcode::GetGlobal => {
                     let name = self.constant()?.ref_string();
                     if let Some(var) = self.globals.get(name) {
-                        self.stack.push(var.try_clone().ok_or_else(|| PiccoloError::new(ErrorKind::CannotClone { ty: var.type_name().to_owned() }))?);
+                        self.stack.push(var.try_clone().ok_or_else(|| {
+                            PiccoloError::new(ErrorKind::CannotClone {
+                                ty: var.type_name().to_owned(),
+                            })
+                        })?);
                     } else {
                         return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                             name: name.to_owned(),
@@ -174,7 +186,14 @@ impl Machine {
                     if let Value::String(name) = self.constant()? {
                         let name = name.clone();
                         self.globals
-                            .insert(name.clone(), self.peek(0).unwrap().try_clone().ok_or_else(|| PiccoloError::new(ErrorKind::CannotClone { ty: self.peek(0).unwrap().type_name().to_owned() }))?)
+                            .insert(
+                                name.clone(),
+                                self.peek(0).unwrap().try_clone().ok_or_else(|| {
+                                    PiccoloError::new(ErrorKind::CannotClone {
+                                        ty: self.peek(0).unwrap().type_name().to_owned(),
+                                    })
+                                })?,
+                            )
                             .map_or_else(
                                 || {
                                     Err(PiccoloError::new(ErrorKind::UndefinedVariable { name })
@@ -187,7 +206,11 @@ impl Machine {
                 }
                 Opcode::Constant => {
                     let c = self.constant()?;
-                    let c = c.try_clone().ok_or_else(|| PiccoloError::new(ErrorKind::CannotClone { ty: c.type_name().to_owned() }))?;
+                    let c = c.try_clone().ok_or_else(|| {
+                        PiccoloError::new(ErrorKind::CannotClone {
+                            ty: c.type_name().to_owned(),
+                        })
+                    })?;
                     self.ip += 2;
 
                     self.stack.push(c);

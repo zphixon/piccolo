@@ -1,4 +1,4 @@
-use crate::{Value, Token};
+use crate::{Token, Value};
 
 use super::stmt::Stmt;
 
