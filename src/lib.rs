@@ -206,7 +206,10 @@ mod tests {
             scanner.peek_token(0).unwrap(),
             &Token::new(TokenKind::Assign, "=", 1)
         );
-        assert_eq!(scanner.next_token().unwrap(), Token::new(TokenKind::Assign, "=", 1));
+        assert_eq!(
+            scanner.next_token().unwrap(),
+            Token::new(TokenKind::Assign, "=", 1)
+        );
         assert_eq!(
             scanner.next_token().unwrap(),
             Token::new(TokenKind::Integer(3), "3", 1)
@@ -215,7 +218,10 @@ mod tests {
             scanner.next_token().unwrap(),
             Token::new(TokenKind::Identifier, "io", 2)
         );
-        assert_eq!(scanner.next_token().unwrap(), Token::new(TokenKind::Period, ".", 2));
+        assert_eq!(
+            scanner.next_token().unwrap(),
+            Token::new(TokenKind::Period, ".", 2)
+        );
         assert_eq!(
             scanner.next_token().unwrap(),
             Token::new(TokenKind::Identifier, "prln", 2)
@@ -249,7 +255,10 @@ mod tests {
             scanner.next_token().unwrap(),
             Token::new(TokenKind::Identifier, "a", 1)
         );
-        assert_eq!(scanner.next_token().unwrap(), Token::new(TokenKind::Assign, "=", 1));
+        assert_eq!(
+            scanner.next_token().unwrap(),
+            Token::new(TokenKind::Assign, "=", 1)
+        );
         assert_eq!(
             scanner.next_token().unwrap(),
             Token::new(TokenKind::Integer(3), "3", 1)
