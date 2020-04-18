@@ -1,9 +1,7 @@
-use crate::ast::expr::ExprAccept;
-use crate::compiler::emitter2::NewEmitter;
 use crate::{ErrorKind, PiccoloError, Scanner, Token, TokenKind, Value};
 
-use super::expr::Expr;
-use super::stmt::Stmt;
+use super::Expr;
+use super::Stmt;
 
 #[derive(Default)]
 pub struct Parser<'a> {
@@ -104,59 +102,6 @@ impl<'a> Parser<'a> {
         }
 
         Ok(lhs)
-    }
-}
-
-#[test]
-fn idk() {
-    let src = "a=:1+2";
-    let mut scanner = Scanner::new(src);
-    let ast = Parser::new().parse(&mut scanner).unwrap();
-    println!("{}", super::AstPrinter.print(&ast));
-    let mut ne = NewEmitter(crate::Chunk::default());
-    ne.emit(&ast);
-    #[cfg(feature = "pc-debug")]
-    {
-        ne.0.disassemble("idklol");
-    }
-    let mut vm = crate::runtime::vm::Machine::new(ne.0);
-    println!("{}", vm.interpret().unwrap());
-}
-
-#[test]
-fn visitor_emitter() {
-    let src = "1+2*3+4";
-    let mut scanner = Scanner::new(src);
-    let ast = Parser::new().parse(&mut scanner).unwrap();
-    if let Stmt::Expr { expr } = &ast[0] {
-        assert_eq!(
-            expr,
-            &Expr::Binary {
-                lhs: Box::new(Expr::Binary {
-                    lhs: Box::new(Expr::Atom(Value::Integer(1))),
-                    op: Token::new(TokenKind::Plus, "+", 1),
-                    rhs: Box::new(Expr::Binary {
-                        lhs: Box::new(Expr::Atom(Value::Integer(2))),
-                        op: Token::new(TokenKind::Multiply, "*", 1),
-                        rhs: Box::new(Expr::Atom(Value::Integer(3)))
-                    })
-                }),
-                op: Token::new(TokenKind::Plus, "+", 1),
-                rhs: Box::new(Expr::Atom(Value::Integer(4))),
-            }
-        );
-
-        let mut ne = NewEmitter(crate::Chunk::default());
-        println!("{}", super::AstPrinter.print_expr(expr));
-        expr.accept(&mut ne);
-        #[cfg(feature = "pc-debug")]
-        {
-            ne.0.disassemble("idklol");
-        }
-        let mut vm = crate::runtime::vm::Machine::new(ne.0);
-        assert_eq!(vm.interpret().unwrap(), Value::Integer(11));
-    } else {
-        panic!("ast not initialized")
     }
 }
 

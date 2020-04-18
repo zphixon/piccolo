@@ -4,16 +4,18 @@ pub mod expr;
 pub mod parser;
 pub mod stmt;
 
+pub use expr::{Expr, ExprAccept, ExprVisitor};
+pub use parser::Parser;
+pub use stmt::{Stmt, StmtAccept, StmtVisitor};
+
+use crate::{Token, Value};
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Arity {
     None,
     Multi,
     Some(usize),
 }
-
-use crate::{Token, Value};
-use expr::{Expr, ExprAccept, ExprVisitor};
-use stmt::{Stmt, StmtAccept, StmtVisitor};
 
 /// Pretty-prints a Piccolo AST using the ExprVisitor and StmtVisitor traits.
 #[derive(Copy, Clone)]
