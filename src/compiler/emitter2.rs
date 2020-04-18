@@ -179,8 +179,13 @@ impl StmtVisitor for NewEmitter {
         unimplemented!("visit_func")
     }
 
-    fn visit_retn(&mut self, _keyword: &Token, _value: Option<&Expr>) -> Self::Output {
-        unimplemented!("visit_retn")
+    fn visit_retn(&mut self, keyword: &Token, value: Option<&Expr>) -> Self::Output {
+        if let Some(expr) = value {
+            expr.accept(self)?;
+        }
+        self.0.write(Opcode::Return, keyword.line);
+
+        Ok(())
     }
 
     fn visit_data(

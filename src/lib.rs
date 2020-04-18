@@ -243,6 +243,10 @@ mod tests {
             &Token::new(TokenKind::Assign, "=", 1)
         );
         assert_eq!(
+            scanner.peek_token(0).unwrap(),
+            &Token::new(TokenKind::Identifier, "a", 1)
+        );
+        assert_eq!(
             scanner.peek_token(6).unwrap(),
             &Token::new(TokenKind::LeftParen, "(", 2)
         );

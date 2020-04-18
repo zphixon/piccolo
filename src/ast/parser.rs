@@ -41,15 +41,19 @@ impl<'a> Parser<'a> {
         if scanner.peek_token(1)?.kind == TokenKind::Assign {
             let name = scanner.next_token()?;
             let op = scanner.next_token()?;
-            let value = self.expr_bp(scanner, 0)?;
+            let value = self.expr_bp(scanner, Precedence::Assignment)?;
             self.ast.push(Stmt::Assignment { name, op, value });
         } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
             let name = scanner.next_token()?;
             let op = scanner.next_token()?;
-            let value = self.expr_bp(scanner, 0)?;
+            let value = self.expr_bp(scanner, Precedence::Assignment)?;
             self.ast.push(Stmt::Assignment { name, op, value });
+        } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
+            let keyword = scanner.next_token()?;
+            let value = Some(self.expr_bp(scanner, Precedence::Assignment)?);
+            self.ast.push(Stmt::Retn { keyword, value })
         } else {
-            let expr = self.expr_bp(scanner, 0)?;
+            let expr = self.expr_bp(scanner, Precedence::Assignment)?;
             self.ast.push(Stmt::Expr { expr });
         }
 
@@ -59,7 +63,7 @@ impl<'a> Parser<'a> {
     fn expr_bp<'b>(
         &mut self,
         scanner: &'b mut Scanner<'a>,
-        min_bp: u8,
+        min_prec: Precedence,
     ) -> Result<Expr<'a>, PiccoloError>
     where
         'a: 'b,
@@ -85,13 +89,13 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let (lbp, rbp) = infix_binding_power(op_token.kind);
-            if lbp < min_bp {
+            let op_prec = get_prec(op_token.kind);
+            if op_prec < min_prec {
                 break;
             }
 
             let op = scanner.next_token()?;
-            let rhs = self.expr_bp(scanner, rbp)?;
+            let rhs = self.expr_bp(scanner, op_prec + 1)?;
             lhs = Expr::Binary {
                 lhs: Box::new(lhs),
                 op,
@@ -100,14 +104,6 @@ impl<'a> Parser<'a> {
         }
 
         Ok(lhs)
-    }
-}
-
-fn infix_binding_power(op: TokenKind) -> (u8, u8) {
-    match op {
-        TokenKind::Plus | TokenKind::Minus => (1, 2),
-        TokenKind::Multiply | TokenKind::Divide => (3, 4),
-        _ => panic!("ibp {:?}", op),
     }
 }
 
@@ -163,3 +159,68 @@ fn visitor_emitter() {
         panic!("ast not initialized")
     }
 }
+
+fn get_prec(kind: TokenKind) -> Precedence {
+    match kind {
+        TokenKind::Plus => Precedence::Term,
+        TokenKind::Minus => Precedence::Term,
+        TokenKind::Multiply => Precedence::Factor,
+        TokenKind::Divide => Precedence::Factor,
+        TokenKind::Modulo => Precedence::Factor,
+        TokenKind::Equal => Precedence::Equality,
+        TokenKind::NotEqual => Precedence::Equality,
+        TokenKind::Less => Precedence::Comparison,
+        TokenKind::Greater => Precedence::Comparison,
+        TokenKind::LessEqual => Precedence::Comparison,
+        TokenKind::GreaterEqual => Precedence::Comparison,
+        _ => Precedence::None,
+    }
+}
+
+macro_rules! prec {
+    ($name:ident => $($item:ident = $num:expr,)*) => {
+        #[derive(Debug, Clone, Copy, PartialOrd, PartialEq)]
+        pub(crate) enum $name {
+            $($item = $num,)*
+        }
+
+        impl Into<u8> for $name {
+            fn into(self) -> u8 {
+                match self {
+                    $($name::$item => $num,)*
+                }
+            }
+        }
+
+        impl From<u8> for $name {
+            fn from(u: u8) -> $name {
+                match u {
+                    $($num => $name::$item,)*
+                    n => panic!("{} does not correspond to any item in {}", n, stringify!($name))
+                }
+            }
+        }
+
+        impl std::ops::Add<u8> for $name {
+            type Output = $name;
+            fn add(self, rhs: u8) -> $name {
+                let s: u8 = self.into();
+                (s + rhs).into()
+            }
+        }
+    };
+}
+
+prec!(Precedence =>
+    None = 0,
+    Assignment = 1,
+    Or = 2,
+    And = 3,
+    Equality = 4,
+    Comparison = 5,
+    Term = 6,
+    Factor = 7,
+    Unary = 8,
+    Call = 9,
+    Primary = 10,
+);
