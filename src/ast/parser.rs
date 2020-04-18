@@ -3,6 +3,7 @@ use crate::{ErrorKind, PiccoloError, Scanner, Token, TokenKind, Value};
 use super::expr::Expr;
 use super::stmt::Stmt;
 
+#[derive(Default)]
 pub struct Parser<'a> {
     ast: Vec<Stmt<'a>>,
 }

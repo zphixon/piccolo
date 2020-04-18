@@ -32,7 +32,7 @@ impl<'a> Scanner<'a> {
 
     /// Take the next token from the scanner.
     pub fn next_token(&mut self) -> Result<Token<'a>, PiccoloError> {
-        if self.tokens.len() == 0 {
+        if self.tokens.is_empty() {
             self.next()?;
         }
 
@@ -42,7 +42,7 @@ impl<'a> Scanner<'a> {
     /// Looks ahead in the token stream. Generates tokens if they do not exist. Duplicates
     /// TokenKind::Eof if necessary.
     pub fn peek_token<'b>(&'b mut self, idx: usize) -> Result<&'b Token<'a>, PiccoloError> {
-        if self.tokens.len() == 0 {
+        if self.tokens.is_empty() {
             self.next()?;
         }
 
