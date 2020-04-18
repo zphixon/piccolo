@@ -1,15 +1,15 @@
-pub mod emitter;
-pub mod emitter2;
+pub mod parser_compiler;
+pub mod compiler;
 pub mod scanner;
 
-use crate::compiler::emitter::Emitter;
+use parser_compiler::ParserCompiler;
 use crate::{Chunk, ErrorKind, PiccoloError};
 
 use core::fmt;
 
 /// Compile some Piccolo source code into a chunk.
 pub fn compile(chunk: Chunk, tokens: &[Token]) -> Result<Chunk, Vec<PiccoloError>> {
-    let mut emitter = Emitter::new(chunk, tokens);
+    let mut emitter = ParserCompiler::new(chunk, tokens);
 
     let mut errors = vec![];
 
@@ -32,8 +32,8 @@ pub fn compile2(src: &str) -> Result<Chunk, Vec<PiccoloError>> {
     let mut scanner = super::Scanner::new(src);
     let mut parser = crate::ast::parser::Parser::new();
     let ast = parser.parse(&mut scanner)?;
-    let mut emitter2 = emitter2::NewEmitter(Chunk::default());
-    emitter2.emit(&ast)
+    let mut emitter2 = compiler::Compiler(Chunk::default());
+    emitter2.compile(&ast)
 }
 
 /// Scans all tokens at once from source.

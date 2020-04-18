@@ -4,10 +4,10 @@ use crate::ast::Arity;
 use crate::runtime::op::Opcode;
 use crate::{Chunk, PiccoloError, Token, TokenKind, Value};
 
-pub struct NewEmitter(pub Chunk);
+pub struct Compiler(pub Chunk);
 
-impl NewEmitter {
-    pub fn emit(&mut self, stmts: &[Stmt]) -> Result<Chunk, Vec<PiccoloError>> {
+impl Compiler {
+    pub fn compile(&mut self, stmts: &[Stmt]) -> Result<Chunk, Vec<PiccoloError>> {
         let mut errs = vec![];
         for stmt in stmts {
             match stmt.accept(self) {
@@ -24,7 +24,7 @@ impl NewEmitter {
     }
 }
 
-impl ExprVisitor for NewEmitter {
+impl ExprVisitor for Compiler {
     type Output = Result<(), PiccoloError>;
 
     fn visit_value(&mut self, value: &Value) -> Self::Output {
@@ -121,7 +121,7 @@ impl ExprVisitor for NewEmitter {
     }
 }
 
-impl StmtVisitor for NewEmitter {
+impl StmtVisitor for Compiler {
     type Output = Result<(), PiccoloError>;
     fn visit_expr(&mut self, expr: &Expr) -> Self::Output {
         expr.accept(self)?;
@@ -183,6 +183,7 @@ impl StmtVisitor for NewEmitter {
         if let Some(expr) = value {
             expr.accept(self)?;
         }
+
         self.0.write(Opcode::Return, keyword.line);
 
         Ok(())

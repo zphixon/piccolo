@@ -55,7 +55,7 @@ prec!(Precedence =>
 
 /// Struct that ad-hoc parses and compiles Piccolo source code into a Chunk.
 /// This will be replaced by a more formal parser and AST-walking compiler.
-pub struct Emitter<'a> {
+pub struct ParserCompiler<'a> {
     chunk: Chunk,
     output: bool,
     assign: bool,
@@ -67,8 +67,8 @@ pub struct Emitter<'a> {
     rules: Vec<(TokenKind, Option<PrefixRule>, Option<InfixRule>, Precedence)>,
 }
 
-type PrefixRule = fn(&mut Emitter, bool) -> Result<(), PiccoloError>;
-type InfixRule = fn(&mut Emitter, bool) -> Result<(), PiccoloError>;
+type PrefixRule = fn(&mut ParserCompiler, bool) -> Result<(), PiccoloError>;
+type InfixRule = fn(&mut ParserCompiler, bool) -> Result<(), PiccoloError>;
 
 // TODO: We need some sort of error reporting struct
 // right now, when we encounter an error, we return all the way back up to
@@ -76,9 +76,9 @@ type InfixRule = fn(&mut Emitter, bool) -> Result<(), PiccoloError>;
 // what would make more sense is to have a flag that says whether or not
 // we should still be outputting bytecode, and still attempt to parse
 // the entire program regardless.
-impl<'a> Emitter<'a> {
-    pub fn new(chunk: Chunk, tokens: &'a [Token<'a>]) -> Emitter<'a> {
-        Emitter {
+impl<'a> ParserCompiler<'a> {
+    pub fn new(chunk: Chunk, tokens: &'a [Token<'a>]) -> ParserCompiler<'a> {
+        ParserCompiler {
             chunk,
             output: true,
             assign: false,
@@ -106,7 +106,7 @@ impl<'a> Emitter<'a> {
                 (TokenKind::Assert, None, None, Precedence::None),
                 (
                     TokenKind::Nil,
-                    Some(|c, _can_assign| Emitter::literal(c)),
+                    Some(|c, _can_assign| ParserCompiler::literal(c)),
                     None,
                     Precedence::None,
                 ),
@@ -114,7 +114,7 @@ impl<'a> Emitter<'a> {
                 (TokenKind::RightBracket, None, None, Precedence::None),
                 (
                     TokenKind::LeftParen,
-                    Some(|c, _can_assign| Emitter::grouping(c)),
+                    Some(|c, _can_assign| ParserCompiler::grouping(c)),
                     None,
                     Precedence::None,
                 ),
@@ -126,38 +126,38 @@ impl<'a> Emitter<'a> {
                 (TokenKind::Assign, None, None, Precedence::None),
                 (
                     TokenKind::Not,
-                    Some(|c, _can_assign| Emitter::unary(c)),
+                    Some(|c, _can_assign| ParserCompiler::unary(c)),
                     None,
                     Precedence::None,
                 ),
                 (
                     TokenKind::Plus,
                     None,
-                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Some(|c, _can_assign| ParserCompiler::binary(c)),
                     Precedence::Term,
                 ),
                 (
                     TokenKind::Minus,
-                    Some(|c, _can_assign| Emitter::unary(c)),
-                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Some(|c, _can_assign| ParserCompiler::unary(c)),
+                    Some(|c, _can_assign| ParserCompiler::binary(c)),
                     Precedence::Term,
                 ),
                 (
                     TokenKind::Multiply,
                     None,
-                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Some(|c, _can_assign| ParserCompiler::binary(c)),
                     Precedence::Factor,
                 ),
                 (
                     TokenKind::Divide,
                     None,
-                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Some(|c, _can_assign| ParserCompiler::binary(c)),
                     Precedence::Factor,
                 ),
                 (
                     TokenKind::Modulo,
                     None,
-                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Some(|c, _can_assign| ParserCompiler::binary(c)),
                     Precedence::Factor,
                 ),
                 (TokenKind::LogicalAnd, None, None, Precedence::None),
@@ -168,75 +168,75 @@ impl<'a> Emitter<'a> {
                 (
                     TokenKind::Equal,
                     None,
-                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Some(|c, _can_assign| ParserCompiler::binary(c)),
                     Precedence::Equality,
                 ),
                 (
                     TokenKind::NotEqual,
                     None,
-                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Some(|c, _can_assign| ParserCompiler::binary(c)),
                     Precedence::Equality,
                 ),
                 (
                     TokenKind::Less,
                     None,
-                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Some(|c, _can_assign| ParserCompiler::binary(c)),
                     Precedence::Comparison,
                 ),
                 (
                     TokenKind::Greater,
                     None,
-                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Some(|c, _can_assign| ParserCompiler::binary(c)),
                     Precedence::Comparison,
                 ),
                 (
                     TokenKind::LessEqual,
                     None,
-                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Some(|c, _can_assign| ParserCompiler::binary(c)),
                     Precedence::Comparison,
                 ),
                 (
                     TokenKind::GreaterEqual,
                     None,
-                    Some(|c, _can_assign| Emitter::binary(c)),
+                    Some(|c, _can_assign| ParserCompiler::binary(c)),
                     Precedence::Comparison,
                 ),
                 (TokenKind::ShiftLeft, None, None, Precedence::None),
                 (TokenKind::ShiftRight, None, None, Precedence::None),
                 (
                     TokenKind::Identifier,
-                    Some(|c, can_assign| Emitter::variable(c, can_assign)),
+                    Some(|c, can_assign| ParserCompiler::variable(c, can_assign)),
                     None,
                     Precedence::None,
                 ),
                 (
                     TokenKind::True,
-                    Some(|c, _can_assign| Emitter::literal(c)),
+                    Some(|c, _can_assign| ParserCompiler::literal(c)),
                     None,
                     Precedence::None,
                 ),
                 (
                     TokenKind::False,
-                    Some(|c, _can_assign| Emitter::literal(c)),
+                    Some(|c, _can_assign| ParserCompiler::literal(c)),
                     None,
                     Precedence::None,
                 ),
                 (TokenKind::Eof, None, None, Precedence::None),
                 (
                     TokenKind::String,
-                    Some(|c, _can_assign| Emitter::string(c)),
+                    Some(|c, _can_assign| ParserCompiler::string(c)),
                     None,
                     Precedence::None,
                 ),
                 (
                     TokenKind::Double(0.0),
-                    Some(|c, _can_assign| Emitter::number(c)),
+                    Some(|c, _can_assign| ParserCompiler::number(c)),
                     None,
                     Precedence::None,
                 ),
                 (
                     TokenKind::Integer(0),
-                    Some(|c, _can_assign| Emitter::number(c)),
+                    Some(|c, _can_assign| ParserCompiler::number(c)),
                     None,
                     Precedence::None,
                 ),
