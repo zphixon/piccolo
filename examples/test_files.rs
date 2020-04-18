@@ -13,8 +13,8 @@ fn main() -> io::Result<()> {
     let mut file_tokens_errors = vec![];
     for item in files {
         println!(" -- '{}'", item.display());
-        let _ = piccolo::do_file(&item)?.map_err(|errs| {
-            file_tokens_errors.push((item.display().to_string(), errs));
+        let _ = piccolo::do_file(&item)?.map_err(|errors| {
+            file_tokens_errors.push((item.display().to_string(), errors));
         });
     }
 
@@ -26,8 +26,8 @@ fn main() -> io::Result<()> {
             println!("        Error {}", errors[0])
         } else {
             println!("        {} Errors:", errors.len());
-            for err in errors.iter() {
-                println!("            {}", err);
+            for e in errors.iter() {
+                println!("            {}", e);
             }
         }
     }
