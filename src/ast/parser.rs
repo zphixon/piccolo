@@ -15,15 +15,26 @@ impl<'a> Parser<'a> {
         Parser { ast: Vec::new() }
     }
 
-    pub fn parse<'b>(&mut self, scanner: &'b mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, PiccoloError>
+    pub fn parse<'b>(
+        &mut self,
+        scanner: &'b mut Scanner<'a>,
+    ) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>>
     where
         'a: 'b,
     {
-        while scanner.peek_token(0)?.kind != TokenKind::Eof {
-            self.declaration(scanner)?;
+        let mut errors = vec![];
+        while scanner.peek_token(0).map_err(|e| vec![e])?.kind != TokenKind::Eof {
+            let result = self.declaration(scanner);
+            if result.is_err() {
+                errors.push(result.unwrap_err());
+            }
         }
 
-        Ok(std::mem::replace(&mut self.ast, Vec::new()))
+        if errors.is_empty() {
+            Ok(std::mem::replace(&mut self.ast, Vec::new()))
+        } else {
+            Err(errors)
+        }
     }
 
     fn declaration<'b>(&mut self, scanner: &'b mut Scanner<'a>) -> Result<(), PiccoloError> {
