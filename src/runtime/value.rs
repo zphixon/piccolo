@@ -135,6 +135,7 @@ impl Value {
             TokenKind::False => Value::Bool(false),
             TokenKind::Double(v) => Value::Double(v),
             TokenKind::String => Value::String(crate::compiler::escape_string(&token).ok()?),
+            TokenKind::Nil => Value::Nil,
             _ => None?,
         })
     }
