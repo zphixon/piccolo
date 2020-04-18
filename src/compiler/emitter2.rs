@@ -17,7 +17,7 @@ impl NewEmitter {
         }
 
         if errs.is_empty() {
-            Ok(std::mem::replace(&mut self.0, Chunk::default()))
+            Ok(std::mem::take(&mut self.0))
         } else {
             Err(errs)
         }
