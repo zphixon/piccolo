@@ -8,9 +8,12 @@ tf:
     cargo run --example test_files
 
 f:
-    cargo run --example fuzzer --features "fuzzer" -- 
+    cargo run --example fuzzer --features "fuzzer" --
 
 c:
+    cargo check
+
+cc:
     cargo clean
     cargo clippy
 
