@@ -22,19 +22,19 @@ impl<'a> Parser<'a> {
     {
         let mut errors = vec![];
         while scanner.peek_token(0).map_err(|e| vec![e])?.kind != TokenKind::Eof {
-            let result = self.declaration(scanner);
-            if result.is_err() {
-                errors.push(result.unwrap_err());
+            if let Err(e) = self.declaration(scanner) {
+                errors.push(e);
             }
         }
 
         if errors.is_empty() {
-            Ok(std::mem::replace(&mut self.ast, Vec::new()))
+            Ok(std::mem::take(&mut self.ast))
         } else {
             Err(errors)
         }
     }
 
+    #[allow(clippy::if_same_then_else)]
     fn declaration<'b>(&mut self, scanner: &'b mut Scanner<'a>) -> Result<(), PiccoloError> {
         if scanner.peek_token(1)?.kind == TokenKind::Assign {
             let name = scanner.next_token()?;
