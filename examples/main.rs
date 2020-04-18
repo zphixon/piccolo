@@ -121,7 +121,7 @@ fn repl() {
                 if let Ok(tokens) = tokens {
                     piccolo::print_tokens(&tokens);
                     println!("****** compiler");
-                    let chunk = piccolo::compile(Chunk::default(), &tokens);
+                    let chunk = piccolo::compiler::compile2(&line);//(Chunk::default(), &tokens);
                     if let Ok(chunk) = chunk {
                         println!("****** chunk");
                         chunk.disassemble("line");
