@@ -39,19 +39,19 @@ impl<'a> Parser<'a> {
         if scanner.peek_token(1)?.kind == TokenKind::Assign {
             let name = scanner.next_token()?;
             let op = scanner.next_token()?;
-            let value = self.expr_bp(scanner, Precedence::Assignment)?;
+            let value = self.expr_bp(scanner, BindingPower::Assignment)?;
             self.ast.push(Stmt::Assignment { name, op, value });
         } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
             let name = scanner.next_token()?;
             let op = scanner.next_token()?;
-            let value = self.expr_bp(scanner, Precedence::Assignment)?;
+            let value = self.expr_bp(scanner, BindingPower::Assignment)?;
             self.ast.push(Stmt::Assignment { name, op, value });
         } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
             let keyword = scanner.next_token()?;
-            let value = Some(self.expr_bp(scanner, Precedence::Assignment)?);
+            let value = Some(self.expr_bp(scanner, BindingPower::Assignment)?);
             self.ast.push(Stmt::Retn { keyword, value })
         } else {
-            let expr = self.expr_bp(scanner, Precedence::Assignment)?;
+            let expr = self.expr_bp(scanner, BindingPower::Assignment)?;
             self.ast.push(Stmt::Expr { expr });
         }
 
@@ -61,7 +61,7 @@ impl<'a> Parser<'a> {
     fn expr_bp<'b>(
         &mut self,
         scanner: &'b mut Scanner<'a>,
-        min_prec: Precedence,
+        min_prec: BindingPower,
     ) -> Result<Expr<'a>, PiccoloError>
     where
         'a: 'b,
@@ -87,7 +87,7 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let op_prec = get_prec(op_token.kind);
+            let op_prec = infix_binding_power(op_token.kind);
             if op_prec < min_prec {
                 break;
             }
@@ -105,20 +105,20 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn get_prec(kind: TokenKind) -> Precedence {
+fn infix_binding_power(kind: TokenKind) -> BindingPower {
     match kind {
-        TokenKind::Plus => Precedence::Term,
-        TokenKind::Minus => Precedence::Term,
-        TokenKind::Multiply => Precedence::Factor,
-        TokenKind::Divide => Precedence::Factor,
-        TokenKind::Modulo => Precedence::Factor,
-        TokenKind::Equal => Precedence::Equality,
-        TokenKind::NotEqual => Precedence::Equality,
-        TokenKind::Less => Precedence::Comparison,
-        TokenKind::Greater => Precedence::Comparison,
-        TokenKind::LessEqual => Precedence::Comparison,
-        TokenKind::GreaterEqual => Precedence::Comparison,
-        _ => Precedence::None,
+        TokenKind::Plus => BindingPower::Term,
+        TokenKind::Minus => BindingPower::Term,
+        TokenKind::Multiply => BindingPower::Factor,
+        TokenKind::Divide => BindingPower::Factor,
+        TokenKind::Modulo => BindingPower::Factor,
+        TokenKind::Equal => BindingPower::Equality,
+        TokenKind::NotEqual => BindingPower::Equality,
+        TokenKind::Less => BindingPower::Comparison,
+        TokenKind::Greater => BindingPower::Comparison,
+        TokenKind::LessEqual => BindingPower::Comparison,
+        TokenKind::GreaterEqual => BindingPower::Comparison,
+        _ => BindingPower::None,
     }
 }
 
@@ -156,7 +156,7 @@ macro_rules! prec {
     };
 }
 
-prec!(Precedence =>
+prec!(BindingPower =>
     None = 0,
     Assignment = 1,
     Or = 2,
