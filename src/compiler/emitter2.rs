@@ -2,7 +2,7 @@ use crate::ast::expr::{Expr, ExprAccept, ExprVisitor};
 use crate::ast::stmt::{Stmt, StmtAccept, StmtVisitor};
 use crate::ast::Arity;
 use crate::runtime::op::Opcode;
-use crate::{Token, TokenKind, Value, PiccoloError, Chunk};
+use crate::{Chunk, PiccoloError, Token, TokenKind, Value};
 
 pub struct NewEmitter(pub Chunk);
 
@@ -11,7 +11,7 @@ impl NewEmitter {
         let mut errs = vec![];
         for stmt in stmts {
             match stmt.accept(self) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => errs.push(e),
             }
         }
