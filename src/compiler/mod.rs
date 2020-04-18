@@ -1,4 +1,5 @@
 pub mod emitter;
+pub mod emitter2;
 pub mod scanner;
 
 use crate::compiler::emitter::Emitter;
@@ -25,6 +26,14 @@ pub fn compile(chunk: Chunk, tokens: &[Token]) -> Result<Chunk, Vec<PiccoloError
     } else {
         Err(errors)
     }
+}
+
+pub fn compile2(src: &str) -> Result<Chunk, Vec<PiccoloError>> {
+    let mut scanner = super::Scanner::new(src);
+    let mut parser = crate::ast::parser::Parser::new();
+    let ast = parser.parse(&mut scanner).map_err(|e| vec![e])?;
+    let mut emitter2 = emitter2::NewEmitter(Chunk::default());
+    emitter2.emit(&ast)
 }
 
 /// Scans all tokens at once from source.
