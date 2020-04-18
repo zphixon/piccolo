@@ -223,6 +223,18 @@ impl<'a> Token<'a> {
     pub fn new(kind: TokenKind, lexeme: &'a str, line: usize) -> Self {
         Token { kind, lexeme, line }
     }
+
+    pub fn is_value(&self) -> bool {
+        match self.kind {
+            TokenKind::Nil => true,
+            TokenKind::String => true,
+            TokenKind::True => true,
+            TokenKind::False => true,
+            TokenKind::Double(_) => true,
+            TokenKind::Integer(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl<'a> fmt::Display for Token<'a> {

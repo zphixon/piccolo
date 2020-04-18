@@ -1,9 +1,9 @@
+use crate::ast::expr::ExprAccept;
+use crate::compiler::emitter2::NewEmitter;
 use crate::{ErrorKind, PiccoloError, Scanner, Token, TokenKind, Value};
 
 use super::expr::Expr;
 use super::stmt::Stmt;
-use crate::ast::expr::ExprAccept;
-use crate::compiler::emitter2::NewEmitter;
 
 #[derive(Default)]
 pub struct Parser<'a> {
@@ -56,7 +56,16 @@ impl<'a> Parser<'a> {
         let lhs_token = scanner.next_token()?;
         let mut lhs = match lhs_token.kind {
             TokenKind::Identifier => unimplemented!("var get"), //self.named_variable(),
-            _ => Expr::Atom(Value::try_from(lhs_token).unwrap()),
+            _ => {
+                if lhs_token.is_value() {
+                    Expr::Atom(Value::try_from(lhs_token).unwrap())
+                } else {
+                    return Err(PiccoloError::new(ErrorKind::MalformedExpression {
+                        from: lhs_token.to_string(),
+                    })
+                    .line(lhs_token.line));
+                }
+            }
         };
 
         loop {
