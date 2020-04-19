@@ -180,7 +180,7 @@ pub mod fuzzer {
 #[cfg(test)]
 mod tests {
     use crate::ast::{Arity, AstPrinter, Expr, ExprAccept, Stmt};
-    use crate::compiler::compiler::Compiler;
+    use crate::compiler::emitter::Emitter;
     use crate::compiler::parser_compiler::Precedence;
     use crate::runtime::{op::Opcode, value::Value};
     use crate::{Chunk, Machine, Parser, Scanner, Token, TokenKind};
@@ -191,7 +191,7 @@ mod tests {
         let mut scanner = Scanner::new(src);
         let ast = Parser::new().parse(&mut scanner).unwrap();
         println!("{}", AstPrinter.print(&ast));
-        let mut ne = Compiler(Chunk::default());
+        let mut ne = Emitter(Chunk::default());
         ne.compile(&ast).unwrap();
         #[cfg(feature = "pc-debug")]
         {
@@ -224,7 +224,7 @@ mod tests {
                 }
             );
 
-            let mut ne = Compiler(crate::Chunk::default());
+            let mut ne = Emitter(crate::Chunk::default());
             println!("{}", AstPrinter.print_expr(expr));
             expr.accept(&mut ne).unwrap();
             #[cfg(feature = "pc-debug")]
