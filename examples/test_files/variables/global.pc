@@ -1,5 +1,5 @@
-let x = 3
-let y = 4
-let z = "i hab " + (x + y) + " frends"
+x =: 3
+y =: 4
+z =: "i hab " + (x + y) + " frends"
 
 assert z == "i hab 7 frends"

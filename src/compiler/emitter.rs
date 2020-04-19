@@ -236,6 +236,12 @@ impl StmtVisitor for Emitter {
         Ok(())
     }
 
+    fn visit_assert(&mut self, keyword: &Token, value: &Expr) -> Self::Output {
+        value.accept(self)?;
+        self.chunk.write(Opcode::Assert, keyword.line);
+        Ok(())
+    }
+
     fn visit_data(
         &mut self,
         _name: &Token,
