@@ -11,7 +11,7 @@ pub mod error;
 pub mod runtime;
 
 pub use ast::Parser;
-pub use compiler::{compile, scan_all, scanner::Scanner, Token, TokenKind};
+pub use compiler::{compile, emitter::Emitter, scan_all, scanner::Scanner, Token, TokenKind};
 pub use error::{ErrorKind, PiccoloError};
 pub use runtime::{chunk::Chunk, value::Value, vm::Machine};
 

@@ -70,9 +70,7 @@ impl ExprVisitor for Emitter {
         let i = if name.kind == TokenKind::String && self.strings.contains_key(name.lexeme) {
             *self.strings.get(name.lexeme).unwrap()
         } else {
-            let i = self
-                .chunk
-                .make_constant(Value::String(name.lexeme.into()));
+            let i = self.chunk.make_constant(Value::String(name.lexeme.into()));
             self.strings.insert(name.lexeme.to_string(), i);
             i
         };
