@@ -64,17 +64,21 @@ impl<'a> Parser<'a> {
             Expr::Atom(Value::try_from(lhs_token).unwrap())
         } else if lhs_token.kind == TokenKind::Identifier {
             unimplemented!("var get");
-        } else if let Some(pbp) = prefix_binding_power(lhs_token.kind) {
-            let rhs = self.expr_bp(scanner, pbp)?;
-            Expr::Unary {
-                op: lhs_token,
-                rhs: Box::new(rhs),
-            }
         } else {
-            return Err(PiccoloError::new(ErrorKind::MalformedExpression {
-                from: lhs_token.to_string(),
-            })
-            .line(lhs_token.line));
+            let pbp = prefix_binding_power(lhs_token.kind);
+            if pbp != BindingPower::None {
+                let rhs = self.expr_bp(scanner, pbp)?;
+                Expr::Unary {
+                    op: lhs_token,
+                    rhs: Box::new(rhs),
+                }
+            } else {
+                return Err(PiccoloError::new(ErrorKind::MalformedExpression {
+                    from: lhs_token.to_string(),
+                })
+                .line(lhs_token.line)
+                .msg("Cannot use as a prefix operator"));
+            }
         };
 
         loop {
@@ -83,8 +87,7 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let op_prec = infix_binding_power(op_token.kind)
-                .unwrap_or_else(|| panic!("no ibp for {:?}", op_token));
+            let op_prec = infix_binding_power(op_token.kind);
 
             if op_prec < min_bp {
                 break;
@@ -103,17 +106,17 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn prefix_binding_power(kind: TokenKind) -> Option<BindingPower> {
-    Some(match kind {
+fn prefix_binding_power(kind: TokenKind) -> BindingPower {
+    match kind {
         TokenKind::Minus => BindingPower::Unary,
         TokenKind::Not => BindingPower::Unary,
         TokenKind::Identifier => BindingPower::None,
-        _ => None?,
-    })
+        _ => BindingPower::None,
+    }
 }
 
-fn infix_binding_power(kind: TokenKind) -> Option<BindingPower> {
-    Some(match kind {
+fn infix_binding_power(kind: TokenKind) -> BindingPower {
+    match kind {
         TokenKind::Plus => BindingPower::Term,
         TokenKind::Minus => BindingPower::Term,
         TokenKind::Multiply => BindingPower::Factor,
@@ -126,8 +129,9 @@ fn infix_binding_power(kind: TokenKind) -> Option<BindingPower> {
         TokenKind::LessEqual => BindingPower::Comparison,
         TokenKind::GreaterEqual => BindingPower::Comparison,
         TokenKind::Retn => BindingPower::None,
-        _ => None?,
-    })
+        TokenKind::Identifier => BindingPower::None,
+        _ => BindingPower::None,
+    }
 }
 
 macro_rules! prec {
