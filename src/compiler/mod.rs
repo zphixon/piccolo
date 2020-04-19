@@ -32,7 +32,7 @@ pub fn compile2(src: &str) -> Result<Chunk, Vec<PiccoloError>> {
     let mut scanner = super::Scanner::new(src);
     let mut parser = crate::ast::parser::Parser::new();
     println!("****** parser");
-    let ast = crate::ast::parser::parse(&mut parser, &mut scanner)?;
+    let ast = parser.parse(&mut scanner)?;
     println!("****** compiler");
     let mut emitter2 = compiler::Compiler(Chunk::default());
     emitter2.compile(&ast)
