@@ -53,24 +53,24 @@ impl fmt::Display for PiccoloError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{}{}{}{}{}",
-            if self.line.is_some() {
+            "{line}{file}{separator}{kind}{msg}",
+            line = if self.line.is_some() {
                 format!("at line {} ", self.line.unwrap())
             } else {
                 "".into()
             },
-            if self.file.is_some() {
+            file = if self.file.is_some() {
                 format!("in file {} ", self.file.as_ref().unwrap())
             } else {
                 "".into()
             },
-            if self.line.is_some() || self.file.is_some() {
+            separator = if self.line.is_some() || self.file.is_some() {
                 "- "
             } else {
                 ""
             },
-            self.kind,
-            if self.msg.is_some() {
+            kind = self.kind,
+            msg = if self.msg.is_some() {
                 format!(" ({})", self.msg.as_ref().unwrap())
             } else {
                 "".into()
