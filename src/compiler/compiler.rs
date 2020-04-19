@@ -38,8 +38,14 @@ impl ExprVisitor for Compiler {
         Ok(())
     }
 
-    fn visit_unary(&mut self, _op: &Token, rhs: &Expr) -> Self::Output {
-        rhs.accept(self)
+    fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output {
+        rhs.accept(self)?;
+        match op.kind {
+            TokenKind::Not => self.0.write(Opcode::Not, op.line),
+            TokenKind::Minus => self.0.write(Opcode::Negate, op.line),
+            _ => unreachable!("unrecognized unary op {:?}", op),
+        }
+        Ok(())
     }
 
     fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output {
@@ -60,7 +66,7 @@ impl ExprVisitor for Compiler {
             TokenKind::GreaterEqual => self.0.write(Opcode::GreaterEqual, 1),
             TokenKind::Less => self.0.write(Opcode::Less, 1),
             TokenKind::LessEqual => self.0.write(Opcode::LessEqual, 1),
-            _ => {}
+            _ => unreachable!("unrecognized binary op {:?}", op)
         }
 
         Ok(())
