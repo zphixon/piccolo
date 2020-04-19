@@ -180,8 +180,8 @@ pub mod fuzzer {
 #[cfg(test)]
 mod tests {
     use crate::ast::{Arity, AstPrinter, Expr, ExprAccept, Stmt};
-    use crate::compiler::parser_compiler::Precedence;
     use crate::compiler::compiler::Compiler;
+    use crate::compiler::parser_compiler::Precedence;
     use crate::runtime::{op::Opcode, value::Value};
     use crate::{Chunk, Machine, Parser, Scanner, Token, TokenKind};
 

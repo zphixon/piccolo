@@ -66,7 +66,7 @@ impl ExprVisitor for Compiler {
             TokenKind::GreaterEqual => self.0.write(Opcode::GreaterEqual, 1),
             TokenKind::Less => self.0.write(Opcode::Less, 1),
             TokenKind::LessEqual => self.0.write(Opcode::LessEqual, 1),
-            _ => unreachable!("unrecognized binary op {:?}", op)
+            _ => unreachable!("unrecognized binary op {:?}", op),
         }
 
         Ok(())

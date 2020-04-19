@@ -120,7 +120,7 @@ fn repl() {
                 let tokens = piccolo::scan_all(&line);
                 if let Ok(tokens) = tokens {
                     piccolo::print_tokens(&tokens);
-                    println!("****** compiler");
+                    //println!("****** compiler");
                     let chunk = piccolo::compiler::compile2(&line);
                     if let Ok(chunk) = chunk {
                         println!("****** chunk");
