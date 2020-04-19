@@ -80,28 +80,28 @@ pub enum Stmt<'a> {
     },
 }
 
+#[rustfmt::skip]
 impl StmtAccept for Stmt<'_> {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
         match self {
-            Stmt::Expr(expr) => v.visit_expr(expr),
-            Stmt::Block(body) => v.visit_block(body),
-            Stmt::Assignment { name, op, value } => v.visit_assignment(name, op, value),
-            Stmt::If { cond, then, else_ } => v.visit_if(cond, then, else_.as_ref()),
-            Stmt::While { cond, body } => v.visit_while(cond, body),
-            Stmt::For { name, iter, body } => v.visit_for(name, iter, body),
-            Stmt::Func {
-                name,
-                args,
-                arity,
-                body,
-                method,
-            } => v.visit_func(name, args, *arity, body, *method),
-            Stmt::Retn { keyword, value } => v.visit_retn(keyword, value.as_ref()),
-            Stmt::Data {
-                name,
-                methods,
-                fields,
-            } => v.visit_data(name, methods, fields),
+            Stmt::Expr(expr)
+                => v.visit_expr(expr),
+            Stmt::Block(body)
+                => v.visit_block(body),
+            Stmt::Assignment { name, op, value }
+                => v.visit_assignment(name, op, value),
+            Stmt::If { cond, then, else_ }
+                => v.visit_if(cond, then, else_.as_ref()),
+            Stmt::While { cond, body }
+                => v.visit_while(cond, body),
+            Stmt::For { name, iter, body }
+                => v.visit_for(name, iter, body),
+            Stmt::Func { name, args, arity, body, method }
+                => v.visit_func(name, args, *arity, body, *method),
+            Stmt::Retn { keyword, value }
+                => v.visit_retn(keyword, value.as_ref()),
+            Stmt::Data { name, methods, fields }
+                => v.visit_data(name, methods, fields),
         }
     }
 }

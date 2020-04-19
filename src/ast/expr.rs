@@ -100,37 +100,36 @@ pub enum Expr<'a> {
     },
 }
 
+#[rustfmt::skip]
 impl ExprAccept for Expr<'_> {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         match self {
-            Expr::Atom(token) => v.visit_atom(token),
-            Expr::Paren(value) => v.visit_paren(value),
-            Expr::Variable(name) => v.visit_variable(name),
-            Expr::Unary { op, rhs } => v.visit_unary(op, rhs),
-            Expr::Binary { lhs, op, rhs } => v.visit_binary(lhs, op, rhs),
-            Expr::Assignment { name, value } => v.visit_assign(name, value),
-            Expr::Logical { lhs, op, rhs } => v.visit_logical(lhs, op, rhs),
-            Expr::Call {
-                callee,
-                paren,
-                arity,
-                args,
-            } => v.visit_call(callee, paren, *arity, args),
-            Expr::New { name, args } => v.visit_new(name, args),
-            Expr::Get { object, name } => v.visit_get(object, name),
-            Expr::Set {
-                object,
-                name,
-                value,
-            } => v.visit_set(object, name, value),
-            Expr::Index { rb, object, idx } => v.visit_index(rb, object, idx),
-            Expr::Func {
-                name,
-                args,
-                arity,
-                body,
-                method,
-            } => v.visit_func(name, args, *arity, body, *method),
+            Expr::Atom(token)
+                => v.visit_atom(token),
+            Expr::Paren(value)
+                => v.visit_paren(value),
+            Expr::Variable(name)
+                => v.visit_variable(name),
+            Expr::Unary { op, rhs }
+                => v.visit_unary(op, rhs),
+            Expr::Binary { lhs, op, rhs }
+                => v.visit_binary(lhs, op, rhs),
+            Expr::Assignment { name, value }
+                => v.visit_assign(name, value),
+            Expr::Logical { lhs, op, rhs }
+                => v.visit_logical(lhs, op, rhs),
+            Expr::Call { callee, paren, arity, args }
+                => v.visit_call(callee, paren, *arity, args),
+            Expr::New { name, args }
+                => v.visit_new(name, args),
+            Expr::Get { object, name }
+                => v.visit_get(object, name),
+            Expr::Set { object, name, value }
+                => v.visit_set(object, name, value),
+            Expr::Index { rb, object, idx }
+                => v.visit_index(rb, object, idx),
+            Expr::Func { name, args, arity, body, method }
+                => v.visit_func(name, args, *arity, body, *method),
         }
     }
 }
