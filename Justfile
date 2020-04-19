@@ -20,6 +20,5 @@ cc:
 t:
     cargo test --features "pc-debug"
 
-idk:
-    cargo test --package piccolo --lib ast::parser::idk --features "pc-debug" -- --exact
-
+vl:
+    cargo test --package piccolo --lib tests::very_long -- --exact --ignored
