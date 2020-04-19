@@ -6,7 +6,18 @@ use super::Stmt;
 type PrefixRule<'a> = fn(&mut Parser<'a>, &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError>;
 type InfixRule<'a> = fn(&mut Parser<'a>, &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError>;
 
-const RULES: [(InfixRule, PrefixRule); 1] = [(test, test)];
+const RULES: [(TokenKind, Option<InfixRule>, Option<PrefixRule>); 1] = [
+    (TokenKind::Identifier, Some(test), Some(test))
+];
+
+fn get_rule<'a>(kind: TokenKind) -> (Option<&'static InfixRule<'a>>, Option<&'static PrefixRule<'a>>) {
+    for (rule_kind, infix, prefix) in RULES.iter() {
+        if kind == *rule_kind {
+            return (infix.as_ref(), prefix.as_ref());
+        }
+    }
+    (None, None)
+}
 
 #[derive(Default)]
 pub struct Parser<'a> {
