@@ -63,7 +63,7 @@ impl<'a> Parser<'a> {
         let mut lhs = if lhs_token.is_value() {
             Expr::Atom(lhs_token)
         } else if lhs_token.kind == TokenKind::Identifier {
-            unimplemented!("var get");
+            Expr::Variable(lhs_token)
         } else {
             let pbp = prefix_binding_power(lhs_token.kind);
             if pbp != BindingPower::None {

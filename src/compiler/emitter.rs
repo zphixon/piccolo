@@ -66,8 +66,22 @@ impl ExprVisitor for Emitter {
         value.accept(self)
     }
 
-    fn visit_variable(&mut self, _name: &Token) -> Self::Output {
-        unimplemented!("visit_variable")
+    fn visit_variable(&mut self, name: &Token) -> Self::Output {
+        let i = if name.kind == TokenKind::String && self.strings.contains_key(name.lexeme) {
+            *self.strings.get(name.lexeme).unwrap()
+        } else {
+            let i = self
+                .chunk
+                .make_constant(Value::String(name.lexeme.into()));
+            self.strings.insert(name.lexeme.to_string(), i);
+            i
+        };
+        let (low, high) = crate::decode_bytes(i);
+        self.chunk.write(Opcode::GetGlobal, name.line);
+        self.chunk.write(low, name.line);
+        self.chunk.write(high, name.line);
+
+        Ok(())
     }
 
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output {

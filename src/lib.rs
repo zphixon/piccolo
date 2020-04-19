@@ -50,6 +50,24 @@ pub fn do_file(
     }))
 }
 
+pub fn do_file2(
+    file: &std::path::Path,
+) -> Result<Result<Value, Vec<error::PiccoloError>>, std::io::Error> {
+    let contents = std::fs::read_to_string(file)?;
+    Ok(interpret2(&contents).map_err(|v| {
+        v.into_iter()
+            .map(|e| e.file(file.to_str().unwrap().to_owned()))
+            .collect()
+    }))
+}
+
+pub fn interpret2(src: &str) -> Result<Value, Vec<error::PiccoloError>> {
+    let mut scanner = Scanner::new(src);
+    let ast = Parser::new().parse(&mut scanner)?;
+    let chunk = compiler::emitter::Emitter::new(Chunk::default()).compile(&ast)?;
+    Machine::new(chunk).interpret().map_err(|e| vec![e])
+}
+
 pub(crate) fn encode_bytes(low: u8, high: u8) -> u16 {
     ((high as u16) << 8) | (low as u16)
 }

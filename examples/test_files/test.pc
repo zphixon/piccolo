@@ -1,14 +1,14 @@
 
-let a = "ayyyy lmao"
-let b = a + "ooo"
+a =: "ayyyy lmao"
+b =: a + "ooo"
 b = b + "323"
-let c = b
+c =: b
 b = c + b
 a = "z"
 b = c + a + b
 retn b + a
 
-let x = "hello \
+x =: "hello \
       world"
 
 retn x == "hello world"
@@ -90,7 +90,7 @@ retn x == "hello world"
 #
 # sys.show_env()
 #
-let a﷽ = "表ポあA鷗ŒéＢ逍Üßªąñ丂㐀𠀀"
-let b = "᚛ᚄᚓᚐᚋᚒᚄ ᚑᚄᚂᚑᚏᚅ᚜"
-let $$$$ = "c"
-let d = "𝕋𝕙𝕖 𝕢𝕦𝕚𝕔𝕜 𝕓𝕣𝕠𝕨𝕟 𝕗𝕠𝕩 𝕛𝕦𝕞𝕡𝕤 𝕠𝕧𝕖𝕣 𝕥𝕙𝕖 𝕝𝕒𝕫𝕪 𝕕𝕠𝕘"
+a﷽ =: "表ポあA鷗ŒéＢ逍Üßªąñ丂㐀𠀀"
+b =: "᚛ᚄᚓᚐᚋᚒᚄ ᚑᚄᚂᚑᚏᚅ᚜"
+dollar =: "c"
+d =: "𝕋𝕙𝕖 𝕢𝕦𝕚𝕔𝕜 𝕓𝕣𝕠𝕨𝕟 𝕗𝕠𝕩 𝕛𝕦𝕞𝕡𝕤 𝕠𝕧𝕖𝕣 𝕥𝕙𝕖 𝕝𝕒𝕫𝕪 𝕕𝕠𝕘"
