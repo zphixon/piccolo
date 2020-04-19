@@ -116,35 +116,38 @@ pub enum ErrorKind {
     SyntaxError,
 }
 
+#[rustfmt::skip]
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ErrorKind::StackUnderflow { op } => write!(f, "Stack underflow due to {:?}", op),
-            ErrorKind::InvalidUTF8 => write!(f, "Invalid UTF-8 sequence"),
-            ErrorKind::UnterminatedString => write!(f, "Unterminated string"),
-            ErrorKind::UnknownFormatCode { code } => write!(f, "Unknown format code '\\{}'", code),
-            ErrorKind::InvalidNumberLiteral { literal } => {
-                write!(f, "Invalid number literal '{}'", literal)
-            }
-            ErrorKind::UnexpectedToken { exp, got } => {
-                write!(f, "Unexpected token: expected {}, got {}", exp, got)
-            }
-            ErrorKind::IncorrectType { exp, got, op } => write!(
-                f,
-                "Incorrect type: expected {}, got {} for op {:?}",
-                exp, got, op
-            ),
-            ErrorKind::UndefinedVariable { name } => write!(f, "Undefined variable '{}'", name),
-            ErrorKind::UnknownField { obj, name } => {
-                write!(f, "Unknown field '{}' on {}", name, obj)
-            }
-            ErrorKind::MalformedExpression { from } => {
-                write!(f, "Malformed expression from {}", from)
-            }
-            ErrorKind::ExpectedExpression { got } => write!(f, "Expected expression, got {}", got),
-            ErrorKind::CannotClone { ty } => write!(f, "Cannot clone type {}", ty),
-            ErrorKind::AssertFailed => write!(f, "Assertion failed"),
-            ErrorKind::SyntaxError => write!(f, "Syntax error"),
+            ErrorKind::StackUnderflow { op }
+                => write!(f, "Stack underflow due to {:?}", op),
+            ErrorKind::InvalidUTF8
+                => write!(f, "Invalid UTF-8 sequence"),
+            ErrorKind::UnterminatedString
+                => write!(f, "Unterminated string"),
+            ErrorKind::UnknownFormatCode { code }
+                => write!(f, "Unknown format code '\\{}'", code),
+            ErrorKind::InvalidNumberLiteral { literal }
+                =>  write!(f, "Invalid number literal '{}'", literal) ,
+            ErrorKind::UnexpectedToken { exp, got }
+                => write!(f, "Unexpected token: expected {}, got {}", exp, got) ,
+            ErrorKind::IncorrectType { exp, got, op }
+                => write!(f, "Incorrect type: expected {}, got {} for op {:?}", exp, got, op),
+            ErrorKind::UndefinedVariable { name }
+                => write!(f, "Undefined variable '{}'", name),
+            ErrorKind::UnknownField { obj, name }
+                => write!(f, "Unknown field '{}' on {}", name, obj) ,
+            ErrorKind::MalformedExpression { from }
+                => write!(f, "Malformed expression from {}", from),
+            ErrorKind::ExpectedExpression { got }
+                => write!(f, "Expected expression, got {}", got),
+            ErrorKind::CannotClone { ty }
+                => write!(f, "Cannot clone type {}", ty),
+            ErrorKind::AssertFailed
+                => write!(f, "Assertion failed"),
+            ErrorKind::SyntaxError
+                => write!(f, "Syntax error"),
         }
     }
 }
