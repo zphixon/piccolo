@@ -181,10 +181,10 @@ pub enum TokenKind {
     Nil,    // nil
 
     // syntax
-    LeftBracket,  // [
-    RightBracket, // ]
-    LeftParen,    // (
-    RightParen,   // )
+    LeftBracket,    // [
+    RightBracket,   // ]
+    LeftParen,      // (
+    RightParen,     // )
     Comma,          // ,
     Period,         // .
     ExclusiveRange, // ..
