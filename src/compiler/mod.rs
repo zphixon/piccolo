@@ -1,4 +1,4 @@
-pub mod compiler;
+pub mod emitter;
 pub mod parser_compiler;
 pub mod scanner;
 
@@ -34,7 +34,7 @@ pub fn compile2(src: &str) -> Result<Chunk, Vec<PiccoloError>> {
     println!("****** parser");
     let ast = parser.parse(&mut scanner)?;
     println!("****** compiler");
-    let mut emitter2 = compiler::Compiler(Chunk::default());
+    let mut emitter2 = emitter::Emitter(Chunk::default());
     emitter2.compile(&ast)
 }
 
