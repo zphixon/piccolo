@@ -67,17 +67,14 @@ impl<'a> Parser<'a> {
         'a: 'b,
     {
         let lhs_token = scanner.next_token()?;
-        let mut lhs = match lhs_token.kind {
-            TokenKind::Identifier => unimplemented!("var get"), //self.named_variable(),
-            _ => {
-                if lhs_token.is_value() {
-                    Expr::Atom(Value::try_from(lhs_token).unwrap())
-                } else {
-                    return Err(PiccoloError::new(ErrorKind::MalformedExpression {
-                        from: lhs_token.to_string(),
-                    })
-                    .line(lhs_token.line));
-                }
+        let mut lhs = if lhs_token.is_value() {
+            Expr::Atom(Value::try_from(lhs_token).unwrap())
+        } else {
+            let pbp = prefix_binding_power(lhs_token.kind);
+            let rhs = self.expr_bp(scanner, pbp)?;
+            Expr::Unary {
+                op: lhs_token,
+                rhs: Box::new(rhs)
             }
         };
 
@@ -105,6 +102,14 @@ impl<'a> Parser<'a> {
     }
 }
 
+fn prefix_binding_power(kind: TokenKind) -> BindingPower {
+    match kind {
+        TokenKind::Minus => BindingPower::Unary,
+        TokenKind::Not => BindingPower::Unary,
+        op => panic!("no pbp for {:?}", op),
+    }
+}
+
 fn infix_binding_power(kind: TokenKind) -> BindingPower {
     match kind {
         TokenKind::Plus => BindingPower::Term,
@@ -118,7 +123,7 @@ fn infix_binding_power(kind: TokenKind) -> BindingPower {
         TokenKind::Greater => BindingPower::Comparison,
         TokenKind::LessEqual => BindingPower::Comparison,
         TokenKind::GreaterEqual => BindingPower::Comparison,
-        _ => BindingPower::None,
+        op => panic!("no ibp for {:?}", op),
     }
 }
 
