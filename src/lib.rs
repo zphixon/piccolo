@@ -454,27 +454,10 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn very_long() {
-        let len = 2048;
-        let mut source = String::new();
-        for i in 0..len {
-            source.push_str(&format!("let a{:04x}=\"{}\"\n", i, i));
-        }
-        for i in 0..len {
-            source.push_str(&format!("let b{:04x}=a{:04x}\n", i, i));
-        }
-        for i in 0..len {
-            source.push_str(&format!("a{:04x}=b{:04x}\n", len - i - 1, i));
-        }
-        for i in 0..len {
-            source.push_str(&format!("retn a{:04x}\n", i));
-        }
-        let chunk = crate::compile(
-            Chunk::default(),
-            &crate::compiler::scan_all(&source).unwrap(),
-        )
-        .unwrap();
-        Machine::new(chunk).interpret().unwrap();
+        let path = std::path::Path::new("examples/long.pc");
+        crate::do_file2(path).unwrap();
     }
 
     #[test]
