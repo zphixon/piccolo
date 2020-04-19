@@ -91,6 +91,18 @@ impl<'a> Scanner<'a> {
             b'^' => TokenKind::BitwiseXor,
             b'%' => TokenKind::Modulo,
 
+            b'@' => TokenKind::At,
+            b'$' => TokenKind::Dollar,
+            b'\'' => TokenKind::SingleQuote,
+            b'`' => TokenKind::Grave,
+            b'{' => TokenKind::LeftBrace,
+            b'}' => TokenKind::RightBrace,
+            b':' => TokenKind::Colon,
+            b'?' => TokenKind::Question,
+            b'\\' => TokenKind::Backslash,
+            b';' => TokenKind::Semicolon,
+            b'~' => TokenKind::Tilde,
+
             b'&' => {
                 if self.peek_char() == b'&' {
                     self.advance_char();

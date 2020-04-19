@@ -146,6 +146,17 @@ fn is_non_identifier(c: u8) -> bool {
         || c == b'>'
         || c == b'<'
         || c == b'"'
+        || c == b'@'
+        || c == b'$'
+        || c == b'\''
+        || c == b'`'
+        || c == b'{'
+        || c == b'}'
+        || c == b':'
+        || c == b'?'
+        || c == b'\\'
+        || c == b';'
+        || c == b'~'
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -174,13 +185,25 @@ pub enum TokenKind {
     RightBracket, // ]
     LeftParen,    // (
     RightParen,   // )
-    // braces?
     Comma,          // ,
     Period,         // .
     ExclusiveRange, // ..
     InclusiveRange, // ...
     Assign,         // =
     Declare,        // =:
+
+    // misc. non-tokens
+    LeftBrace,
+    RightBrace,
+    Dollar,
+    At,
+    Grave,
+    Tilde,
+    Colon,
+    Semicolon,
+    Backslash,
+    Question,
+    SingleQuote,
 
     // operators
     Not,          // !
@@ -329,6 +352,17 @@ impl fmt::Display for TokenKind {
             TokenKind::InclusiveRange => write!(f, "..."),
             TokenKind::Assign => write!(f, "="),
             TokenKind::Declare => write!(f, "=:"),
+            TokenKind::LeftBrace => write!(f, "{{"),
+            TokenKind::RightBrace => write!(f, "}}"),
+            TokenKind::Dollar => write!(f, "$"),
+            TokenKind::At => write!(f, "@"),
+            TokenKind::Grave => write!(f, "`"),
+            TokenKind::Tilde => write!(f, "~"),
+            TokenKind::Colon => write!(f, ":"),
+            TokenKind::Semicolon => write!(f, ";"),
+            TokenKind::Backslash => write!(f, "\\"),
+            TokenKind::Question => write!(f, "?"),
+            TokenKind::SingleQuote => write!(f, "'"),
             TokenKind::Not => write!(f, "!"),
             TokenKind::Plus => write!(f, "+"),
             TokenKind::Minus => write!(f, "-"),
