@@ -63,7 +63,7 @@ pub mod fuzzer {
     extern crate rand;
 
     use crate::compiler::TokenKind;
-    use crate::{Chunk, Machine};
+    use crate::Machine;
 
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
@@ -436,7 +436,7 @@ mod tests {
     #[ignore]
     fn very_long() {
         let path = std::path::Path::new("examples/long.pc");
-        crate::do_file(path).unwrap();
+        crate::do_file(path).unwrap().unwrap();
     }
 
     #[test]
