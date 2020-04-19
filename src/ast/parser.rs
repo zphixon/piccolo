@@ -6,9 +6,7 @@ use super::Stmt;
 type PrefixRule<'a> = fn(&mut Parser<'a>, &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError>;
 type InfixRule<'a> = fn(&mut Parser<'a>, &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError>;
 
-const RULES: [(InfixRule, PrefixRule); 1] = [
-    (test, test)
-];
+const RULES: [(InfixRule, PrefixRule); 1] = [(test, test)];
 
 #[derive(Default)]
 pub struct Parser<'a> {
@@ -21,99 +19,101 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn test<'a>(_parser: &mut Parser<'a>, _scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+fn test<'a>(
+    _parser: &mut Parser<'a>,
+    _scanner: &mut Scanner<'a>,
+) -> Result<Expr<'a>, PiccoloError> {
     Ok(Expr::Atom(Value::Nil))
 }
 
-    pub fn parse<'a>(
-        parser: &mut Parser<'a>,
-        scanner: &mut Scanner<'a>,
-    ) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
-        let mut errors = vec![];
-        while scanner.peek_token(0).map_err(|e| vec![e])?.kind != TokenKind::Eof {
-            if let Err(e) = declaration(parser, scanner) {
-                errors.push(e);
-            }
-        }
-
-        if errors.is_empty() {
-            Ok(std::mem::take(&mut parser.ast))
-        } else {
-            Err(errors)
+pub fn parse<'a>(
+    parser: &mut Parser<'a>,
+    scanner: &mut Scanner<'a>,
+) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
+    let mut errors = vec![];
+    while scanner.peek_token(0).map_err(|e| vec![e])?.kind != TokenKind::Eof {
+        if let Err(e) = declaration(parser, scanner) {
+            errors.push(e);
         }
     }
 
-    #[allow(clippy::if_same_then_else)]
-    fn declaration<'a>(parser: &mut Parser<'a>, scanner: &mut Scanner<'a>) -> Result<(), PiccoloError> {
-        if scanner.peek_token(1)?.kind == TokenKind::Assign {
-            let name = scanner.next_token()?;
-            let op = scanner.next_token()?;
-            let value = expr_bp(parser, scanner, BindingPower::Assignment)?;
-            parser.ast.push(Stmt::Assignment { name, op, value });
-        } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
-            let name = scanner.next_token()?;
-            let op = scanner.next_token()?;
-            let value = expr_bp(parser, scanner, BindingPower::Assignment)?;
-            parser.ast.push(Stmt::Assignment { name, op, value });
-        } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
-            let keyword = scanner.next_token()?;
-            let value = Some(expr_bp(parser, scanner, BindingPower::Assignment)?);
-            parser.ast.push(Stmt::Retn { keyword, value })
-        } else {
-            let expr = expr_bp(parser, scanner, BindingPower::Assignment)?;
-            parser.ast.push(Stmt::Expr { expr });
-        }
+    if errors.is_empty() {
+        Ok(std::mem::take(&mut parser.ast))
+    } else {
+        Err(errors)
+    }
+}
 
-        Ok(())
+#[allow(clippy::if_same_then_else)]
+fn declaration<'a>(parser: &mut Parser<'a>, scanner: &mut Scanner<'a>) -> Result<(), PiccoloError> {
+    if scanner.peek_token(1)?.kind == TokenKind::Assign {
+        let name = scanner.next_token()?;
+        let op = scanner.next_token()?;
+        let value = expr_bp(parser, scanner, BindingPower::Assignment)?;
+        parser.ast.push(Stmt::Assignment { name, op, value });
+    } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
+        let name = scanner.next_token()?;
+        let op = scanner.next_token()?;
+        let value = expr_bp(parser, scanner, BindingPower::Assignment)?;
+        parser.ast.push(Stmt::Assignment { name, op, value });
+    } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
+        let keyword = scanner.next_token()?;
+        let value = Some(expr_bp(parser, scanner, BindingPower::Assignment)?);
+        parser.ast.push(Stmt::Retn { keyword, value })
+    } else {
+        let expr = expr_bp(parser, scanner, BindingPower::Assignment)?;
+        parser.ast.push(Stmt::Expr { expr });
     }
 
-    fn expr_bp<'a>(
-        parser: &mut Parser<'a>,
-        scanner: & mut Scanner<'a>,
-        min_bp: BindingPower,
-    ) -> Result<Expr<'a>, PiccoloError>
-    {
-        let lhs_token = scanner.next_token()?;
-        let mut lhs = if lhs_token.is_value() {
-            Expr::Atom(Value::try_from(lhs_token).unwrap())
-        } else {
-            if let Some(pbp) = prefix_binding_power(lhs_token.kind) {
-                let rhs = expr_bp(parser, scanner, pbp)?;
-                Expr::Unary {
-                    op: lhs_token,
-                    rhs: Box::new(rhs),
-                }
-            } else {
-                return Err(PiccoloError::new(ErrorKind::MalformedExpression {
-                    from: lhs_token.to_string(),
-                })
-                .line(lhs_token.line));
-            }
-        };
+    Ok(())
+}
 
-        loop {
-            let op_token = scanner.peek_token(0)?;
-            if op_token.kind == TokenKind::Eof {
-                break;
-            }
-
-            let op_prec = infix_binding_power(op_token.kind)
-                .unwrap_or_else(|| panic!("no ibp for {:?}", op_token));
-            if op_prec < min_bp {
-                break;
-            }
-
-            let op = scanner.next_token()?;
-            let rhs = expr_bp(parser, scanner, op_prec + 1)?;
-            lhs = Expr::Binary {
-                lhs: Box::new(lhs),
-                op,
+fn expr_bp<'a>(
+    parser: &mut Parser<'a>,
+    scanner: &mut Scanner<'a>,
+    min_bp: BindingPower,
+) -> Result<Expr<'a>, PiccoloError> {
+    let lhs_token = scanner.next_token()?;
+    let mut lhs = if lhs_token.is_value() {
+        Expr::Atom(Value::try_from(lhs_token).unwrap())
+    } else {
+        if let Some(pbp) = prefix_binding_power(lhs_token.kind) {
+            let rhs = expr_bp(parser, scanner, pbp)?;
+            Expr::Unary {
+                op: lhs_token,
                 rhs: Box::new(rhs),
             }
+        } else {
+            return Err(PiccoloError::new(ErrorKind::MalformedExpression {
+                from: lhs_token.to_string(),
+            })
+            .line(lhs_token.line));
+        }
+    };
+
+    loop {
+        let op_token = scanner.peek_token(0)?;
+        if op_token.kind == TokenKind::Eof {
+            break;
         }
 
-        Ok(lhs)
+        let op_prec = infix_binding_power(op_token.kind)
+            .unwrap_or_else(|| panic!("no ibp for {:?}", op_token));
+        if op_prec < min_bp {
+            break;
+        }
+
+        let op = scanner.next_token()?;
+        let rhs = expr_bp(parser, scanner, op_prec + 1)?;
+        lhs = Expr::Binary {
+            lhs: Box::new(lhs),
+            op,
+            rhs: Box::new(rhs),
+        }
     }
+
+    Ok(lhs)
+}
 
 fn prefix_binding_power(kind: TokenKind) -> Option<BindingPower> {
     Some(match kind {
