@@ -287,6 +287,12 @@ impl Value {
     }
 }
 
+impl Clone for Value {
+    fn clone(&self) -> Value {
+        self.try_clone().unwrap()
+    }
+}
+
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", Value::fmt(self))

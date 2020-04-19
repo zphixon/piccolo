@@ -1,4 +1,4 @@
-use crate::{ErrorKind, PiccoloError, Scanner, Token, TokenKind, Value};
+use crate::{ErrorKind, PiccoloError, Scanner, TokenKind};
 
 use super::Expr;
 use super::Stmt;
@@ -61,7 +61,7 @@ impl<'a> Parser<'a> {
     ) -> Result<Expr<'a>, PiccoloError> {
         let lhs_token = scanner.next_token()?;
         let mut lhs = if lhs_token.is_value() {
-            Expr::Atom(Value::try_from(lhs_token).unwrap())
+            Expr::Atom(lhs_token)
         } else if lhs_token.kind == TokenKind::Identifier {
             unimplemented!("var get");
         } else {

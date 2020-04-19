@@ -8,7 +8,7 @@ pub use expr::{Expr, ExprAccept, ExprVisitor};
 pub use parser::Parser;
 pub use stmt::{Stmt, StmtAccept, StmtVisitor};
 
-use crate::{Token, Value};
+use crate::{Token, TokenKind};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Arity {
@@ -140,8 +140,11 @@ impl StmtVisitor for AstPrinter {
         self.parenthesize_list(&s, None, body)
     }
 
-    fn visit_retn(&mut self, _keyword: &Token, value: Option<&Expr>) -> String {
-        self.parenthesize("retn", &[value.unwrap_or(&Expr::Atom(Value::Nil))])
+    fn visit_retn(&mut self, keyword: &Token, value: Option<&Expr>) -> String {
+        self.parenthesize(
+            "retn",
+            &[value.unwrap_or(&Expr::Atom(Token::new(TokenKind::Nil, "nil", keyword.line)))],
+        )
     }
 
     fn visit_data(
@@ -158,8 +161,8 @@ impl StmtVisitor for AstPrinter {
 impl ExprVisitor for AstPrinter {
     type Output = String;
 
-    fn visit_value(&mut self, literal: &Value) -> String {
-        format!("{}", literal)
+    fn visit_atom(&mut self, token: &Token) -> String {
+        format!("{}", token)
     }
 
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> String {
