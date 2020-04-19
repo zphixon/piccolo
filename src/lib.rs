@@ -206,7 +206,7 @@ mod tests {
         let src = "1+2*3+4";
         let mut scanner = Scanner::new(src);
         let ast = Parser::new().parse(&mut scanner).unwrap();
-        if let Stmt::Expr { expr } = &ast[0] {
+        if let Stmt::Expr(expr) = &ast[0] {
             assert_eq!(
                 expr,
                 &Expr::Binary {
@@ -362,36 +362,26 @@ mod tests {
                 name: tokens[3].take().unwrap(),
                 op: tokens[4].take().unwrap(),
                 value: Expr::Binary {
-                    lhs: Box::new(Expr::Variable {
-                        name: tokens[5].take().unwrap(),
-                    }),
+                    lhs: Box::new(Expr::Variable(tokens[5].take().unwrap())),
                     op: tokens[6].take().unwrap(),
                     rhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(4), "4", 2))),
                 },
             },
             Stmt::If {
                 cond: Expr::Binary {
-                    lhs: Box::new(Expr::Variable {
-                        name: tokens[9].take().unwrap(),
-                    }),
+                    lhs: Box::new(Expr::Variable(tokens[9].take().unwrap())),
                     op: tokens[10].take().unwrap(),
-                    rhs: Box::new(Expr::Variable {
-                        name: tokens[11].take().unwrap(),
-                    }),
+                    rhs: Box::new(Expr::Variable(tokens[11].take().unwrap())),
                 },
-                then: vec![Stmt::Expr {
-                    expr: Expr::Call {
-                        callee: Box::new(Expr::Get {
-                            object: Box::new(Expr::Variable {
-                                name: tokens[13].take().unwrap(),
-                            }),
-                            name: tokens[15].take().unwrap(),
-                        }),
-                        paren: tokens[16].take().unwrap(),
-                        arity: Arity::Some(1),
-                        args: vec![Expr::Atom(Token::new(TokenKind::Integer(3), "3", 4))],
-                    },
-                }],
+                then: vec![Stmt::Expr(Expr::Call {
+                    callee: Box::new(Expr::Get {
+                        object: Box::new(Expr::Variable(tokens[13].take().unwrap())),
+                        name: tokens[15].take().unwrap(),
+                    }),
+                    paren: tokens[16].take().unwrap(),
+                    arity: Arity::Some(1),
+                    args: vec![Expr::Atom(Token::new(TokenKind::Integer(3), "3", 4))],
+                })],
                 else_: None,
             },
         ];
