@@ -62,6 +62,14 @@ impl ExprVisitor for Emitter {
         Ok(())
     }
 
+    fn visit_paren(&mut self, value: &Expr) -> Self::Output {
+        value.accept(self)
+    }
+
+    fn visit_variable(&mut self, _name: &Token) -> Self::Output {
+        unimplemented!("visit_variable")
+    }
+
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output {
         rhs.accept(self)?;
         match op.kind {
@@ -94,14 +102,6 @@ impl ExprVisitor for Emitter {
         }
 
         Ok(())
-    }
-
-    fn visit_paren(&mut self, value: &Expr) -> Self::Output {
-        value.accept(self)
-    }
-
-    fn visit_variable(&mut self, _name: &Token) -> Self::Output {
-        unimplemented!("visit_variable")
     }
 
     fn visit_assign(&mut self, _name: &Token, value: &Expr) -> Self::Output {
@@ -153,10 +153,15 @@ impl ExprVisitor for Emitter {
 
 impl StmtVisitor for Emitter {
     type Output = Result<(), PiccoloError>;
+
     fn visit_expr(&mut self, expr: &Expr) -> Self::Output {
         expr.accept(self)?;
         self.chunk.write(Opcode::Pop, 1); // TODO: line
         Ok(())
+    }
+
+    fn visit_block(&mut self, _body: &[Stmt]) -> Self::Output {
+        unimplemented!("visit_block")
     }
 
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
@@ -179,10 +184,6 @@ impl StmtVisitor for Emitter {
             self.chunk.write(high, name.line);
         }
         Ok(())
-    }
-
-    fn visit_block(&mut self, _stmts: &[Stmt]) -> Self::Output {
-        unimplemented!("visit_block")
     }
 
     fn visit_if(

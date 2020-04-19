@@ -16,8 +16,8 @@ pub trait StmtAccept {
 pub trait StmtVisitor {
     type Output;
     fn visit_expr(&mut self, expr: &Expr) -> Self::Output;
+    fn visit_block(&mut self, body: &[Stmt]) -> Self::Output;
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output;
-    fn visit_block(&mut self, stmts: &[Stmt]) -> Self::Output;
     fn visit_if(&mut self, cond: &Expr, then: &[Stmt], else_: Option<&Vec<Stmt>>) -> Self::Output;
     fn visit_while(&mut self, cond: &Expr, body: &[Stmt]) -> Self::Output;
     fn visit_for(&mut self, name: &Token, iter: &Expr, body: &[Stmt]) -> Self::Output;
@@ -41,16 +41,12 @@ pub trait StmtVisitor {
 /// Piccolo AST node. Roughly corresponds to statements.
 #[derive(Debug, PartialEq)]
 pub enum Stmt<'a> {
-    Expr {
-        expr: Expr<'a>,
-    },
+    Expr(Expr<'a>),
+    Block(Vec<Stmt<'a>>),
     Assignment {
         name: Token<'a>,
         op: Token<'a>,
         value: Expr<'a>,
-    },
-    Block {
-        stmts: Vec<Stmt<'a>>,
     },
     If {
         cond: Expr<'a>,
@@ -87,9 +83,9 @@ pub enum Stmt<'a> {
 impl StmtAccept for Stmt<'_> {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
         match self {
-            Stmt::Expr { expr } => v.visit_expr(expr),
+            Stmt::Expr(expr) => v.visit_expr(expr),
+            Stmt::Block(body) => v.visit_block(body),
             Stmt::Assignment { name, op, value } => v.visit_assignment(name, op, value),
-            Stmt::Block { stmts } => v.visit_block(stmts),
             Stmt::If { cond, then, else_ } => v.visit_if(cond, then, else_.as_ref()),
             Stmt::While { cond, body } => v.visit_while(cond, body),
             Stmt::For { name, iter, body } => v.visit_for(name, iter, body),

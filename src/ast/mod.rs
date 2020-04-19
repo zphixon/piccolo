@@ -90,18 +90,18 @@ impl StmtVisitor for AstPrinter {
         self.parenthesize("expr", &[&expr])
     }
 
-    fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> String {
-        self.parenthesize(&format!("{} {}", op.lexeme, name.lexeme), &[value])
-    }
-
-    fn visit_block(&mut self, stmts: &[Stmt]) -> String {
+    fn visit_block(&mut self, body: &[Stmt]) -> String {
         let mut s = String::from("(block");
-        for stmt in stmts.iter() {
+        for stmt in body.iter() {
             s.push_str(" ");
             s.push_str(&stmt.accept(self));
         }
         s.push_str(")");
         s
+    }
+
+    fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> String {
+        self.parenthesize(&format!("{} {}", op.lexeme, name.lexeme), &[value])
     }
 
     fn visit_if(&mut self, cond: &Expr, then: &[Stmt], else_: Option<&Vec<Stmt>>) -> String {
@@ -165,20 +165,20 @@ impl ExprVisitor for AstPrinter {
         format!("{}", token)
     }
 
-    fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> String {
-        self.parenthesize(op.lexeme, &[rhs])
-    }
-
-    fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> String {
-        self.parenthesize(op.lexeme, &[lhs, rhs])
-    }
-
     fn visit_paren(&mut self, value: &Expr) -> String {
         self.parenthesize("paren", &[value])
     }
 
     fn visit_variable(&mut self, name: &Token) -> String {
         String::from(name.lexeme)
+    }
+
+    fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> String {
+        self.parenthesize(op.lexeme, &[rhs])
+    }
+
+    fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> String {
+        self.parenthesize(op.lexeme, &[lhs, rhs])
     }
 
     fn visit_assign(&mut self, name: &Token, value: &Expr) -> String {

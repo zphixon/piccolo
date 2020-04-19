@@ -48,7 +48,7 @@ impl<'a> Parser<'a> {
             self.ast.push(Stmt::Retn { keyword, value })
         } else {
             let expr = self.expr_bp(scanner, BindingPower::Assignment)?;
-            self.ast.push(Stmt::Expr { expr });
+            self.ast.push(Stmt::Expr(expr));
         }
 
         Ok(())

@@ -16,10 +16,10 @@ pub trait ExprAccept {
 pub trait ExprVisitor {
     type Output;
     fn visit_atom(&mut self, token: &Token) -> Self::Output;
-    fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output;
-    fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
     fn visit_paren(&mut self, value: &Expr) -> Self::Output;
     fn visit_variable(&mut self, name: &Token) -> Self::Output;
+    fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output;
+    fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
     fn visit_assign(&mut self, name: &Token, value: &Expr) -> Self::Output;
     fn visit_logical(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
     fn visit_call(
@@ -47,6 +47,8 @@ pub trait ExprVisitor {
 #[derive(Debug, PartialEq)]
 pub enum Expr<'a> {
     Atom(Token<'a>),
+    Paren(Box<Expr<'a>>),
+    Variable(Token<'a>),
     Unary {
         op: Token<'a>,
         rhs: Box<Expr<'a>>,
@@ -55,12 +57,6 @@ pub enum Expr<'a> {
         lhs: Box<Expr<'a>>,
         op: Token<'a>,
         rhs: Box<Expr<'a>>,
-    },
-    Paren {
-        value: Box<Expr<'a>>,
-    },
-    Variable {
-        name: Token<'a>,
     },
     Assignment {
         name: Token<'a>,
@@ -108,10 +104,10 @@ impl ExprAccept for Expr<'_> {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         match self {
             Expr::Atom(token) => v.visit_atom(token),
+            Expr::Paren(value) => v.visit_paren(value),
+            Expr::Variable(name) => v.visit_variable(name),
             Expr::Unary { op, rhs } => v.visit_unary(op, rhs),
             Expr::Binary { lhs, op, rhs } => v.visit_binary(lhs, op, rhs),
-            Expr::Paren { value } => v.visit_paren(value),
-            Expr::Variable { name } => v.visit_variable(name),
             Expr::Assignment { name, value } => v.visit_assign(name, value),
             Expr::Logical { lhs, op, rhs } => v.visit_logical(lhs, op, rhs),
             Expr::Call {
