@@ -58,11 +58,11 @@ impl<'a> Scanner<'a> {
     fn slurp_whitespace(&mut self) {
         while self.peek_char() == b'#' || is_whitespace(self.peek_char()) {
             if self.peek_char() == b'#' {
-                while self.peek_char() != b'\n' {
+                while !self.is_at_end() && self.peek_char() != b'\n' {
                     self.advance_char();
                 }
             }
-            while is_whitespace(self.peek_char()) {
+            while !self.is_at_end() && is_whitespace(self.peek_char()) {
                 if self.advance_char() == b'\n' {
                     self.line += 1;
                 }
