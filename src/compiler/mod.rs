@@ -1,9 +1,9 @@
-pub mod parser_compiler;
 pub mod compiler;
+pub mod parser_compiler;
 pub mod scanner;
 
-use parser_compiler::ParserCompiler;
 use crate::{Chunk, ErrorKind, PiccoloError};
+use parser_compiler::ParserCompiler;
 
 use core::fmt;
 
@@ -31,7 +31,9 @@ pub fn compile(chunk: Chunk, tokens: &[Token]) -> Result<Chunk, Vec<PiccoloError
 pub fn compile2(src: &str) -> Result<Chunk, Vec<PiccoloError>> {
     let mut scanner = super::Scanner::new(src);
     let mut parser = crate::ast::parser::Parser::new();
+    println!("****** parser");
     let ast = parser.parse(&mut scanner)?;
+    println!("****** compiler");
     let mut emitter2 = compiler::Compiler(Chunk::default());
     emitter2.compile(&ast)
 }

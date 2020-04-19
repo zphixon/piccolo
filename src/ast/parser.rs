@@ -61,7 +61,7 @@ impl<'a> Parser<'a> {
     fn expr_bp<'b>(
         &mut self,
         scanner: &'b mut Scanner<'a>,
-        min_prec: BindingPower,
+        min_bp: BindingPower,
     ) -> Result<Expr<'a>, PiccoloError>
     where
         'a: 'b,
@@ -92,7 +92,7 @@ impl<'a> Parser<'a> {
 
             let op_prec = infix_binding_power(op_token.kind)
                 .unwrap_or_else(|| panic!("no ibp for {:?}", op_token));
-            if op_prec < min_prec {
+            if op_prec < min_bp {
                 break;
             }
 
@@ -113,6 +113,7 @@ fn prefix_binding_power(kind: TokenKind) -> Option<BindingPower> {
     Some(match kind {
         TokenKind::Minus => BindingPower::Unary,
         TokenKind::Not => BindingPower::Unary,
+        TokenKind::Identifier => BindingPower::None,
         _ => None?,
     })
 }
@@ -130,6 +131,7 @@ fn infix_binding_power(kind: TokenKind) -> Option<BindingPower> {
         TokenKind::Greater => BindingPower::Comparison,
         TokenKind::LessEqual => BindingPower::Comparison,
         TokenKind::GreaterEqual => BindingPower::Comparison,
+        TokenKind::Retn => BindingPower::None,
         _ => None?,
     })
 }
