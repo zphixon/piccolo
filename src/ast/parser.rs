@@ -46,6 +46,10 @@ impl<'a> Parser<'a> {
             let keyword = scanner.next_token()?;
             let value = Some(self.expr_bp(scanner, BindingPower::Assignment)?);
             self.ast.push(Stmt::Retn { keyword, value })
+        } else if scanner.peek_token(0)?.kind == TokenKind::Assert {
+            let keyword = scanner.next_token()?;
+            let value = self.expr_bp(scanner, BindingPower::Assignment)?;
+            self.ast.push(Stmt::Assert { keyword, value })
         } else {
             let expr = self.expr_bp(scanner, BindingPower::Assignment)?;
             self.ast.push(Stmt::Expr(expr));

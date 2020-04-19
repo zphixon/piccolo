@@ -147,6 +147,10 @@ impl StmtVisitor for AstPrinter {
         )
     }
 
+    fn visit_assert(&mut self, _keyword: &Token, value: &Expr) -> String {
+        self.parenthesize("assert", &[value])
+    }
+
     fn visit_data(
         &mut self,
         _name: &Token,

@@ -30,6 +30,7 @@ pub trait StmtVisitor {
         method: bool,
     ) -> Self::Output;
     fn visit_retn(&mut self, keyword: &Token, value: Option<&Expr>) -> Self::Output;
+    fn visit_assert(&mut self, keyword: &Token, value: &Expr) -> Self::Output;
     fn visit_data(
         &mut self,
         name: &Token,
@@ -73,6 +74,10 @@ pub enum Stmt<'a> {
         keyword: Token<'a>,
         value: Option<Expr<'a>>,
     },
+    Assert {
+        keyword: Token<'a>,
+        value: Expr<'a>,
+    },
     Data {
         name: Token<'a>,
         methods: Vec<Stmt<'a>>,
@@ -100,6 +105,8 @@ impl StmtAccept for Stmt<'_> {
                 => v.visit_func(name, args, *arity, body, *method),
             Stmt::Retn { keyword, value }
                 => v.visit_retn(keyword, value.as_ref()),
+            Stmt::Assert { keyword, value }
+                => v.visit_assert(keyword, value),
             Stmt::Data { name, methods, fields }
                 => v.visit_data(name, methods, fields),
         }
