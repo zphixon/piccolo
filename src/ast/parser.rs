@@ -15,10 +15,7 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn parse(
-        &mut self,
-        scanner: &mut Scanner<'a>,
-    ) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
+    pub fn parse(&mut self, scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
         let mut errors = vec![];
         while scanner.peek_token(0).map_err(|e| vec![e])?.kind != TokenKind::Eof {
             if let Err(e) = self.declaration(scanner) {
@@ -65,19 +62,19 @@ impl<'a> Parser<'a> {
         let lhs_token = scanner.next_token()?;
         let mut lhs = if lhs_token.is_value() {
             Expr::Atom(Value::try_from(lhs_token).unwrap())
-        } else {
-            if let Some(pbp) = prefix_binding_power(lhs_token.kind) {
-                let rhs = self.expr_bp(scanner, pbp)?;
-                Expr::Unary {
-                    op: lhs_token,
-                    rhs: Box::new(rhs),
-                }
-            } else {
-                return Err(PiccoloError::new(ErrorKind::MalformedExpression {
-                    from: lhs_token.to_string(),
-                })
-                    .line(lhs_token.line));
+        } else if lhs_token.kind == TokenKind::Identifier {
+            unimplemented!("var get");
+        } else if let Some(pbp) = prefix_binding_power(lhs_token.kind) {
+            let rhs = self.expr_bp(scanner, pbp)?;
+            Expr::Unary {
+                op: lhs_token,
+                rhs: Box::new(rhs),
             }
+        } else {
+            return Err(PiccoloError::new(ErrorKind::MalformedExpression {
+                from: lhs_token.to_string(),
+            })
+            .line(lhs_token.line));
         };
 
         loop {
@@ -88,6 +85,7 @@ impl<'a> Parser<'a> {
 
             let op_prec = infix_binding_power(op_token.kind)
                 .unwrap_or_else(|| panic!("no ibp for {:?}", op_token));
+
             if op_prec < min_bp {
                 break;
             }
