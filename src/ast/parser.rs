@@ -3,6 +3,13 @@ use crate::{ErrorKind, PiccoloError, Scanner, Token, TokenKind, Value};
 use super::Expr;
 use super::Stmt;
 
+type PrefixRule<'a> = fn(&mut Parser<'a>, &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError>;
+type InfixRule<'a> = fn(&mut Parser<'a>, &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError>;
+
+const RULES: [(InfixRule, PrefixRule); 1] = [
+    (test, test)
+];
+
 #[derive(Default)]
 pub struct Parser<'a> {
     ast: Vec<Stmt<'a>>,
@@ -12,66 +19,66 @@ impl<'a> Parser<'a> {
     pub fn new() -> Self {
         Parser { ast: Vec::new() }
     }
+}
 
-    pub fn parse<'b>(
-        &mut self,
-        scanner: &'b mut Scanner<'a>,
-    ) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>>
-    where
-        'a: 'b,
-    {
+fn test<'a>(_parser: &mut Parser<'a>, _scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    Ok(Expr::Atom(Value::Nil))
+}
+
+    pub fn parse<'a>(
+        parser: &mut Parser<'a>,
+        scanner: &mut Scanner<'a>,
+    ) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
         let mut errors = vec![];
         while scanner.peek_token(0).map_err(|e| vec![e])?.kind != TokenKind::Eof {
-            if let Err(e) = self.declaration(scanner) {
+            if let Err(e) = declaration(parser, scanner) {
                 errors.push(e);
             }
         }
 
         if errors.is_empty() {
-            Ok(std::mem::take(&mut self.ast))
+            Ok(std::mem::take(&mut parser.ast))
         } else {
             Err(errors)
         }
     }
 
     #[allow(clippy::if_same_then_else)]
-    fn declaration<'b>(&mut self, scanner: &'b mut Scanner<'a>) -> Result<(), PiccoloError> {
+    fn declaration<'a>(parser: &mut Parser<'a>, scanner: &mut Scanner<'a>) -> Result<(), PiccoloError> {
         if scanner.peek_token(1)?.kind == TokenKind::Assign {
             let name = scanner.next_token()?;
             let op = scanner.next_token()?;
-            let value = self.expr_bp(scanner, BindingPower::Assignment)?;
-            self.ast.push(Stmt::Assignment { name, op, value });
+            let value = expr_bp(parser, scanner, BindingPower::Assignment)?;
+            parser.ast.push(Stmt::Assignment { name, op, value });
         } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
             let name = scanner.next_token()?;
             let op = scanner.next_token()?;
-            let value = self.expr_bp(scanner, BindingPower::Assignment)?;
-            self.ast.push(Stmt::Assignment { name, op, value });
+            let value = expr_bp(parser, scanner, BindingPower::Assignment)?;
+            parser.ast.push(Stmt::Assignment { name, op, value });
         } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
             let keyword = scanner.next_token()?;
-            let value = Some(self.expr_bp(scanner, BindingPower::Assignment)?);
-            self.ast.push(Stmt::Retn { keyword, value })
+            let value = Some(expr_bp(parser, scanner, BindingPower::Assignment)?);
+            parser.ast.push(Stmt::Retn { keyword, value })
         } else {
-            let expr = self.expr_bp(scanner, BindingPower::Assignment)?;
-            self.ast.push(Stmt::Expr { expr });
+            let expr = expr_bp(parser, scanner, BindingPower::Assignment)?;
+            parser.ast.push(Stmt::Expr { expr });
         }
 
         Ok(())
     }
 
-    fn expr_bp<'b>(
-        &mut self,
-        scanner: &'b mut Scanner<'a>,
+    fn expr_bp<'a>(
+        parser: &mut Parser<'a>,
+        scanner: & mut Scanner<'a>,
         min_bp: BindingPower,
     ) -> Result<Expr<'a>, PiccoloError>
-    where
-        'a: 'b,
     {
         let lhs_token = scanner.next_token()?;
         let mut lhs = if lhs_token.is_value() {
             Expr::Atom(Value::try_from(lhs_token).unwrap())
         } else {
             if let Some(pbp) = prefix_binding_power(lhs_token.kind) {
-                let rhs = self.expr_bp(scanner, pbp)?;
+                let rhs = expr_bp(parser, scanner, pbp)?;
                 Expr::Unary {
                     op: lhs_token,
                     rhs: Box::new(rhs),
@@ -97,7 +104,7 @@ impl<'a> Parser<'a> {
             }
 
             let op = scanner.next_token()?;
-            let rhs = self.expr_bp(scanner, op_prec + 1)?;
+            let rhs = expr_bp(parser, scanner, op_prec + 1)?;
             lhs = Expr::Binary {
                 lhs: Box::new(lhs),
                 op,
@@ -107,7 +114,6 @@ impl<'a> Parser<'a> {
 
         Ok(lhs)
     }
-}
 
 fn prefix_binding_power(kind: TokenKind) -> Option<BindingPower> {
     Some(match kind {
