@@ -65,9 +65,7 @@ fn repl() {
 
 #[cfg(feature = "pc-debug")]
 fn file(contents: &str) {
-    use piccolo::Chunk;
     use piccolo::Machine;
-    use piccolo::Scanner;
 
     println!("****** tokens");
     let tokens = piccolo::scan_all(contents);
@@ -102,9 +100,7 @@ fn file(contents: &str) {
 
 #[cfg(feature = "pc-debug")]
 fn repl() {
-    use piccolo::Chunk;
     use piccolo::Machine;
-    use piccolo::Scanner;
 
     let mut rl = Editor::<()>::new();
     rl.load_history(".piccolo_history")
