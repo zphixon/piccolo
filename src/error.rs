@@ -53,7 +53,7 @@ impl fmt::Display for PiccoloError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{}{}{}{}",
+            "{}{}{}{}{}",
             if self.line.is_some() {
                 format!("at line {} ", self.line.unwrap())
             } else {
@@ -69,7 +69,12 @@ impl fmt::Display for PiccoloError {
             } else {
                 ""
             },
-            self.kind
+            self.kind,
+            if self.msg.is_some() {
+                format!(" ({})", self.msg.as_ref().unwrap())
+            } else {
+                "".into()
+            }
         )
     }
 }
