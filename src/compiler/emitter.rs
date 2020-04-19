@@ -4,9 +4,19 @@ use crate::ast::Arity;
 use crate::runtime::op::Opcode;
 use crate::{Chunk, PiccoloError, Token, TokenKind, Value};
 
-pub struct Emitter(pub Chunk);
+use std::collections::HashMap;
+
+pub struct Emitter {
+    chunk: Chunk,
+}
 
 impl Emitter {
+    pub fn new(chunk: Chunk) -> Self {
+        Emitter {
+            chunk,
+        }
+    }
+
     pub fn compile(&mut self, stmts: &[Stmt]) -> Result<Chunk, Vec<PiccoloError>> {
         let mut errs = vec![];
         for stmt in stmts {
@@ -17,7 +27,7 @@ impl Emitter {
         }
 
         if errs.is_empty() {
-            Ok(std::mem::take(&mut self.0))
+            Ok(std::mem::take(&mut self.chunk))
         } else {
             Err(errs)
         }
@@ -28,12 +38,11 @@ impl ExprVisitor for Emitter {
     type Output = Result<(), PiccoloError>;
 
     fn visit_value(&mut self, value: &Value) -> Self::Output {
-        let i = self.0.make_constant(value.try_clone().unwrap());
+        let i = self.chunk.make_constant(value.try_clone().unwrap());
         let (low, high) = crate::decode_bytes(i);
-
-        self.0.write(Opcode::Constant, 1);
-        self.0.write(low, 1);
-        self.0.write(high, 1);
+        self.chunk.write(Opcode::Constant, 1);
+        self.chunk.write(low, 1);
+        self.chunk.write(high, 1);
 
         Ok(())
     }
@@ -41,8 +50,8 @@ impl ExprVisitor for Emitter {
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output {
         rhs.accept(self)?;
         match op.kind {
-            TokenKind::Not => self.0.write(Opcode::Not, op.line),
-            TokenKind::Minus => self.0.write(Opcode::Negate, op.line),
+            TokenKind::Not => self.chunk.write(Opcode::Not, op.line),
+            TokenKind::Minus => self.chunk.write(Opcode::Negate, op.line),
             _ => unreachable!("unrecognized unary op {:?}", op),
         }
         Ok(())
@@ -53,19 +62,19 @@ impl ExprVisitor for Emitter {
         rhs.accept(self)?;
 
         match op.kind {
-            TokenKind::Plus => self.0.write(Opcode::Add, 1),
-            TokenKind::Minus => self.0.write(Opcode::Subtract, 1),
-            TokenKind::Divide => self.0.write(Opcode::Divide, 1),
-            TokenKind::Multiply => self.0.write(Opcode::Multiply, 1),
-            TokenKind::Equal => self.0.write(Opcode::Equal, 1),
+            TokenKind::Plus => self.chunk.write(Opcode::Add, 1),
+            TokenKind::Minus => self.chunk.write(Opcode::Subtract, 1),
+            TokenKind::Divide => self.chunk.write(Opcode::Divide, 1),
+            TokenKind::Multiply => self.chunk.write(Opcode::Multiply, 1),
+            TokenKind::Equal => self.chunk.write(Opcode::Equal, 1),
             TokenKind::NotEqual => {
-                self.0.write(Opcode::Equal, 1);
-                self.0.write(Opcode::Not, 1);
+                self.chunk.write(Opcode::Equal, 1);
+                self.chunk.write(Opcode::Not, 1);
             }
-            TokenKind::Greater => self.0.write(Opcode::Greater, 1),
-            TokenKind::GreaterEqual => self.0.write(Opcode::GreaterEqual, 1),
-            TokenKind::Less => self.0.write(Opcode::Less, 1),
-            TokenKind::LessEqual => self.0.write(Opcode::LessEqual, 1),
+            TokenKind::Greater => self.chunk.write(Opcode::Greater, 1),
+            TokenKind::GreaterEqual => self.chunk.write(Opcode::GreaterEqual, 1),
+            TokenKind::Less => self.chunk.write(Opcode::Less, 1),
+            TokenKind::LessEqual => self.chunk.write(Opcode::LessEqual, 1),
             _ => unreachable!("unrecognized binary op {:?}", op),
         }
 
@@ -131,24 +140,24 @@ impl StmtVisitor for Emitter {
     type Output = Result<(), PiccoloError>;
     fn visit_expr(&mut self, expr: &Expr) -> Self::Output {
         expr.accept(self)?;
-        self.0.write(Opcode::Pop, 1); // TODO: line
+        self.chunk.write(Opcode::Pop, 1); // TODO: line
         Ok(())
     }
 
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
         value.accept(self)?;
         if op.kind == TokenKind::Assign {
-            let idx = self.0.make_constant(Value::String(name.lexeme.to_owned()));
+            let idx = self.chunk.make_constant(Value::String(name.lexeme.to_owned()));
             let (low, high) = crate::decode_bytes(idx);
-            self.0.write(Opcode::AssignGlobal, name.line);
-            self.0.write(low, name.line);
-            self.0.write(high, name.line);
+            self.chunk.write(Opcode::AssignGlobal, name.line);
+            self.chunk.write(low, name.line);
+            self.chunk.write(high, name.line);
         } else if op.kind == TokenKind::Declare {
-            let idx = self.0.make_constant(Value::String(name.lexeme.to_owned()));
+            let idx = self.chunk.make_constant(Value::String(name.lexeme.to_owned()));
             let (low, high) = crate::decode_bytes(idx);
-            self.0.write(Opcode::DeclareGlobal, name.line);
-            self.0.write(low, name.line);
-            self.0.write(high, name.line);
+            self.chunk.write(Opcode::DeclareGlobal, name.line);
+            self.chunk.write(low, name.line);
+            self.chunk.write(high, name.line);
         }
         Ok(())
     }
@@ -190,7 +199,7 @@ impl StmtVisitor for Emitter {
             expr.accept(self)?;
         }
 
-        self.0.write(Opcode::Return, keyword.line);
+        self.chunk.write(Opcode::Return, keyword.line);
 
         Ok(())
     }
