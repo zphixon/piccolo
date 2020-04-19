@@ -64,8 +64,9 @@ impl Chunk {
             let op = self.data[offset].into();
 
             print!(
-                "{:04x} {} {:?}",
+                "{:04x} {:02x} {} {:?}",
                 offset,
+                op as u8,
                 if line == prev_line {
                     String::from("   |")
                 } else {
@@ -135,7 +136,7 @@ impl Chunk {
 
         let op = self.data[offset].into();
 
-        print!("{:04} line {:>6} {:?}", offset, line, op);
+        print!("{:04} line {:<4} {:02x} {:?}", offset, line, op as u8, op);
         if let Opcode::Constant = op {
             print!(
                 "#{:04} {:?}",
