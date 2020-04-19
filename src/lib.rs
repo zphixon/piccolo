@@ -191,13 +191,13 @@ mod tests {
         let mut scanner = Scanner::new(src);
         let ast = Parser::new().parse(&mut scanner).unwrap();
         println!("{}", AstPrinter.print(&ast));
-        let mut ne = Emitter(Chunk::default());
-        ne.compile(&ast).unwrap();
+        let mut ne = Emitter::new(Chunk::default());
+        let chunk = ne.compile(&ast).unwrap();
         #[cfg(feature = "pc-debug")]
         {
-            ne.0.disassemble("idklol");
+            chunk.disassemble("idklol");
         }
-        let mut vm = Machine::new(ne.0);
+        let mut vm = Machine::new(chunk);
         println!("{}", vm.interpret().unwrap());
     }
 
@@ -211,27 +211,27 @@ mod tests {
                 expr,
                 &Expr::Binary {
                     lhs: Box::new(Expr::Binary {
-                        lhs: Box::new(Expr::Atom(Value::Integer(1))),
+                        lhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(1), "1", 1))),
                         op: Token::new(TokenKind::Plus, "+", 1),
                         rhs: Box::new(Expr::Binary {
-                            lhs: Box::new(Expr::Atom(Value::Integer(2))),
+                            lhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(2), "2", 1))),
                             op: Token::new(TokenKind::Multiply, "*", 1),
-                            rhs: Box::new(Expr::Atom(Value::Integer(3)))
+                            rhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(3), "3", 1)))
                         })
                     }),
                     op: Token::new(TokenKind::Plus, "+", 1),
-                    rhs: Box::new(Expr::Atom(Value::Integer(4))),
+                    rhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(4), "4", 1))),
                 }
             );
 
-            let mut ne = Emitter(crate::Chunk::default());
+            let mut ne = Emitter::new(crate::Chunk::default());
             println!("{}", AstPrinter.print_expr(expr));
             expr.accept(&mut ne).unwrap();
             #[cfg(feature = "pc-debug")]
             {
-                ne.0.disassemble("idklol");
+                ne.chunk().disassemble("idklol");
             }
-            let mut vm = crate::runtime::vm::Machine::new(ne.0);
+            let mut vm = crate::runtime::vm::Machine::new(ne.chunk().clone());
             assert_eq!(vm.interpret().unwrap(), Value::Integer(11));
         } else {
             panic!("ast not initialized")
@@ -356,7 +356,7 @@ mod tests {
             Stmt::Assignment {
                 name: tokens[0].take().unwrap(),
                 op: tokens[1].take().unwrap(),
-                value: Expr::Atom(Value::Integer(3)),
+                value: Expr::Atom(Token::new(TokenKind::Integer(3), "3", 1)),
             },
             Stmt::Assignment {
                 name: tokens[3].take().unwrap(),
@@ -366,7 +366,7 @@ mod tests {
                         name: tokens[5].take().unwrap(),
                     }),
                     op: tokens[6].take().unwrap(),
-                    rhs: Box::new(Expr::Atom(Value::Integer(4))),
+                    rhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(4), "4", 2))),
                 },
             },
             Stmt::If {
@@ -389,7 +389,7 @@ mod tests {
                         }),
                         paren: tokens[16].take().unwrap(),
                         arity: Arity::Some(1),
-                        args: vec![Expr::Atom(Value::Integer(3))],
+                        args: vec![Expr::Atom(Token::new(TokenKind::Integer(3), "3", 4))],
                     },
                 }],
                 else_: None,

@@ -266,9 +266,9 @@ impl<'a> fmt::Display for Token<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.kind {
             TokenKind::Identifier => write!(f, "{}", self.lexeme),
-            TokenKind::String => write!(f, "string \"{}\"", self.lexeme),
-            TokenKind::Double(d) => write!(f, "double {}", d),
-            TokenKind::Integer(i) => write!(f, "integer {}", i),
+            TokenKind::String => write!(f, "{}", self.lexeme),
+            TokenKind::Double(d) => write!(f, "{}", d),
+            TokenKind::Integer(i) => write!(f, "{}", i),
             k => write!(f, "{:?}", k),
         }
     }

@@ -8,13 +8,19 @@ use std::collections::HashMap;
 
 pub struct Emitter {
     chunk: Chunk,
+    strings: HashMap<String, u16>,
 }
 
 impl Emitter {
     pub fn new(chunk: Chunk) -> Self {
         Emitter {
             chunk,
+            strings: HashMap::new(),
         }
+    }
+
+    pub fn chunk(&self) -> &Chunk {
+        &self.chunk
     }
 
     pub fn compile(&mut self, stmts: &[Stmt]) -> Result<Chunk, Vec<PiccoloError>> {
@@ -37,8 +43,17 @@ impl Emitter {
 impl ExprVisitor for Emitter {
     type Output = Result<(), PiccoloError>;
 
-    fn visit_value(&mut self, value: &Value) -> Self::Output {
-        let i = self.chunk.make_constant(value.try_clone().unwrap());
+    fn visit_atom(&mut self, token: &Token) -> Self::Output {
+        let i = if token.kind == TokenKind::String && self.strings.contains_key(token.lexeme) {
+            *self.strings.get(token.lexeme).unwrap()
+        } else {
+            let i = self
+                .chunk
+                .make_constant(Value::try_from(token.clone()).unwrap());
+            self.strings.insert(token.lexeme.to_string(), i);
+            i
+        };
+
         let (low, high) = crate::decode_bytes(i);
         self.chunk.write(Opcode::Constant, 1);
         self.chunk.write(low, 1);
@@ -147,13 +162,17 @@ impl StmtVisitor for Emitter {
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
         value.accept(self)?;
         if op.kind == TokenKind::Assign {
-            let idx = self.chunk.make_constant(Value::String(name.lexeme.to_owned()));
+            let idx = self
+                .chunk
+                .make_constant(Value::String(name.lexeme.to_owned()));
             let (low, high) = crate::decode_bytes(idx);
             self.chunk.write(Opcode::AssignGlobal, name.line);
             self.chunk.write(low, name.line);
             self.chunk.write(high, name.line);
         } else if op.kind == TokenKind::Declare {
-            let idx = self.chunk.make_constant(Value::String(name.lexeme.to_owned()));
+            let idx = self
+                .chunk
+                .make_constant(Value::String(name.lexeme.to_owned()));
             let (low, high) = crate::decode_bytes(idx);
             self.chunk.write(Opcode::DeclareGlobal, name.line);
             self.chunk.write(low, name.line);

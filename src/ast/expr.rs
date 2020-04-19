@@ -1,4 +1,4 @@
-use crate::{Token, Value};
+use crate::Token;
 
 use super::stmt::Stmt;
 
@@ -15,7 +15,7 @@ pub trait ExprAccept {
 /// AST to tell the visitor to visit each node.
 pub trait ExprVisitor {
     type Output;
-    fn visit_value(&mut self, value: &Value) -> Self::Output;
+    fn visit_atom(&mut self, token: &Token) -> Self::Output;
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output;
     fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
     fn visit_paren(&mut self, value: &Expr) -> Self::Output;
@@ -43,16 +43,10 @@ pub trait ExprVisitor {
     ) -> Self::Output;
 }
 
-impl ExprAccept for Value {
-    fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
-        v.visit_value(self)
-    }
-}
-
 /// Piccolo AST node.
 #[derive(Debug, PartialEq)]
 pub enum Expr<'a> {
-    Atom(Value),
+    Atom(Token<'a>),
     Unary {
         op: Token<'a>,
         rhs: Box<Expr<'a>>,
@@ -113,7 +107,7 @@ pub enum Expr<'a> {
 impl ExprAccept for Expr<'_> {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         match self {
-            Expr::Atom(ref e) => e.accept(v),
+            Expr::Atom(token) => v.visit_atom(token),
             Expr::Unary { op, rhs } => v.visit_unary(op, rhs),
             Expr::Binary { lhs, op, rhs } => v.visit_binary(lhs, op, rhs),
             Expr::Paren { value } => v.visit_paren(value),
