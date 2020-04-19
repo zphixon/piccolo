@@ -70,11 +70,17 @@ impl<'a> Parser<'a> {
         let mut lhs = if lhs_token.is_value() {
             Expr::Atom(Value::try_from(lhs_token).unwrap())
         } else {
-            let pbp = prefix_binding_power(lhs_token.kind);
-            let rhs = self.expr_bp(scanner, pbp)?;
-            Expr::Unary {
-                op: lhs_token,
-                rhs: Box::new(rhs)
+            if let Some(pbp) = prefix_binding_power(lhs_token.kind) {
+                let rhs = self.expr_bp(scanner, pbp)?;
+                Expr::Unary {
+                    op: lhs_token,
+                    rhs: Box::new(rhs),
+                }
+            } else {
+                return Err(PiccoloError::new(ErrorKind::MalformedExpression {
+                    from: lhs_token.to_string(),
+                })
+                .line(lhs_token.line));
             }
         };
 
@@ -84,7 +90,8 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let op_prec = infix_binding_power(op_token.kind);
+            let op_prec = infix_binding_power(op_token.kind)
+                .unwrap_or_else(|| panic!("no ibp for {:?}", op_token));
             if op_prec < min_prec {
                 break;
             }
@@ -102,16 +109,16 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn prefix_binding_power(kind: TokenKind) -> BindingPower {
-    match kind {
+fn prefix_binding_power(kind: TokenKind) -> Option<BindingPower> {
+    Some(match kind {
         TokenKind::Minus => BindingPower::Unary,
         TokenKind::Not => BindingPower::Unary,
-        op => panic!("no pbp for {:?}", op),
-    }
+        _ => None?,
+    })
 }
 
-fn infix_binding_power(kind: TokenKind) -> BindingPower {
-    match kind {
+fn infix_binding_power(kind: TokenKind) -> Option<BindingPower> {
+    Some(match kind {
         TokenKind::Plus => BindingPower::Term,
         TokenKind::Minus => BindingPower::Term,
         TokenKind::Multiply => BindingPower::Factor,
@@ -123,8 +130,8 @@ fn infix_binding_power(kind: TokenKind) -> BindingPower {
         TokenKind::Greater => BindingPower::Comparison,
         TokenKind::LessEqual => BindingPower::Comparison,
         TokenKind::GreaterEqual => BindingPower::Comparison,
-        op => panic!("no ibp for {:?}", op),
-    }
+        _ => None?,
+    })
 }
 
 macro_rules! prec {
