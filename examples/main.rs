@@ -74,7 +74,7 @@ fn file(contents: &str) {
     if let Ok(tokens) = tokens {
         piccolo::print_tokens(&tokens);
         println!("****** compiler");
-        let chunk = piccolo::compile(Chunk::default(), &tokens);
+        let chunk = piccolo::compile(contents);
         if let Ok(chunk) = chunk {
             println!("****** chunk");
             chunk.disassemble("file");
@@ -121,7 +121,7 @@ fn repl() {
                 if let Ok(tokens) = tokens {
                     piccolo::print_tokens(&tokens);
                     //println!("****** compiler");
-                    let chunk = piccolo::compiler::compile2(&line);
+                    let chunk = piccolo::compiler::compile(&line);
                     if let Ok(chunk) = chunk {
                         println!("****** chunk");
                         chunk.disassemble("line");

@@ -30,12 +30,10 @@ pub use compiler::print_tokens;
 /// # }
 /// ```
 pub fn interpret(src: &str) -> Result<Value, Vec<error::PiccoloError>> {
-    Machine::new(compile(
-        Chunk::default(),
-        &compiler::scan_all(src).map_err(|e| vec![e])?,
-    )?)
-    .interpret()
-    .map_err(|e| vec![e])
+    let mut scanner = Scanner::new(src);
+    let ast = Parser::new().parse(&mut scanner)?;
+    let chunk = compiler::emitter::Emitter::new(Chunk::default()).compile(&ast)?;
+    Machine::new(chunk).interpret().map_err(|e| vec![e])
 }
 
 /// Reads a file and interprets its contents.
@@ -48,24 +46,6 @@ pub fn do_file(
             .map(|e| e.file(file.to_str().unwrap().to_owned()))
             .collect()
     }))
-}
-
-pub fn do_file2(
-    file: &std::path::Path,
-) -> Result<Result<Value, Vec<error::PiccoloError>>, std::io::Error> {
-    let contents = std::fs::read_to_string(file)?;
-    Ok(interpret2(&contents).map_err(|v| {
-        v.into_iter()
-            .map(|e| e.file(file.to_str().unwrap().to_owned()))
-            .collect()
-    }))
-}
-
-pub fn interpret2(src: &str) -> Result<Value, Vec<error::PiccoloError>> {
-    let mut scanner = Scanner::new(src);
-    let ast = Parser::new().parse(&mut scanner)?;
-    let chunk = compiler::emitter::Emitter::new(Chunk::default()).compile(&ast)?;
-    Machine::new(chunk).interpret().map_err(|e| vec![e])
 }
 
 pub(crate) fn encode_bytes(low: u8, high: u8) -> u16 {
@@ -123,10 +103,9 @@ pub mod fuzzer {
             src.push_str(&format!("{} ", tk).to_lowercase());
         }
 
-        let tokens = crate::compiler::scan_all(&src).ok()?;
-        if let Ok(chunk) = crate::compile(Chunk::default(), &tokens) {
+        if let Ok(chunk) = crate::compile(&src) {
             println!("----- run {} compiles -----", n);
-            crate::print_tokens(&tokens);
+            crate::print_tokens(&crate::compiler::scan_all(&src).unwrap());
             chunk.disassemble("");
             Machine::new(chunk).interpret().ok().map(|_| {
                 println!("----- run {} executes -----", n);
@@ -197,9 +176,9 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod tests {
+    use crate::ast::parser::BindingPower;
     use crate::ast::{Arity, AstPrinter, Expr, ExprAccept, Stmt};
     use crate::compiler::emitter::Emitter;
-    use crate::compiler::parser_compiler::Precedence;
     use crate::runtime::{op::Opcode, value::Value};
     use crate::{Chunk, Machine, Parser, Scanner, Token, TokenKind};
 
@@ -457,11 +436,11 @@ mod tests {
     #[ignore]
     fn very_long() {
         let path = std::path::Path::new("examples/long.pc");
-        crate::do_file2(path).unwrap();
+        crate::do_file(path).unwrap();
     }
 
     #[test]
     fn precedence_ord() {
-        assert!(Precedence::And > Precedence::Or);
+        assert!(BindingPower::And > BindingPower::Or);
     }
 }
