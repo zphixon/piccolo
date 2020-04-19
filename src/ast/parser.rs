@@ -64,6 +64,16 @@ impl<'a> Parser<'a> {
             Expr::Atom(lhs_token)
         } else if lhs_token.kind == TokenKind::Identifier {
             Expr::Variable(lhs_token)
+        } else if lhs_token.kind == TokenKind::LeftParen {
+            let e = Expr::Paren(Box::new(self.expr_bp(scanner, BindingPower::Assignment)?));
+            let rp = scanner.next_token()?;
+            if rp.kind != TokenKind::RightParen {
+                return Err(PiccoloError::new(ErrorKind::MalformedExpression {
+                    from: lhs_token.to_string(),
+                })
+                .line(lhs_token.line));
+            }
+            e
         } else {
             let pbp = prefix_binding_power(lhs_token.kind);
             if pbp != BindingPower::None {
