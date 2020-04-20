@@ -85,6 +85,8 @@ pub enum ErrorKind {
         op: Opcode,
     },
     InvalidUTF8,
+    FileNotFound,
+    IOError,
     UnterminatedString,
     UnknownFormatCode {
         code: char,
@@ -129,6 +131,10 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Stack underflow due to {:?}", op),
             ErrorKind::InvalidUTF8
                 => write!(f, "Invalid UTF-8 sequence"),
+            ErrorKind::FileNotFound
+                => write!(f, "File not found"),
+            ErrorKind::IOError
+                => write!(f, "Unknown IO error occurred"),
             ErrorKind::UnterminatedString
                 => write!(f, "Unterminated string"),
             ErrorKind::UnknownFormatCode { code }
@@ -154,5 +160,34 @@ impl fmt::Display for ErrorKind {
             ErrorKind::SyntaxError
                 => write!(f, "Syntax error"),
         }
+    }
+}
+
+impl From<std::str::Utf8Error> for PiccoloError {
+    fn from(e: std::str::Utf8Error) -> PiccoloError {
+        PiccoloError::new(ErrorKind::InvalidUTF8)
+            .msg_string(format!("valid up to {}", e.valid_up_to()))
+    }
+}
+
+impl From<std::string::FromUtf8Error> for PiccoloError {
+    fn from(e: std::string::FromUtf8Error) -> PiccoloError {
+        PiccoloError::from(e.utf8_error())
+    }
+}
+
+impl From<std::io::Error> for PiccoloError {
+    fn from(e: std::io::Error) -> PiccoloError {
+        match e.kind() {
+            std::io::ErrorKind::InvalidData => PiccoloError::new(ErrorKind::InvalidUTF8),
+            std::io::ErrorKind::NotFound => PiccoloError::new(ErrorKind::FileNotFound),
+            _ => PiccoloError::new(ErrorKind::IOError),
+        }
+    }
+}
+
+impl From<PiccoloError> for Vec<PiccoloError> {
+    fn from(e: PiccoloError) -> Vec<PiccoloError> {
+        vec![e]
     }
 }

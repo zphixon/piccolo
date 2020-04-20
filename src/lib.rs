@@ -33,19 +33,17 @@ pub fn interpret(src: &str) -> Result<Value, Vec<error::PiccoloError>> {
     let mut scanner = Scanner::new(src);
     let ast = Parser::new().parse(&mut scanner)?;
     let chunk = compiler::emitter::Emitter::new(Chunk::default()).compile(&ast)?;
-    Machine::new(chunk).interpret().map_err(|e| vec![e])
+    Ok(Machine::new(chunk).interpret()?)
 }
 
 /// Reads a file and interprets its contents.
-pub fn do_file(
-    file: &std::path::Path,
-) -> Result<Result<Value, Vec<error::PiccoloError>>, std::io::Error> {
-    let contents = std::fs::read_to_string(file)?;
-    Ok(interpret(&contents).map_err(|v| {
+pub fn do_file(file: &std::path::Path) -> Result<Value, Vec<error::PiccoloError>> {
+    let contents = std::fs::read_to_string(file).map_err(|e| vec![PiccoloError::from(e)])?;
+    interpret(&contents).map_err(|v| {
         v.into_iter()
             .map(|e| e.file(file.to_str().unwrap().to_owned()))
             .collect()
-    }))
+    })
 }
 
 pub(crate) fn encode_bytes(low: u8, high: u8) -> u16 {
@@ -392,26 +390,26 @@ mod tests {
     #[test]
     fn get_line_from_index() {
         let mut c = Chunk::default();
-        c.write(Opcode::Return, 1); // 0
-        c.write(Opcode::Return, 1); // 1
-        c.write(Opcode::Return, 1); // 2
-        c.write(Opcode::Return, 1); // 3
-        c.write(Opcode::Return, 1); // 4
-        c.write(Opcode::Return, 1); // 5
-        c.write(Opcode::Return, 2); // 6
-        c.write(Opcode::Return, 2); // 7
-        c.write(Opcode::Return, 2); // 8
-        c.write(Opcode::Return, 2); // 9
-        c.write(Opcode::Return, 2); // 10
-        c.write(Opcode::Return, 3); // 11
-        c.write(Opcode::Return, 3); // 12
-        c.write(Opcode::Return, 3); // 13
-        c.write(Opcode::Return, 3); // 14
-        c.write(Opcode::Return, 4); // 15
-        c.write(Opcode::Return, 4); // 16
-        c.write(Opcode::Return, 4); // 17
-        c.write(Opcode::Return, 4); // 18
-        c.write(Opcode::Return, 5); // 19
+        c.write_u8(Opcode::Return, 1); // 0
+        c.write_u8(Opcode::Return, 1); // 1
+        c.write_u8(Opcode::Return, 1); // 2
+        c.write_u8(Opcode::Return, 1); // 3
+        c.write_u8(Opcode::Return, 1); // 4
+        c.write_u8(Opcode::Return, 1); // 5
+        c.write_u8(Opcode::Return, 2); // 6
+        c.write_u8(Opcode::Return, 2); // 7
+        c.write_u8(Opcode::Return, 2); // 8
+        c.write_u8(Opcode::Return, 2); // 9
+        c.write_u8(Opcode::Return, 2); // 10
+        c.write_u8(Opcode::Return, 3); // 11
+        c.write_u8(Opcode::Return, 3); // 12
+        c.write_u8(Opcode::Return, 3); // 13
+        c.write_u8(Opcode::Return, 3); // 14
+        c.write_u8(Opcode::Return, 4); // 15
+        c.write_u8(Opcode::Return, 4); // 16
+        c.write_u8(Opcode::Return, 4); // 17
+        c.write_u8(Opcode::Return, 4); // 18
+        c.write_u8(Opcode::Return, 5); // 19
 
         assert_eq!(c.get_line_from_index(0), 1);
         assert_eq!(c.get_line_from_index(5), 1);
@@ -436,7 +434,7 @@ mod tests {
     #[ignore]
     fn very_long() {
         let path = std::path::Path::new("examples/long.pc");
-        crate::do_file(path).unwrap().unwrap();
+        crate::do_file(path).unwrap();
     }
 
     #[test]

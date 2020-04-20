@@ -74,8 +74,7 @@ pub(crate) fn escape_string(t: &Token) -> Result<String, PiccoloError> {
                 i += 1;
             }
 
-            Ok(String::from_utf8(value)
-                .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(line))?)
+            Ok(String::from_utf8(value)?)
         }
         _ => {
             panic!("Cannot escape string from token {:?}", t);
@@ -227,12 +226,12 @@ impl<'a> Token<'a> {
 
     pub fn is_value(&self) -> bool {
         match self.kind {
-            TokenKind::Nil => true,
-            TokenKind::String => true,
-            TokenKind::True => true,
-            TokenKind::False => true,
-            TokenKind::Double(_) => true,
-            TokenKind::Integer(_) => true,
+            TokenKind::Nil
+            | TokenKind::String
+            | TokenKind::True
+            | TokenKind::False
+            | TokenKind::Double(_)
+            | TokenKind::Integer(_) => true,
             _ => false,
         }
     }
