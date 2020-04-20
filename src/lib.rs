@@ -183,7 +183,7 @@ mod tests {
         let src = "a=:1+2";
         let mut scanner = Scanner::new(src);
         let ast = Parser::new().parse(&mut scanner).unwrap();
-        println!("{}", AstPrinter.print(&ast));
+        println!("{}", AstPrinter::print(&ast));
         let mut ne = Emitter::new(Chunk::default());
         let chunk = ne.compile(&ast).unwrap();
         #[cfg(feature = "pc-debug")]
@@ -217,14 +217,14 @@ mod tests {
                 }
             );
 
-            let mut ne = Emitter::new(crate::Chunk::default());
-            println!("{}", AstPrinter.print_expr(expr));
+            let mut ne = Emitter::new(Chunk::default());
+            println!("{}", AstPrinter::print_expr(expr));
             expr.accept(&mut ne).unwrap();
             #[cfg(feature = "pc-debug")]
             {
                 ne.chunk().disassemble("idklol");
             }
-            let mut vm = crate::runtime::vm::Machine::new(ne.chunk().clone());
+            let mut vm = Machine::new(ne.chunk().clone());
             assert_eq!(vm.interpret().unwrap(), Value::Integer(11));
         } else {
             panic!("ast not initialized")
@@ -380,8 +380,8 @@ mod tests {
         ];
 
         assert_eq!(
-            "(=: x 3)\n(=: y (- x 4))\n(if (> x y) (expr (call (get prln io) 3)))\n",
-            AstPrinter.print(&ast)
+            "(=: x 3)\n(=: y (- x 4))\n(if (> x y)\n  (expr (call (get prln io) 3)))\n",
+            AstPrinter::print(&ast)
         );
     }
 

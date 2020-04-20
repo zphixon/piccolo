@@ -19,27 +19,29 @@ pub enum Arity {
 
 /// Pretty-prints a Piccolo AST using the ExprVisitor and StmtVisitor traits.
 #[derive(Copy, Clone)]
-pub struct AstPrinter;
+pub struct AstPrinter {
+    indent: usize,
+}
 
 impl AstPrinter {
     /// Pretty-print a full AST.
-    pub fn print(&mut self, ast: &[Stmt]) -> String {
+    pub fn print(ast: &[Stmt]) -> String {
         let mut s = String::new();
         for stmt in ast.iter() {
-            s.push_str(&stmt.accept(self));
+            s.push_str(&stmt.accept(&mut AstPrinter { indent: 0 }));
             s.push_str("\n");
         }
         s
     }
 
     /// Pretty-print a single expression.
-    pub fn print_expr(&mut self, expr: &Expr) -> String {
-        expr.accept(self)
+    pub fn print_expr(expr: &Expr) -> String {
+        expr.accept(&mut AstPrinter { indent: 0 })
     }
 
     /// Pretty-print a single statement.
-    pub fn print_stmt(&mut self, stmt: &Stmt) -> String {
-        stmt.accept(self)
+    pub fn print_stmt(stmt: &Stmt) -> String {
+        stmt.accept(&mut AstPrinter { indent: 0 })
     }
 
     fn parenthesize(&mut self, name: &str, expressions: &[&Expr]) -> String {
@@ -53,32 +55,27 @@ impl AstPrinter {
     }
 
     fn parenthesize_list(&mut self, name: &str, expr: Option<&Expr>, stmts: &[Stmt]) -> String {
+        self.parenthesize_lists(name, expr, &[stmts])
+    }
+
+    fn parenthesize_lists(&mut self, name: &str, expr: Option<&Expr>, stmts: &[&[Stmt]]) -> String {
+        self.indent += 1;
         let mut s = format!("({}", name);
         if expr.is_some() {
             s.push_str(" ");
             s.push_str(&expr.as_ref().unwrap().accept(self));
         }
-        for stmt in stmts {
-            s.push_str(" ");
-            s.push_str(&stmt.accept(self));
-        }
-        s.push_str(")");
-        s
-    }
-
-    fn parenthesize_lists(&mut self, name: &str, e: Option<&Expr>, stmts: &[&[Stmt]]) -> String {
-        let mut s = format!("({}", name);
-        if e.is_some() {
-            s.push_str(" ");
-            s.push_str(&e.as_ref().unwrap().accept(self));
-        }
         for stmt_list in stmts.iter() {
             for stmt in stmt_list.iter() {
-                s.push_str(" ");
+                s.push_str("\n");
+                for _ in 0..self.indent {
+                    s.push_str("  ");
+                }
                 s.push_str(&stmt.accept(self));
             }
         }
         s.push_str(")");
+        self.indent -= 1;
         s
     }
 }
@@ -91,13 +88,7 @@ impl StmtVisitor for AstPrinter {
     }
 
     fn visit_block(&mut self, body: &[Stmt]) -> String {
-        let mut s = String::from("(block");
-        for stmt in body.iter() {
-            s.push_str(" ");
-            s.push_str(&stmt.accept(self));
-        }
-        s.push_str(")");
-        s
+        self.parenthesize_list("do", None, body)
     }
 
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> String {
