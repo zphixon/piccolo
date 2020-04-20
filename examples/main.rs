@@ -71,7 +71,7 @@ fn file(contents: &str) {
     println!("****** parse");
     match Parser::new().parse(&mut Scanner::new(&contents)) {
         Ok(ast) => {
-            println!("****** ast\n{}", AstPrinter.print(&ast));
+            println!("****** ast\n{}", AstPrinter::print(&ast));
             match Emitter::new(Chunk::default()).compile(&ast) {
                 Ok(chunk) => {
                     println!("****** chunk");
@@ -117,7 +117,7 @@ fn repl() {
                 println!("****** parse");
                 match Parser::new().parse(&mut Scanner::new(&line)) {
                     Ok(ast) => {
-                        println!("****** ast\n{}", AstPrinter.print(&ast));
+                        println!("****** ast\n{}", AstPrinter::print(&ast));
                         match Emitter::new(Chunk::default()).compile(&ast) {
                             Ok(chunk) => {
                                 println!("****** chunk");
