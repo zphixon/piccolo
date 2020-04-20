@@ -33,32 +33,67 @@ impl Machine {
     fn pop(&mut self) -> Result<Value, PiccoloError> {
         self.stack.pop().ok_or_else(|| {
             PiccoloError::new(ErrorKind::StackUnderflow {
-                op: self.chunk.data[self.ip].into(),
+                op: self.chunk.data[self.ip - 1].into(),
+            })
+            .line(self.chunk.get_line_from_index(self.ip))
+            .msg("file a bug report!")
+        })
+    }
+
+    fn peek_back(&self, dist: usize) -> Result<&Value, PiccoloError> {
+        self.stack.get(self.stack.len() - dist - 1).ok_or_else(|| {
+            PiccoloError::new(ErrorKind::StackUnderflow {
+                op: self.chunk.data[self.ip - 1].into(),
+            })
+            .line(self.chunk.get_line_from_index(self.ip))
+            .msg_string(format!("peek_back({})", dist))
+        })
+    }
+
+    fn peek_front(&self, dist: usize) -> Result<&Value, PiccoloError> {
+        self.stack.get(dist).ok_or_else(|| {
+            PiccoloError::new(ErrorKind::StackUnderflow {
+                op: self.chunk.data[self.ip - 1].into(),
+            })
+            .line(self.chunk.get_line_from_index(self.ip))
+            .msg_string(format!("peek_front({})", dist))
+        })
+    }
+
+    fn front_try_clone(&self, dist: usize) -> Result<Value, PiccoloError> {
+        self.peek_front(dist)?.try_clone().ok_or_else(|| {
+            PiccoloError::new(ErrorKind::CannotClone {
+                ty: self.peek_front(dist).unwrap().type_name().to_owned(),
             })
             .line(self.chunk.get_line_from_index(self.ip))
         })
     }
 
-    fn peek(&self, dist: usize) -> Option<&Value> {
-        self.stack.get(self.stack.len() - dist - 1)
+    fn read_short(&self) -> u16 {
+        let low = self.chunk.data[self.ip];
+        let high = self.chunk.data[self.ip + 1];
+        crate::encode_bytes(low, high)
     }
 
     // get a constant from the chunk
-    fn constant(&self) -> Result<&Value, PiccoloError> {
+    fn peek_constant(&self) -> &Value {
         // Opcode::Constant takes a two-byte operand, meaning it's necessary
         // to decode the high and low bytes. the machine is little-endian with
         // constant addresses.
         self.chunk
-            .data
-            .get(self.ip)
-            .and_then(|low| {
-                self.chunk.data.get(self.ip + 1).and_then(|high| {
-                    self.chunk
-                        .constants
-                        .get(crate::encode_bytes(*low, *high) as usize)
-                })
+            .constants
+            .get(self.read_short() as usize)
+            .unwrap()
+    }
+
+    fn constant_try_clone(&self) -> Result<Value, PiccoloError> {
+        let c = self.peek_constant();
+        c.try_clone().ok_or_else(|| {
+            PiccoloError::new(ErrorKind::CannotClone {
+                ty: c.type_name().to_owned(),
             })
-            .ok_or_else(|| panic!("constant does not exist"))
+            .line(self.chunk.get_line_from_index(self.ip))
+        })
     }
 
     /// Interprets the machine's bytecode, returning a Value.
@@ -66,7 +101,12 @@ impl Machine {
         while self.ip < self.chunk.data.len() {
             #[cfg(feature = "pc-debug")]
             {
-                print!(" ┌─ {:?}\n └─ ", self.stack);
+                let (exit_msg, exit_spc) = if self.ip + 1 == self.chunk.data.len() {
+                    ("─vm─exit─ ", "───────── ")
+                } else {
+                    (" ", " ")
+                };
+                print!(" ┌─{}{:?}\n └─{}", exit_msg, self.stack, exit_spc);
                 self.chunk.disassemble_instruction(self.ip);
             }
 
@@ -148,27 +188,17 @@ impl Machine {
                     }
                 }
                 Opcode::DeclareGlobal => {
-                    if let Value::String(name) = self.constant()? {
+                    if let Value::String(name) = self.peek_constant() {
                         let name = name.clone();
-                        self.globals.insert(
-                            name,
-                            self.stack[self.stack.len() - 1]
-                                .try_clone()
-                                .ok_or_else(|| {
-                                    PiccoloError::new(ErrorKind::CannotClone {
-                                        ty: self.peek(0).unwrap().type_name().to_owned(),
-                                    })
-                                    .line(line)
-                                })?,
-                        );
-                        self.pop()?;
+                        let value = self.pop()?;
+                        self.globals.insert(name, value);
                         self.ip += 2;
                     } else {
                         panic!("defined global with non-string name");
                     }
                 }
                 Opcode::GetGlobal => {
-                    let name = self.constant()?.ref_string();
+                    let name = self.peek_constant().ref_string();
                     if let Some(var) = self.globals.get(name) {
                         if let Some(var) = var.try_clone() {
                             self.stack.push(var);
@@ -176,8 +206,7 @@ impl Machine {
                             return Err(PiccoloError::new(ErrorKind::CannotClone {
                                 ty: var.type_name().to_owned(),
                             })
-                            .line(line)
-                            .msg_string(format!("global {}", name)));
+                            .line(line));
                         }
                     } else {
                         return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
@@ -188,40 +217,32 @@ impl Machine {
                     self.ip += 2;
                 }
                 Opcode::AssignGlobal => {
-                    if let Value::String(name) = self.constant()? {
+                    if let Value::String(name) = self.peek_constant() {
                         let name = name.clone();
-                        self.globals
-                            .insert(
-                                name.clone(),
-                                self.peek(0).unwrap().try_clone().ok_or_else(|| {
-                                    PiccoloError::new(ErrorKind::CannotClone {
-                                        ty: self.peek(0).unwrap().type_name().to_owned(),
-                                    })
-                                    .line(line)
-                                    .msg_string(format!("global {}", name))
-                                })?,
-                            )
-                            .map_or_else(
-                                || {
-                                    Err(PiccoloError::new(ErrorKind::UndefinedVariable { name })
-                                        .line(line))
-                                },
-                                |_| Ok(()),
-                            )?;
+                        let value = self.pop()?;
+                        if self.globals.insert(name.clone(), value).is_none() {
+                            return Err(
+                                PiccoloError::new(ErrorKind::UndefinedVariable { name }).line(line)
+                            );
+                        }
                         self.ip += 2;
                     }
                 }
-                Opcode::Constant => {
-                    let c = self.constant()?;
-                    let c = c.try_clone().ok_or_else(|| {
-                        PiccoloError::new(ErrorKind::CannotClone {
-                            ty: c.type_name().to_owned(),
-                        })
-                        .line(line)
-                    })?;
+                Opcode::GetLocal => {
+                    let slot = self.read_short();
+                    let v = self.front_try_clone(slot as usize)?;
+                    self.stack.push(v);
                     self.ip += 2;
-
+                }
+                Opcode::AssignLocal => {
+                    let slot = self.read_short();
+                    self.stack[slot as usize] = self.pop()?;
+                    self.ip += 2;
+                }
+                Opcode::Constant => {
+                    let c = self.constant_try_clone()?;
                     self.stack.push(c);
+                    self.ip += 2;
                 }
                 Opcode::Nil => self.stack.push(Value::Nil),
                 Opcode::True => self.stack.push(Value::Bool(true)),

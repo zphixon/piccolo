@@ -113,6 +113,7 @@ fn repl() {
         match rl.readline("-- ") {
             Ok(line) => {
                 rl.add_history_entry(&line);
+                rl.save_history(".piccolo_history").unwrap();
 
                 println!("****** parse");
                 match Parser::new().parse(&mut Scanner::new(&line)) {
@@ -149,5 +150,4 @@ fn repl() {
             _ => break,
         }
     }
-    rl.save_history(".piccolo_history").unwrap();
 }

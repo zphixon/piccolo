@@ -47,4 +47,6 @@ opcodes!(Opcode =>
     GetGlobal       = 0x12,
     AssignGlobal    = 0x13,
     Assert          = 0x14,
+    GetLocal        = 0x15,
+    AssignLocal     = 0x16,
 );
