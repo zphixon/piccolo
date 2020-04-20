@@ -30,12 +30,9 @@ impl<'a> Parser<'a> {
     }
 
     fn declaration(&self, scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-        if scanner.peek_token(1)?.kind == TokenKind::Assign {
-            let name = self.consume(scanner, TokenKind::Identifier)?;
-            let op = scanner.next_token()?;
-            let value = self.expr_bp(scanner, BindingPower::Assignment)?;
-            Ok(Stmt::Assignment { name, op, value })
-        } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
+        if scanner.peek_token(1)?.kind == TokenKind::Assign
+            || scanner.peek_token(1)?.kind == TokenKind::Declare
+        {
             let name = self.consume(scanner, TokenKind::Identifier)?;
             let op = scanner.next_token()?;
             let value = self.expr_bp(scanner, BindingPower::Assignment)?;

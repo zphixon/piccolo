@@ -53,6 +53,27 @@ impl Emitter {
         }
         None
     }
+
+    fn make_ident(&mut self, name: &str) -> u16 {
+        if self.identifiers.contains_key(name) {
+            self.identifiers[name]
+        } else {
+            let idx = self.chunk.make_constant(Value::String(name.to_owned()));
+            self.identifiers.insert(name.to_owned(), idx);
+            idx
+        }
+    }
+
+    fn get_ident(&self, name: &Token) -> Result<u16, PiccoloError> {
+        if self.identifiers.contains_key(name.lexeme) {
+            Ok(self.identifiers[name.lexeme])
+        } else {
+            Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                name: name.lexeme.to_owned(),
+            })
+            .line(name.line))
+        }
+    }
 }
 
 impl ExprVisitor for Emitter {
@@ -68,7 +89,8 @@ impl ExprVisitor for Emitter {
             self.strings.insert(token.lexeme.to_string(), i);
             i
         } else {
-            self.chunk.make_constant(Value::try_from(token.clone()).unwrap())
+            self.chunk
+                .make_constant(Value::try_from(token.clone()).unwrap())
         };
 
         self.chunk.write_arg_u16(Opcode::Constant, i, token.line);
@@ -195,7 +217,7 @@ impl StmtVisitor for Emitter {
             stmt.accept(self)?;
         }
         self.scope_depth -= 1;
-        while self.locals.len() > 0 && self.locals[self.locals.len() - 1].1 > self.scope_depth {
+        while !self.locals.is_empty() && self.locals[self.locals.len() - 1].1 > self.scope_depth {
             self.chunk.write_u8(Opcode::Pop, 4);
             self.locals.pop().unwrap();
         }
@@ -206,34 +228,21 @@ impl StmtVisitor for Emitter {
         value.accept(self)?;
         if self.scope_depth > 0 {
             if op.kind == TokenKind::Assign {
-                match self.resolve_local(name.lexeme) {
-                    Some(idx) => self.chunk.write_arg_u16(Opcode::AssignLocal, idx, op.line),
-                    None => {
-                        let i = if self.identifiers.contains_key(name.lexeme) {
-                            *self.identifiers.get(name.lexeme).unwrap()
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
-                                name: name.lexeme.to_owned(),
-                            })
-                            .line(name.line));
-                        };
-                        self.chunk.write_arg_u16(Opcode::AssignGlobal, i, name.line);
-                    }
+                if let Some(idx) = self.resolve_local(name.lexeme) {
+                    self.chunk.write_arg_u16(Opcode::AssignLocal, idx, op.line);
+                } else {
+                    let i = self.get_ident(name)?;
+                    self.chunk.write_arg_u16(Opcode::AssignGlobal, i, name.line);
                 }
             } else if op.kind == TokenKind::Declare {
                 self.locals.push((name.lexeme.to_owned(), self.scope_depth));
             }
         } else if op.kind == TokenKind::Assign {
-            let idx = self
-                .chunk
-                .make_constant(Value::String(name.lexeme.to_owned()));
+            let idx = self.get_ident(name)?;
             self.chunk
                 .write_arg_u16(Opcode::AssignGlobal, idx, name.line);
         } else if op.kind == TokenKind::Declare {
-            let idx = self
-                .chunk
-                .make_constant(Value::String(name.lexeme.to_owned()));
-            self.identifiers.insert(name.lexeme.to_owned(), idx);
+            let idx = self.make_ident(name.lexeme);
             self.chunk
                 .write_arg_u16(Opcode::DeclareGlobal, idx, name.line);
         }

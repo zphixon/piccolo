@@ -40,6 +40,7 @@ impl Machine {
         })
     }
 
+    #[allow(dead_code)]
     fn peek_back(&self, dist: usize) -> Result<&Value, PiccoloError> {
         self.stack.get(self.stack.len() - dist - 1).ok_or_else(|| {
             PiccoloError::new(ErrorKind::StackUnderflow {
