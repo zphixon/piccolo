@@ -9,6 +9,7 @@ use std::collections::HashMap;
 pub struct Emitter {
     chunk: Chunk,
     strings: HashMap<String, u16>,
+    identifiers: HashMap<String, u16>,
     scope_depth: u16,
     locals: Vec<(String, u16)>,
 }
@@ -18,6 +19,7 @@ impl Emitter {
         Emitter {
             chunk,
             strings: HashMap::new(),
+            identifiers: HashMap::new(),
             scope_depth: 0,
             locals: Vec::new(),
         }
@@ -59,12 +61,14 @@ impl ExprVisitor for Emitter {
     fn visit_atom(&mut self, token: &Token) -> Self::Output {
         let i = if token.kind == TokenKind::String && self.strings.contains_key(token.lexeme) {
             *self.strings.get(token.lexeme).unwrap()
-        } else {
+        } else if token.kind == TokenKind::String {
             let i = self
                 .chunk
                 .make_constant(Value::try_from(token.clone()).unwrap());
             self.strings.insert(token.lexeme.to_string(), i);
             i
+        } else {
+            self.chunk.make_constant(Value::try_from(token.clone()).unwrap())
         };
 
         self.chunk.write_arg_u16(Opcode::Constant, i, token.line);
@@ -80,8 +84,8 @@ impl ExprVisitor for Emitter {
         match self.resolve_local(name.lexeme) {
             Some(idx) => self.chunk.write_arg_u16(Opcode::GetLocal, idx, name.line),
             None => {
-                let i = if self.strings.contains_key(name.lexeme) {
-                    *self.strings.get(name.lexeme).unwrap()
+                let i = if self.identifiers.contains_key(name.lexeme) {
+                    *self.identifiers.get(name.lexeme).unwrap()
                 } else {
                     return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                         name: name.lexeme.to_owned(),
@@ -205,8 +209,8 @@ impl StmtVisitor for Emitter {
                 match self.resolve_local(name.lexeme) {
                     Some(idx) => self.chunk.write_arg_u16(Opcode::AssignLocal, idx, op.line),
                     None => {
-                        let i = if self.strings.contains_key(name.lexeme) {
-                            *self.strings.get(name.lexeme).unwrap()
+                        let i = if self.identifiers.contains_key(name.lexeme) {
+                            *self.identifiers.get(name.lexeme).unwrap()
                         } else {
                             return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                                 name: name.lexeme.to_owned(),
@@ -229,7 +233,7 @@ impl StmtVisitor for Emitter {
             let idx = self
                 .chunk
                 .make_constant(Value::String(name.lexeme.to_owned()));
-            self.strings.insert(name.lexeme.to_owned(), idx);
+            self.identifiers.insert(name.lexeme.to_owned(), idx);
             self.chunk
                 .write_arg_u16(Opcode::DeclareGlobal, idx, name.line);
         }
