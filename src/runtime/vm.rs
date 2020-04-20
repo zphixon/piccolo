@@ -23,7 +23,7 @@ impl Machine {
             ip: 0,
             //strings: HashSet::new(),
             globals: HashMap::new(),
-            stack: vec![],
+            stack: Vec::new(),
         }
     }
 

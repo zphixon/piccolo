@@ -33,7 +33,7 @@ impl<'a, 'b> Emitter<'a, 'b> {
     }
 
     pub fn compile(&mut self, stmts: &[Stmt]) -> Result<Chunk, Vec<PiccoloError>> {
-        let mut errs = vec![];
+        let mut errs = Vec::new();
         for stmt in stmts {
             match stmt.accept(self) {
                 Ok(_) => {}
@@ -176,8 +176,13 @@ impl StmtVisitor for Emitter<'_, '_> {
         Ok(())
     }
 
-    fn visit_block(&mut self, _body: &[Stmt]) -> Self::Output {
-        unimplemented!("visit_block")
+    fn visit_block(&mut self, body: &[Stmt]) -> Self::Output {
+        self.scope_depth += 1;
+        for stmt in body {
+            stmt.accept(self)?;
+        }
+        self.scope_depth -= 1;
+        Ok(())
     }
 
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {

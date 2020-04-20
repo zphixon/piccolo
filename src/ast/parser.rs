@@ -14,10 +14,11 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self, scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
-        let mut errors = vec![];
+        let mut errors = Vec::new();
         while scanner.peek_token(0)?.kind != TokenKind::Eof {
-            if let Err(e) = self.declaration(scanner) {
-                errors.push(e);
+            match self.declaration(scanner) {
+                Ok(stmt) => self.ast.push(stmt),
+                Err(e) => errors.push(e),
             }
         }
 
@@ -28,35 +29,48 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn declaration(&mut self, scanner: &mut Scanner<'a>) -> Result<(), PiccoloError> {
+    fn declaration(&self, scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
         if scanner.peek_token(1)?.kind == TokenKind::Assign {
             let name = self.consume(scanner, TokenKind::Identifier)?;
             let op = scanner.next_token()?;
             let value = self.expr_bp(scanner, BindingPower::Assignment)?;
-            self.ast.push(Stmt::Assignment { name, op, value });
+            Ok(Stmt::Assignment { name, op, value })
         } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
             let name = self.consume(scanner, TokenKind::Identifier)?;
             let op = scanner.next_token()?;
             let value = self.expr_bp(scanner, BindingPower::Assignment)?;
-            self.ast.push(Stmt::Assignment { name, op, value });
+            Ok(Stmt::Assignment { name, op, value })
         } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
             let keyword = scanner.next_token()?;
             let value = Some(self.expr_bp(scanner, BindingPower::Assignment)?);
-            self.ast.push(Stmt::Retn { keyword, value })
+            Ok(Stmt::Retn { keyword, value })
         } else if scanner.peek_token(0)?.kind == TokenKind::Assert {
             let keyword = scanner.next_token()?;
             let value = self.expr_bp(scanner, BindingPower::Assignment)?;
-            self.ast.push(Stmt::Assert { keyword, value })
+            Ok(Stmt::Assert { keyword, value })
+        } else if scanner.peek_token(0)?.kind == TokenKind::Do {
+            scanner.next_token()?;
+            let block = self.block(scanner)?;
+            self.consume(scanner, TokenKind::End)?;
+            Ok(Stmt::Block(block))
         } else {
             let expr = self.expr_bp(scanner, BindingPower::Assignment)?;
-            self.ast.push(Stmt::Expr(expr));
+            Ok(Stmt::Expr(expr))
+        }
+    }
+
+    fn block(&self, scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, PiccoloError> {
+        let mut stmts = Vec::new();
+
+        while scanner.peek_token(0)?.kind != TokenKind::End {
+            stmts.push(self.declaration(scanner)?);
         }
 
-        Ok(())
+        Ok(stmts)
     }
 
     fn expr_bp(
-        &mut self,
+        &self,
         scanner: &mut Scanner<'a>,
         min_bp: BindingPower,
     ) -> Result<Expr<'a>, PiccoloError> {
