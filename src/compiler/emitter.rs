@@ -6,16 +6,25 @@ use crate::{Chunk, PiccoloError, Token, TokenKind, Value};
 
 use std::collections::HashMap;
 
-pub struct Emitter {
-    chunk: Chunk,
-    strings: HashMap<String, u16>,
+pub struct Local<'a: 'b, 'b> {
+    name: &'b Token<'a>,
+    depth: usize
 }
 
-impl Emitter {
+pub struct Emitter<'a, 'b> {
+    chunk: Chunk,
+    strings: HashMap<String, u16>,
+    scope_depth: usize,
+    locals: Vec<Local<'a, 'b>>
+}
+
+impl<'a, 'b> Emitter<'a, 'b> {
     pub fn new(chunk: Chunk) -> Self {
         Emitter {
             chunk,
             strings: HashMap::new(),
+            scope_depth: 0,
+            locals: Vec::new()
         }
     }
 
@@ -40,7 +49,7 @@ impl Emitter {
     }
 }
 
-impl ExprVisitor for Emitter {
+impl ExprVisitor for Emitter<'_, '_> {
     type Output = Result<(), PiccoloError>;
 
     fn visit_atom(&mut self, token: &Token) -> Self::Output {
@@ -158,7 +167,7 @@ impl ExprVisitor for Emitter {
     }
 }
 
-impl StmtVisitor for Emitter {
+impl StmtVisitor for Emitter<'_, '_> {
     type Output = Result<(), PiccoloError>;
 
     fn visit_expr(&mut self, expr: &Expr) -> Self::Output {

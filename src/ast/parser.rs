@@ -31,20 +31,20 @@ impl<'a> Parser<'a> {
     fn declaration(&mut self, scanner: &mut Scanner<'a>) -> Result<(), PiccoloError> {
         if scanner.peek_token(1)?.kind == TokenKind::Assign {
             let name = self.consume(scanner, TokenKind::Identifier)?;
-            let op = self.consume(scanner, TokenKind::Assign)?;
+            let op = scanner.next_token()?;
             let value = self.expr_bp(scanner, BindingPower::Assignment)?;
             self.ast.push(Stmt::Assignment { name, op, value });
         } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
             let name = self.consume(scanner, TokenKind::Identifier)?;
-            let op = self.consume(scanner, TokenKind::Declare)?;
+            let op = scanner.next_token()?;
             let value = self.expr_bp(scanner, BindingPower::Assignment)?;
             self.ast.push(Stmt::Assignment { name, op, value });
         } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
-            let keyword = self.consume(scanner, TokenKind::Retn)?;
+            let keyword = scanner.next_token()?;
             let value = Some(self.expr_bp(scanner, BindingPower::Assignment)?);
             self.ast.push(Stmt::Retn { keyword, value })
         } else if scanner.peek_token(0)?.kind == TokenKind::Assert {
-            let keyword = self.consume(scanner, TokenKind::Assert)?;
+            let keyword = scanner.next_token()?;
             let value = self.expr_bp(scanner, BindingPower::Assignment)?;
             self.ast.push(Stmt::Assert { keyword, value })
         } else {
