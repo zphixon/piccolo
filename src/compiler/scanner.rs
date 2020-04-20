@@ -73,7 +73,7 @@ impl<'a> Scanner<'a> {
     fn next<'b>(&'b mut self) -> Result<&'b Token<'a>, PiccoloError> {
         self.slurp_whitespace();
         if self.is_at_end() {
-            self.add_token(TokenKind::Eof);
+            self.add_token(TokenKind::Eof)?;
             return Ok(&self.tokens[self.tokens.len() - 1]);
         }
 
@@ -192,7 +192,7 @@ impl<'a> Scanner<'a> {
                 }
             }
         };
-        self.add_token(tk);
+        self.add_token(tk)?;
         Ok(&self.tokens[self.tokens.len() - 1])
     }
 
@@ -201,10 +201,7 @@ impl<'a> Scanner<'a> {
             self.advance_char();
         }
 
-        if let Some(tk) = super::into_keyword(
-            core::str::from_utf8(&self.source[self.start..self.current])
-                .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?,
-        ) {
+        if let Some(tk) = super::into_keyword(self.lexeme()?) {
             Ok(tk)
         } else {
             Ok(TokenKind::Identifier)
@@ -251,8 +248,7 @@ impl<'a> Scanner<'a> {
             }
         }
 
-        let value = core::str::from_utf8(&self.source[self.start..self.current])
-            .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
+        let value = self.lexeme()?;
         if let Ok(i) = value.parse::<i64>() {
             Ok(TokenKind::Integer(i))
         } else {
@@ -274,8 +270,7 @@ impl<'a> Scanner<'a> {
             }
         }
 
-        let value = core::str::from_utf8(&self.source[self.start..self.current])
-            .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))?;
+        let value = self.lexeme()?;
         if let Ok(f) = value.parse::<f64>() {
             Ok(TokenKind::Double(f))
         } else {
@@ -286,12 +281,16 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn add_token(&mut self, kind: TokenKind) {
-        self.tokens.push_back(Token::new(
-            kind,
-            core::str::from_utf8(&self.source[self.start..self.current]).unwrap(),
-            self.line,
-        ));
+    fn add_token(&mut self, kind: TokenKind) -> Result<(), PiccoloError> {
+        self.tokens
+            .push_back(Token::new(kind, self.lexeme()?, self.line));
+
+        Ok(())
+    }
+
+    fn lexeme(&self) -> Result<&'a str, PiccoloError> {
+        core::str::from_utf8(&self.source[self.start..self.current])
+            .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))
     }
 
     fn is_at_end(&self) -> bool {
