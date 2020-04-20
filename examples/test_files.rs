@@ -7,12 +7,12 @@ use std::{io, path};
 
 fn main() -> Result<(), PiccoloError> {
     let path: path::PathBuf = "examples\\test_files".into();
-    let mut files = vec![];
+    let mut files = Vec::new();
     collect_files_recursively(&path, &mut files)?;
 
     println!("found {} tests", files.len());
 
-    let mut file_tokens_errors = vec![];
+    let mut file_tokens_errors = Vec::new();
     for item in files {
         println!(" -- '{}'", item.display());
         let _ = piccolo::do_file(&item).map_err(|errors| {
