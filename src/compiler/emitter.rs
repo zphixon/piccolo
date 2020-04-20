@@ -54,10 +54,7 @@ impl ExprVisitor for Emitter {
             i
         };
 
-        let (low, high) = crate::decode_bytes(i);
-        self.chunk.write(Opcode::Constant, 1);
-        self.chunk.write(low, 1);
-        self.chunk.write(high, 1);
+        self.chunk.write_arg_u16(Opcode::Constant, i, token.line);
 
         Ok(())
     }
@@ -74,10 +71,8 @@ impl ExprVisitor for Emitter {
             self.strings.insert(name.lexeme.to_string(), i);
             i
         };
-        let (low, high) = crate::decode_bytes(i);
-        self.chunk.write(Opcode::GetGlobal, name.line);
-        self.chunk.write(low, name.line);
-        self.chunk.write(high, name.line);
+
+        self.chunk.write_arg_u16(Opcode::GetGlobal, i, name.line);
 
         Ok(())
     }
@@ -85,8 +80,8 @@ impl ExprVisitor for Emitter {
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output {
         rhs.accept(self)?;
         match op.kind {
-            TokenKind::Not => self.chunk.write(Opcode::Not, op.line),
-            TokenKind::Minus => self.chunk.write(Opcode::Negate, op.line),
+            TokenKind::Not => self.chunk.write_u8(Opcode::Not, op.line),
+            TokenKind::Minus => self.chunk.write_u8(Opcode::Negate, op.line),
             _ => unreachable!("unrecognized unary op {:?}", op),
         }
         Ok(())
@@ -97,19 +92,19 @@ impl ExprVisitor for Emitter {
         rhs.accept(self)?;
 
         match op.kind {
-            TokenKind::Plus => self.chunk.write(Opcode::Add, 1),
-            TokenKind::Minus => self.chunk.write(Opcode::Subtract, 1),
-            TokenKind::Divide => self.chunk.write(Opcode::Divide, 1),
-            TokenKind::Multiply => self.chunk.write(Opcode::Multiply, 1),
-            TokenKind::Equal => self.chunk.write(Opcode::Equal, 1),
+            TokenKind::Plus => self.chunk.write_u8(Opcode::Add, 1),
+            TokenKind::Minus => self.chunk.write_u8(Opcode::Subtract, 1),
+            TokenKind::Divide => self.chunk.write_u8(Opcode::Divide, 1),
+            TokenKind::Multiply => self.chunk.write_u8(Opcode::Multiply, 1),
+            TokenKind::Equal => self.chunk.write_u8(Opcode::Equal, 1),
             TokenKind::NotEqual => {
-                self.chunk.write(Opcode::Equal, 1);
-                self.chunk.write(Opcode::Not, 1);
+                self.chunk.write_u8(Opcode::Equal, 1);
+                self.chunk.write_u8(Opcode::Not, 1);
             }
-            TokenKind::Greater => self.chunk.write(Opcode::Greater, 1),
-            TokenKind::GreaterEqual => self.chunk.write(Opcode::GreaterEqual, 1),
-            TokenKind::Less => self.chunk.write(Opcode::Less, 1),
-            TokenKind::LessEqual => self.chunk.write(Opcode::LessEqual, 1),
+            TokenKind::Greater => self.chunk.write_u8(Opcode::Greater, 1),
+            TokenKind::GreaterEqual => self.chunk.write_u8(Opcode::GreaterEqual, 1),
+            TokenKind::Less => self.chunk.write_u8(Opcode::Less, 1),
+            TokenKind::LessEqual => self.chunk.write_u8(Opcode::LessEqual, 1),
             _ => unreachable!("unrecognized binary op {:?}", op),
         }
 
@@ -168,7 +163,7 @@ impl StmtVisitor for Emitter {
 
     fn visit_expr(&mut self, expr: &Expr) -> Self::Output {
         expr.accept(self)?;
-        self.chunk.write(Opcode::Pop, 1); // TODO: line
+        self.chunk.write_u8(Opcode::Pop, 1); // TODO: line
         Ok(())
     }
 
@@ -182,18 +177,14 @@ impl StmtVisitor for Emitter {
             let idx = self
                 .chunk
                 .make_constant(Value::String(name.lexeme.to_owned()));
-            let (low, high) = crate::decode_bytes(idx);
-            self.chunk.write(Opcode::AssignGlobal, name.line);
-            self.chunk.write(low, name.line);
-            self.chunk.write(high, name.line);
+            self.chunk
+                .write_arg_u16(Opcode::AssignGlobal, idx, name.line);
         } else if op.kind == TokenKind::Declare {
             let idx = self
                 .chunk
                 .make_constant(Value::String(name.lexeme.to_owned()));
-            let (low, high) = crate::decode_bytes(idx);
-            self.chunk.write(Opcode::DeclareGlobal, name.line);
-            self.chunk.write(low, name.line);
-            self.chunk.write(high, name.line);
+            self.chunk
+                .write_arg_u16(Opcode::DeclareGlobal, idx, name.line);
         }
         Ok(())
     }
@@ -230,15 +221,13 @@ impl StmtVisitor for Emitter {
         if let Some(expr) = value {
             expr.accept(self)?;
         }
-
-        self.chunk.write(Opcode::Return, keyword.line);
-
+        self.chunk.write_u8(Opcode::Return, keyword.line);
         Ok(())
     }
 
     fn visit_assert(&mut self, keyword: &Token, value: &Expr) -> Self::Output {
         value.accept(self)?;
-        self.chunk.write(Opcode::Assert, keyword.line);
+        self.chunk.write_u8(Opcode::Assert, keyword.line);
         Ok(())
     }
 
