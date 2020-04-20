@@ -10,8 +10,8 @@ pub fn compile(src: &str) -> Result<Chunk, Vec<PiccoloError>> {
     let mut scanner = super::Scanner::new(src);
     let mut parser = crate::Parser::new();
     let ast = parser.parse(&mut scanner)?;
-    let mut emitter2 = emitter::Emitter::new(Chunk::default());
-    emitter2.compile(&ast)
+    let mut emitter = emitter::Emitter::new(Chunk::default());
+    emitter.compile(&ast)
 }
 
 /// Scans all tokens at once from source.
@@ -55,7 +55,7 @@ pub(crate) fn escape_string(t: &Token) -> Result<String, PiccoloError> {
                             value.push(b'\t');
                         }
                         b'\n' => {
-                            while i < s.as_bytes().len() - 1 && is_whitespace(s.as_bytes()[i]) {
+                            while i < s.as_bytes().len() - 1 && scanner::is_whitespace(s.as_bytes()[i]) {
                                 i += 1;
                             }
                             i -= 1;
@@ -80,58 +80,6 @@ pub(crate) fn escape_string(t: &Token) -> Result<String, PiccoloError> {
             panic!("Cannot escape string from token {:?}", t);
         }
     }
-}
-
-fn is_digit(c: u8) -> bool {
-    b'0' <= c && c <= b'9'
-}
-
-fn is_whitespace(c: u8) -> bool {
-    c == 0x09        // tab
-        || c == 0x0A // line feed
-        || c == 0x0B // line tab
-        || c == 0x0C // form feed
-        || c == 0x0D // carriage return
-        || c == 0x20 // space
-                     //  || c == 0x85 // next line      !! represented in utf-8 as C2 85
-                     //  || c == 0xA0 // no-break space !! represented in utf-8 as C2 A0
-}
-
-fn is_non_identifier(c: u8) -> bool {
-    is_whitespace(c)
-        || c == 0x00
-        || c == b'#'
-        || c == b'['
-        || c == b']'
-        || c == b'('
-        || c == b')'
-        || c == b','
-        || c == b'-'
-        || c == b'+'
-        || c == b'*'
-        || c == b'/'
-        || c == b'^'
-        || c == b'%'
-        || c == b'&'
-        || c == b'|'
-        || c == b'.'
-        || c == b'!'
-        || c == b':'
-        || c == b'='
-        || c == b'>'
-        || c == b'<'
-        || c == b'"'
-        || c == b'@'
-        || c == b'$'
-        || c == b'\''
-        || c == b'`'
-        || c == b'{'
-        || c == b'}'
-        || c == b':'
-        || c == b'?'
-        || c == b'\\'
-        || c == b';'
-        || c == b'~'
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -242,9 +190,9 @@ impl<'a> fmt::Display for Token<'a> {
         match &self.kind {
             TokenKind::Identifier => write!(f, "{}", self.lexeme),
             TokenKind::String => write!(f, "{}", self.lexeme),
-            TokenKind::Double(d) => write!(f, "{}", d),
-            TokenKind::Integer(i) => write!(f, "{}", i),
-            k => write!(f, "{:?}", k),
+            TokenKind::Double(v) => write!(f, "{}", v),
+            TokenKind::Integer(v) => write!(f, "{}", v),
+            v => write!(f, "{:?}", v),
         }
     }
 }
@@ -268,31 +216,6 @@ pub fn print_tokens(tokens: &[Token]) {
                 "".into()
             }
         );
-    }
-}
-
-fn into_keyword(s: &str) -> Option<TokenKind> {
-    match s {
-        "do" => Some(TokenKind::Do),
-        "end" => Some(TokenKind::End),
-        "fn" => Some(TokenKind::Fn),
-        "if" => Some(TokenKind::If),
-        "else" => Some(TokenKind::Else),
-        "while" => Some(TokenKind::While),
-        "for" => Some(TokenKind::For),
-        "in" => Some(TokenKind::In),
-        "data" => Some(TokenKind::Data),
-        "let" => Some(TokenKind::Let),
-        "is" => Some(TokenKind::Is),
-        "me" => Some(TokenKind::Me),
-        "new" => Some(TokenKind::New),
-        "err" => Some(TokenKind::Err),
-        "retn" => Some(TokenKind::Retn),
-        "assert" => Some(TokenKind::Assert),
-        "true" => Some(TokenKind::True),
-        "false" => Some(TokenKind::False),
-        "nil" => Some(TokenKind::Nil),
-        _ => None,
     }
 }
 
@@ -361,8 +284,8 @@ impl fmt::Display for TokenKind {
             TokenKind::String => write!(f, "\"str\""),
             TokenKind::True => write!(f, "true"),
             TokenKind::False => write!(f, "false"),
-            TokenKind::Double(f64) => write!(f, "{}", f64),
-            TokenKind::Integer(i64) => write!(f, "{}", i64),
+            TokenKind::Double(v) => write!(f, "{}", v),
+            TokenKind::Integer(v) => write!(f, "{}", v),
             TokenKind::Eof => write!(f, ""),
         }
     }

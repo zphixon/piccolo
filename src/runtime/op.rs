@@ -15,10 +15,10 @@ macro_rules! opcodes {
         }
 
         impl From<u8> for $name {
-            fn from(u: u8) -> $name {
-                match u {
+            fn from(v: u8) -> $name {
+                match v {
                     $($num => $name::$op,)*
-                    n => panic!("{} does not correspond to any opcode in {}", n, stringify!($name))
+                    _ => panic!("{} does not correspond to any opcode in {}", v, stringify!($name))
                 }
             }
         }

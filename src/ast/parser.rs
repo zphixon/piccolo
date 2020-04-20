@@ -173,10 +173,10 @@ macro_rules! prec {
         }
 
         impl From<u8> for $name {
-            fn from(u: u8) -> $name {
-                match u {
+            fn from(v: u8) -> $name {
+                match v {
                     $($num => $name::$item,)*
-                    n => panic!("{} does not correspond to any item in {}", n, stringify!($name))
+                    _ => panic!("{} does not correspond to any item in {}", v, stringify!($name))
                 }
             }
         }
@@ -184,8 +184,8 @@ macro_rules! prec {
         impl std::ops::Add<u8> for $name {
             type Output = $name;
             fn add(self, rhs: u8) -> $name {
-                let s: u8 = self.into();
-                (s + rhs).into()
+                let lhs: u8 = self.into();
+                (lhs + rhs).into()
             }
         }
     };

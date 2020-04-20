@@ -119,11 +119,11 @@ impl Value {
     /// Attempts to clone a value. Panics if it doesn't succeed.
     pub fn try_clone(&self) -> Option<Value> {
         Some(match self {
-            Value::String(string) => Value::String(string.clone()),
-            Value::Object(o) => Value::Object(o.try_clone()?),
-            Value::Bool(bool) => Value::Bool(*bool),
-            Value::Integer(i64) => Value::Integer(*i64),
-            Value::Double(f64) => Value::Double(*f64),
+            Value::String(v) => Value::String(v.clone()),
+            Value::Object(v) => Value::Object(v.try_clone()?),
+            Value::Bool(v) => Value::Bool(*v),
+            Value::Integer(v) => Value::Integer(*v),
+            Value::Double(v) => Value::Double(*v),
             Value::Nil => Value::Nil,
         })
     }
@@ -308,7 +308,7 @@ impl PartialEq for Value {
 impl Into<String> for Value {
     fn into(self) -> String {
         match self {
-            Value::String(t) => t,
+            Value::String(v) => v,
             _ => panic!("could not cast {:?} to string", self),
         }
     }
@@ -317,7 +317,7 @@ impl Into<String> for Value {
 impl Into<bool> for Value {
     fn into(self) -> bool {
         match self {
-            Value::Bool(t) => t,
+            Value::Bool(v) => v,
             _ => panic!("could not cast {:?} to bool", self),
         }
     }
@@ -326,7 +326,7 @@ impl Into<bool> for Value {
 impl Into<i64> for Value {
     fn into(self) -> i64 {
         match self {
-            Value::Integer(t) => t,
+            Value::Integer(v) => v,
             _ => panic!("could not cast {:?} to i64", self),
         }
     }
@@ -335,7 +335,7 @@ impl Into<i64> for Value {
 impl Into<f64> for Value {
     fn into(self) -> f64 {
         match self {
-            Value::Double(t) => t,
+            Value::Double(v) => v,
             _ => panic!("could not cast {:?} to f64", self),
         }
     }
