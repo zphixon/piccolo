@@ -176,7 +176,7 @@ pub mod fuzzer {
 mod tests {
     use crate::ast::{Arity, AstPrinter, Expr, ExprAccept, Stmt};
     use crate::runtime::{op::Opcode, value::Value};
-    use crate::{Emitter, Chunk, Machine, Parser, Scanner, Token, TokenKind};
+    use crate::{Chunk, Emitter, Machine, Parser, Scanner, Token, TokenKind};
 
     #[test]
     fn idk() {

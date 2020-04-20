@@ -44,7 +44,7 @@ fn repl() {
 
                 let r = piccolo::interpret(&line);
                 if let Ok(v) = r {
-                    println!("{:?}", v);
+                    println!("{}", v);
                 } else if let Err(e) = r {
                     if e.len() == 1 {
                         println!("Error {}", e[0])
@@ -65,42 +65,44 @@ fn repl() {
 
 #[cfg(feature = "pc-debug")]
 fn file(contents: &str) {
-    use piccolo::Machine;
+    use piccolo::ast::AstPrinter;
+    use piccolo::{Chunk, Emitter, Machine, Parser, Scanner};
 
-    println!("****** tokens");
-    let tokens = piccolo::scan_all(contents);
-    if let Ok(tokens) = tokens {
-        piccolo::print_tokens(&tokens);
-        println!("****** compiler");
-        let chunk = piccolo::compile(contents);
-        if let Ok(chunk) = chunk {
-            println!("****** chunk");
-            chunk.disassemble("file");
-            let mut vm = Machine::new(chunk);
-            println!("****** result");
-            let result = vm.interpret();
-            if let Err(result) = result {
-                println!("{}", result);
-            } else {
-                println!("****** ok");
+    println!("****** parse");
+    match Parser::new().parse(&mut Scanner::new(&contents)) {
+        Ok(ast) => {
+            println!("****** ast\n{}", AstPrinter.print(&ast));
+            match Emitter::new(Chunk::default()).compile(&ast) {
+                Ok(chunk) => {
+                    println!("****** chunk");
+                    chunk.disassemble("");
+                    let mut vm = Machine::new(chunk);
+                    match vm.interpret() {
+                        Ok(value) => println!("{:?}", value),
+                        Err(e) => println!("interpret error: {}", e),
+                    }
+                }
+                Err(errors) => {
+                    println!("compile error:");
+                    for e in errors {
+                        println!("{}", e);
+                    }
+                }
             }
-        } else {
-            let _: Vec<_> = chunk
-                .unwrap_err()
-                .iter()
-                .map(|err| {
-                    println!("{}", err);
-                })
-                .collect();
         }
-    } else {
-        println!("{}", tokens.unwrap_err());
+        Err(errors) => {
+            println!("parse error:");
+            for e in errors {
+                println!("{}", e);
+            }
+        }
     }
 }
 
 #[cfg(feature = "pc-debug")]
 fn repl() {
-    use piccolo::Machine;
+    use piccolo::ast::AstPrinter;
+    use piccolo::{Chunk, Emitter, Machine, Parser, Scanner};
 
     let mut rl = Editor::<()>::new();
     rl.load_history(".piccolo_history")
@@ -112,31 +114,34 @@ fn repl() {
             Ok(line) => {
                 rl.add_history_entry(&line);
 
-                println!("****** tokens");
-                let tokens = piccolo::scan_all(&line);
-                if let Ok(tokens) = tokens {
-                    piccolo::print_tokens(&tokens);
-                    //println!("****** compiler");
-                    let chunk = piccolo::compiler::compile(&line);
-                    if let Ok(chunk) = chunk {
-                        println!("****** chunk");
-                        chunk.disassemble("line");
-                        let mut vm = Machine::new(chunk);
-                        println!("****** result");
-                        println!("{:?}", vm.interpret());
-                    } else {
-                        let e = chunk.err().unwrap();
-                        if e.len() == 1 {
-                            println!("Error {}", e[0])
-                        } else {
-                            println!("{} Errors:", e.len());
-                            for e in e.iter() {
-                                println!("    {}", e);
+                println!("****** parse");
+                match Parser::new().parse(&mut Scanner::new(&line)) {
+                    Ok(ast) => {
+                        println!("****** ast\n{}", AstPrinter.print(&ast));
+                        match Emitter::new(Chunk::default()).compile(&ast) {
+                            Ok(chunk) => {
+                                println!("****** chunk");
+                                chunk.disassemble("");
+                                let mut vm = Machine::new(chunk);
+                                match vm.interpret() {
+                                    Ok(value) => println!("{:?}", value),
+                                    Err(e) => println!("interpret error: {}", e),
+                                }
+                            }
+                            Err(errors) => {
+                                println!("compile error:");
+                                for e in errors {
+                                    println!("{}", e);
+                                }
                             }
                         }
                     }
-                } else {
-                    println!("{}", tokens.unwrap_err());
+                    Err(errors) => {
+                        println!("parse error:");
+                        for e in errors {
+                            println!("{}", e);
+                        }
+                    }
                 }
             }
 

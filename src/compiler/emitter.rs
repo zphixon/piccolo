@@ -8,14 +8,14 @@ use std::collections::HashMap;
 
 pub struct Local<'a: 'b, 'b> {
     name: &'b Token<'a>,
-    depth: usize
+    depth: usize,
 }
 
 pub struct Emitter<'a, 'b> {
     chunk: Chunk,
     strings: HashMap<String, u16>,
     scope_depth: usize,
-    locals: Vec<Local<'a, 'b>>
+    locals: Vec<Local<'a, 'b>>,
 }
 
 impl<'a, 'b> Emitter<'a, 'b> {
@@ -24,7 +24,7 @@ impl<'a, 'b> Emitter<'a, 'b> {
             chunk,
             strings: HashMap::new(),
             scope_depth: 0,
-            locals: Vec::new()
+            locals: Vec::new(),
         }
     }
 
