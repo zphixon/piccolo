@@ -12,12 +12,10 @@ impl<'a> Parser<'a> {
     pub fn new() -> Self {
         Parser { ast: Vec::new() }
     }
-}
 
-impl<'a> Parser<'a> {
     pub fn parse(&mut self, scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
         let mut errors = vec![];
-        while scanner.peek_token(0).map_err(|e| vec![e])?.kind != TokenKind::Eof {
+        while scanner.peek_token(0)?.kind != TokenKind::Eof {
             if let Err(e) = self.declaration(scanner) {
                 errors.push(e);
             }

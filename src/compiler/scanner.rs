@@ -289,8 +289,9 @@ impl<'a> Scanner<'a> {
     }
 
     fn lexeme(&self) -> Result<&'a str, PiccoloError> {
-        core::str::from_utf8(&self.source[self.start..self.current])
-            .map_err(|_| PiccoloError::new(ErrorKind::InvalidUTF8).line(self.line))
+        Ok(core::str::from_utf8(
+            &self.source[self.start..self.current],
+        )?)
     }
 
     fn is_at_end(&self) -> bool {

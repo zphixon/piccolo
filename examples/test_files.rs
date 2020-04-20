@@ -1,9 +1,11 @@
 extern crate piccolo;
 
+use piccolo::PiccoloError;
+
 use std::fs;
 use std::{io, path};
 
-fn main() -> io::Result<()> {
+fn main() -> Result<(), PiccoloError> {
     let path: path::PathBuf = "examples\\test_files".into();
     let mut files = vec![];
     collect_files_recursively(&path, &mut files)?;
@@ -13,7 +15,7 @@ fn main() -> io::Result<()> {
     let mut file_tokens_errors = vec![];
     for item in files {
         println!(" -- '{}'", item.display());
-        let _ = piccolo::do_file(&item)?.map_err(|errors| {
+        let _ = piccolo::do_file(&item).map_err(|errors| {
             file_tokens_errors.push((item.display().to_string(), errors));
         });
     }
