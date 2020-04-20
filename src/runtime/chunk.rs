@@ -10,9 +10,20 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub(crate) fn write<T: Into<u8>>(&mut self, byte: T, line: usize) {
+    pub(crate) fn write_u8<T: Into<u8>>(&mut self, byte: T, line: usize) {
         self.data.push(byte.into());
         self.add_to_line(line);
+    }
+
+    pub(crate) fn write_u16<T: Into<u16>>(&mut self, bytes: T, line: usize) {
+        let (low, high) = crate::decode_bytes(bytes.into());
+        self.write_u8(low, line);
+        self.write_u8(high, line);
+    }
+
+    pub(crate) fn write_arg_u16<T: Into<u8>>(&mut self, op: T, arg: u16, line: usize) {
+        self.write_u8(op, line);
+        self.write_u16(arg, line);
     }
 
     // allows for duplicate constants, non-duplicates are checked in the compiler
