@@ -1,7 +1,5 @@
 use crate::{ErrorKind, PiccoloError, Token, TokenKind};
 
-use super::{is_digit, is_whitespace};
-
 use std::collections::VecDeque;
 
 /// Converts a piccolo source into a list of tokens.
@@ -197,11 +195,11 @@ impl<'a> Scanner<'a> {
     }
 
     fn identifier_or_keyword(&mut self) -> Result<TokenKind, PiccoloError> {
-        while !super::is_non_identifier(self.peek_char()) {
+        while !is_non_identifier(self.peek_char()) {
             self.advance_char();
         }
 
-        if let Some(tk) = super::into_keyword(self.lexeme()?) {
+        if let Some(tk) = into_keyword(self.lexeme()?) {
             Ok(tk)
         } else {
             Ok(TokenKind::Identifier)
@@ -323,4 +321,81 @@ impl<'a> Scanner<'a> {
             self.source[self.current + n]
         }
     }
+}
+
+fn into_keyword(s: &str) -> Option<TokenKind> {
+    match s {
+        "do" => Some(TokenKind::Do),
+        "end" => Some(TokenKind::End),
+        "fn" => Some(TokenKind::Fn),
+        "if" => Some(TokenKind::If),
+        "else" => Some(TokenKind::Else),
+        "while" => Some(TokenKind::While),
+        "for" => Some(TokenKind::For),
+        "in" => Some(TokenKind::In),
+        "data" => Some(TokenKind::Data),
+        "let" => Some(TokenKind::Let),
+        "is" => Some(TokenKind::Is),
+        "me" => Some(TokenKind::Me),
+        "new" => Some(TokenKind::New),
+        "err" => Some(TokenKind::Err),
+        "retn" => Some(TokenKind::Retn),
+        "assert" => Some(TokenKind::Assert),
+        "true" => Some(TokenKind::True),
+        "false" => Some(TokenKind::False),
+        "nil" => Some(TokenKind::Nil),
+        _ => None,
+    }
+}
+
+fn is_digit(c: u8) -> bool {
+    b'0' <= c && c <= b'9'
+}
+
+pub(super) fn is_whitespace(c: u8) -> bool {
+    c == 0x09        // tab
+        || c == 0x0A // line feed
+        || c == 0x0B // line tab
+        || c == 0x0C // form feed
+        || c == 0x0D // carriage return
+        || c == 0x20 // space
+                     //  || c == 0x85 // next line      !! represented in utf-8 as C2 85
+                     //  || c == 0xA0 // no-break space !! represented in utf-8 as C2 A0
+}
+
+fn is_non_identifier(c: u8) -> bool {
+    is_whitespace(c)
+        || c == 0x00
+        || c == b'#'
+        || c == b'['
+        || c == b']'
+        || c == b'('
+        || c == b')'
+        || c == b','
+        || c == b'-'
+        || c == b'+'
+        || c == b'*'
+        || c == b'/'
+        || c == b'^'
+        || c == b'%'
+        || c == b'&'
+        || c == b'|'
+        || c == b'.'
+        || c == b'!'
+        || c == b':'
+        || c == b'='
+        || c == b'>'
+        || c == b'<'
+        || c == b'"'
+        || c == b'@'
+        || c == b'$'
+        || c == b'\''
+        || c == b'`'
+        || c == b'{'
+        || c == b'}'
+        || c == b':'
+        || c == b'?'
+        || c == b'\\'
+        || c == b';'
+        || c == b'~'
 }

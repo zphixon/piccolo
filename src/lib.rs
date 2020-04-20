@@ -29,15 +29,15 @@ pub use compiler::print_tokens;
 /// # Ok(())
 /// # }
 /// ```
-pub fn interpret(src: &str) -> Result<Value, Vec<error::PiccoloError>> {
+pub fn interpret(src: &str) -> Result<Value, Vec<PiccoloError>> {
     let mut scanner = Scanner::new(src);
     let ast = Parser::new().parse(&mut scanner)?;
-    let chunk = compiler::emitter::Emitter::new(Chunk::default()).compile(&ast)?;
+    let chunk = Emitter::new(Chunk::default()).compile(&ast)?;
     Ok(Machine::new(chunk).interpret()?)
 }
 
 /// Reads a file and interprets its contents.
-pub fn do_file(file: &std::path::Path) -> Result<Value, Vec<error::PiccoloError>> {
+pub fn do_file(file: &std::path::Path) -> Result<Value, Vec<PiccoloError>> {
     let contents = std::fs::read_to_string(file).map_err(|e| vec![PiccoloError::from(e)])?;
     interpret(&contents).map_err(|v| {
         v.into_iter()
@@ -174,11 +174,9 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::parser::BindingPower;
     use crate::ast::{Arity, AstPrinter, Expr, ExprAccept, Stmt};
-    use crate::compiler::emitter::Emitter;
     use crate::runtime::{op::Opcode, value::Value};
-    use crate::{Chunk, Machine, Parser, Scanner, Token, TokenKind};
+    use crate::{Emitter, Chunk, Machine, Parser, Scanner, Token, TokenKind};
 
     #[test]
     fn idk() {
@@ -439,6 +437,7 @@ mod tests {
 
     #[test]
     fn precedence_ord() {
+        use crate::ast::parser::BindingPower;
         assert!(BindingPower::And > BindingPower::Or);
     }
 }
