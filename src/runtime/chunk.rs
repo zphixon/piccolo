@@ -76,7 +76,7 @@ impl Chunk {
             let op = self.data[offset].into();
 
             print!(
-                "{:04x} {:02x} {} {:?}",
+                "{:04x} {:02x} {} {:15}",
                 offset,
                 op as u8,
                 if line == prev_line {
@@ -84,7 +84,7 @@ impl Chunk {
                 } else {
                     format!("{:>4}", line)
                 },
-                op
+                format!("{:?}", op)
             );
 
             offset = match op {
@@ -94,7 +94,7 @@ impl Chunk {
                     let low = self.data[offset + 1];
                     let high = self.data[offset + 2];
                     let idx = crate::encode_bytes(low, high);
-                    print!("#{:04x} {:?}", idx, self.constants[idx as usize]);
+                    print!(" @{:04x} {:?}", idx, self.constants[idx as usize]);
                     offset + 3
                 }
                 Opcode::Negate => offset + 1,
@@ -116,21 +116,35 @@ impl Chunk {
                     let low = self.data[offset + 1];
                     let high = self.data[offset + 2];
                     let idx = crate::encode_bytes(low, high);
-                    print!("#{:04x} {:?}", idx, self.constants[idx as usize]);
+                    print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
                     offset + 3
                 }
                 Opcode::GetGlobal => {
                     let low = self.data[offset + 1];
                     let high = self.data[offset + 2];
                     let idx = crate::encode_bytes(low, high);
-                    print!("#{:04x} {:?}", idx, self.constants[idx as usize]);
+                    print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
                     offset + 3
                 }
                 Opcode::AssignGlobal => {
                     let low = self.data[offset + 1];
                     let high = self.data[offset + 2];
                     let idx = crate::encode_bytes(low, high);
-                    print!("#{:04x} {:?}", idx, self.constants[idx as usize]);
+                    print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
+                    offset + 3
+                }
+                Opcode::GetLocal => {
+                    let low = self.data[offset + 1];
+                    let high = self.data[offset + 2];
+                    let idx = crate::encode_bytes(low, high);
+                    print!(" ${}", idx);
+                    offset + 3
+                }
+                Opcode::AssignLocal => {
+                    let low = self.data[offset + 1];
+                    let high = self.data[offset + 2];
+                    let idx = crate::encode_bytes(low, high);
+                    print!(" ${}", idx);
                     offset + 3
                 }
             };
@@ -148,13 +162,52 @@ impl Chunk {
 
         let op = self.data[offset].into();
 
-        print!("{:04} line {:<4} {:02x} {:?}", offset, line, op as u8, op);
-        if let Opcode::Constant = op {
-            print!(
-                "#{:04} {:?}",
-                self.data[offset + 1],
-                self.constants[self.data[offset + 1] as usize]
-            );
+        print!(
+            "{:04x} {:02x} line {:<4} {:15}",
+            offset,
+            op as u8,
+            line,
+            format!("{:?}", op)
+        );
+
+        match op {
+            Opcode::Constant => {
+                let low = self.data[offset + 1];
+                let high = self.data[offset + 2];
+                let idx = crate::encode_bytes(low, high);
+                print!(" @{:04x} {:?}", idx, self.constants[idx as usize]);
+            }
+            Opcode::DeclareGlobal => {
+                let low = self.data[offset + 1];
+                let high = self.data[offset + 2];
+                let idx = crate::encode_bytes(low, high);
+                print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
+            }
+            Opcode::GetGlobal => {
+                let low = self.data[offset + 1];
+                let high = self.data[offset + 2];
+                let idx = crate::encode_bytes(low, high);
+                print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
+            }
+            Opcode::AssignGlobal => {
+                let low = self.data[offset + 1];
+                let high = self.data[offset + 2];
+                let idx = crate::encode_bytes(low, high);
+                print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
+            }
+            Opcode::GetLocal => {
+                let low = self.data[offset + 1];
+                let high = self.data[offset + 2];
+                let idx = crate::encode_bytes(low, high);
+                print!(" ${}", idx);
+            }
+            Opcode::AssignLocal => {
+                let low = self.data[offset + 1];
+                let high = self.data[offset + 2];
+                let idx = crate::encode_bytes(low, high);
+                print!(" ${}", idx);
+            }
+            _ => {}
         }
         println!();
     }

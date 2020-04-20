@@ -2,23 +2,18 @@ use crate::ast::expr::{Expr, ExprAccept, ExprVisitor};
 use crate::ast::stmt::{Stmt, StmtAccept, StmtVisitor};
 use crate::ast::Arity;
 use crate::runtime::op::Opcode;
-use crate::{Chunk, PiccoloError, Token, TokenKind, Value};
+use crate::{Chunk, ErrorKind, PiccoloError, Token, TokenKind, Value};
 
 use std::collections::HashMap;
 
-pub struct Local<'a> {
-    name: Token<'a>,
-    depth: usize,
-}
-
-pub struct Emitter<'a> {
+pub struct Emitter {
     chunk: Chunk,
     strings: HashMap<String, u16>,
-    scope_depth: usize,
-    locals: Vec<Local<'a>>,
+    scope_depth: u16,
+    locals: Vec<(String, u16)>,
 }
 
-impl<'a> Emitter<'a> {
+impl Emitter {
     pub fn new(chunk: Chunk) -> Self {
         Emitter {
             chunk,
@@ -47,9 +42,18 @@ impl<'a> Emitter<'a> {
             Err(errs)
         }
     }
+
+    fn resolve_local(&self, name: &str) -> Option<u16> {
+        for (i, (k, _)) in self.locals.iter().enumerate().rev() {
+            if k == name {
+                return Some(i as u16);
+            }
+        }
+        None
+    }
 }
 
-impl ExprVisitor for Emitter<'_> {
+impl ExprVisitor for Emitter {
     type Output = Result<(), PiccoloError>;
 
     fn visit_atom(&mut self, token: &Token) -> Self::Output {
@@ -73,16 +77,21 @@ impl ExprVisitor for Emitter<'_> {
     }
 
     fn visit_variable(&mut self, name: &Token) -> Self::Output {
-        let i = if name.kind == TokenKind::String && self.strings.contains_key(name.lexeme) {
-            *self.strings.get(name.lexeme).unwrap()
-        } else {
-            let i = self.chunk.make_constant(Value::String(name.lexeme.into()));
-            self.strings.insert(name.lexeme.to_string(), i);
-            i
-        };
+        match self.resolve_local(name.lexeme) {
+            Some(idx) => self.chunk.write_arg_u16(Opcode::GetLocal, idx, name.line),
+            None => {
+                let i = if self.strings.contains_key(name.lexeme) {
+                    *self.strings.get(name.lexeme).unwrap()
+                } else {
+                    return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                        name: name.lexeme.to_owned(),
+                    })
+                    .line(name.line));
+                };
 
-        self.chunk.write_arg_u16(Opcode::GetGlobal, i, name.line);
-
+                self.chunk.write_arg_u16(Opcode::GetGlobal, i, name.line);
+            }
+        }
         Ok(())
     }
 
@@ -120,8 +129,8 @@ impl ExprVisitor for Emitter<'_> {
         Ok(())
     }
 
-    fn visit_assign(&mut self, _name: &Token, value: &Expr) -> Self::Output {
-        value.accept(self)
+    fn visit_assign(&mut self, _name: &Token, _value: &Expr) -> Self::Output {
+        unimplemented!("visit_assign")
     }
 
     fn visit_logical(&mut self, lhs: &Expr, _op: &Token, rhs: &Expr) -> Self::Output {
@@ -136,7 +145,7 @@ impl ExprVisitor for Emitter<'_> {
         _arity: Arity,
         _args: &[Expr],
     ) -> Self::Output {
-        unimplemented!()
+        unimplemented!("visit_call")
     }
 
     fn visit_new(&mut self, _name: &Token, _args: &[(Token, Box<Expr>)]) -> Self::Output {
@@ -167,7 +176,7 @@ impl ExprVisitor for Emitter<'_> {
     }
 }
 
-impl StmtVisitor for Emitter<'_> {
+impl StmtVisitor for Emitter {
     type Output = Result<(), PiccoloError>;
 
     fn visit_expr(&mut self, expr: &Expr) -> Self::Output {
@@ -182,12 +191,35 @@ impl StmtVisitor for Emitter<'_> {
             stmt.accept(self)?;
         }
         self.scope_depth -= 1;
+        while self.locals.len() > 0 && self.locals[self.locals.len() - 1].1 > self.scope_depth {
+            self.chunk.write_u8(Opcode::Pop, 4);
+            self.locals.pop().unwrap();
+        }
         Ok(())
     }
 
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
         value.accept(self)?;
-        if op.kind == TokenKind::Assign {
+        if self.scope_depth > 0 {
+            if op.kind == TokenKind::Assign {
+                match self.resolve_local(name.lexeme) {
+                    Some(idx) => self.chunk.write_arg_u16(Opcode::AssignLocal, idx, op.line),
+                    None => {
+                        let i = if self.strings.contains_key(name.lexeme) {
+                            *self.strings.get(name.lexeme).unwrap()
+                        } else {
+                            return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                                name: name.lexeme.to_owned(),
+                            })
+                            .line(name.line));
+                        };
+                        self.chunk.write_arg_u16(Opcode::AssignGlobal, i, name.line);
+                    }
+                }
+            } else if op.kind == TokenKind::Declare {
+                self.locals.push((name.lexeme.to_owned(), self.scope_depth));
+            }
+        } else if op.kind == TokenKind::Assign {
             let idx = self
                 .chunk
                 .make_constant(Value::String(name.lexeme.to_owned()));
@@ -197,6 +229,7 @@ impl StmtVisitor for Emitter<'_> {
             let idx = self
                 .chunk
                 .make_constant(Value::String(name.lexeme.to_owned()));
+            self.strings.insert(name.lexeme.to_owned(), idx);
             self.chunk
                 .write_arg_u16(Opcode::DeclareGlobal, idx, name.line);
         }
