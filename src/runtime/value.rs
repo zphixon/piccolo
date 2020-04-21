@@ -202,7 +202,7 @@ impl Value {
             Value::Integer(v) => format!("{}", v),
             Value::Double(v) => format!("{}", v),
             Value::Object(v) => format!("{}", v),
-            Value::Nil => String::new(),
+            Value::Nil => "nil".into(),
         }
     }
 
