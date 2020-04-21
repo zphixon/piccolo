@@ -13,7 +13,7 @@ fn main() -> Result<(), PiccoloError> {
     println!("found {} tests", files.len());
 
     let mut ignored = 0;
-    let mut file_tokens_errors = Vec::new();
+    let mut test_errors = Vec::new();
     for item in files.iter() {
         let name = item.display().to_string();
         if name.ends_with("ignore") {
@@ -21,42 +21,36 @@ fn main() -> Result<(), PiccoloError> {
         } else if !name.ends_with("_fail.pc") {
             println!(" -- '{}'", name);
             let _ = piccolo::do_file(&item).map_err(|errors| {
-                file_tokens_errors.push((name, errors));
+                test_errors.push(errors);
             });
         } else {
             println!(" xx '{}'", name);
             let _ = piccolo::do_file(&item).map(|v| {
-                file_tokens_errors.push((
-                    name.clone(),
-                    vec![PiccoloError::new(ErrorKind::AssertFailed)
-                        .file(name)
-                        .msg_string(format!(
-                            "should have failed to complete, but resulted in {:?}",
-                            v
-                        ))],
-                ))
+                test_errors.push(vec![PiccoloError::new(ErrorKind::AssertFailed)
+                    .file(name)
+                    .msg_string(format!("resulted in {:?}", v))])
             });
         }
     }
 
     println!();
 
-    for (file, errors) in file_tokens_errors.iter() {
-        println!(" -- test '{}' failed", file);
+    for errors in test_errors.iter() {
+        print!(" XX ");
         if errors.len() == 1 {
-            println!("        Error {}", errors[0])
+            println!("Error {}", errors[0])
         } else {
-            println!("        {} Errors:", errors.len());
+            println!("{} Errors:", errors.len());
             for e in errors.iter() {
-                println!("            {}", e);
+                println!("        {}", e);
             }
         }
     }
 
     println!(
-        "reported {} successful, {} failures, {} ignored",
-        files.len() - file_tokens_errors.len() - ignored,
-        file_tokens_errors.len(),
+        "\nreported {} successful, {} failures, {} ignored",
+        files.len() - test_errors.len() - ignored,
+        test_errors.len(),
         ignored,
     );
 
