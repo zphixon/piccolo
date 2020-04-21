@@ -1,0 +1,9 @@
+do
+    a =: "first"
+    assert a == "first"
+end
+
+do
+    a =: "second"
+    assert a == "second"
+end

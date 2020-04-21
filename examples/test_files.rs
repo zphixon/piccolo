@@ -31,7 +31,7 @@ fn main() -> Result<(), PiccoloError> {
                     vec![PiccoloError::new(ErrorKind::AssertFailed)
                         .file(name)
                         .msg_string(format!(
-                            "should have failed to complete, but resulted in {}",
+                            "should have failed to complete, but resulted in {:?}",
                             v
                         ))],
                 ))
@@ -54,10 +54,10 @@ fn main() -> Result<(), PiccoloError> {
     }
 
     println!(
-        "reported {} failures, {} ignored, {} successful",
+        "reported {} successful, {} failures, {} ignored",
+        files.len() - file_tokens_errors.len() - ignored,
         file_tokens_errors.len(),
         ignored,
-        files.len() - file_tokens_errors.len() - ignored
     );
 
     Ok(())

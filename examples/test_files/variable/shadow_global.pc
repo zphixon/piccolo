@@ -1,0 +1,6 @@
+a =: "global"
+do
+    a =: "shadow"
+    assert a == "shadow"
+end
+assert a == "global"
