@@ -217,7 +217,7 @@ impl Machine {
                     }
                     self.ip += 2;
                 }
-                Opcode::AssignGlobal => {
+                Opcode::SetGlobal => {
                     if let Value::String(name) = self.peek_constant() {
                         let name = name.clone();
                         let value = self.pop()?;
@@ -235,7 +235,7 @@ impl Machine {
                     self.stack.push(v);
                     self.ip += 2;
                 }
-                Opcode::AssignLocal => {
+                Opcode::SetLocal => {
                     let slot = self.read_short();
                     self.stack[slot as usize] = self.pop()?;
                     self.ip += 2;

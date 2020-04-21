@@ -45,8 +45,8 @@ opcodes!(Opcode =>
     Pop             = 0x10,
     DeclareGlobal   = 0x11,
     GetGlobal       = 0x12,
-    AssignGlobal    = 0x13,
+    SetGlobal       = 0x13,
     Assert          = 0x14,
     GetLocal        = 0x15,
-    AssignLocal     = 0x16,
+    SetLocal        = 0x16,
 );

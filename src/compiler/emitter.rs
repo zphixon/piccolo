@@ -229,10 +229,10 @@ impl StmtVisitor for Emitter {
         if self.scope_depth > 0 {
             if op.kind == TokenKind::Assign {
                 if let Some(idx) = self.resolve_local(name.lexeme) {
-                    self.chunk.write_arg_u16(Opcode::AssignLocal, idx, op.line);
+                    self.chunk.write_arg_u16(Opcode::SetLocal, idx, op.line);
                 } else {
                     let i = self.get_ident(name)?;
-                    self.chunk.write_arg_u16(Opcode::AssignGlobal, i, name.line);
+                    self.chunk.write_arg_u16(Opcode::SetGlobal, i, name.line);
                 }
             } else if op.kind == TokenKind::Declare {
                 self.locals.push((name.lexeme.to_owned(), self.scope_depth));
@@ -240,7 +240,7 @@ impl StmtVisitor for Emitter {
         } else if op.kind == TokenKind::Assign {
             let idx = self.get_ident(name)?;
             self.chunk
-                .write_arg_u16(Opcode::AssignGlobal, idx, name.line);
+                .write_arg_u16(Opcode::SetGlobal, idx, name.line);
         } else if op.kind == TokenKind::Declare {
             let idx = self.make_ident(name.lexeme);
             self.chunk
