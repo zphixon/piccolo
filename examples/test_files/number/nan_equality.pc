@@ -1,0 +1,4 @@
+nan =: 0./0.
+
+assert nan != 1
+assert nan != nan

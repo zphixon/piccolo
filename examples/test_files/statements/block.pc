@@ -1,15 +1,33 @@
-z =: 3
-
+x =: "something"
 do
-    x =: 3             # 0
     do
-        y =: 4         # 1
+        do
+            do
+                x = x + " cool"
+            end
+            do
+                do
+                    x = x + " is"
+                    do
+                        do
+                            x = x + " not"
+                        end
+                        do
+                            do
+                                do
+                                    x = x + " happening"
+                                end
+                            end
+                        end
+                    end
+                    do
+                    end
+                end
+            end
+            x = x + " here"
+        end
     end
-    y =: 5             # 1
-    retn x             # 0
-    x = "yeet" + y     # 0 = 1
-    retn x             # 0
-    z = x
+    do
+        assert x == "something cool is not happening here"
+    end
 end
-
-assert z == "yeet5"

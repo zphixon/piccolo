@@ -6,12 +6,12 @@ c =: b
 b = c + b
 a = "z"
 b = c + a + b
-retn b + a
+assert b + a == "ayyyy lmaoooo323zayyyy lmaoooo323ayyyy lmaoooo323z"
 
 x =: "hello \
       world"
 
-retn x == "hello world"
+assert x == "hello world"
 
 # fn thing(arg_juan, arg_deux) is
 #     sum = arg_juan + arg_deux

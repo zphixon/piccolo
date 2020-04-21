@@ -1,0 +1,15 @@
+z =: 3
+
+do
+    x =: 3
+    do
+        y =: 4
+    end
+    y =: 5
+    assert x == 3
+    x = "yeet" + y     # 0 = 1
+    assert x == "yeet5"
+    z = x
+end
+
+assert z == "yeet5"
