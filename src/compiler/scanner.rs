@@ -44,10 +44,8 @@ impl<'a> Scanner<'a> {
             self.next()?;
         }
 
-        if self.tokens.len() <= idx {
-            while self.tokens.len() <= idx {
-                self.next()?;
-            }
+        while self.tokens.len() <= idx {
+            self.next()?;
         }
 
         Ok(&self.tokens[idx])
