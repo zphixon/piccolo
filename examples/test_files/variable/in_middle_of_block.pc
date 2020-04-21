@@ -1,0 +1,10 @@
+do
+  a =: "a"
+  assert a == "a"
+  b =: a + " b"
+  assert b == "a b"
+  c =: a + " c"
+  assert c == "a c"
+  d =: b + " d"
+  assert d == "a b d"
+end

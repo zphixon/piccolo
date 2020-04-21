@@ -1,0 +1,2 @@
+assert 579 == 123 + 456
+assert "string" == "str" + "ing"

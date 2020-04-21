@@ -1,0 +1,4 @@
+a =: "outer"
+do
+    a =: a
+end

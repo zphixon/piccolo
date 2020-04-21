@@ -1,0 +1,8 @@
+do
+    a =: "local"
+    do
+        a =: "shadow"
+        assert a == "shadow"
+    end
+    assert a == "local"
+end
