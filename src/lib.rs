@@ -10,8 +10,8 @@ pub mod compiler;
 pub mod error;
 pub mod runtime;
 
-pub use ast::Parser;
-pub use compiler::{compile, emitter::Emitter, scan_all, scanner::Scanner, Token, TokenKind};
+pub use compiler::{compile, scan_all, Token, TokenKind};
+pub use compiler::{emitter::Emitter, parser::Parser, scanner::Scanner};
 pub use error::{ErrorKind, PiccoloError};
 pub use runtime::{chunk::Chunk, value::Value, vm::Machine};
 
@@ -437,7 +437,7 @@ mod tests {
 
     #[test]
     fn precedence_ord() {
-        use crate::ast::parser::BindingPower;
+        use crate::compiler::parser::BindingPower;
         assert!(BindingPower::And > BindingPower::Or);
     }
 }

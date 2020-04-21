@@ -1,11 +1,9 @@
 #![allow(dead_code)]
 
 pub mod expr;
-pub mod parser;
 pub mod stmt;
 
 pub use expr::{Expr, ExprAccept, ExprVisitor};
-pub use parser::Parser;
 pub use stmt::{Stmt, StmtAccept, StmtVisitor};
 
 use crate::{Token, TokenKind};
