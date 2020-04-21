@@ -1,0 +1,2 @@
+assert "ok" # ok
+#comment

@@ -1,3 +1,4 @@
 target/
 .idea/
 .piccolo_history
+*.ignore

@@ -1,6 +1,6 @@
 extern crate piccolo;
 
-use piccolo::PiccoloError;
+use piccolo::{ErrorKind, PiccoloError};
 
 use std::fs;
 use std::{io, path};
@@ -12,17 +12,36 @@ fn main() -> Result<(), PiccoloError> {
 
     println!("found {} tests", files.len());
 
+    let mut ignored = 0;
     let mut file_tokens_errors = Vec::new();
-    for item in files {
-        println!(" -- '{}'", item.display());
-        let _ = piccolo::do_file(&item).map_err(|errors| {
-            file_tokens_errors.push((item.display().to_string(), errors));
-        });
+    for item in files.iter() {
+        let name = item.display().to_string();
+        if name.ends_with("ignore") {
+            ignored += 1;
+        } else if !name.ends_with("_fail.pc") {
+            println!(" -- '{}'", name);
+            let _ = piccolo::do_file(&item).map_err(|errors| {
+                file_tokens_errors.push((name, errors));
+            });
+        } else {
+            println!(" xx '{}'", name);
+            let _ = piccolo::do_file(&item).map(|v| {
+                file_tokens_errors.push((
+                    name.clone(),
+                    vec![PiccoloError::new(ErrorKind::AssertFailed)
+                        .file(name)
+                        .msg_string(format!(
+                            "should have failed to complete, but resulted in {}",
+                            v
+                        ))],
+                ))
+            });
+        }
     }
 
-    println!("\nreported {} failures", file_tokens_errors.len());
+    println!();
 
-    for (file, errors) in file_tokens_errors {
+    for (file, errors) in file_tokens_errors.iter() {
         println!(" -- test '{}' failed", file);
         if errors.len() == 1 {
             println!("        Error {}", errors[0])
@@ -33,6 +52,13 @@ fn main() -> Result<(), PiccoloError> {
             }
         }
     }
+
+    println!(
+        "reported {} failures, {} ignored, {} successful",
+        file_tokens_errors.len(),
+        ignored,
+        files.len() - file_tokens_errors.len() - ignored
+    );
 
     Ok(())
 }

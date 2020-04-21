@@ -1,0 +1,7 @@
+assert 123
+assert 987654
+assert 0
+assert -0
+
+assert 123.456
+assert -0.001

@@ -1,0 +1,8 @@
+a =: "outer"
+
+do
+    a =: "inner"
+    assert a == "inner"
+end
+
+assert a == "outer"

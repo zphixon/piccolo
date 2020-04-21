@@ -1,0 +1,5 @@
+a =: "before"
+assert a == "before"
+
+a = "after"
+assert a == "after"
