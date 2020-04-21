@@ -1,7 +1,7 @@
 use crate::{ErrorKind, PiccoloError, Scanner, Token, TokenKind};
 
-use super::Expr;
-use super::Stmt;
+use crate::ast::Expr;
+use crate::ast::Stmt;
 
 #[derive(Default)]
 pub struct Parser<'a> {

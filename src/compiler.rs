@@ -1,4 +1,5 @@
 pub mod emitter;
+pub mod parser;
 pub mod scanner;
 
 use crate::{Chunk, ErrorKind, PiccoloError};
