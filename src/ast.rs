@@ -85,7 +85,7 @@ impl StmtVisitor for AstPrinter {
         self.parenthesize("expr", &[&expr])
     }
 
-    fn visit_block(&mut self, body: &[Stmt]) -> String {
+    fn visit_block(&mut self, _do_: &Token, body: &[Stmt]) -> String {
         self.parenthesize_list("do", None, body)
     }
 
