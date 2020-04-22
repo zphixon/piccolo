@@ -45,10 +45,19 @@ impl Emitter {
         }
     }
 
-    fn resolve_local(&self, name: &str) -> Option<u16> {
+    fn get_local_slot(&self, name: &str) -> Option<u16> {
         for (i, (k, _)) in self.locals.iter().enumerate().rev() {
             if k == name {
                 return Some(i as u16);
+            }
+        }
+        None
+    }
+
+    fn get_local_depth(&self, name: &str) -> Option<u16> {
+        for (k, v) in self.locals.iter().rev() {
+            if k == name {
+                return Some(*v);
             }
         }
         None
@@ -103,18 +112,10 @@ impl ExprVisitor for Emitter {
     }
 
     fn visit_variable(&mut self, name: &Token) -> Self::Output {
-        match self.resolve_local(name.lexeme) {
+        match self.get_local_slot(name.lexeme) {
             Some(idx) => self.chunk.write_arg_u16(Opcode::GetLocal, idx, name.line),
             None => {
-                let i = if self.identifiers.contains_key(name.lexeme) {
-                    *self.identifiers.get(name.lexeme).unwrap()
-                } else {
-                    return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
-                        name: name.lexeme.to_owned(),
-                    })
-                    .line(name.line));
-                };
-
+                let i = self.get_ident(name)?;
                 self.chunk.write_arg_u16(Opcode::GetGlobal, i, name.line);
             }
         }
@@ -227,15 +228,32 @@ impl StmtVisitor for Emitter {
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
         value.accept(self)?;
         if self.scope_depth > 0 {
+            // inside of a block, declaration creates local variables
             if op.kind == TokenKind::Assign {
-                if let Some(idx) = self.resolve_local(name.lexeme) {
+                if let Some(idx) = self.get_local_slot(name.lexeme) {
+                    // local variable exists, reassign it
                     self.chunk.write_arg_u16(Opcode::SetLocal, idx, op.line);
                 } else {
+                    // reassign global variable, checking for existence at runtime
                     let i = self.get_ident(name)?;
                     self.chunk.write_arg_u16(Opcode::SetGlobal, i, name.line);
                 }
             } else if op.kind == TokenKind::Declare {
-                self.locals.push((name.lexeme.to_owned(), self.scope_depth));
+                // if there exists some local with this name
+                if let Some(idx) = self.get_local_depth(name.lexeme) {
+                    if idx != self.scope_depth {
+                        // create a new local if we're in a different scope
+                        self.locals.push((name.lexeme.to_owned(), self.scope_depth));
+                    } else {
+                        // error if we're in the same scope
+                        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+                            .line(name.line)
+                            .msg_string(format!("cannot shadow local variable '{}'", self.locals[idx as usize - 1].0)));
+                    }
+                } else {
+                    // create a new local with this name
+                    self.locals.push((name.lexeme.to_owned(), self.scope_depth));
+                }
             }
         } else if op.kind == TokenKind::Assign {
             let idx = self.get_ident(name)?;
