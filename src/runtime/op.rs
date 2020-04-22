@@ -49,4 +49,5 @@ opcodes!(Opcode =>
     Assert          = 0x14,
     GetLocal        = 0x15,
     SetLocal        = 0x16,
+    Modulo          = 0x17,
 );
