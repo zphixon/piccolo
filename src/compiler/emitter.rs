@@ -156,10 +156,6 @@ impl ExprVisitor for Emitter {
         Ok(())
     }
 
-    fn visit_assign(&mut self, _name: &Token, _value: &Expr) -> Self::Output {
-        unimplemented!("visit_assign")
-    }
-
     fn visit_logical(&mut self, lhs: &Expr, _op: &Token, rhs: &Expr) -> Self::Output {
         lhs.accept(self)?;
         rhs.accept(self)
@@ -248,7 +244,10 @@ impl StmtVisitor for Emitter {
                         // error if we're in the same scope
                         return Err(PiccoloError::new(ErrorKind::SyntaxError)
                             .line(name.line)
-                            .msg_string(format!("cannot shadow local variable '{}'", self.locals[idx as usize - 1].0)));
+                            .msg_string(format!(
+                                "cannot shadow local variable '{}'",
+                                self.locals[idx as usize - 1].0
+                            )));
                     }
                 } else {
                     // create a new local with this name
@@ -257,8 +256,7 @@ impl StmtVisitor for Emitter {
             }
         } else if op.kind == TokenKind::Assign {
             let idx = self.get_ident(name)?;
-            self.chunk
-                .write_arg_u16(Opcode::SetGlobal, idx, name.line);
+            self.chunk.write_arg_u16(Opcode::SetGlobal, idx, name.line);
         } else if op.kind == TokenKind::Declare {
             let idx = self.make_ident(name.lexeme);
             self.chunk

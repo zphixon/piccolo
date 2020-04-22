@@ -20,7 +20,6 @@ pub trait ExprVisitor {
     fn visit_variable(&mut self, name: &Token) -> Self::Output;
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output;
     fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
-    fn visit_assign(&mut self, name: &Token, value: &Expr) -> Self::Output;
     fn visit_logical(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
     fn visit_call(
         &mut self,
@@ -57,10 +56,6 @@ pub enum Expr<'a> {
         lhs: Box<Expr<'a>>,
         op: Token<'a>,
         rhs: Box<Expr<'a>>,
-    },
-    Assignment {
-        name: Token<'a>,
-        value: Box<Expr<'a>>,
     },
     Logical {
         lhs: Box<Expr<'a>>,
@@ -114,8 +109,6 @@ impl ExprAccept for Expr<'_> {
                 => v.visit_unary(op, rhs),
             Expr::Binary { lhs, op, rhs }
                 => v.visit_binary(lhs, op, rhs),
-            Expr::Assignment { name, value }
-                => v.visit_assign(name, value),
             Expr::Logical { lhs, op, rhs }
                 => v.visit_logical(lhs, op, rhs),
             Expr::Call { callee, paren, arity, args }

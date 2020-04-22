@@ -126,7 +126,7 @@ impl Chunk {
                     print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
                     offset + 3
                 }
-                Opcode::AssignGlobal => {
+                Opcode::SetGlobal => {
                     let low = self.data[offset + 1];
                     let high = self.data[offset + 2];
                     let idx = crate::encode_bytes(low, high);
@@ -140,7 +140,7 @@ impl Chunk {
                     print!(" ${}", idx);
                     offset + 3
                 }
-                Opcode::AssignLocal => {
+                Opcode::SetLocal => {
                     let low = self.data[offset + 1];
                     let high = self.data[offset + 2];
                     let idx = crate::encode_bytes(low, high);
@@ -189,7 +189,7 @@ impl Chunk {
                 let idx = crate::encode_bytes(low, high);
                 print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
             }
-            Opcode::AssignGlobal => {
+            Opcode::SetGlobal => {
                 let low = self.data[offset + 1];
                 let high = self.data[offset + 2];
                 let idx = crate::encode_bytes(low, high);
@@ -201,7 +201,7 @@ impl Chunk {
                 let idx = crate::encode_bytes(low, high);
                 print!(" ${}", idx);
             }
-            Opcode::AssignLocal => {
+            Opcode::SetLocal => {
                 let low = self.data[offset + 1];
                 let high = self.data[offset + 2];
                 let idx = crate::encode_bytes(low, high);

@@ -174,10 +174,6 @@ impl ExprVisitor for AstPrinter {
         self.parenthesize(op.lexeme, &[lhs, rhs])
     }
 
-    fn visit_assign(&mut self, name: &Token, value: &Expr) -> String {
-        self.parenthesize(&format!("= {}", name.lexeme), &[value])
-    }
-
     fn visit_logical(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> String {
         self.parenthesize(op.lexeme, &[lhs, rhs])
     }
