@@ -46,10 +46,10 @@ impl<'a> Parser<'a> {
             let value = self.expr_bp(scanner, BindingPower::Assignment)?;
             Ok(Stmt::Assert { keyword, value })
         } else if scanner.peek_token(0)?.kind == TokenKind::Do {
-            let do_ = scanner.next_token()?;
+            scanner.next_token()?;
             let body = self.block(scanner)?;
-            self.consume(scanner, TokenKind::End)?;
-            Ok(Stmt::Block { do_, body })
+            let end = self.consume(scanner, TokenKind::End)?;
+            Ok(Stmt::Block { end, body })
         } else {
             let expr = self.expr_bp(scanner, BindingPower::Assignment)?;
             Ok(Stmt::Expr(expr))

@@ -210,14 +210,14 @@ impl StmtVisitor for Emitter {
         Ok(())
     }
 
-    fn visit_block(&mut self, do_: &Token, body: &[Stmt]) -> Self::Output {
+    fn visit_block(&mut self, end: &Token, body: &[Stmt]) -> Self::Output {
         self.scope_depth += 1;
         for stmt in body {
             stmt.accept(self)?;
         }
         self.scope_depth -= 1;
         while !self.locals.is_empty() && self.locals[self.locals.len() - 1].1 > self.scope_depth {
-            self.chunk.write_u8(Opcode::Pop, do_.line);
+            self.chunk.write_u8(Opcode::Pop, end.line);
             self.locals.pop().unwrap();
         }
         Ok(())
