@@ -105,7 +105,6 @@ impl Machine {
                 self.chunk.disassemble_instruction(self.ip);
             }
 
-            let line = self.chunk.get_line_from_index(self.ip);
             let inst = self.chunk.data[self.ip];
             self.ip += 1;
 
@@ -131,7 +130,7 @@ impl Machine {
                                 got: format!("double {} {}", stringify!($op), rhs.type_name()),
                                 op: $opcode,
                             })
-                            .line(line));
+                            .line(self.chunk.get_line_from_index(self.ip)));
                         }
                     } else if lhs.is_integer() {
                         let lhs = lhs.into::<i64>();
@@ -147,7 +146,7 @@ impl Machine {
                                 got: format!("integer {} {}", stringify!($op), rhs.type_name()),
                                 op: $opcode,
                             })
-                            .line(line));
+                            .line(self.chunk.get_line_from_index(self.ip)));
                         }
                     } else if $concat && lhs.is_string() {
                         let mut lhs = lhs.into::<String>();
@@ -159,7 +158,7 @@ impl Machine {
                             got: format!("{} {} {}", lhs.type_name(), stringify!($op), rhs.type_name()),
                             op: $opcode,
                         })
-                        .line(line));
+                        .line(self.chunk.get_line_from_index(self.ip)));
                     }
                 };
             }
@@ -199,7 +198,7 @@ impl Machine {
                             got: v.type_name().to_owned(),
                             op: Opcode::Negate,
                         })
-                        .line(line));
+                        .line(self.chunk.get_line_from_index(self.ip)));
                     }
                 }
                 Opcode::Not => {
@@ -229,17 +228,17 @@ impl Machine {
                 Opcode::Equal => {
                     let a = self.pop()?;
                     let b = self.pop()?;
-                    self.stack.push(Value::Bool(
-                        a.eq(&b).map_or(
+                    self.stack.push(Value::Bool(a.eq(&b).map_or_else(
+                        || {
                             Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: a.type_name().to_owned(),
                                 got: b.type_name().to_owned(),
                                 op,
                             })
-                            .line(line)),
-                            Ok,
-                        )?,
-                    ));
+                            .line(self.chunk.get_line_from_index(self.ip)))
+                        },
+                        Ok,
+                    )?));
                 }
                 Opcode::Greater => {
                     let rhs = self.pop()?;
@@ -250,19 +249,19 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(line));
+                        .line(self.chunk.get_line_from_index(self.ip)));
                     }
-                    self.stack.push(Value::Bool(
-                        lhs.gt(&rhs).map_or(
+                    self.stack.push(Value::Bool(lhs.gt(&rhs).map_or_else(
+                        || {
                             Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: lhs.type_name().to_owned(),
                                 got: rhs.type_name().to_owned(),
                                 op,
                             })
-                            .line(line)),
-                            Ok,
-                        )?,
-                    ));
+                            .line(self.chunk.get_line_from_index(self.ip)))
+                        },
+                        Ok,
+                    )?));
                 }
                 Opcode::Less => {
                     let rhs = self.pop()?;
@@ -273,19 +272,19 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(line));
+                        .line(self.chunk.get_line_from_index(self.ip)));
                     }
-                    self.stack.push(Value::Bool(
-                        lhs.lt(&rhs).map_or(
+                    self.stack.push(Value::Bool(lhs.lt(&rhs).map_or_else(
+                        || {
                             Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: lhs.type_name().to_owned(),
                                 got: rhs.type_name().to_owned(),
                                 op,
                             })
-                            .line(line)),
-                            Ok,
-                        )?,
-                    ));
+                            .line(self.chunk.get_line_from_index(self.ip)))
+                        },
+                        Ok,
+                    )?));
                 }
                 Opcode::GreaterEqual => {
                     let rhs = self.pop()?;
@@ -296,19 +295,19 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(line));
+                        .line(self.chunk.get_line_from_index(self.ip)));
                     }
-                    self.stack.push(Value::Bool(
-                        !lhs.lt(&rhs).map_or(
+                    self.stack.push(Value::Bool(!lhs.lt(&rhs).map_or_else(
+                        || {
                             Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: lhs.type_name().to_owned(),
                                 got: rhs.type_name().to_owned(),
                                 op,
                             })
-                            .line(line)),
-                            Ok,
-                        )?,
-                    ));
+                            .line(self.chunk.get_line_from_index(self.ip)))
+                        },
+                        Ok,
+                    )?));
                 }
                 Opcode::LessEqual => {
                     let rhs = self.pop()?;
@@ -319,19 +318,19 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(line));
+                        .line(self.chunk.get_line_from_index(self.ip)));
                     }
-                    self.stack.push(Value::Bool(
-                        !lhs.gt(&rhs).map_or(
+                    self.stack.push(Value::Bool(!lhs.gt(&rhs).map_or_else(
+                        || {
                             Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: lhs.type_name().to_owned(),
                                 got: rhs.type_name().to_owned(),
                                 op,
                             })
-                            .line(line)),
-                            Ok,
-                        )?,
-                    ));
+                            .line(self.chunk.get_line_from_index(self.ip)))
+                        },
+                        Ok,
+                    )?));
                 }
 
                 Opcode::GetLocal => {
@@ -354,13 +353,13 @@ impl Machine {
                             return Err(PiccoloError::new(ErrorKind::CannotClone {
                                 ty: var.type_name().to_owned(),
                             })
-                            .line(line));
+                            .line(self.chunk.get_line_from_index(self.ip)));
                         }
                     } else {
                         return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                             name: name.to_owned(),
                         })
-                        .line(line));
+                        .line(self.chunk.get_line_from_index(self.ip)));
                     }
                     self.ip += 2;
                 }
@@ -369,9 +368,8 @@ impl Machine {
                         let name = name.clone();
                         let value = self.pop()?;
                         if self.globals.insert(name.clone(), value).is_none() {
-                            return Err(
-                                PiccoloError::new(ErrorKind::UndefinedVariable { name }).line(line)
-                            );
+                            return Err(PiccoloError::new(ErrorKind::UndefinedVariable { name })
+                                .line(self.chunk.get_line_from_index(self.ip)));
                         }
                         self.ip += 2;
                     }
@@ -390,7 +388,8 @@ impl Machine {
                 Opcode::Assert => {
                     let v = self.pop()?;
                     if !v.is_truthy() {
-                        return Err(PiccoloError::new(ErrorKind::AssertFailed).line(line));
+                        return Err(PiccoloError::new(ErrorKind::AssertFailed)
+                            .line(self.chunk.get_line_from_index(self.ip)));
                     }
                 }
             }
