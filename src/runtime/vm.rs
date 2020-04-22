@@ -70,12 +70,6 @@ impl Machine {
         })
     }
 
-    fn read_short(&self) -> u16 {
-        let low = self.chunk.data[self.ip];
-        let high = self.chunk.data[self.ip + 1];
-        crate::encode_bytes(low, high)
-    }
-
     // get a constant from the chunk
     fn peek_constant(&self) -> &Value {
         // Opcode::Constant takes a two-byte operand, meaning it's necessary
@@ -83,7 +77,7 @@ impl Machine {
         // constant addresses.
         self.chunk
             .constants
-            .get(self.read_short() as usize)
+            .get(self.chunk.read_short(self.ip) as usize)
             .unwrap()
     }
 
@@ -182,64 +176,6 @@ impl Machine {
                     let v = self.pop()?;
                     println!("{}", v);
                 }
-                Opcode::Assert => {
-                    let v = self.pop()?;
-                    if !v.is_truthy() {
-                        return Err(PiccoloError::new(ErrorKind::AssertFailed).line(line));
-                    }
-                }
-                Opcode::DeclareGlobal => {
-                    if let Value::String(name) = self.peek_constant() {
-                        let name = name.clone();
-                        let value = self.pop()?;
-                        self.globals.insert(name, value);
-                        self.ip += 2;
-                    } else {
-                        panic!("defined global with non-string name");
-                    }
-                }
-                Opcode::GetGlobal => {
-                    let name = self.peek_constant().ref_string();
-                    if let Some(var) = self.globals.get(name) {
-                        if let Some(var) = var.try_clone() {
-                            self.stack.push(var);
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::CannotClone {
-                                ty: var.type_name().to_owned(),
-                            })
-                            .line(line));
-                        }
-                    } else {
-                        return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
-                            name: name.to_owned(),
-                        })
-                        .line(line));
-                    }
-                    self.ip += 2;
-                }
-                Opcode::SetGlobal => {
-                    if let Value::String(name) = self.peek_constant() {
-                        let name = name.clone();
-                        let value = self.pop()?;
-                        if self.globals.insert(name.clone(), value).is_none() {
-                            return Err(
-                                PiccoloError::new(ErrorKind::UndefinedVariable { name }).line(line)
-                            );
-                        }
-                        self.ip += 2;
-                    }
-                }
-                Opcode::GetLocal => {
-                    let slot = self.read_short();
-                    let v = self.front_try_clone(slot as usize)?;
-                    self.stack.push(v);
-                    self.ip += 2;
-                }
-                Opcode::SetLocal => {
-                    let slot = self.read_short();
-                    self.stack[slot as usize] = self.pop()?;
-                    self.ip += 2;
-                }
                 Opcode::Constant => {
                     let c = self.constant_try_clone()?;
                     self.stack.push(c);
@@ -248,6 +184,7 @@ impl Machine {
                 Opcode::Nil => self.stack.push(Value::Nil),
                 Opcode::True => self.stack.push(Value::Bool(true)),
                 Opcode::False => self.stack.push(Value::Bool(false)),
+
                 Opcode::Negate => {
                     let v = self.pop()?;
                     if v.is_double() {
@@ -273,6 +210,22 @@ impl Machine {
                         self.stack.push(Value::Bool(true));
                     }
                 }
+                Opcode::Add => {
+                    bin_op!(Opcode::Add, +, true);
+                }
+                Opcode::Subtract => {
+                    bin_op!(Opcode::Subtract, -);
+                }
+                Opcode::Multiply => {
+                    bin_op!(Opcode::Multiply, *);
+                }
+                Opcode::Divide => {
+                    bin_op!(Opcode::Multiply, /);
+                }
+                Opcode::Modulo => {
+                    bin_op!(Opcode::Multiply, %);
+                }
+
                 Opcode::Equal => {
                     let a = self.pop()?;
                     let b = self.pop()?;
@@ -380,20 +333,65 @@ impl Machine {
                         )?,
                     ));
                 }
-                Opcode::Add => {
-                    bin_op!(Opcode::Add, +, true);
+
+                Opcode::GetLocal => {
+                    let slot = self.chunk.read_short(self.ip);
+                    let v = self.front_try_clone(slot as usize)?;
+                    self.stack.push(v);
+                    self.ip += 2;
                 }
-                Opcode::Subtract => {
-                    bin_op!(Opcode::Subtract, -);
+                Opcode::SetLocal => {
+                    let slot = self.chunk.read_short(self.ip);
+                    self.stack[slot as usize] = self.pop()?;
+                    self.ip += 2;
                 }
-                Opcode::Multiply => {
-                    bin_op!(Opcode::Multiply, *);
+                Opcode::GetGlobal => {
+                    let name = self.peek_constant().ref_string();
+                    if let Some(var) = self.globals.get(name) {
+                        if let Some(var) = var.try_clone() {
+                            self.stack.push(var);
+                        } else {
+                            return Err(PiccoloError::new(ErrorKind::CannotClone {
+                                ty: var.type_name().to_owned(),
+                            })
+                            .line(line));
+                        }
+                    } else {
+                        return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                            name: name.to_owned(),
+                        })
+                        .line(line));
+                    }
+                    self.ip += 2;
                 }
-                Opcode::Divide => {
-                    bin_op!(Opcode::Multiply, /);
+                Opcode::SetGlobal => {
+                    if let Value::String(name) = self.peek_constant() {
+                        let name = name.clone();
+                        let value = self.pop()?;
+                        if self.globals.insert(name.clone(), value).is_none() {
+                            return Err(
+                                PiccoloError::new(ErrorKind::UndefinedVariable { name }).line(line)
+                            );
+                        }
+                        self.ip += 2;
+                    }
                 }
-                Opcode::Modulo => {
-                    bin_op!(Opcode::Multiply, %);
+                Opcode::DeclareGlobal => {
+                    if let Value::String(name) = self.peek_constant() {
+                        let name = name.clone();
+                        let value = self.pop()?;
+                        self.globals.insert(name, value);
+                        self.ip += 2;
+                    } else {
+                        panic!("defined global with non-string name");
+                    }
+                }
+
+                Opcode::Assert => {
+                    let v = self.pop()?;
+                    if !v.is_truthy() {
+                        return Err(PiccoloError::new(ErrorKind::AssertFailed).line(line));
+                    }
                 }
             }
         }

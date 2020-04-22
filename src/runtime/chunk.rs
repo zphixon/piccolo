@@ -37,6 +37,12 @@ impl Chunk {
         }
     }
 
+    pub(crate) fn read_short(&self, offset: usize) -> u16 {
+        let low = self.data[offset];
+        let high = self.data[offset + 1];
+        crate::encode_bytes(low, high)
+    }
+
     // get a line number from a byte offset using run-length encoding
     pub(crate) fn get_line_from_index(&self, idx: usize) -> usize {
         let mut total_ops = 0;
@@ -88,66 +94,41 @@ impl Chunk {
             );
 
             offset = match op {
-                Opcode::Return => offset + 1,
-                Opcode::Assert => offset + 1,
+                Opcode::Pop | Opcode::Return => offset + 1,
+
                 Opcode::Constant => {
-                    let low = self.data[offset + 1];
-                    let high = self.data[offset + 2];
-                    let idx = crate::encode_bytes(low, high);
+                    let idx = self.read_short(offset + 1);
                     print!(" @{:04x} {:?}", idx, self.constants[idx as usize]);
                     offset + 3
                 }
-                Opcode::Negate => offset + 1,
-                Opcode::Add => offset + 1,
-                Opcode::Subtract => offset + 1,
-                Opcode::Multiply => offset + 1,
-                Opcode::Divide => offset + 1,
-                Opcode::Modulo => offset + 1,
-                Opcode::Nil => offset + 1,
-                Opcode::True => offset + 1,
-                Opcode::False => offset + 1,
-                Opcode::Not => offset + 1,
-                Opcode::Equal => offset + 1,
-                Opcode::Greater => offset + 1,
-                Opcode::Less => offset + 1,
-                Opcode::GreaterEqual => offset + 1,
-                Opcode::LessEqual => offset + 1,
-                Opcode::Pop => offset + 1,
-                Opcode::DeclareGlobal => {
-                    let low = self.data[offset + 1];
-                    let high = self.data[offset + 2];
-                    let idx = crate::encode_bytes(low, high);
-                    print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
-                    offset + 3
-                }
-                Opcode::GetGlobal => {
-                    let low = self.data[offset + 1];
-                    let high = self.data[offset + 2];
-                    let idx = crate::encode_bytes(low, high);
-                    print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
-                    offset + 3
-                }
-                Opcode::SetGlobal => {
-                    let low = self.data[offset + 1];
-                    let high = self.data[offset + 2];
-                    let idx = crate::encode_bytes(low, high);
-                    print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
-                    offset + 3
-                }
-                Opcode::GetLocal => {
-                    let low = self.data[offset + 1];
-                    let high = self.data[offset + 2];
-                    let idx = crate::encode_bytes(low, high);
+                Opcode::Nil | Opcode::True | Opcode::False => offset + 1,
+
+                Opcode::Negate
+                | Opcode::Not
+                | Opcode::Add
+                | Opcode::Subtract
+                | Opcode::Multiply
+                | Opcode::Divide
+                | Opcode::Modulo => offset + 1,
+
+                Opcode::Equal
+                | Opcode::Greater
+                | Opcode::Less
+                | Opcode::GreaterEqual
+                | Opcode::LessEqual => offset + 1,
+
+                Opcode::GetLocal | Opcode::SetLocal => {
+                    let idx = self.read_short(offset + 1);
                     print!(" ${}", idx);
                     offset + 3
                 }
-                Opcode::SetLocal => {
-                    let low = self.data[offset + 1];
-                    let high = self.data[offset + 2];
-                    let idx = crate::encode_bytes(low, high);
-                    print!(" ${}", idx);
+                Opcode::GetGlobal | Opcode::SetGlobal | Opcode::DeclareGlobal => {
+                    let idx = self.read_short(offset + 1);
+                    print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
                     offset + 3
                 }
+
+                Opcode::Assert => offset + 1,
             };
             println!();
 
@@ -173,40 +154,16 @@ impl Chunk {
 
         match op {
             Opcode::Constant => {
-                let low = self.data[offset + 1];
-                let high = self.data[offset + 2];
-                let idx = crate::encode_bytes(low, high);
+                let idx = self.read_short(offset + 1);
                 print!(" @{:04x} {:?}", idx, self.constants[idx as usize]);
             }
-            Opcode::DeclareGlobal => {
-                let low = self.data[offset + 1];
-                let high = self.data[offset + 2];
-                let idx = crate::encode_bytes(low, high);
-                print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
-            }
-            Opcode::GetGlobal => {
-                let low = self.data[offset + 1];
-                let high = self.data[offset + 2];
-                let idx = crate::encode_bytes(low, high);
-                print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
-            }
-            Opcode::SetGlobal => {
-                let low = self.data[offset + 1];
-                let high = self.data[offset + 2];
-                let idx = crate::encode_bytes(low, high);
-                print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
-            }
-            Opcode::GetLocal => {
-                let low = self.data[offset + 1];
-                let high = self.data[offset + 2];
-                let idx = crate::encode_bytes(low, high);
+            Opcode::GetLocal | Opcode::SetLocal => {
+                let idx = self.read_short(offset + 1);
                 print!(" ${}", idx);
             }
-            Opcode::SetLocal => {
-                let low = self.data[offset + 1];
-                let high = self.data[offset + 2];
-                let idx = crate::encode_bytes(low, high);
-                print!(" ${}", idx);
+            Opcode::GetGlobal | Opcode::SetGlobal | Opcode::DeclareGlobal => {
+                let idx = self.read_short(offset + 1);
+                print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
             }
             _ => {}
         }
