@@ -392,6 +392,9 @@ impl Machine {
                 Opcode::Divide => {
                     bin_op!(Opcode::Multiply, /);
                 }
+                Opcode::Modulo => {
+                    bin_op!(Opcode::Multiply, %);
+                }
             }
         }
         Ok(self.stack.pop().unwrap_or(Value::Nil))

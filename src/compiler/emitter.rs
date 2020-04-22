@@ -137,19 +137,20 @@ impl ExprVisitor for Emitter {
         rhs.accept(self)?;
 
         match op.kind {
-            TokenKind::Plus => self.chunk.write_u8(Opcode::Add, 1),
-            TokenKind::Minus => self.chunk.write_u8(Opcode::Subtract, 1),
-            TokenKind::Divide => self.chunk.write_u8(Opcode::Divide, 1),
-            TokenKind::Multiply => self.chunk.write_u8(Opcode::Multiply, 1),
-            TokenKind::Equal => self.chunk.write_u8(Opcode::Equal, 1),
+            TokenKind::Plus => self.chunk.write_u8(Opcode::Add, op.line),
+            TokenKind::Minus => self.chunk.write_u8(Opcode::Subtract, op.line),
+            TokenKind::Divide => self.chunk.write_u8(Opcode::Divide, op.line),
+            TokenKind::Multiply => self.chunk.write_u8(Opcode::Multiply, op.line),
+            TokenKind::Equal => self.chunk.write_u8(Opcode::Equal, op.line),
             TokenKind::NotEqual => {
-                self.chunk.write_u8(Opcode::Equal, 1);
-                self.chunk.write_u8(Opcode::Not, 1);
+                self.chunk.write_u8(Opcode::Equal, op.line);
+                self.chunk.write_u8(Opcode::Not, op.line);
             }
-            TokenKind::Greater => self.chunk.write_u8(Opcode::Greater, 1),
-            TokenKind::GreaterEqual => self.chunk.write_u8(Opcode::GreaterEqual, 1),
-            TokenKind::Less => self.chunk.write_u8(Opcode::Less, 1),
-            TokenKind::LessEqual => self.chunk.write_u8(Opcode::LessEqual, 1),
+            TokenKind::Greater => self.chunk.write_u8(Opcode::Greater, op.line),
+            TokenKind::GreaterEqual => self.chunk.write_u8(Opcode::GreaterEqual, op.line),
+            TokenKind::Less => self.chunk.write_u8(Opcode::Less, op.line),
+            TokenKind::LessEqual => self.chunk.write_u8(Opcode::LessEqual, op.line),
+            TokenKind::Modulo => self.chunk.write_u8(Opcode::Modulo, op.line),
             _ => unreachable!("unrecognized binary op {:?}", op),
         }
 
