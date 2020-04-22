@@ -1,20 +1,19 @@
 
 set shell := ["powershell"]
 
+file := ""
+fuzz := ""
+
 r:
-    cargo run --features "pc-debug" --example main
+    cargo run --features "pc-debug" --example main -- {{file}}
 
 rr:
-    cargo run --example main --release
+    cargo run --example main --release -- {{file}}
 
 c:
     cargo check
 
 cc:
-    cargo clean
-    cargo clippy
-
-ccc:
     cargo check
     cargo check --features "pc-debug"
     cargo check --features "fuzzer"
@@ -22,7 +21,9 @@ ccc:
     cargo test --no-run --all-targets --features "pc-debug"
     cargo test --no-run --all-targets --features "fuzzer"
 
-b:
+ccc:
+    cargo clean
+    cargo clippy
     cargo build --features "pc-debug" --example main
 
 t:
@@ -35,7 +36,7 @@ do:
     cargo doc --no-deps --open
 
 f:
-    cargo run --example fuzzer --features "fuzzer" --
+    cargo run --example fuzzer --features "fuzzer" -- {{fuzz}}
 
 vl:
     cargo test --package piccolo --lib tests::very_long -- --exact --ignored
