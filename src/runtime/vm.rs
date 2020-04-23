@@ -198,7 +198,7 @@ impl Machine {
                             got: v.type_name().to_owned(),
                             op: Opcode::Negate,
                         })
-                        .line(self.chunk.get_line_from_index(self.ip)));
+                        .line(self.chunk.get_line_from_index(self.ip - 1)));
                     }
                 }
                 Opcode::Not => {
@@ -235,7 +235,7 @@ impl Machine {
                                 got: b.type_name().to_owned(),
                                 op,
                             })
-                            .line(self.chunk.get_line_from_index(self.ip)))
+                            .line(self.chunk.get_line_from_index(self.ip - 1)))
                         },
                         Ok,
                     )?));
@@ -249,7 +249,7 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(self.chunk.get_line_from_index(self.ip)));
+                        .line(self.chunk.get_line_from_index(self.ip - 1)));
                     }
                     self.stack.push(Value::Bool(lhs.gt(&rhs).map_or_else(
                         || {
@@ -258,7 +258,7 @@ impl Machine {
                                 got: rhs.type_name().to_owned(),
                                 op,
                             })
-                            .line(self.chunk.get_line_from_index(self.ip)))
+                            .line(self.chunk.get_line_from_index(self.ip - 1)))
                         },
                         Ok,
                     )?));
@@ -272,7 +272,7 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(self.chunk.get_line_from_index(self.ip)));
+                        .line(self.chunk.get_line_from_index(self.ip - 1)));
                     }
                     self.stack.push(Value::Bool(lhs.lt(&rhs).map_or_else(
                         || {
@@ -281,7 +281,7 @@ impl Machine {
                                 got: rhs.type_name().to_owned(),
                                 op,
                             })
-                            .line(self.chunk.get_line_from_index(self.ip)))
+                            .line(self.chunk.get_line_from_index(self.ip - 1)))
                         },
                         Ok,
                     )?));
@@ -295,7 +295,7 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(self.chunk.get_line_from_index(self.ip)));
+                        .line(self.chunk.get_line_from_index(self.ip - 1)));
                     }
                     self.stack.push(Value::Bool(!lhs.lt(&rhs).map_or_else(
                         || {
@@ -304,7 +304,7 @@ impl Machine {
                                 got: rhs.type_name().to_owned(),
                                 op,
                             })
-                            .line(self.chunk.get_line_from_index(self.ip)))
+                            .line(self.chunk.get_line_from_index(self.ip - 1)))
                         },
                         Ok,
                     )?));
@@ -318,7 +318,7 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(self.chunk.get_line_from_index(self.ip)));
+                        .line(self.chunk.get_line_from_index(self.ip - 1)));
                     }
                     self.stack.push(Value::Bool(!lhs.gt(&rhs).map_or_else(
                         || {
@@ -327,7 +327,7 @@ impl Machine {
                                 got: rhs.type_name().to_owned(),
                                 op,
                             })
-                            .line(self.chunk.get_line_from_index(self.ip)))
+                            .line(self.chunk.get_line_from_index(self.ip - 1)))
                         },
                         Ok,
                     )?));
@@ -353,13 +353,13 @@ impl Machine {
                             return Err(PiccoloError::new(ErrorKind::CannotClone {
                                 ty: var.type_name().to_owned(),
                             })
-                            .line(self.chunk.get_line_from_index(self.ip)));
+                            .line(self.chunk.get_line_from_index(self.ip - 1)));
                         }
                     } else {
                         return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                             name: name.to_owned(),
                         })
-                        .line(self.chunk.get_line_from_index(self.ip)));
+                        .line(self.chunk.get_line_from_index(self.ip - 1)));
                     }
                     self.ip += 2;
                 }
@@ -369,7 +369,7 @@ impl Machine {
                         let value = self.pop()?;
                         if self.globals.insert(name.clone(), value).is_none() {
                             return Err(PiccoloError::new(ErrorKind::UndefinedVariable { name })
-                                .line(self.chunk.get_line_from_index(self.ip)));
+                                .line(self.chunk.get_line_from_index(self.ip - 1)));
                         }
                         self.ip += 2;
                     }
@@ -389,7 +389,7 @@ impl Machine {
                     let v = self.pop()?;
                     if !v.is_truthy() {
                         return Err(PiccoloError::new(ErrorKind::AssertFailed)
-                            .line(self.chunk.get_line_from_index(self.ip)));
+                            .line(self.chunk.get_line_from_index(self.ip - 1)));
                     }
                 }
             }

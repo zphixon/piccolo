@@ -20,7 +20,6 @@ pub fn scan_all(source: &str) -> Result<Vec<Token>, PiccoloError> {
     scanner::Scanner::new(source).scan_all()
 }
 
-#[allow(dead_code)]
 pub(crate) fn escape_string(t: &Token) -> Result<String, PiccoloError> {
     match t.kind {
         TokenKind::String => {

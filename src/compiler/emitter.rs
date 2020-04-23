@@ -95,7 +95,7 @@ impl ExprVisitor for Emitter {
         } else if token.kind == TokenKind::String {
             let i = self
                 .chunk
-                .make_constant(Value::try_from(token.clone()).unwrap());
+                .make_constant(Value::try_from(token.clone())?);
             self.strings.insert(token.lexeme.to_string(), i);
             i
         } else {
