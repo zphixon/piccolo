@@ -52,7 +52,7 @@ impl Chunk {
                 return offset_line + 1;
             }
         }
-        panic!("no line for idx {}", idx);
+        panic!("no line for idx {} {:?} {:?}", idx, self.lines, self.data);
     }
 
     // add one opcode to a line

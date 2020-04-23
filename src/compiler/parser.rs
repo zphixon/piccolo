@@ -82,6 +82,11 @@ impl<'a> Parser<'a> {
                 e.msg_string(format!("in expression starting on line {}", lhs_token.line))
             })?;
             e
+        } else if lhs_token.kind == TokenKind::Eof {
+            return Err(PiccoloError::new(ErrorKind::ExpectedExpression {
+                got: lhs_token.to_string(),
+            })
+            .line(lhs_token.line));
         } else {
             let pbp = prefix_binding_power(lhs_token.kind);
             if pbp != BindingPower::None {
