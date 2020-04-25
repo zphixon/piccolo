@@ -465,7 +465,7 @@ impl StmtAccept for Stmt<'_> {
 mod test {
     use crate::{Token, TokenKind};
 
-    use super::{Stmt, Expr, Arity, AstPrinter};
+    use super::{Arity, AstPrinter, Expr, Stmt};
 
     #[test]
     fn ast_print() {

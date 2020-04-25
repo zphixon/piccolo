@@ -173,8 +173,8 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod integration {
-    use crate::compiler::ast::{AstPrinter, Expr, ExprAccept, Stmt};
     use super::{Chunk, Emitter, Machine, Parser, Scanner, Token, TokenKind, Value};
+    use crate::compiler::ast::{AstPrinter, Expr, ExprAccept, Stmt};
 
     #[test]
     #[ignore]
