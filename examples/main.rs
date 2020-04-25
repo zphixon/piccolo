@@ -3,6 +3,7 @@ extern crate rustyline;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
+use std::path::{PathBuf, Path};
 
 fn main() {
     let args = std::env::args();
@@ -11,14 +12,14 @@ fn main() {
         repl();
     } else {
         let args: Vec<String> = args.collect();
-        let contents = std::fs::read_to_string(&args[1]).expect("filename doesn't exist");
-        file(&contents);
+        let path = PathBuf::from(&args[1]);
+        file(&path);
     }
 }
 
 #[cfg(not(feature = "pc-debug"))]
-fn file(contents: &str) {
-    if let Err(e) = piccolo::interpret(contents) {
+fn file(path: &Path) {
+    if let Err(e) = piccolo::do_file(path) {
         if e.len() == 1 {
             println!("Error {}", e[0])
         } else {
@@ -64,9 +65,11 @@ fn repl() {
 }
 
 #[cfg(feature = "pc-debug")]
-fn file(contents: &str) {
+fn file(path: &Path) {
     use piccolo::compiler::ast::AstPrinter;
     use piccolo::{Chunk, Emitter, Machine, Parser, Scanner};
+
+    let contents = std::fs::read_to_string(path).unwrap();
 
     println!("****** parse");
     match Parser::new().parse(&mut Scanner::new(&contents)) {
