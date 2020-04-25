@@ -1,10 +1,9 @@
-use crate::ast::expr::{Expr, ExprAccept, ExprVisitor};
-use crate::ast::stmt::{Stmt, StmtAccept, StmtVisitor};
-use crate::ast::Arity;
 use crate::runtime::op::Opcode;
 use crate::{Chunk, ErrorKind, PiccoloError, Token, TokenKind, Value};
 
 use std::collections::HashMap;
+
+use super::ast::{Arity, Expr, ExprAccept, ExprVisitor, Stmt, StmtAccept, StmtVisitor};
 
 pub struct Emitter {
     chunk: Chunk,
@@ -93,9 +92,7 @@ impl ExprVisitor for Emitter {
         let i = if token.kind == TokenKind::String && self.strings.contains_key(token.lexeme) {
             *self.strings.get(token.lexeme).unwrap()
         } else if token.kind == TokenKind::String {
-            let i = self
-                .chunk
-                .make_constant(Value::try_from(token.clone())?);
+            let i = self.chunk.make_constant(Value::try_from(token.clone())?);
             self.strings.insert(token.lexeme.to_string(), i);
             i
         } else {

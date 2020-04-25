@@ -65,7 +65,7 @@ fn repl() {
 
 #[cfg(feature = "pc-debug")]
 fn file(contents: &str) {
-    use piccolo::ast::AstPrinter;
+    use piccolo::compiler::ast::AstPrinter;
     use piccolo::{Chunk, Emitter, Machine, Parser, Scanner};
 
     println!("****** parse");
@@ -101,7 +101,7 @@ fn file(contents: &str) {
 
 #[cfg(feature = "pc-debug")]
 fn repl() {
-    use piccolo::ast::AstPrinter;
+    use piccolo::compiler::ast::AstPrinter;
     use piccolo::{Chunk, Emitter, Machine, Parser, Scanner};
 
     let mut rl = Editor::<()>::new();
