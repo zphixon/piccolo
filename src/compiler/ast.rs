@@ -460,3 +460,76 @@ impl StmtAccept for Stmt<'_> {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{Token, TokenKind};
+
+    use super::{Stmt, Expr, Arity, AstPrinter};
+
+    #[test]
+    fn ast_print() {
+        let source = "x =: 3\ny =: x - 4\nif x > y then\n  io.prln(3)\nend\n";
+        let mut tokens = vec![
+            Some(Token::new(TokenKind::Identifier, &source[0..1], 1)),
+            Some(Token::new(TokenKind::Declare, &source[2..4], 1)),
+            Some(Token::new(TokenKind::Integer(3), &source[5..6], 1)),
+            Some(Token::new(TokenKind::Identifier, &source[7..8], 2)),
+            Some(Token::new(TokenKind::Declare, &source[9..11], 2)),
+            Some(Token::new(TokenKind::Identifier, &source[12..13], 2)),
+            Some(Token::new(TokenKind::Minus, &source[14..15], 2)),
+            Some(Token::new(TokenKind::Integer(3), &source[16..17], 2)),
+            Some(Token::new(TokenKind::If, &source[18..19], 3)),
+            Some(Token::new(TokenKind::Identifier, &source[21..22], 3)),
+            Some(Token::new(TokenKind::Greater, &source[23..24], 3)),
+            Some(Token::new(TokenKind::Identifier, &source[25..26], 3)),
+            Some(Token::new(TokenKind::Nil, &source[27..31], 3)),
+            Some(Token::new(TokenKind::Identifier, &source[34..36], 4)),
+            Some(Token::new(TokenKind::Period, &source[36..37], 4)),
+            Some(Token::new(TokenKind::Identifier, &source[37..41], 4)),
+            Some(Token::new(TokenKind::LeftParen, &source[41..42], 4)),
+            Some(Token::new(TokenKind::Integer(3), &source[42..43], 4)),
+            Some(Token::new(TokenKind::RightParen, &source[43..44], 4)),
+            Some(Token::new(TokenKind::End, &source[45..48], 5)),
+        ];
+
+        let ast = vec![
+            Stmt::Assignment {
+                name: tokens[0].take().unwrap(),
+                op: tokens[1].take().unwrap(),
+                value: Expr::Atom(Token::new(TokenKind::Integer(3), "3", 1)),
+            },
+            Stmt::Assignment {
+                name: tokens[3].take().unwrap(),
+                op: tokens[4].take().unwrap(),
+                value: Expr::Binary {
+                    lhs: Box::new(Expr::Variable(tokens[5].take().unwrap())),
+                    op: tokens[6].take().unwrap(),
+                    rhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(4), "4", 2))),
+                },
+            },
+            Stmt::If {
+                cond: Expr::Binary {
+                    lhs: Box::new(Expr::Variable(tokens[9].take().unwrap())),
+                    op: tokens[10].take().unwrap(),
+                    rhs: Box::new(Expr::Variable(tokens[11].take().unwrap())),
+                },
+                then: vec![Stmt::Expr(Expr::Call {
+                    callee: Box::new(Expr::Get {
+                        object: Box::new(Expr::Variable(tokens[13].take().unwrap())),
+                        name: tokens[15].take().unwrap(),
+                    }),
+                    paren: tokens[16].take().unwrap(),
+                    arity: Arity::Some(1),
+                    args: vec![Expr::Atom(Token::new(TokenKind::Integer(3), "3", 4))],
+                })],
+                else_: None,
+            },
+        ];
+
+        assert_eq!(
+            "(=: x 3)\n(=: y (- x 4))\n(if (> x y)\n  (expr (call (get prln io) 3)))\n",
+            AstPrinter::print(&ast)
+        );
+    }
+}

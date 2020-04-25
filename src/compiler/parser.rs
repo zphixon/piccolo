@@ -220,3 +220,13 @@ prec!(BindingPower =>
     Call = 9,
     Primary = 10,
 );
+
+#[cfg(test)]
+mod test {
+    use super::BindingPower;
+
+    #[test]
+    fn precedence_ord() {
+        assert!(BindingPower::And > BindingPower::Or);
+    }
+}
