@@ -172,10 +172,27 @@ pub mod fuzzer {
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::compiler::ast::{Arity, AstPrinter, Expr, ExprAccept, Stmt};
-    use crate::runtime::{op::Opcode, value::Value};
-    use crate::{Chunk, Emitter, Machine, Parser, Scanner, Token, TokenKind};
+mod integration {
+    use crate::compiler::ast::{AstPrinter, Expr, ExprAccept, Stmt};
+    use super::{Chunk, Emitter, Machine, Parser, Scanner, Token, TokenKind, Value};
+
+    #[test]
+    #[ignore]
+    fn very_long() {
+        let path = std::path::Path::new("examples/long.pc");
+        crate::do_file(path).unwrap();
+    }
+
+    #[test]
+    fn encode_decode() {
+        let bytes: u16 = 0xbead;
+        let (low, high) = crate::decode_bytes(bytes);
+        assert_eq!(high, 0xbe);
+        assert_eq!(low, 0xad);
+
+        let bytes2 = crate::encode_bytes(low, high);
+        assert_eq!(bytes, bytes2);
+    }
 
     #[test]
     fn idk() {
@@ -228,215 +245,5 @@ mod tests {
         } else {
             panic!("ast not initialized")
         }
-    }
-
-    #[test]
-    fn scanner() {
-        let src = "a = 3\nio.prln(a)\n";
-        let mut scanner = Scanner::new(src);
-        assert_eq!(
-            scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Identifier, "a", 1)
-        );
-        assert_eq!(
-            scanner.peek_token(1).unwrap(),
-            &Token::new(TokenKind::Assign, "=", 1)
-        );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "a", 1)
-        );
-
-        assert_eq!(
-            scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Assign, "=", 1)
-        );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Assign, "=", 1)
-        );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Integer(3), "3", 1)
-        );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "io", 2)
-        );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Period, ".", 2)
-        );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "prln", 2)
-        );
-    }
-
-    #[test]
-    fn scanner2() {
-        //               0 1 2  3 45   678
-        let src = "a = 3\nio.prln(a)\n";
-        let mut scanner = Scanner::new(src);
-
-        assert_eq!(
-            scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Identifier, "a", 1)
-        );
-        assert_eq!(
-            scanner.peek_token(1).unwrap(),
-            &Token::new(TokenKind::Assign, "=", 1)
-        );
-        assert_eq!(
-            scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Identifier, "a", 1)
-        );
-        assert_eq!(
-            scanner.peek_token(6).unwrap(),
-            &Token::new(TokenKind::LeftParen, "(", 2)
-        );
-        assert_eq!(
-            scanner.peek_token(8).unwrap(),
-            &Token::new(TokenKind::RightParen, ")", 2)
-        );
-
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "a", 1)
-        );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Assign, "=", 1)
-        );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Integer(3), "3", 1)
-        );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "io", 2)
-        );
-    }
-
-    #[test]
-    fn ast_print() {
-        let source = "x =: 3\ny =: x - 4\nif x > y then\n  io.prln(3)\nend\n";
-        let mut tokens = vec![
-            Some(Token::new(TokenKind::Identifier, &source[0..1], 1)),
-            Some(Token::new(TokenKind::Declare, &source[2..4], 1)),
-            Some(Token::new(TokenKind::Integer(3), &source[5..6], 1)),
-            Some(Token::new(TokenKind::Identifier, &source[7..8], 2)),
-            Some(Token::new(TokenKind::Declare, &source[9..11], 2)),
-            Some(Token::new(TokenKind::Identifier, &source[12..13], 2)),
-            Some(Token::new(TokenKind::Minus, &source[14..15], 2)),
-            Some(Token::new(TokenKind::Integer(3), &source[16..17], 2)),
-            Some(Token::new(TokenKind::If, &source[18..19], 3)),
-            Some(Token::new(TokenKind::Identifier, &source[21..22], 3)),
-            Some(Token::new(TokenKind::Greater, &source[23..24], 3)),
-            Some(Token::new(TokenKind::Identifier, &source[25..26], 3)),
-            Some(Token::new(TokenKind::Nil, &source[27..31], 3)),
-            Some(Token::new(TokenKind::Identifier, &source[34..36], 4)),
-            Some(Token::new(TokenKind::Period, &source[36..37], 4)),
-            Some(Token::new(TokenKind::Identifier, &source[37..41], 4)),
-            Some(Token::new(TokenKind::LeftParen, &source[41..42], 4)),
-            Some(Token::new(TokenKind::Integer(3), &source[42..43], 4)),
-            Some(Token::new(TokenKind::RightParen, &source[43..44], 4)),
-            Some(Token::new(TokenKind::End, &source[45..48], 5)),
-        ];
-
-        let ast = vec![
-            Stmt::Assignment {
-                name: tokens[0].take().unwrap(),
-                op: tokens[1].take().unwrap(),
-                value: Expr::Atom(Token::new(TokenKind::Integer(3), "3", 1)),
-            },
-            Stmt::Assignment {
-                name: tokens[3].take().unwrap(),
-                op: tokens[4].take().unwrap(),
-                value: Expr::Binary {
-                    lhs: Box::new(Expr::Variable(tokens[5].take().unwrap())),
-                    op: tokens[6].take().unwrap(),
-                    rhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(4), "4", 2))),
-                },
-            },
-            Stmt::If {
-                cond: Expr::Binary {
-                    lhs: Box::new(Expr::Variable(tokens[9].take().unwrap())),
-                    op: tokens[10].take().unwrap(),
-                    rhs: Box::new(Expr::Variable(tokens[11].take().unwrap())),
-                },
-                then: vec![Stmt::Expr(Expr::Call {
-                    callee: Box::new(Expr::Get {
-                        object: Box::new(Expr::Variable(tokens[13].take().unwrap())),
-                        name: tokens[15].take().unwrap(),
-                    }),
-                    paren: tokens[16].take().unwrap(),
-                    arity: Arity::Some(1),
-                    args: vec![Expr::Atom(Token::new(TokenKind::Integer(3), "3", 4))],
-                })],
-                else_: None,
-            },
-        ];
-
-        assert_eq!(
-            "(=: x 3)\n(=: y (- x 4))\n(if (> x y)\n  (expr (call (get prln io) 3)))\n",
-            AstPrinter::print(&ast)
-        );
-    }
-
-    #[test]
-    fn get_line_from_index() {
-        let mut c = Chunk::default();
-        c.write_u8(Opcode::Return, 1); // 0
-        c.write_u8(Opcode::Return, 1); // 1
-        c.write_u8(Opcode::Return, 1); // 2
-        c.write_u8(Opcode::Return, 1); // 3
-        c.write_u8(Opcode::Return, 1); // 4
-        c.write_u8(Opcode::Return, 1); // 5
-        c.write_u8(Opcode::Return, 2); // 6
-        c.write_u8(Opcode::Return, 2); // 7
-        c.write_u8(Opcode::Return, 2); // 8
-        c.write_u8(Opcode::Return, 2); // 9
-        c.write_u8(Opcode::Return, 2); // 10
-        c.write_u8(Opcode::Return, 3); // 11
-        c.write_u8(Opcode::Return, 3); // 12
-        c.write_u8(Opcode::Return, 3); // 13
-        c.write_u8(Opcode::Return, 3); // 14
-        c.write_u8(Opcode::Return, 4); // 15
-        c.write_u8(Opcode::Return, 4); // 16
-        c.write_u8(Opcode::Return, 4); // 17
-        c.write_u8(Opcode::Return, 4); // 18
-        c.write_u8(Opcode::Return, 5); // 19
-
-        assert_eq!(c.get_line_from_index(0), 1);
-        assert_eq!(c.get_line_from_index(5), 1);
-        assert_eq!(c.get_line_from_index(6), 2);
-        assert_eq!(c.get_line_from_index(10), 2);
-        assert_eq!(c.get_line_from_index(11), 3);
-        assert_eq!(c.get_line_from_index(14), 3);
-    }
-
-    #[test]
-    fn encode_decode() {
-        let bytes: u16 = 0xbead;
-        let (low, high) = crate::decode_bytes(bytes);
-        assert_eq!(high, 0xbe);
-        assert_eq!(low, 0xad);
-
-        let bytes2 = crate::encode_bytes(low, high);
-        assert_eq!(bytes, bytes2);
-    }
-
-    #[test]
-    #[ignore]
-    fn very_long() {
-        let path = std::path::Path::new("examples/long.pc");
-        crate::do_file(path).unwrap();
-    }
-
-    #[test]
-    fn precedence_ord() {
-        use crate::compiler::parser::BindingPower;
-        assert!(BindingPower::And > BindingPower::Or);
     }
 }
