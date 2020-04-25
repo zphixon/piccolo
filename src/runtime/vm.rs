@@ -333,6 +333,11 @@ impl Machine {
                     )?));
                 }
 
+                // TODO: the try_clone deep clones the entire value which isn't what we want
+                // one idea is to have Value::Object just be an index into a Vec<Option<Box<dyn Object>>>
+                // which would be two layers of indirection, so it wouldn't be that fast but it's
+                // the actual behavior that we want, and that would make it slightly easier to reason
+                // about lifetime-wise...
                 Opcode::GetLocal => {
                     let slot = self.chunk.read_short(self.ip);
                     let v = self.front_try_clone(slot as usize)?;
