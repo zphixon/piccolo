@@ -5,7 +5,6 @@
 
 pub extern crate downcast_rs;
 
-pub mod ast;
 pub mod compiler;
 pub mod error;
 pub mod runtime;
@@ -174,7 +173,7 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{Arity, AstPrinter, Expr, ExprAccept, Stmt};
+    use crate::compiler::ast::{Arity, AstPrinter, Expr, ExprAccept, Stmt};
     use crate::runtime::{op::Opcode, value::Value};
     use crate::{Chunk, Emitter, Machine, Parser, Scanner, Token, TokenKind};
 
