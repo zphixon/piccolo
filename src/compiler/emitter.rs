@@ -1,9 +1,10 @@
 use crate::runtime::op::Opcode;
-use crate::{Chunk, ErrorKind, PiccoloError, Token, TokenKind, Value};
+use crate::{Chunk, ErrorKind, PiccoloError, Token, TokenKind};
 
 use std::collections::HashMap;
 
 use super::ast::{Arity, Expr, ExprAccept, ExprVisitor, Stmt, StmtAccept, StmtVisitor};
+use crate::runtime::chunk::Constant;
 
 pub struct Emitter {
     chunk: Chunk,
@@ -66,7 +67,7 @@ impl Emitter {
         if self.identifiers.contains_key(name) {
             self.identifiers[name]
         } else {
-            let idx = self.chunk.make_constant(Value::String(name.to_owned()));
+            let idx = self.chunk.make_constant(Constant::String(name.to_owned()));
             self.identifiers.insert(name.to_owned(), idx);
             idx
         }
@@ -92,12 +93,12 @@ impl ExprVisitor for Emitter {
         let i = if token.kind == TokenKind::String && self.strings.contains_key(token.lexeme) {
             *self.strings.get(token.lexeme).unwrap()
         } else if token.kind == TokenKind::String {
-            let i = self.chunk.make_constant(Value::try_from(token.clone())?);
+            let i = self.chunk.make_constant(Constant::try_from(token.clone())?);
             self.strings.insert(token.lexeme.to_string(), i);
             i
         } else {
             self.chunk
-                .make_constant(Value::try_from(token.clone()).unwrap())
+                .make_constant(Constant::try_from(token.clone()).unwrap())
         };
 
         self.chunk.write_arg_u16(Opcode::Constant, i, token.line);

@@ -1,4 +1,48 @@
-use super::value::Value;
+use crate::{Token, TokenKind, PiccoloError, Value};
+use crate::runtime::memory::Heap;
+
+#[derive(Clone, Debug)]
+pub enum Constant {
+    String(String),
+    Bool(bool),
+    Integer(i64),
+    Double(f64),
+    Nil,
+}
+
+impl Constant {
+    pub(crate) fn ref_string(&self) -> &str {
+        match self {
+            Constant::String(v) => v,
+            _ => panic!("ref string on non-string"),
+        }
+    }
+
+    pub(crate) fn try_from(token: Token) -> Result<Constant, PiccoloError> {
+        Ok(match token.kind {
+            TokenKind::String => Constant::String(crate::compiler::escape_string(&token)?),
+            TokenKind::Integer(v) => Constant::Integer(v),
+            TokenKind::True => Constant::Bool(true),
+            TokenKind::False => Constant::Bool(false),
+            TokenKind::Double(v) => Constant::Double(v),
+            TokenKind::Nil => Constant::Nil,
+            _ => panic!("cannot create value from token {:?}", token),
+        })
+    }
+
+    pub(crate) fn into_value(self, heap: &mut Heap) -> Value {
+        match self {
+            Constant::String(v) => {
+                let ptr = heap.alloc(Box::new(v));
+                Value::Object(ptr)
+            }
+            Constant::Integer(v) => Value::Integer(v),
+            Constant::Bool(v) => Value::Bool(v),
+            Constant::Double(v) => Value::Double(v),
+            Constant::Nil => Value::Nil,
+        }
+    }
+}
 
 // TODO: don't let chunk be cloned
 /// Stores a piece of compiled Piccolo bytecode.
@@ -6,7 +50,7 @@ use super::value::Value;
 pub struct Chunk {
     pub(crate) data: Vec<u8>,
     pub(crate) lines: Vec<usize>,
-    pub(crate) constants: Vec<Value>,
+    pub(crate) constants: Vec<Constant>,
 }
 
 impl Chunk {
@@ -27,7 +71,7 @@ impl Chunk {
     }
 
     // allows for duplicate constants, non-duplicates are checked in the compiler
-    pub(crate) fn make_constant(&mut self, value: Value) -> u16 {
+    pub(crate) fn make_constant(&mut self, value: Constant) -> u16 {
         self.constants.push(value);
         let idx = self.constants.len() - 1;
         if idx > core::u16::MAX as usize {

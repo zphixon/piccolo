@@ -81,7 +81,7 @@ fn file(path: &Path) {
                     chunk.disassemble("");
                     let mut vm = Machine::new(chunk);
                     match vm.interpret() {
-                        Ok(value) => println!("{:?}", value),
+                        Ok(value) => println!("{}", value.fmt(&vm.heap())),
                         Err(e) => println!("interpret error: {}", e),
                     }
                 }
@@ -128,7 +128,7 @@ fn repl() {
                                 chunk.disassemble("");
                                 let mut vm = Machine::new(chunk);
                                 match vm.interpret() {
-                                    Ok(value) => println!("{:?}", value),
+                                    Ok(value) => println!("{}", value.dbg(vm.heap())),
                                     Err(e) => println!("interpret error: {}", e),
                                 }
                             }
