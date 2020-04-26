@@ -33,7 +33,7 @@ pub trait Object: Downcast + fmt::Debug + fmt::Display {
     }
 
     /// Sets the named property on the object. Returns `None` if it doesn't exist.
-    fn set(&mut self, _property: &str) -> Option<Value> {
+    fn set(&mut self, _property: &str, _value: Value) -> Option<()> {
         None
     }
 
@@ -69,7 +69,7 @@ impl Object for String {
         }
     }
 
-    fn set(&mut self, _property: &str) -> Option<Value> {
+    fn set(&mut self, _property: &str, _value: Value) -> Option<()> {
         None
     }
 
