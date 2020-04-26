@@ -4,6 +4,7 @@ extern crate rustyline;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use std::path::{PathBuf, Path};
+use piccolo::Constant;
 
 fn main() {
     let args = std::env::args();
@@ -45,7 +46,9 @@ fn repl() {
 
                 let r = piccolo::interpret(&line);
                 if let Ok(v) = r {
-                    println!("{}", v);
+                    if v != Constant::Nil {
+                        println!("{:?}", v);
+                    }
                 } else if let Err(e) = r {
                     if e.len() == 1 {
                         println!("Error {}", e[0])
@@ -81,7 +84,7 @@ fn file(path: &Path) {
                     chunk.disassemble("");
                     let mut vm = Machine::new(chunk);
                     match vm.interpret() {
-                        Ok(value) => println!("{}", value.fmt(&vm.heap())),
+                        Ok(value) => println!("{:?}", value),
                         Err(e) => println!("interpret error: {}", e),
                     }
                 }
@@ -128,7 +131,7 @@ fn repl() {
                                 chunk.disassemble("");
                                 let mut vm = Machine::new(chunk);
                                 match vm.interpret() {
-                                    Ok(value) => println!("{}", value.dbg(vm.heap())),
+                                    Ok(value) => println!("{:?}", value),
                                     Err(e) => println!("interpret error: {}", e),
                                 }
                             }

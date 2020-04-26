@@ -35,7 +35,6 @@ impl Heap {
     }
 
     pub fn alloc(&mut self, value: Box<dyn Object>) -> usize {
-        print!("alloc {:?} ", value);
         while self.memory[self.alloc_after].is_some() {
             self.alloc_after += 1;
         }
@@ -45,7 +44,6 @@ impl Heap {
                 .resize_with(self.memory.len() + (self.memory.len() / 2 + 1), || None);
         }
 
-        println!("{:x}", self.alloc_after);
         self.memory[self.alloc_after] = Some(value);
         self.alloc_after
     }
@@ -62,7 +60,6 @@ impl Heap {
 
     #[inline]
     pub fn take(&mut self, ptr: usize) -> Box<dyn Object> {
-        println!("free {:?} {:x}", self.memory[ptr], ptr);
         self.memory[ptr].take().expect("free invalid ptr")
     }
 }
