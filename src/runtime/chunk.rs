@@ -1,5 +1,5 @@
-use crate::{Token, TokenKind, PiccoloError, Value};
 use crate::runtime::memory::Heap;
+use crate::{PiccoloError, Token, TokenKind, Value};
 
 use core::fmt;
 
@@ -60,6 +60,13 @@ impl Constant {
             Constant::Double(v) => Value::Double(v),
             Constant::Nil => Value::Nil,
         }
+    }
+
+    pub fn into<T>(self) -> T
+    where
+        Constant: Into<T>,
+    {
+        core::convert::Into::<T>::into(self)
     }
 }
 

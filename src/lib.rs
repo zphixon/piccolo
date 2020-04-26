@@ -173,8 +173,9 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod integration {
-    use super::{Chunk, Emitter, Machine, Parser, Scanner, Token, TokenKind, Value};
+    use super::{Chunk, Emitter, Machine, Parser, Scanner, Token, TokenKind};
     use crate::compiler::ast::{AstPrinter, Expr, ExprAccept, Stmt};
+    use crate::Constant;
 
     #[test]
     #[ignore]
@@ -241,7 +242,7 @@ mod integration {
                 ne.chunk().disassemble("idklol");
             }
             let mut vm = Machine::new(ne.chunk().clone());
-            assert_eq!(vm.interpret().unwrap(), Value::Integer(11));
+            assert_eq!(vm.interpret().unwrap(), Constant::Integer(11));
         } else {
             panic!("ast not initialized")
         }

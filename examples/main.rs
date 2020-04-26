@@ -3,8 +3,7 @@ extern crate rustyline;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
-use std::path::{PathBuf, Path};
-use piccolo::Constant;
+use std::path::{Path, PathBuf};
 
 fn main() {
     let args = std::env::args();
@@ -34,6 +33,7 @@ fn file(path: &Path) {
 
 #[cfg(not(feature = "pc-debug"))]
 fn repl() {
+    use piccolo::Constant;
     let mut rl = Editor::<()>::new();
     rl.load_history(".piccolo_history")
         .or_else(|_| std::fs::File::create(".piccolo_history").map(|_| ()))
