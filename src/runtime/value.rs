@@ -1,8 +1,8 @@
+use super::memory::Heap;
+
 use downcast_rs::Downcast;
 
 use core::fmt;
-
-use super::memory::Heap;
 
 /// Trait for Piccolo objects.
 pub trait Object: Downcast + fmt::Debug + fmt::Display {
@@ -90,7 +90,7 @@ impl Object for f64 {
 }
 
 /// Wrapper type for piccolo values.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum Value {
     Bool(bool),
     Integer(i64),
@@ -134,9 +134,7 @@ impl Value {
 
     pub fn is_string(&self, heap: &Heap) -> bool {
         match self {
-            Value::Object(ptr) => {
-                heap.deref(*ptr).is::<String>()
-            }
+            Value::Object(ptr) => heap.deref(*ptr).is::<String>(),
             _ => false,
         }
     }
@@ -235,7 +233,7 @@ impl Value {
                         let rhs = heap.deref(*r);
                         lhs.eq(rhs)
                     }
-                },
+                }
                 _ => None,
             },
             Value::Nil => match other {
@@ -262,7 +260,7 @@ impl Value {
                     let lhs = heap.deref(*l);
                     let rhs = heap.deref(*r);
                     lhs.lt(rhs)
-                },
+                }
                 _ => None,
             },
             _ => None,
@@ -286,7 +284,7 @@ impl Value {
                     let lhs = heap.deref(*l);
                     let rhs = heap.deref(*r);
                     lhs.gt(rhs)
-                },
+                }
                 _ => None,
             },
             _ => None,
@@ -303,7 +301,7 @@ pub(crate) fn dbg_list(l: &[Value], heap: &Heap) -> String {
         for item in l {
             s.push_str(&format!("{}, ", item.dbg(heap)));
         }
-        format!("{}]", &s[..s.len()-2])
+        format!("{}]", &s[..s.len() - 2])
     }
 }
 

@@ -29,7 +29,8 @@ fn main() -> Result<(), PiccoloError> {
             println!(" xx '{}'", name);
             let _ = piccolo::do_file(&item).map(|v| {
                 test_errors.push(vec![PiccoloError::new(ErrorKind::AssertFailed)
-                    .file(name)])
+                    .file(name)
+                    .msg_string(format!("resulted in {}", v))])
             });
         }
     }

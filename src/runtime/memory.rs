@@ -55,7 +55,9 @@ impl Heap {
 
     #[inline]
     pub fn deref_mut(&mut self, ptr: usize) -> &mut dyn Object {
-        self.memory[ptr].as_deref_mut().expect("deref_mut invalid ptr")
+        self.memory[ptr]
+            .as_deref_mut()
+            .expect("deref_mut invalid ptr")
     }
 
     #[inline]
