@@ -294,6 +294,7 @@ impl Value {
     }
 }
 
+#[cfg(feature = "pc-debug")]
 pub(crate) fn dbg_list(l: &[Value], heap: &Heap) -> String {
     if l.is_empty() {
         "".into()

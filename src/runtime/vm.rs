@@ -69,8 +69,8 @@ impl Machine {
             .unwrap()
     }
 
-    /// Interprets the machine's bytecode, returning a Value.
-    pub fn interpret(&mut self) -> Result<Value, PiccoloError> {
+    /// Interprets the machine's bytecode, returning a Constant.
+    pub fn interpret(&mut self) -> Result<Constant, PiccoloError> {
         while self.ip < self.chunk.data.len() {
             #[cfg(feature = "pc-debug")]
             {
@@ -145,7 +145,7 @@ impl Machine {
             match op {
                 Opcode::Pop => {
                     if self.ip == self.chunk.data.len() {
-                        return self.pop();
+                        return Ok(Constant::from_value(self.pop()?, &mut self.heap));
                     }
                     self.pop()?;
                 }
@@ -376,6 +376,6 @@ impl Machine {
                 }
             }
         }
-        Ok(self.stack.pop().unwrap_or(Value::Nil))
+        Ok(Constant::from_value(self.stack.pop().unwrap_or(Value::Nil), &mut self.heap))
     }
 }

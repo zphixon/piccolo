@@ -12,7 +12,7 @@ pub mod runtime;
 pub use compiler::{compile, scan_all, Token, TokenKind};
 pub use compiler::{emitter::Emitter, parser::Parser, scanner::Scanner};
 pub use error::{ErrorKind, PiccoloError};
-pub use runtime::{chunk::Chunk, value::Value, vm::Machine};
+pub use runtime::{chunk::Chunk, chunk::Constant, value::Value, vm::Machine};
 
 #[cfg(feature = "pc-debug")]
 pub use compiler::print_tokens;
@@ -28,7 +28,7 @@ pub use compiler::print_tokens;
 /// # Ok(())
 /// # }
 /// ```
-pub fn interpret(src: &str) -> Result<Value, Vec<PiccoloError>> {
+pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     let mut scanner = Scanner::new(src);
     let ast = Parser::new().parse(&mut scanner)?;
     let chunk = Emitter::new(Chunk::default()).compile(&ast)?;
@@ -36,7 +36,7 @@ pub fn interpret(src: &str) -> Result<Value, Vec<PiccoloError>> {
 }
 
 /// Reads a file and interprets its contents.
-pub fn do_file(file: &std::path::Path) -> Result<Value, Vec<PiccoloError>> {
+pub fn do_file(file: &std::path::Path) -> Result<Constant, Vec<PiccoloError>> {
     let contents = std::fs::read_to_string(file).map_err(|e| vec![PiccoloError::from(e)])?;
     interpret(&contents).map_err(|v| {
         v.into_iter()

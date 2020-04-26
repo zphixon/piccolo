@@ -1,7 +1,9 @@
 use crate::{Token, TokenKind, PiccoloError, Value};
 use crate::runtime::memory::Heap;
 
-#[derive(Clone, Debug)]
+use core::fmt;
+
+#[derive(Clone, Debug, PartialOrd, PartialEq)]
 pub enum Constant {
     String(String),
     Bool(bool),
@@ -15,6 +17,23 @@ impl Constant {
         match self {
             Constant::String(v) => v,
             _ => panic!("ref string on non-string"),
+        }
+    }
+
+    pub(crate) fn from_value(v: Value, heap: &mut Heap) -> Constant {
+        match v {
+            Value::Object(ptr) => {
+                let obj = heap.take(ptr);
+                if let Ok(string) = obj.downcast::<String>() {
+                    Constant::String(string.to_string())
+                } else {
+                    panic!("non-string constant");
+                }
+            }
+            Value::Bool(v) => Constant::Bool(v),
+            Value::Integer(v) => Constant::Integer(v),
+            Value::Double(v) => Constant::Double(v),
+            Value::Nil => Constant::Nil,
         }
     }
 
@@ -40,6 +59,45 @@ impl Constant {
             Constant::Bool(v) => Value::Bool(v),
             Constant::Double(v) => Value::Double(v),
             Constant::Nil => Value::Nil,
+        }
+    }
+}
+
+impl fmt::Display for Constant {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Constant::String(v) => write!(f, "{}", v),
+            Constant::Bool(v) => write!(f, "{}", v),
+            Constant::Integer(v) => write!(f, "{}", v),
+            Constant::Double(v) => write!(f, "{}", v),
+            Constant::Nil => write!(f, "nil"),
+        }
+    }
+}
+
+impl Into<bool> for Constant {
+    fn into(self) -> bool {
+        match self {
+            Constant::Bool(v) => v,
+            _ => panic!("could not cast to bool"),
+        }
+    }
+}
+
+impl Into<i64> for Constant {
+    fn into(self) -> i64 {
+        match self {
+            Constant::Integer(v) => v,
+            _ => panic!("could not cast to i64"),
+        }
+    }
+}
+
+impl Into<f64> for Constant {
+    fn into(self) -> f64 {
+        match self {
+            Constant::Double(v) => v,
+            _ => panic!("could not cast to f64"),
         }
     }
 }
