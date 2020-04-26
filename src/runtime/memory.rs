@@ -7,14 +7,6 @@ use super::value::Object;
 // Constant table. I think this is the easiest method of implementing "dynamic" references
 // without taking a deep dive into actual unsafe rust land.
 
-#[derive(Copy, Clone)]
-pub enum Val {
-    Integer(i64),
-    Double(f64),
-    Object(usize),
-    Nil,
-}
-
 pub struct Heap {
     memory: Vec<Option<Box<dyn Object>>>,
     alloc_after: usize,
@@ -37,7 +29,13 @@ impl Heap {
         self.alloc_after = 0;
     }
 
-    pub fn alloc(&mut self, value: Box<dyn Object>) -> Val {
+    pub fn try_copy(&mut self, ptr: usize) -> Option<usize> {
+        let cloned = self.deref(ptr).try_clone()?;
+        Some(self.alloc(cloned))
+    }
+
+    pub fn alloc(&mut self, value: Box<dyn Object>) -> usize {
+        print!("alloc {:?} ", value);
         while self.memory[self.alloc_after].is_some() {
             self.alloc_after += 1;
         }
@@ -47,24 +45,25 @@ impl Heap {
                 .resize_with(self.memory.len() + (self.memory.len() / 2 + 1), || None);
         }
 
+        println!("{:x}", self.alloc_after);
         self.memory[self.alloc_after] = Some(value);
-        Val::Object(self.alloc_after)
+        self.alloc_after
     }
 
     #[inline]
-    pub fn deref(&self, ptr: Val) -> &Box<dyn Object> {
-        match ptr {
-            Val::Object(i) => self.memory[i].as_ref().expect("deref invalid ptr"),
-            _ => panic!("deref with non-ptr"),
-        }
+    pub fn deref(&self, ptr: usize) -> &dyn Object {
+        self.memory[ptr].as_deref().expect("deref invalid ptr")
     }
 
     #[inline]
-    pub fn take(&mut self, ptr: Val) -> Box<dyn Object> {
-        match ptr {
-            Val::Object(ptr) => self.memory[ptr].take().expect("free invalid ptr"),
-            _ => panic!("free with non-ptr"),
-        }
+    pub fn deref_mut(&mut self, ptr: usize) -> &mut dyn Object {
+        self.memory[ptr].as_deref_mut().expect("deref_mut invalid ptr")
+    }
+
+    #[inline]
+    pub fn take(&mut self, ptr: usize) -> Box<dyn Object> {
+        println!("free {:?} {:x}", self.memory[ptr], ptr);
+        self.memory[ptr].take().expect("free invalid ptr")
     }
 }
 
@@ -100,6 +99,38 @@ mod test {
         let s = h.alloc(Box::new(String::from("world")));
         assert!(h.take(s).eq(&String::from("world")).unwrap());
         h.deref(s);
+    }
+
+    #[test]
+    fn mutable() {
+        use crate::Value;
+        #[derive(Debug, PartialEq)]
+        struct S(i64);
+        impl Object for S {
+            fn type_name(&self) -> &'static str {
+                "S"
+            }
+            fn eq(&self, rhs: &dyn Object) -> Option<bool> {
+                Some(rhs.downcast_ref::<S>()?.0 == self.0)
+            }
+            fn set(&mut self, _property: &str, value: Value) -> Option<()> {
+                match value {
+                    Value::Integer(v) => self.0 = v,
+                    _ => panic!(),
+                }
+                Some(())
+            }
+        }
+        impl core::fmt::Display for S {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                write!(f, "{:?}", self)
+            }
+        }
+
+        let mut heap = Heap::new(8);
+        let ptr = heap.alloc(Box::new(S(32)));
+        heap.deref_mut(ptr).set("", Value::Integer(78));
+        assert_eq!(heap.deref(ptr).downcast_ref::<S>().unwrap(), &S(78));
     }
 
     #[test]

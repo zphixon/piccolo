@@ -6,7 +6,9 @@ use std::fs;
 use std::{io, path};
 
 fn main() -> Result<(), PiccoloError> {
-    let path: path::PathBuf = "examples\\test_files".into();
+    let mut path = path::PathBuf::new();
+    path.push("examples");
+    path.push("test_files");
     let mut files = Vec::new();
     collect_files_recursively(&path, &mut files)?;
 
@@ -27,8 +29,7 @@ fn main() -> Result<(), PiccoloError> {
             println!(" xx '{}'", name);
             let _ = piccolo::do_file(&item).map(|v| {
                 test_errors.push(vec![PiccoloError::new(ErrorKind::AssertFailed)
-                    .file(name)
-                    .msg_string(format!("resulted in {:?}", v))])
+                    .file(name)])
             });
         }
     }

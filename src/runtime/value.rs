@@ -2,7 +2,7 @@ use downcast_rs::Downcast;
 
 use core::fmt;
 
-use crate::{PiccoloError, Token, TokenKind};
+use super::memory::Heap;
 
 /// Trait for Piccolo objects.
 pub trait Object: Downcast + fmt::Debug + fmt::Display {
@@ -78,14 +78,24 @@ impl Object for String {
     }
 }
 
+impl Object for i64 {
+    fn type_name(&self) -> &'static str {
+        "integer"
+    }
+}
+impl Object for f64 {
+    fn type_name(&self) -> &'static str {
+        "double"
+    }
+}
+
 /// Wrapper type for piccolo values.
-#[derive(Debug)]
+#[derive(Copy, Clone)]
 pub enum Value {
-    String(String),
     Bool(bool),
     Integer(i64),
     Double(f64),
-    Object(Box<dyn Object>),
+    Object(usize),
     Nil,
 }
 
@@ -101,26 +111,20 @@ impl Value {
     }
 
     /// Converts the value into a type T for which Value implements Into<T>.
-    pub fn into<T>(self) -> T
+    pub fn into<T: Object>(self, heap: &mut Heap) -> T
     where
         Value: Into<T>,
     {
-        core::convert::Into::<T>::into(self)
-    }
-
-    /// Takes a reference to the inner string. Panics if the value is not a string.
-    pub fn ref_string(&self) -> &String {
         match self {
-            Value::String(s) => s,
-            _ => panic!("tried to take reference to inner string - file a bug report!"),
+            Value::Object(ptr) => *heap.take(ptr).downcast::<T>().unwrap(),
+            _ => core::convert::Into::<T>::into(self),
         }
     }
 
     /// Attempts to clone a value. Panics if it doesn't succeed.
-    pub fn try_clone(&self) -> Option<Value> {
+    pub fn try_clone(&self, heap: &mut Heap) -> Option<Value> {
         Some(match self {
-            Value::String(v) => Value::String(v.clone()),
-            Value::Object(v) => Value::Object(v.try_clone()?),
+            Value::Object(v) => Value::Object(heap.try_copy(*v)?),
             Value::Bool(v) => Value::Bool(*v),
             Value::Integer(v) => Value::Integer(*v),
             Value::Double(v) => Value::Double(*v),
@@ -128,21 +132,11 @@ impl Value {
         })
     }
 
-    pub(crate) fn try_from(token: Token) -> Result<Value, PiccoloError> {
-        Ok(match token.kind {
-            TokenKind::Integer(v) => Value::Integer(v),
-            TokenKind::True => Value::Bool(true),
-            TokenKind::False => Value::Bool(false),
-            TokenKind::Double(v) => Value::Double(v),
-            TokenKind::String => Value::String(crate::compiler::escape_string(&token)?),
-            TokenKind::Nil => Value::Nil,
-            _ => panic!("cannot create value from token {:?}", token),
-        })
-    }
-
-    pub fn is_string(&self) -> bool {
+    pub fn is_string(&self, heap: &Heap) -> bool {
         match self {
-            Value::String(_) => true,
+            Value::Object(ptr) => {
+                heap.deref(*ptr).is::<String>()
+            }
             _ => false,
         }
     }
@@ -183,36 +177,41 @@ impl Value {
     }
 
     /// Returns the type name of a value.
-    pub fn type_name(&self) -> &'static str {
+    pub fn type_name(&self, heap: &Heap) -> &'static str {
         match self {
-            Value::String(_) => "string",
             Value::Bool(_) => "bool",
             Value::Integer(_) => "integer",
             Value::Double(_) => "double",
-            Value::Object(v) => v.type_name(),
+            Value::Object(v) => heap.deref(*v).type_name(),
             Value::Nil => "nil",
         }
     }
 
     /// Formats the value.
-    pub fn fmt(&self) -> String {
+    pub fn fmt(&self, heap: &Heap) -> String {
         match self {
-            Value::String(v) => v.to_string(),
             Value::Bool(v) => format!("{}", v),
             Value::Integer(v) => format!("{}", v),
             Value::Double(v) => format!("{}", v),
-            Value::Object(v) => format!("{}", v),
+            Value::Object(v) => format!("{}", heap.deref(*v)),
             Value::Nil => "nil".into(),
         }
     }
 
-    /// Tests a value for equality. Returns `None` if incomparable.
-    pub fn eq(&self, other: &Value) -> Option<bool> {
+    /// Formats the value.
+    pub fn dbg(&self, heap: &Heap) -> String {
         match self {
-            Value::String(l) => match other {
-                Value::String(r) => Some(l == r),
-                _ => None,
-            },
+            Value::Bool(v) => format!("bool({})", v),
+            Value::Integer(v) => format!("integer({})", v),
+            Value::Double(v) => format!("double({})", v),
+            Value::Object(v) => format!("*{}({:?})", heap.deref(*v).type_name(), heap.deref(*v)),
+            Value::Nil => "Nil".into(),
+        }
+    }
+
+    /// Tests a value for equality. Returns `None` if incomparable.
+    pub fn eq(&self, other: &Value, heap: &Heap) -> Option<bool> {
+        match self {
             Value::Bool(l) => match other {
                 Value::Bool(r) => Some(l == r),
                 _ => None,
@@ -228,7 +227,15 @@ impl Value {
                 _ => None,
             },
             Value::Object(l) => match other {
-                Value::Object(r) => l.eq(r.as_ref()),
+                Value::Object(r) => {
+                    if l == r {
+                        Some(true)
+                    } else {
+                        let lhs = heap.deref(*l);
+                        let rhs = heap.deref(*r);
+                        lhs.eq(rhs)
+                    }
+                },
                 _ => None,
             },
             Value::Nil => match other {
@@ -238,7 +245,7 @@ impl Value {
         }
     }
 
-    pub fn lt(&self, other: &Value) -> Option<bool> {
+    pub fn lt(&self, other: &Value, heap: &Heap) -> Option<bool> {
         match self {
             Value::Integer(l) => match other {
                 Value::Integer(r) => Some(l < r),
@@ -250,19 +257,19 @@ impl Value {
                 Value::Double(r) => Some(l < r),
                 _ => None,
             },
-            Value::String(l) => match other {
-                Value::String(r) => Some(l < r),
-                _ => None,
-            },
             Value::Object(l) => match other {
-                Value::Object(r) => l.lt(r.as_ref()),
+                Value::Object(r) => {
+                    let lhs = heap.deref(*l);
+                    let rhs = heap.deref(*r);
+                    lhs.lt(rhs)
+                },
                 _ => None,
             },
             _ => None,
         }
     }
 
-    pub fn gt(&self, other: &Value) -> Option<bool> {
+    pub fn gt(&self, other: &Value, heap: &Heap) -> Option<bool> {
         match self {
             Value::Integer(l) => match other {
                 Value::Integer(r) => Some(l > r),
@@ -274,12 +281,12 @@ impl Value {
                 Value::Double(r) => Some(l > r),
                 _ => None,
             },
-            Value::String(l) => match other {
-                Value::String(r) => Some(l > r),
-                _ => None,
-            },
             Value::Object(l) => match other {
-                Value::Object(r) => l.gt(r.as_ref()),
+                Value::Object(r) => {
+                    let lhs = heap.deref(*l);
+                    let rhs = heap.deref(*r);
+                    lhs.gt(rhs)
+                },
                 _ => None,
             },
             _ => None,
@@ -287,30 +294,15 @@ impl Value {
     }
 }
 
-impl Clone for Value {
-    fn clone(&self) -> Value {
-        self.try_clone().unwrap()
-    }
-}
-
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", Value::fmt(self))
-    }
-}
-
-impl PartialEq for Value {
-    fn eq(&self, rhs: &Value) -> bool {
-        Value::eq(self, rhs).unwrap()
-    }
-}
-
-impl Into<String> for Value {
-    fn into(self) -> String {
-        match self {
-            Value::String(v) => v,
-            _ => panic!("could not cast {:?} to string", self),
+pub(crate) fn dbg_list(l: &[Value], heap: &Heap) -> String {
+    if l.is_empty() {
+        "".into()
+    } else {
+        let mut s = String::from("[");
+        for item in l {
+            s.push_str(&format!("{}, ", item.dbg(heap)));
         }
+        format!("{}]", &s[..s.len()-2])
     }
 }
 
@@ -318,7 +310,7 @@ impl Into<bool> for Value {
     fn into(self) -> bool {
         match self {
             Value::Bool(v) => v,
-            _ => panic!("could not cast {:?} to bool", self),
+            _ => panic!("could not cast to bool"),
         }
     }
 }
@@ -327,7 +319,7 @@ impl Into<i64> for Value {
     fn into(self) -> i64 {
         match self {
             Value::Integer(v) => v,
-            _ => panic!("could not cast {:?} to i64", self),
+            _ => panic!("could not cast to i64"),
         }
     }
 }
@@ -336,31 +328,7 @@ impl Into<f64> for Value {
     fn into(self) -> f64 {
         match self {
             Value::Double(v) => v,
-            _ => panic!("could not cast {:?} to f64", self),
+            _ => panic!("could not cast to f64"),
         }
-    }
-}
-
-impl From<String> for Value {
-    fn from(v: String) -> Self {
-        Value::String(v)
-    }
-}
-
-impl From<bool> for Value {
-    fn from(v: bool) -> Self {
-        Value::Bool(v)
-    }
-}
-
-impl From<i64> for Value {
-    fn from(v: i64) -> Self {
-        Value::Integer(v)
-    }
-}
-
-impl From<f64> for Value {
-    fn from(v: f64) -> Self {
-        Value::Double(v)
     }
 }
