@@ -1,7 +1,10 @@
+//! Types for dealing with errors in scanning, parsing, compiling, or executing Piccolo.
+
 use crate::runtime::op::Opcode;
 
 use core::fmt;
 
+/// The main error-reporting struct.
 #[derive(Debug, Clone)]
 pub struct PiccoloError {
     kind: ErrorKind,
@@ -79,6 +82,7 @@ impl fmt::Display for PiccoloError {
     }
 }
 
+/// Types of errors possible in Piccolo.
 #[derive(Debug, Clone)]
 pub enum ErrorKind {
     StackUnderflow {

@@ -1,18 +1,30 @@
+//! Contains `Parser`, which converts a source of tokens into a Piccolo AST.
+
 use crate::{ErrorKind, PiccoloError, Scanner, Token, TokenKind};
 
 use super::ast::Expr;
 use super::ast::Stmt;
 
+/// A parser for Piccolo.
+///
+/// A parser scans tokens on-demand from a provided [`Scanner`]. The parser
+/// is an implementation of the Pratt parsing algorithm, also known as TDOP or
+/// precedence climbing.
+///
+/// [`Scanner`]: ../scanner/struct.Scanner.html
 #[derive(Default)]
 pub struct Parser<'a> {
     ast: Vec<Stmt<'a>>,
 }
 
 impl<'a> Parser<'a> {
+    /// Create a new scanner.
     pub fn new() -> Self {
         Parser { ast: Vec::new() }
     }
 
+    /// Parse a stream of tokens into an AST. This method collects errors on statement
+    /// boundaries, continuing until the end of the file.
     pub fn parse(&mut self, scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
         let mut errors = Vec::new();
         while scanner.peek_token(0)?.kind != TokenKind::Eof {

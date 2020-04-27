@@ -1,10 +1,14 @@
+//! Contains types for working with Piccolo values at runtime.
+
 use super::memory::Heap;
 
 use downcast_rs::Downcast;
 
 use core::fmt;
 
-/// Trait for Piccolo objects.
+/// Trait for Piccolo objects that will be stored in a [`Heap`].
+///
+/// [`Heap`]: ../memory/struct.Heap.html
 pub trait Object: Downcast + fmt::Debug + fmt::Display {
     /// Return the name of the type of the object. Used for runtime type comparison inside
     /// Piccolo via the `type()` builtin function.
@@ -83,13 +87,18 @@ impl Object for i64 {
         "integer"
     }
 }
+
 impl Object for f64 {
     fn type_name(&self) -> &'static str {
         "double"
     }
 }
 
-/// Wrapper type for piccolo values.
+/// Wrapper type for runtime Piccolo values.
+///
+/// `Value::Object` is a pointer into a [`Heap`].
+///
+/// [`Heap`]: ../memory/struct.Heap.html
 #[derive(Copy, Clone, Debug)]
 pub enum Value {
     Bool(bool),

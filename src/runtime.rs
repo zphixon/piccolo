@@ -1,3 +1,5 @@
+//! Modules for the runtime representation and interpretation of Piccolo bytecode.
+
 pub mod chunk;
 pub mod memory;
 pub mod op;

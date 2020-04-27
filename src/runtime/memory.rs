@@ -1,18 +1,28 @@
+//! Contains items for the manipulation of memory at runtime.
+
 use super::value::Object;
 
-// objects need to be able to live for any period of time during the interpreter's
-// execution. they don't need to exist at creation, since constants are baked into the
-// chunk. I'm probably going to break up Value into standard Value and Constant which is
-// what a Chunk will hold, and when needed at runtime a Value can be an index to a chunk's
-// Constant table. I think this is the easiest method of implementing "dynamic" references
-// without taking a deep dive into actual unsafe rust land.
-
+/// A `Heap` is the main method of runtime variable reference semantics.
+///
+/// The only way of implementing the dynamic lifetimes of values that need to exist in
+/// a scripting language like Piccolo is to circumvent Rust's system of borrows and lifetimes
+/// entirely. This struct is how this is implemented in Piccolo.
+///
+/// A `Heap` is implemented using a `Vec<Option<Box<dyn `[`Object`]`>>>`, and at runtime, pointers
+/// to objects in the heap are simply `usize` indices into the heap's vector. Although there
+/// are two levels of indirection, the negative impact on performance comes with static memory
+/// safety guarantees.
+///
+/// [`Object`]: ../value/trait.Object.html
 pub struct Heap {
     memory: Vec<Option<Box<dyn Object>>>,
     alloc_after: usize,
 }
 
 impl Heap {
+    /// Create a new `Heap` with a capacity. See also [`Vec::with_capacity`].
+    ///
+    /// [`Vec::with_capacity`]: https://doc.rust-lang.org/stable/std/vec/struct.Vec.html#method.with_capacity
     pub fn new(capacity: usize) -> Heap {
         let mut memory = Vec::with_capacity(capacity);
         memory.resize_with(capacity, || None);
@@ -29,11 +39,13 @@ impl Heap {
         self.alloc_after = 0;
     }
 
+    /// Attempt to clone a value in the heap and return a pointer to it.
     pub fn try_copy(&mut self, ptr: usize) -> Option<usize> {
         let cloned = self.deref(ptr).try_clone()?;
         Some(self.alloc(cloned))
     }
 
+    /// Allocate space for a new value, and return its pointer.
     pub fn alloc(&mut self, value: Box<dyn Object>) -> usize {
         while self.memory[self.alloc_after].is_some() {
             self.alloc_after += 1;
@@ -48,11 +60,23 @@ impl Heap {
         self.alloc_after
     }
 
+    /// De-reference a pointer.
+    ///
+    /// # Panics:
+    ///
+    /// This method panics if the pointer points to memory outside the range of the heap,
+    /// or if the object pointed at is `None`.
     #[inline]
     pub fn deref(&self, ptr: usize) -> &dyn Object {
         self.memory[ptr].as_deref().expect("deref invalid ptr")
     }
 
+    /// De-reference a pointer, and get a mutable reference.
+    ///
+    /// # Panics:
+    ///
+    /// This method panics if the pointer points to memory outside the range of the heap,
+    /// or if the object pointed at is `None`.
     #[inline]
     pub fn deref_mut(&mut self, ptr: usize) -> &mut dyn Object {
         self.memory[ptr]
@@ -60,6 +84,12 @@ impl Heap {
             .expect("deref_mut invalid ptr")
     }
 
+    /// Move a value out of the heap, de-allocating it.
+    ///
+    /// # Panics:
+    ///
+    /// This method panics if the pointer points to memory outside the range of the heap,
+    /// or if the object pointed at is `None`.
     #[inline]
     pub fn take(&mut self, ptr: usize) -> Box<dyn Object> {
         self.memory[ptr].take().expect("free invalid ptr")

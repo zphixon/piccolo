@@ -1,3 +1,23 @@
+//! Contains types and traits useful for working with a Piccolo AST.
+//!
+//! The main Piccolo AST is fit into enums [`Expr`] and [`Stmt`]. `Expr` contains
+//! variants for working with Piccolo expressions, and `Stmt` for statements. Generally,
+//! `Stmt` AST nodes have some block component to them, like a function, object, or
+//! control flow.
+//!
+//! [`ExprVisitor`] and [`StmtVisitor`] are traits for implementing the [visitor]
+//! pattern. They allow a struct implementing them to walk the AST to perform some
+//! operation without modifying it. Piccolo's bytecode [`Emitter`] implements these
+//! traits to compile an AST into a [`Chunk`].
+//!
+//! [`Expr`]: ./enum.Expr.html
+//! [`Stmt`]: ./enum.Stmt.html
+//! [`ExprVisitor`]: ./trait.ExprVisitor.html
+//! [`StmtVisitor`]: ./trait.StmtVisitor.html
+//! [visitor]: https://github.com/rust-unofficial/patterns/blob/master/patterns/visitor.md
+//! [`Emitter`]: ../emitter/struct.Emitter.html
+//! [`Chunk`]: ../runtime/struct.Chunk.html
+
 use crate::{Token, TokenKind};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -14,7 +34,7 @@ pub struct AstPrinter {
 }
 
 impl AstPrinter {
-    /// Pretty-print a full AST.
+    /// Pretty-print the full AST.
     pub fn print(ast: &[Stmt]) -> String {
         let mut s = String::new();
         for stmt in ast.iter() {
@@ -222,25 +242,53 @@ impl ExprVisitor for AstPrinter {
     }
 }
 
-/// A visitor tells some node in an AST to accept the visitor, and that node
-/// tells the visitor to visit its own node and its child nodes.
+/// Trait for an expression to accept an [`ExprVisitor`].
 ///
-/// Only Piccolo AST nodes will implement this trait, but you will need to use it
-/// in order to walk the AST.
+/// Only [`Expr`] will implement this trait, you probably want [`ExprVisitor`].
+///
+/// [`ExprVisitor`]: ./trait.ExprVisitor.html
+/// [`Expr`]: ./enum.Expr.html
 pub trait ExprAccept {
+    /// De-structures the [`Expr`] variant into its parts, and calls the corresponding
+    /// method on [`ExprVisitor`].
+    ///
+    /// [`Expr`]: ./enum.Expr.html
+    /// [`ExprVisitor`]: ./trait.ExprVisitor.html
     fn accept<T: ExprVisitor>(&self, visitor: &mut T) -> T::Output;
 }
 
-/// A struct wishing to walk the AST will need to implement ExprVisitor. This allows the
-/// AST to tell the visitor to visit each node.
+/// One of two traits used to walk a Piccolo AST.
+///
+/// An implementor of this trait will specify some output which is folded over
+/// recursively. To continue walking the AST, the implementor will need to call
+/// [`Expr::accept`] with itself as the argument, which will return to the
+/// `ExprVisitor` implementation.
+///
+/// [`Expr::accept`]: ./enum.Expr.html
 pub trait ExprVisitor {
+    /// Type which the visitor folds over.
     type Output;
+
+    /// Visit Piccolo value literals, like `nil`, bools, strings, integers, and
+    /// floating point numbers.
     fn visit_atom(&mut self, token: &Token) -> Self::Output;
+
+    /// Visit parenthesized expressions.
     fn visit_paren(&mut self, value: &Expr) -> Self::Output;
+
+    /// Visit variable references.
     fn visit_variable(&mut self, name: &Token) -> Self::Output;
+
+    /// Visit unary operator expressions, like `!` or `-`.
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output;
+
+    /// Visit binary operator expressions.
     fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
+
+    /// Visit logical operator expressions, like `&&` and `||`.
     fn visit_logical(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output;
+
+    /// Visit function call expressions.
     fn visit_call(
         &mut self,
         callee: &Expr,
@@ -248,6 +296,7 @@ pub trait ExprVisitor {
         arity: Arity,
         args: &[Expr],
     ) -> Self::Output;
+
     fn visit_new(&mut self, name: &Token, args: &[(Token, Box<Expr>)]) -> Self::Output;
     fn visit_get(&mut self, object: &Expr, name: &Token) -> Self::Output;
     fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> Self::Output;
@@ -262,7 +311,14 @@ pub trait ExprVisitor {
     ) -> Self::Output;
 }
 
-/// Piccolo AST node.
+/// Piccolo expression AST node.
+///
+/// This enum contains every expression variant available in Piccolo.
+/// Generally, if one expression could be built in terms of another,
+/// for example `Binary` and `Logical`, the behavior for an implementor
+/// of [`ExprVisitor`] should reflect a difference between the two.
+///
+/// [`ExprVisitor`]: ./trait.ExprVisitor.html
 #[derive(Debug, PartialEq)]
 pub enum Expr<'a> {
     Atom(Token<'a>),
@@ -347,25 +403,51 @@ impl ExprAccept for Expr<'_> {
     }
 }
 
-/// A visitor tells some node in an AST to accept the visitor, and that node
-/// tells the visitor to visit its own node and its child nodes.
+/// Trait for a statement to accept an [`StmtVisitor`].
 ///
-/// Only Piccolo AST nodes will implement this trait, but you will need to use it
-/// in order to walk the AST.
+/// Only [`Stmt`] will implement this trait, you probably want [`StmtVisitor`].
+///
+/// [`StmtVisitor`]: ./trait.StmtVisitor.html
+/// [`Stmt`]: ./enum.Stmt.html
 pub trait StmtAccept {
+    /// De-structures the [`Stmt`] variant into its parts, and calls the corresponding
+    /// method on [`StmtVisitor`].
+    ///
+    /// [`Stmt`]: ./enum.Stmt.html
+    /// [`StmtVisitor`]: ./trait.StmtVisitor.html
     fn accept<T: StmtVisitor>(&self, visitor: &mut T) -> T::Output;
 }
 
-/// A struct wishing to walk the AST will need to implement StmtVisitor. This allows the
-/// AST to tell the visitor to visit each node.
+/// One of two traits used to walk a Piccolo AST.
+///
+/// An implementor of this trait will specify some output which is folded over
+/// recursively. To continue walking the AST, the implementor will need to call
+/// [`Stmt::accept`] with itself as the argument, which will return to the
+/// `StmtVisitor` implementation.
+///
+/// [`Stmt::accept`]: ./enum.Stmt.html
 pub trait StmtVisitor {
+    /// Type which the visitor folds over.
     type Output;
+
+    /// Visit an expression statement, like function calls, method calls, or property sets.
     fn visit_expr(&mut self, expr: &Expr) -> Self::Output;
+
+    /// Visit a bare block.
     fn visit_block(&mut self, end: &Token, body: &[Stmt]) -> Self::Output;
+
+    /// Visit a variable assignment or declaration.
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output;
+
+    /// Visit an `if-then` statement.
     fn visit_if(&mut self, cond: &Expr, then: &[Stmt], else_: Option<&Vec<Stmt>>) -> Self::Output;
+
+    /// Visit a `while` loop.
     fn visit_while(&mut self, cond: &Expr, body: &[Stmt]) -> Self::Output;
+
+    /// Visit a `for` loop.
     fn visit_for(&mut self, name: &Token, iter: &Expr, body: &[Stmt]) -> Self::Output;
+
     fn visit_func(
         &mut self,
         name: &Token,
@@ -384,7 +466,14 @@ pub trait StmtVisitor {
     ) -> Self::Output;
 }
 
-/// Piccolo AST node. Roughly corresponds to statements.
+/// Piccolo statement AST node.
+///
+/// This enum contains every statement variant available in Piccolo. Generally,
+/// if one statement could be built in terms of another, for example `Assignment`
+/// and `Declaration`, the behavior for an implementor of [`StmtVisitor`] should
+/// reflect a difference between the two.
+///
+/// [`StmtVisitor`]: ./trait.StmtVisitor.html
 #[derive(Debug, PartialEq)]
 pub enum Stmt<'a> {
     Expr(Expr<'a>),
