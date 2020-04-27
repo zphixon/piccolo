@@ -42,7 +42,7 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     let chunk = Emitter::new(Chunk::default()).compile(&ast)?;
     debug!("chunk\n{}", chunk.disassemble(""));
     debug!("interpret");
-    Ok(Machine::new(chunk).interpret()?)
+    Ok(Machine::new().interpret(&chunk)?)
 }
 
 /// Reads a file and interprets its contents.
@@ -114,7 +114,7 @@ pub mod fuzzer {
             println!("----- run {} compiles -----", n);
             crate::print_tokens(&crate::compiler::scan_all(&src).unwrap());
             chunk.disassemble("");
-            Machine::new(chunk).interpret().ok().map(|_| {
+            Machine::new().interpret(&chunk).ok().map(|_| {
                 println!("----- run {} executes -----", n);
             })
         } else {
@@ -217,8 +217,8 @@ mod integration {
         {
             chunk.disassemble("idklol");
         }
-        let mut vm = Machine::new(chunk);
-        println!("{}", vm.interpret().unwrap());
+        let mut vm = Machine::new();
+        println!("{}", vm.interpret(&chunk).unwrap());
     }
 
     #[test]
@@ -251,8 +251,8 @@ mod integration {
             {
                 ne.chunk().disassemble("idklol");
             }
-            let mut vm = Machine::new(ne.chunk().clone());
-            assert_eq!(vm.interpret().unwrap(), Constant::Integer(11));
+            let mut vm = Machine::new();
+            assert_eq!(vm.interpret(&chunk).unwrap(), Constant::Integer(11));
         } else {
             panic!("ast not initialized")
         }
