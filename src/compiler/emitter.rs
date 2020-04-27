@@ -1,3 +1,7 @@
+//! Contains `Emitter`, which converts an AST into a [`Chunk`].
+//!
+//! [`Chunk`]: ../runtime/chunk/struct.Chunk.html
+
 use crate::runtime::op::Opcode;
 use crate::{Chunk, ErrorKind, PiccoloError, Token, TokenKind};
 
@@ -6,6 +10,14 @@ use std::collections::HashMap;
 use super::ast::{Arity, Expr, ExprAccept, ExprVisitor, Stmt, StmtAccept, StmtVisitor};
 use crate::runtime::chunk::Constant;
 
+/// Struct for emitting Piccolo virtual machine bytecode.
+///
+/// Implements [`StmtVisitor`] and [`ExprVisitor`] to walk the AST, compiling
+/// into a [`Chunk`].
+///
+/// [`ExprVisitor`]: ../ast/trait.ExprVisitor.html
+/// [`StmtVisitor`]: ../ast/trait.StmtVisitor.html
+/// [`Chunk`]: ../runtime/chunk/struct.Chunk.html
 pub struct Emitter {
     chunk: Chunk,
     strings: HashMap<String, u16>,
@@ -15,6 +27,7 @@ pub struct Emitter {
 }
 
 impl Emitter {
+    /// Create a new bytecode emitter.
     pub fn new(chunk: Chunk) -> Self {
         Emitter {
             chunk,
@@ -25,10 +38,15 @@ impl Emitter {
         }
     }
 
+    /// Get the chunk of the emitter.
     pub fn chunk(&self) -> &Chunk {
         &self.chunk
     }
 
+    /// Compile an AST into a chunk. Moves the emitter's chunk out of itself,
+    /// replacing it with [`Chunk::default`].
+    ///
+    /// [`Chunk::default`]: ../../runtime/chunk/struct.Chunk.html
     pub fn compile(&mut self, stmts: &[Stmt]) -> Result<Chunk, Vec<PiccoloError>> {
         let mut errs = Vec::new();
         for stmt in stmts {

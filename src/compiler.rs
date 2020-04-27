@@ -1,22 +1,24 @@
+//! Modules for compiling Piccolo source code.
+
 pub mod ast;
 pub mod emitter;
 pub mod parser;
 pub mod scanner;
 
-use crate::{Chunk, ErrorKind, PiccoloError};
+use crate::{ErrorKind, PiccoloError};
 
 use core::fmt;
 
-/// Compile some Piccolo source code into a chunk.
-pub fn compile(src: &str) -> Result<Chunk, Vec<PiccoloError>> {
+#[cfg(feature = "pc-debug")]
+pub fn compile(src: &str) -> Result<crate::Chunk, Vec<PiccoloError>> {
     let mut scanner = super::Scanner::new(src);
     let mut parser = crate::Parser::new();
     let ast = parser.parse(&mut scanner)?;
-    let mut emitter = emitter::Emitter::new(Chunk::default());
+    let mut emitter = emitter::Emitter::new(crate::Chunk::default());
     emitter.compile(&ast)
 }
 
-/// Scans all tokens at once from source.
+#[cfg(feature = "pc-debug")]
 pub fn scan_all(source: &str) -> Result<Vec<Token>, PiccoloError> {
     scanner::Scanner::new(source).scan_all()
 }
@@ -85,6 +87,10 @@ pub(crate) fn escape_string(t: &Token) -> Result<String, PiccoloError> {
     }
 }
 
+/// Kinds of tokens that may exist in Piccolo code.
+///
+/// Some of these don't currently have a use, and only exist for the creation of
+/// syntax errors :^)
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     // keywords
@@ -163,6 +169,9 @@ pub enum TokenKind {
     Eof,
 }
 
+/// Main token struct.
+///
+/// Maintains a reference to the original source.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token<'a> {
     pub(crate) kind: TokenKind,
@@ -175,6 +184,7 @@ impl<'a> Token<'a> {
         Token { kind, lexeme, line }
     }
 
+    /// Whether or not the token is a value literal.
     pub fn is_value(&self) -> bool {
         match self.kind {
             TokenKind::Nil

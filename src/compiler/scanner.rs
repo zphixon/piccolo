@@ -1,8 +1,25 @@
+//! Contains `Scanner`, an on-demand producer of tokens.
+
 use crate::{ErrorKind, PiccoloError, Token, TokenKind};
 
 use std::collections::VecDeque;
 
-/// Converts a piccolo source into a list of tokens.
+/// Converts a piccolo source into a stream of [`Token`].
+///
+/// Operates in a scan-on-demand fashion. A consumer of tokens calls the [`next_token`]
+/// method, which produces the next token from the source. A consumer can also
+/// look ahead in the stream using [`peek_token`], which produces tokens as
+/// required.
+///
+/// [`Token`]s internally are stored in a [`VecDeque`] which increases in size if
+/// the scanner produces new tokens when [`next_token`] is called. In Piccolo, the
+/// parser calls `peek_token` with a maximum of 2, so the size of the token buffer
+/// is never larger than 2 tokens.
+///
+/// [`VecDeque`]: https://doc.rust-lang.org/stable/std/collections/struct.VecDeque.html
+/// [`Token`]: ../struct.Token.html
+/// [`next_token`]: ./struct.Scanner.html#method.next_token
+/// [`peek_token`]: ./struct.Scanner.html#method.peek_token
 #[derive(Debug)]
 pub struct Scanner<'a> {
     source: &'a [u8],
@@ -13,6 +30,7 @@ pub struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
+    /// Create a new `Scanner` from a source.
     pub fn new(source: &'a str) -> Self {
         Scanner {
             source: source.as_bytes(),
@@ -23,12 +41,16 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    #[cfg(feature = "pc-debug")]
     pub(super) fn scan_all(mut self) -> Result<Vec<Token<'a>>, PiccoloError> {
         while self.next()?.kind != TokenKind::Eof {}
         Ok(self.tokens.drain(0..).collect())
     }
 
-    /// Take the next token from the scanner.
+    /// Produce the next token, moving it out of the scanner. Returns [`TokenKind::Eof`]
+    /// if the scanner is at the end of the source.
+    ///
+    /// [`TokenKind::Eof`]: ../struct.TokenKind.html
     pub fn next_token(&mut self) -> Result<Token<'a>, PiccoloError> {
         if self.tokens.is_empty() {
             self.next()?;
@@ -37,8 +59,7 @@ impl<'a> Scanner<'a> {
         Ok(self.tokens.pop_front().unwrap())
     }
 
-    /// Looks ahead in the token stream. Generates tokens if they do not exist. Duplicates
-    /// TokenKind::Eof if necessary.
+    /// Looks ahead in the token stream, generating tokens if they do not exist.
     pub fn peek_token<'b>(&'b mut self, idx: usize) -> Result<&'b Token<'a>, PiccoloError> {
         if self.tokens.is_empty() {
             self.next()?;

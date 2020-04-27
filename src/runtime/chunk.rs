@@ -1,8 +1,15 @@
+//! Contains types for working with compiled Piccolo bytecode.
+
 use crate::runtime::memory::Heap;
 use crate::{PiccoloError, Token, TokenKind, Value};
 
 use core::fmt;
 
+/// Compile-time constant Piccolo values.
+///
+/// Similar to [`Value`]. `Constant` is also used to return from Piccolo execution.
+///
+/// [`Value`]: ../value/enum.Value.html
 #[derive(Clone, Debug, PartialOrd, PartialEq)]
 pub enum Constant {
     String(String),
@@ -49,6 +56,7 @@ impl Constant {
         })
     }
 
+    // TODO: check VM's string table
     pub(crate) fn into_value(self, heap: &mut Heap) -> Value {
         match self {
             Constant::String(v) => {
@@ -62,6 +70,7 @@ impl Constant {
         }
     }
 
+    /// Convert a `Constant` into its base type.
     pub fn into<T>(self) -> T
     where
         Constant: Into<T>,

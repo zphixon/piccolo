@@ -9,13 +9,13 @@ pub mod compiler;
 pub mod error;
 pub mod runtime;
 
-pub use compiler::{compile, scan_all, Token, TokenKind};
 pub use compiler::{emitter::Emitter, parser::Parser, scanner::Scanner};
+pub use compiler::{Token, TokenKind};
 pub use error::{ErrorKind, PiccoloError};
 pub use runtime::{chunk::Chunk, chunk::Constant, value::Value, vm::Machine};
 
 #[cfg(feature = "pc-debug")]
-pub use compiler::print_tokens;
+pub use compiler::{compile, print_tokens, scan_all};
 
 /// Interprets a Piccolo source and returns its result.
 ///

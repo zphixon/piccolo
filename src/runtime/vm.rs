@@ -1,3 +1,5 @@
+//! Contains `Machine`, the Piccolo bytecode interpreter.
+
 use crate::runtime::chunk::Constant;
 use crate::runtime::memory::Heap;
 use crate::{ErrorKind, PiccoloError};
@@ -7,6 +9,13 @@ use super::{chunk::Chunk, op::Opcode, value::Value};
 use std::collections::HashMap;
 
 /// Interprets compiled Piccolo bytecode.
+///
+/// Contains a [`Chunk`] from which it executes instructions, a global variable hash
+/// table, a stack for temporary values and local variables, and a [`Heap`] for long-lived
+/// objects that require heap allocation, like strings, class instances, and others.
+///
+/// [`Chunk`]: ../chunk/struct.Chunk.html
+/// [`Heap`]: ../memory/struct.Heap.html
 pub struct Machine {
     chunk: Chunk,
     ip: usize,
@@ -18,7 +27,7 @@ pub struct Machine {
 
 impl Machine {
     // TODO: make interpret hold a chunk rather than Machine owning it
-    /// Creates a new machine.
+    /// Creates a new machine from a chunk.
     pub fn new(chunk: Chunk) -> Self {
         Machine {
             chunk,
@@ -30,6 +39,9 @@ impl Machine {
         }
     }
 
+    /// Get the [`Heap`] of a VM.
+    ///
+    /// [`Heap`]: ../memory/struct.Heap.html
     pub fn heap(&mut self) -> &mut Heap {
         &mut self.heap
     }
@@ -70,6 +82,9 @@ impl Machine {
     }
 
     /// Interprets the machine's bytecode, returning a Constant.
+    ///
+    /// The instruction pointer is not reset after running, functions and stuff
+    /// are still a WIP.
     pub fn interpret(&mut self) -> Result<Constant, PiccoloError> {
         while self.ip < self.chunk.data.len() {
             #[cfg(feature = "pc-debug")]
