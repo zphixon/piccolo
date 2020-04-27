@@ -22,16 +22,20 @@ fn main() {
     }
 }
 
-fn file(path: &Path) {
-    if let Err(e) = piccolo::do_file(path) {
-        if e.len() == 1 {
-            println!("Error {}", e[0])
-        } else {
-            println!("{} Errors:", e.len());
-            for e in e.iter() {
-                println!("    {}", e);
-            }
+fn print_errors(errors: Vec<piccolo::PiccoloError>) {
+    if errors.len() == 1 {
+        println!("Error {}", errors[0])
+    } else {
+        println!("{} Errors:", errors.len());
+        for e in errors.iter() {
+            println!("    {}", e);
         }
+    }
+}
+
+fn file(path: &Path) {
+    if let Err(errors) = piccolo::do_file(path) {
+        print_errors(errors);
     }
 }
 
@@ -47,22 +51,16 @@ fn repl() {
             Ok(line) => {
                 rl.add_history_entry(&line);
 
-                let r = piccolo::interpret(&line);
-                if let Ok(v) = r {
-                    if v != Constant::Nil {
-                        println!("{:?}", v);
-                    }
-                } else if let Err(e) = r {
-                    if e.len() == 1 {
-                        println!("Error {}", e[0])
-                    } else {
-                        println!("{} Errors:", e.len());
-                        for e in e.iter() {
-                            println!("    {}", e);
+                match piccolo::interpret(&line) {
+                    Ok(v) => {
+                        if v != Constant::Nil {
+                            println!("{:?}", v);
                         }
                     }
+                    Err(errors) => print_errors(errors),
                 }
             }
+
             Err(ReadlineError::Interrupted) => {}
             _ => break,
         }
