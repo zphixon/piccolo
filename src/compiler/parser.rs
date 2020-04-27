@@ -28,6 +28,8 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self, scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
         let mut errors = Vec::new();
         while scanner.peek_token(0)?.kind != TokenKind::Eof {
+            trace!("statement");
+
             match self.declaration(scanner) {
                 Ok(stmt) => self.ast.push(stmt),
                 Err(e) => errors.push(e),
@@ -45,25 +47,40 @@ impl<'a> Parser<'a> {
         if scanner.peek_token(1)?.kind == TokenKind::Assign
             || scanner.peek_token(1)?.kind == TokenKind::Declare
         {
+            trace!("declaration, assign/declare");
+
             let name = self.consume(scanner, TokenKind::Identifier)?;
             let op = scanner.next_token()?;
             let value = self.expr_bp(scanner, BindingPower::Assignment)?;
+
             Ok(Stmt::Assignment { name, op, value })
         } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
+            trace!("declaration, retn");
+
             let keyword = scanner.next_token()?;
             let value = Some(self.expr_bp(scanner, BindingPower::Assignment)?);
+
             Ok(Stmt::Retn { keyword, value })
         } else if scanner.peek_token(0)?.kind == TokenKind::Assert {
+            trace!("declaration, assert");
+
             let keyword = scanner.next_token()?;
             let value = self.expr_bp(scanner, BindingPower::Assignment)?;
+
             Ok(Stmt::Assert { keyword, value })
         } else if scanner.peek_token(0)?.kind == TokenKind::Do {
+            trace!("declaration, do");
+
             scanner.next_token()?;
             let body = self.block(scanner)?;
             let end = self.consume(scanner, TokenKind::End)?;
+
             Ok(Stmt::Block { end, body })
         } else {
+            trace!("declaration, expr");
+
             let expr = self.expr_bp(scanner, BindingPower::Assignment)?;
+
             Ok(Stmt::Expr(expr))
         }
     }
@@ -72,6 +89,7 @@ impl<'a> Parser<'a> {
         let mut stmts = Vec::new();
 
         while scanner.peek_token(0)?.kind != TokenKind::End {
+            trace!("declaration in block");
             stmts.push(self.declaration(scanner)?);
         }
 
@@ -83,23 +101,29 @@ impl<'a> Parser<'a> {
         scanner: &mut Scanner<'a>,
         min_bp: BindingPower,
     ) -> Result<Expr<'a>, PiccoloError> {
+        trace!("expr_bp {:?}", min_bp);
         let lhs_token = scanner.next_token()?;
         let mut lhs = if lhs_token.is_value() {
+            trace!("atom");
             Expr::Atom(lhs_token)
         } else if lhs_token.kind == TokenKind::Identifier {
+            trace!("variable");
             Expr::Variable(lhs_token)
         } else if lhs_token.kind == TokenKind::LeftParen {
+            trace!("grouping");
             let e = Expr::Paren(Box::new(self.expr_bp(scanner, BindingPower::Assignment)?));
             self.consume(scanner, TokenKind::RightParen).map_err(|e| {
                 e.msg_string(format!("in expression starting on line {}", lhs_token.line))
             })?;
             e
         } else if lhs_token.kind == TokenKind::Eof {
+            trace!("eof");
             return Err(PiccoloError::new(ErrorKind::ExpectedExpression {
                 got: lhs_token.to_string(),
             })
             .line(lhs_token.line));
         } else {
+            trace!("prefix");
             let pbp = prefix_binding_power(lhs_token.kind);
             if pbp != BindingPower::None {
                 let rhs = self.expr_bp(scanner, pbp)?;
@@ -124,9 +148,11 @@ impl<'a> Parser<'a> {
             let op_prec = infix_binding_power(op_token.kind);
 
             if op_prec < min_bp {
+                trace!("end of infix at {:?}", op_token.kind);
                 break;
             }
 
+            trace!("infix");
             let op = scanner.next_token()?;
             let rhs = self.expr_bp(scanner, op_prec + 1)?;
             lhs = Expr::Binary {

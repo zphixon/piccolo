@@ -87,21 +87,24 @@ impl Machine {
     /// are still a WIP.
     pub fn interpret(&mut self) -> Result<Constant, PiccoloError> {
         while self.ip < self.chunk.data.len() {
-            #[cfg(feature = "pc-debug")]
-            {
-                let (exit_msg, exit_spc) = if self.ip + 1 == self.chunk.data.len() {
-                    ("─vm─exit─ ", "───────── ")
+            debug!(
+                " ┌─{}{}",
+                if self.ip + 1 == self.chunk.data.len() {
+                    "─vm─exit─ "
                 } else {
-                    (" ", " ")
-                };
-                print!(
-                    " ┌─{}{}\n └─{}",
-                    exit_msg,
-                    super::value::dbg_list(&self.stack, &self.heap),
-                    exit_spc
-                );
-                self.chunk.disassemble_instruction(self.ip);
-            }
+                    " "
+                },
+                super::value::dbg_list(&self.stack, &self.heap),
+            );
+            debug!(
+                " └─{} {}",
+                if self.ip + 1 == self.chunk.data.len() {
+                    "───────── "
+                } else {
+                    " "
+                },
+                self.chunk.disassemble_instruction(self.ip)
+            );
 
             let inst = self.chunk.data[self.ip];
             self.ip += 1;

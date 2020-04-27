@@ -8,13 +8,15 @@ edition = "2018"
 
 [features]
 default = []
-pc-debug = []
+pc-debug = ["log/max_level_trace"]
 fuzzer = ["pc-debug"]
 
 [dependencies]
-rustyline = "6.0.0"
 downcast-rs = "1.1.1"
 rand = "0.7.3"
+log = "0.4.8"
 
 [dev-dependencies]
 clap = "2.33.0"
+env_logger = "0.7.1"
+rustyline = "6.0.0"

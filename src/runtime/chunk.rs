@@ -129,7 +129,10 @@ pub struct Chunk {
 
 impl Chunk {
     pub(crate) fn write_u8<T: Into<u8>>(&mut self, byte: T, line: usize) {
-        self.data.push(byte.into());
+        let byte = byte.into();
+        trace!("write u8 {}", byte);
+
+        self.data.push(byte);
         self.add_to_line(line);
     }
 
@@ -146,6 +149,8 @@ impl Chunk {
 
     // allows for duplicate constants, non-duplicates are checked in the compiler
     pub(crate) fn make_constant(&mut self, value: Constant) -> u16 {
+        trace!("make constant {:?}", value);
+
         self.constants.push(value);
         let idx = self.constants.len() - 1;
         if idx > core::u16::MAX as usize {
@@ -156,6 +161,8 @@ impl Chunk {
     }
 
     pub(crate) fn read_short(&self, offset: usize) -> u16 {
+        trace!("read short {:x}", offset);
+
         let low = self.data[offset];
         let high = self.data[offset + 1];
         crate::encode_bytes(low, high)
@@ -181,16 +188,15 @@ impl Chunk {
         self.lines[line - 1] += 1;
     }
 
-    #[cfg(feature = "pc-debug")]
-    pub fn disassemble(&self, name: &str) {
+    pub fn disassemble(&self, name: &str) -> String {
         use crate::runtime::op::Opcode;
 
-        println!(" -- {} --", name);
-        println!(" ++ constants");
+        let mut s = format!(" -- {} --\n", name);
+        s.push_str(&format!(" ++ constants\n"));
         for (idx, constant) in self.constants.iter().enumerate() {
-            println!("{:04x} {:?}", idx, constant);
+            s.push_str(&format!("{:04x} {:?}\n", idx, constant));
         }
-        println!(" ++ code");
+        s.push_str(&format!(" ++ code\n"));
 
         let mut prev_line = 0;
         let mut offset = 0;
@@ -199,7 +205,7 @@ impl Chunk {
 
             let op = self.data[offset].into();
 
-            print!(
+            s.push_str(&format!(
                 "{:04x} {:02x} {} {:15}",
                 offset,
                 op as u8,
@@ -209,14 +215,14 @@ impl Chunk {
                     format!("{:>4}", line)
                 },
                 format!("{:?}", op)
-            );
+            ));
 
             offset = match op {
                 Opcode::Pop | Opcode::Return => offset + 1,
 
                 Opcode::Constant => {
                     let idx = self.read_short(offset + 1);
-                    print!(" @{:04x} {:?}", idx, self.constants[idx as usize]);
+                    s.push_str(&format!(" @{:04x} {:?}", idx, self.constants[idx as usize]));
                     offset + 3
                 }
                 Opcode::Nil | Opcode::True | Opcode::False => offset + 1,
@@ -237,32 +243,33 @@ impl Chunk {
 
                 Opcode::GetLocal | Opcode::SetLocal => {
                     let idx = self.read_short(offset + 1);
-                    print!(" ${}", idx);
+                    s.push_str(&format!(" ${}", idx));
                     offset + 3
                 }
                 Opcode::GetGlobal | Opcode::SetGlobal | Opcode::DeclareGlobal => {
                     let idx = self.read_short(offset + 1);
-                    print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
+                    s.push_str(&format!(" g{:04x} {:?}", idx, self.constants[idx as usize]));
                     offset + 3
                 }
 
                 Opcode::Assert => offset + 1,
             };
-            println!();
+            s.push('\n');
 
             prev_line = line;
         }
+
+        s
     }
 
-    #[cfg(feature = "pc-debug")]
-    pub(crate) fn disassemble_instruction(&self, offset: usize) {
+    pub fn disassemble_instruction(&self, offset: usize) -> String {
         use crate::runtime::op::Opcode;
 
         let line = self.get_line_from_index(offset);
 
         let op = self.data[offset].into();
 
-        print!(
+        let mut s = format!(
             "{:04x} {:02x} line {:<4} {:15}",
             offset,
             op as u8,
@@ -273,19 +280,20 @@ impl Chunk {
         match op {
             Opcode::Constant => {
                 let idx = self.read_short(offset + 1);
-                print!(" @{:04x} {:?}", idx, self.constants[idx as usize]);
+                s.push_str(&format!(" @{:04x} {:?}", idx, self.constants[idx as usize]));
             }
             Opcode::GetLocal | Opcode::SetLocal => {
                 let idx = self.read_short(offset + 1);
-                print!(" ${}", idx);
+                s.push_str(&format!(" ${}", idx));
             }
             Opcode::GetGlobal | Opcode::SetGlobal | Opcode::DeclareGlobal => {
                 let idx = self.read_short(offset + 1);
-                print!(" g{:04x} {:?}", idx, self.constants[idx as usize]);
+                s.push_str(&format!(" g{:04x} {:?}", idx, self.constants[idx as usize]));
             }
             _ => {}
         }
-        println!();
+
+        s
     }
 }
 
