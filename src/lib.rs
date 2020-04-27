@@ -4,6 +4,8 @@
 //! for embedding in Rust projects.
 
 pub extern crate downcast_rs;
+#[macro_use]
+pub extern crate log;
 
 pub mod compiler;
 pub mod error;
@@ -15,7 +17,10 @@ pub use error::{ErrorKind, PiccoloError};
 pub use runtime::{chunk::Chunk, chunk::Constant, value::Value, vm::Machine};
 
 #[cfg(feature = "pc-debug")]
-pub use compiler::{compile, print_tokens, scan_all};
+pub use compiler::{compile, scan_all};
+
+#[cfg(feature = "fuzzer")]
+pub use compiler::print_tokens;
 
 /// Interprets a Piccolo source and returns its result.
 ///
@@ -30,8 +35,13 @@ pub use compiler::{compile, print_tokens, scan_all};
 /// ```
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     let mut scanner = Scanner::new(src);
+    debug!("parse");
     let ast = Parser::new().parse(&mut scanner)?;
+    debug!("ast\n{}", compiler::ast::AstPrinter::print(&ast));
+    debug!("compile");
     let chunk = Emitter::new(Chunk::default()).compile(&ast)?;
+    debug!("chunk\n{}", chunk.disassemble(""));
+    debug!("interpret");
     Ok(Machine::new(chunk).interpret()?)
 }
 

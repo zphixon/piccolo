@@ -34,6 +34,7 @@ impl Heap {
 
     // needs to see the vm stack
     pub fn gc(&mut self) {
+        debug!("start GC");
         // for item in memory
         // if inaccessible by the VM, Option::take() it
         self.alloc_after = 0;
@@ -41,6 +42,7 @@ impl Heap {
 
     /// Attempt to clone a value in the heap and return a pointer to it.
     pub fn try_copy(&mut self, ptr: usize) -> Option<usize> {
+        trace!("try copy {:x}", ptr);
         let cloned = self.deref(ptr).try_clone()?;
         Some(self.alloc(cloned))
     }
@@ -56,6 +58,8 @@ impl Heap {
                 .resize_with(self.memory.len() + (self.memory.len() / 2 + 1), || None);
         }
 
+        debug!("alloc {:x} = {:?}", self.alloc_after, value);
+
         self.memory[self.alloc_after] = Some(value);
         self.alloc_after
     }
@@ -68,6 +72,7 @@ impl Heap {
     /// or if the object pointed at is `None`.
     #[inline]
     pub fn deref(&self, ptr: usize) -> &dyn Object {
+        trace!("deref {:x}", ptr);
         self.memory[ptr].as_deref().expect("deref invalid ptr")
     }
 
@@ -79,6 +84,7 @@ impl Heap {
     /// or if the object pointed at is `None`.
     #[inline]
     pub fn deref_mut(&mut self, ptr: usize) -> &mut dyn Object {
+        trace!("deref mut {:x}", ptr);
         self.memory[ptr]
             .as_deref_mut()
             .expect("deref_mut invalid ptr")
@@ -92,6 +98,7 @@ impl Heap {
     /// or if the object pointed at is `None`.
     #[inline]
     pub fn take(&mut self, ptr: usize) -> Box<dyn Object> {
+        debug!("take {:x}", ptr);
         self.memory[ptr].take().expect("free invalid ptr")
     }
 }

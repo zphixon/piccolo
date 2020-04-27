@@ -50,6 +50,8 @@ impl Emitter {
     pub fn compile(&mut self, stmts: &[Stmt]) -> Result<Chunk, Vec<PiccoloError>> {
         let mut errs = Vec::new();
         for stmt in stmts {
+            trace!("stmt {}", super::ast::AstPrinter::print_stmt(stmt));
+
             match stmt.accept(self) {
                 Ok(_) => {}
                 Err(e) => errs.push(e),
@@ -64,6 +66,8 @@ impl Emitter {
     }
 
     fn get_local_slot(&self, name: &str) -> Option<u16> {
+        trace!("get local slot for '{}'", name);
+
         for (i, (k, _)) in self.locals.iter().enumerate().rev() {
             if k == name {
                 return Some(i as u16);
@@ -73,6 +77,8 @@ impl Emitter {
     }
 
     fn get_local_depth(&self, name: &str) -> Option<u16> {
+        trace!("get local depth for '{}'", name);
+
         for (k, v) in self.locals.iter().rev() {
             if k == name {
                 return Some(*v);
@@ -82,6 +88,8 @@ impl Emitter {
     }
 
     fn make_ident(&mut self, name: &str) -> u16 {
+        trace!("make ident '{}'", name);
+
         if self.identifiers.contains_key(name) {
             self.identifiers[name]
         } else {
@@ -92,6 +100,8 @@ impl Emitter {
     }
 
     fn get_ident(&self, name: &Token) -> Result<u16, PiccoloError> {
+        trace!("get ident '{}'", name.lexeme);
+
         if self.identifiers.contains_key(name.lexeme) {
             Ok(self.identifiers[name.lexeme])
         } else {
@@ -109,6 +119,8 @@ impl ExprVisitor for Emitter {
     // TODO: actually emit Opcode::Nil/True/False
     fn visit_atom(&mut self, token: &Token) -> Self::Output {
         let i = if token.kind == TokenKind::String && self.strings.contains_key(token.lexeme) {
+            trace!("has string {}", token.lexeme);
+
             *self.strings.get(token.lexeme).unwrap()
         } else if token.kind == TokenKind::String {
             let i = self.chunk.make_constant(Constant::try_from(token.clone())?);

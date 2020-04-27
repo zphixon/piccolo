@@ -172,7 +172,7 @@ pub enum TokenKind {
 /// Main token struct.
 ///
 /// Maintains a reference to the original source.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Token<'a> {
     pub(crate) kind: TokenKind,
     pub(crate) lexeme: &'a str,
@@ -210,7 +210,7 @@ impl<'a> fmt::Display for Token<'a> {
     }
 }
 
-#[cfg(feature = "pc-debug")]
+#[cfg(feature = "fuzzer")]
 pub fn print_tokens(tokens: &[Token]) {
     let mut previous_line = 0;
     for token in tokens.iter() {
