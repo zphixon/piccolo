@@ -77,6 +77,13 @@ impl Constant {
     {
         core::convert::Into::<T>::into(self)
     }
+
+    pub fn is_string(&self) -> bool {
+        match self {
+            Constant::String(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for Constant {
