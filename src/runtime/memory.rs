@@ -58,7 +58,7 @@ impl Heap {
                 .resize_with(self.memory.len() + (self.memory.len() / 2 + 1), || None);
         }
 
-        debug!("alloc {:x} = {:?}", self.alloc_after, value);
+        debug!("insert {:x} = {:?}", self.alloc_after, value);
 
         self.memory[self.alloc_after] = Some(value);
         self.alloc_after

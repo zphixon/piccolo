@@ -302,6 +302,7 @@ impl Value {
 }
 
 pub(crate) fn dbg_list(l: &[Value], heap: &Heap) -> String {
+    trace!("dbg_list");
     if l.is_empty() {
         "[]".into()
     } else {
