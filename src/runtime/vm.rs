@@ -19,7 +19,6 @@ use std::collections::HashMap;
 pub struct Machine {
     chunk: Chunk,
     ip: usize,
-    //strings: HashSet<Intern<String>>, //idfk
     globals: HashMap<String, Value>,
     stack: Vec<Value>,
     heap: Heap,
@@ -32,7 +31,6 @@ impl Machine {
         Machine {
             chunk,
             ip: 0,
-            //strings: HashSet::new(),
             globals: HashMap::new(),
             stack: Vec::new(),
             heap: Heap::new(1024),
@@ -72,6 +70,7 @@ impl Machine {
 
     // get a constant from the chunk
     fn peek_constant(&self) -> &Constant {
+        trace!("peek_constant");
         // Opcode::Constant takes a two-byte operand, meaning it's necessary
         // to decode the high and low bytes. the machine is little-endian with
         // constant addresses.
@@ -403,6 +402,8 @@ impl Machine {
                     }
                 }
             }
+
+            trace!("next instruction");
         }
         Ok(Constant::from_value(
             self.stack.pop().unwrap_or(Value::Nil),

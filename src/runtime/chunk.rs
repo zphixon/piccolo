@@ -58,6 +58,7 @@ impl Constant {
 
     // TODO: check VM's string table
     pub(crate) fn into_value(self, heap: &mut Heap) -> Value {
+        trace!("into_value");
         match self {
             Constant::String(v) => {
                 let ptr = heap.alloc(Box::new(v));
@@ -196,6 +197,7 @@ impl Chunk {
     }
 
     pub fn disassemble(&self, name: &str) -> String {
+        trace!("disassemble");
         use crate::runtime::op::Opcode;
 
         let mut s = format!(" -- {} --\n", name);
@@ -270,6 +272,7 @@ impl Chunk {
     }
 
     pub fn disassemble_instruction(&self, offset: usize) -> String {
+        trace!("disassemble_instruction");
         use crate::runtime::op::Opcode;
 
         let line = self.get_line_from_index(offset);
