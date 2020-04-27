@@ -1,38 +1,43 @@
 //! The compile-time representation of Piccolo code.
 //!
-//! Opcode bytes are currently unstable.
+//! Opcode bytes are currently unstable. Operands are little-endian.
 //!
-//! | Opcode            | Byte   |
-//! |-------------------|--------|
-//! | `Pop`             | `0x00` |
-//! | `Return`          | `0x01` |
-//! |                   |        |
-//! | `Constant`        | `0x02` |
-//! | `Nil`             | `0x03` |
-//! | `True`            | `0x04` |
-//! | `False`           | `0x05` |
-//! |                   |        |
-//! | `Negate`          | `0x06` |
-//! | `Not`             | `0x07` |
-//! | `Add`             | `0x08` |
-//! | `Subtract`        | `0x09` |
-//! | `Multiply`        | `0x0a` |
-//! | `Divide`          | `0x0b` |
-//! | `Modulo`          | `0x0c` |
-//! |                   |        |
-//! | `Equal`           | `0x0d` |
-//! | `Greater`         | `0x0e` |
-//! | `Less`            | `0x0f` |
-//! | `GreaterEqual`    | `0x10` |
-//! | `LessEqual`       | `0x11` |
-//! |                   |        |
-//! | `GetLocal`        | `0x12` |
-//! | `SetLocal`        | `0x13` |
-//! | `GetGlobal`       | `0x14` |
-//! | `SetGlobal`       | `0x15` |
-//! | `DeclareGlobal`   | `0x16` |
-//! |                   |        |
-//! | `Assert`          | `0xff` |
+//! Index means the index in the chunk's constant table, and slot means the
+//! index from the bottom of the call frame on the [`Machine`] stack.
+//!
+//! | Opcode            | Operands    | Byte   |
+//! |-------------------|-------------|--------|
+//! | `Pop`             |             | `0x00` |
+//! | `Return`          |             | `0x01` |
+//! |                   |             |        |
+//! | `Constant`        | index       | `0x02` |
+//! | `Nil`             |             | `0x03` |
+//! | `True`            |             | `0x04` |
+//! | `False`           |             | `0x05` |
+//! |                   |             |        |
+//! | `Negate`          |             | `0x06` |
+//! | `Not`             |             | `0x07` |
+//! | `Add`             |             | `0x08` |
+//! | `Subtract`        |             | `0x09` |
+//! | `Multiply`        |             | `0x0a` |
+//! | `Divide`          |             | `0x0b` |
+//! | `Modulo`          |             | `0x0c` |
+//! |                   |             |        |
+//! | `Equal`           |             | `0x0d` |
+//! | `Greater`         |             | `0x0e` |
+//! | `Less`            |             | `0x0f` |
+//! | `GreaterEqual`    |             | `0x10` |
+//! | `LessEqual`       |             | `0x11` |
+//! |                   |             |        |
+//! | `GetLocal`        | slot        | `0x12` |
+//! | `SetLocal`        | slot        | `0x13` |
+//! | `GetGlobal`       | index       | `0x14` |
+//! | `SetGlobal`       | index       | `0x15` |
+//! | `DeclareGlobal`   | index       | `0x16` |
+//! |                   |             |        |
+//! | `Assert`          |             | `0xff` |
+//!
+//! [`Machine`]: ../vm/struct.Machine.html
 
 macro_rules! opcodes {
     ($name:ident => $($op:ident = $num:expr,)*) => {
