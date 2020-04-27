@@ -57,6 +57,7 @@ impl Constant {
     }
 
     // TODO: check VM's string table
+    // TODO: make it more obvious that this allocates heap space
     pub(crate) fn into_value(self, heap: &mut Heap) -> Value {
         trace!("into_value");
         match self {
