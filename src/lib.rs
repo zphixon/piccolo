@@ -11,10 +11,13 @@ pub mod compiler;
 pub mod error;
 pub mod runtime;
 
-pub use compiler::{emitter::Emitter, parser::Parser, scanner::Scanner};
-pub use compiler::{Token, TokenKind};
-pub use error::{ErrorKind, PiccoloError};
-pub use runtime::{chunk::Chunk, chunk::Constant, value::Value, vm::Machine};
+/// Commonly used items that you might want access to.
+pub mod prelude {
+    pub use super::compiler::{emitter::Emitter, parser::Parser, scanner::Scanner};
+    pub use super::compiler::{Token, TokenKind};
+    pub use super::error::{ErrorKind, PiccoloError};
+    pub use super::runtime::{chunk::Chunk, chunk::Constant, value::Value, vm::Machine};
+}
 
 #[cfg(feature = "pc-debug")]
 pub use compiler::{compile, scan_all};
@@ -22,12 +25,14 @@ pub use compiler::{compile, scan_all};
 #[cfg(feature = "fuzzer")]
 pub use compiler::print_tokens;
 
+use prelude::*;
+
 /// Interprets a Piccolo source and returns its result.
 ///
 /// # Examples
 ///
 /// ```rust
-/// # fn main() -> Result<(), Vec<piccolo::PiccoloError>> {
+/// # fn main() -> Result<(), Vec<piccolo::prelude::PiccoloError>> {
 /// let result = piccolo::interpret("1 + 2")?;
 /// assert_eq!(3, result.into::<i64>());
 /// # Ok(())
@@ -252,7 +257,7 @@ mod integration {
                 ne.chunk().disassemble("idklol");
             }
             let mut vm = Machine::new();
-            assert_eq!(vm.interpret(&chunk).unwrap(), Constant::Integer(11));
+            assert_eq!(vm.interpret(ne.chunk()).unwrap(), Constant::Integer(11));
         } else {
             panic!("ast not initialized")
         }
