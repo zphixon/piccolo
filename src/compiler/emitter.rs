@@ -123,12 +123,12 @@ impl ExprVisitor for Emitter {
 
             *self.strings.get(token.lexeme).unwrap()
         } else if token.kind == TokenKind::String {
-            let i = self.chunk.make_constant(Constant::try_from(token.clone())?);
+            let i = self.chunk.make_constant(Constant::try_from(*token)?);
             self.strings.insert(token.lexeme.to_string(), i);
             i
         } else {
             self.chunk
-                .make_constant(Constant::try_from(token.clone()).unwrap())
+                .make_constant(Constant::try_from(*token).unwrap())
         };
 
         self.chunk.write_arg_u16(Opcode::Constant, i, token.line);

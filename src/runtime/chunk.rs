@@ -202,11 +202,11 @@ impl Chunk {
         use crate::runtime::op::Opcode;
 
         let mut s = format!(" -- {} --\n", name);
-        s.push_str(&format!(" ++ constants\n"));
+        s.push_str(" ++ constants\n");
         for (idx, constant) in self.constants.iter().enumerate() {
             s.push_str(&format!("{:04x} {:?}\n", idx, constant));
         }
-        s.push_str(&format!(" ++ code\n"));
+        s.push_str(" ++ code\n");
 
         let mut prev_line = 0;
         let mut offset = 0;

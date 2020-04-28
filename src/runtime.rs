@@ -10,9 +10,7 @@ pub mod vm;
 fn ptr_funnies() {
     use value::Object;
     unsafe {
-        let mut v: Vec<*mut dyn Object> = vec![
-            Box::into_raw(Box::new(1)),
-        ];
+        let mut v: Vec<*mut dyn Object> = vec![Box::into_raw(Box::new(1))];
 
         // ok this seems fine
         let x = v[0];
@@ -29,7 +27,10 @@ fn ptr_funnies() {
 
         // mhmm....
         v[0] = Box::into_raw(Box::new(String::from("haha")));
-        assert_eq!(v[0].as_ref().unwrap().downcast_ref::<String>().unwrap(), &String::from("haha"));
+        assert_eq!(
+            v[0].as_ref().unwrap().downcast_ref::<String>().unwrap(),
+            &String::from("haha")
+        );
         assert!(!std::ptr::eq(v[0], x) && !std::ptr::eq(v[0], y));
 
         // *scatman's world plays faintly in the distance*
