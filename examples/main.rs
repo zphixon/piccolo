@@ -2,6 +2,8 @@ extern crate env_logger;
 extern crate piccolo;
 extern crate rustyline;
 
+use piccolo::prelude::*;
+
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
@@ -22,7 +24,7 @@ fn main() {
     }
 }
 
-fn print_errors(errors: Vec<piccolo::PiccoloError>) {
+fn print_errors(errors: Vec<PiccoloError>) {
     if errors.len() == 1 {
         println!("Error {}", errors[0])
     } else {
@@ -40,7 +42,6 @@ fn file(path: &Path) {
 }
 
 fn repl() {
-    use piccolo::Constant;
     let mut rl = Editor::<()>::new();
     rl.load_history(".piccolo_history")
         .or_else(|_| std::fs::File::create(".piccolo_history").map(|_| ()))

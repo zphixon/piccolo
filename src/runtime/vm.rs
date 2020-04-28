@@ -78,13 +78,12 @@ impl Machine {
     }
 
     /// Interprets the machine's bytecode, returning a Constant.
-    pub fn interpret(&mut self, chunk: &Chunk) -> Result<Constant, PiccoloError> {
-        self.start_at(chunk, 0)
-    }
-
     pub fn start_at(&mut self, chunk: &Chunk, start: usize) -> Result<Constant, PiccoloError> {
         self.ip = start;
+        self.interpret(chunk)
+    }
 
+    pub fn interpret(&mut self, chunk: &Chunk) -> Result<Constant, PiccoloError> {
         while self.ip < chunk.data.len() {
             debug!(
                 " ┌─{}{}",

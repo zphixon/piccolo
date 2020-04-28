@@ -1,6 +1,6 @@
 extern crate piccolo;
 
-use piccolo::{ErrorKind, PiccoloError};
+use piccolo::prelude::*;
 
 use std::fs;
 use std::{io, path};
