@@ -23,6 +23,12 @@ pub struct Machine {
     heap: Heap,
 }
 
+impl Default for Machine {
+    fn default() -> Machine {
+        Machine::new()
+    }
+}
+
 impl Machine {
     /// Creates a new machine from a chunk.
     pub fn new() -> Self {
