@@ -39,4 +39,4 @@ f:
     cargo run --example fuzzer --features "fuzzer" -- {{fuzz}}
 
 vl:
-    cargo test --package piccolo --lib tests::very_long -- --exact --ignored
+    cargo test --package piccolo --lib integration::very_long -- --exact --ignored
