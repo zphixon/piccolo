@@ -198,23 +198,23 @@ impl ExprVisitor for Emitter {
         _arity: Arity,
         _args: &[Expr],
     ) -> Self::Output {
-        unimplemented!("visit_call")
+        todo!("visit_call")
     }
 
     fn visit_new(&mut self, _name: &Token, _args: &[(Token, Box<Expr>)]) -> Self::Output {
-        unimplemented!("visit_new")
+        todo!("visit_new")
     }
 
     fn visit_get(&mut self, _object: &Expr, _name: &Token) -> Self::Output {
-        unimplemented!("visit_get")
+        todo!("visit_get")
     }
 
     fn visit_set(&mut self, _object: &Expr, _name: &Token, _value: &Expr) -> Self::Output {
-        unimplemented!("visit_set")
+        todo!("visit_set")
     }
 
     fn visit_index(&mut self, _rb: &Token, _object: &Expr, _idx: &Expr) -> Self::Output {
-        unimplemented!("visit_index")
+        todo!("visit_index")
     }
 
     fn visit_func(
@@ -225,7 +225,7 @@ impl ExprVisitor for Emitter {
         _body: &[Stmt],
         _method: bool,
     ) -> Self::Output {
-        unimplemented!("visit_func")
+        todo!("visit_func")
     }
 }
 
@@ -301,15 +301,15 @@ impl StmtVisitor for Emitter {
         _then: &[Stmt],
         _else_: Option<&Vec<Stmt>>,
     ) -> Self::Output {
-        unimplemented!("visit_if")
+        todo!("visit_if")
     }
 
     fn visit_while(&mut self, _cond: &Expr, _body: &[Stmt]) -> Self::Output {
-        unimplemented!("visit_while")
+        todo!("visit_while")
     }
 
     fn visit_for(&mut self, _name: &Token, _iter: &Expr, _body: &[Stmt]) -> Self::Output {
-        unimplemented!("visit_for")
+        todo!("visit_for")
     }
 
     fn visit_func(
@@ -320,7 +320,7 @@ impl StmtVisitor for Emitter {
         _body: &[Stmt],
         _method: bool,
     ) -> Self::Output {
-        unimplemented!("visit_func")
+        todo!("visit_func")
     }
 
     fn visit_retn(&mut self, keyword: &Token, value: Option<&Expr>) -> Self::Output {
@@ -343,6 +343,6 @@ impl StmtVisitor for Emitter {
         _methods: &[Stmt],
         _fields: &[(Token, Expr)],
     ) -> Self::Output {
-        unimplemented!("visit_data")
+        todo!("visit_data")
     }
 }
