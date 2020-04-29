@@ -89,6 +89,7 @@ impl Machine {
         self.interpret(chunk)
     }
 
+    // TODO: probably even move out the heap from the machine
     pub fn interpret(&mut self, chunk: &Chunk) -> Result<Constant, PiccoloError> {
         while self.ip < chunk.data.len() {
             debug!(

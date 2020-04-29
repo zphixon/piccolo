@@ -1,6 +1,6 @@
 //! Contains items for the manipulation of memory at runtime.
 
-use super::value::Object;
+use super::object::Object;
 
 /// A `Heap` is the main method of runtime variable reference semantics.
 ///
@@ -106,7 +106,7 @@ impl Heap {
 #[cfg(test)]
 mod test {
     use super::Heap;
-    use crate::runtime::value::Object;
+    use super::super::object::Object;
 
     #[test]
     fn heap_alloc() {
