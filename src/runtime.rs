@@ -2,27 +2,47 @@
 
 pub mod chunk;
 pub mod memory;
+pub mod object;
 pub mod op;
 pub mod value;
 pub mod vm;
 
 #[test]
 fn ptr_funnies() {
-    use value::Object;
+    use value::Value;
+    use object::Object;
+
+    #[derive(PartialEq, Debug)]
+    struct Upvalue {
+        pub data: Value,
+    }
+    impl Object for Upvalue {
+        fn type_name(&self) -> &'static str {
+            "upvalue"
+        }
+    }
+    impl core::fmt::Display for Upvalue {
+        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+            write!(f, "{:?}", self.data)
+        }
+    }
+
     unsafe {
-        let mut v: Vec<*mut dyn Object> = vec![Box::into_raw(Box::new(1))];
+        let mut v: Vec<*mut dyn Object> = vec![Box::into_raw(Box::new(Upvalue {
+            data: Value::Integer(1)
+        }))];
 
         // ok this seems fine
         let x = v[0];
-        *x.as_mut().unwrap().downcast_mut::<i64>().unwrap() = 3;
-        assert_eq!(x.as_ref().unwrap().downcast_ref::<i64>().unwrap(), &3);
+        x.as_mut().unwrap().downcast_mut::<Upvalue>().unwrap().data = Value::Integer(3);
+        assert_eq!(x.as_ref().unwrap().downcast_ref::<Upvalue>().unwrap().data, Value::Integer(3));
         assert!(std::ptr::eq(v[0], x));
 
         // wtf
         let y = v[0];
-        *y.as_mut().unwrap().downcast_mut::<i64>().unwrap() = 32;
-        assert_eq!(x.as_ref().unwrap().downcast_ref::<i64>().unwrap(), &32);
-        assert_eq!(y.as_ref().unwrap().downcast_ref::<i64>().unwrap(), &32);
+        y.as_mut().unwrap().downcast_mut::<Upvalue>().unwrap().data = Value::Integer(32);
+        assert_eq!(x.as_ref().unwrap().downcast_ref::<Upvalue>().unwrap().data, Value::Integer(32));
+        assert_eq!(y.as_ref().unwrap().downcast_ref::<Upvalue>().unwrap().data, Value::Integer(32));
         assert!(std::ptr::eq(v[0], x) && std::ptr::eq(v[0], y));
 
         // y and x still refer to the old box, we need to drop it later
