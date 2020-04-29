@@ -25,7 +25,7 @@ fn ptr_funnies() {
         assert_eq!(y.as_ref().unwrap().downcast_ref::<i64>().unwrap(), &32);
         assert!(std::ptr::eq(v[0], x) && std::ptr::eq(v[0], y));
 
-        // mhmm....
+        // y and x still refer to the old box, we need to drop it later
         v[0] = Box::into_raw(Box::new(String::from("haha")));
         assert_eq!(
             v[0].as_ref().unwrap().downcast_ref::<String>().unwrap(),
@@ -33,13 +33,8 @@ fn ptr_funnies() {
         );
         assert!(!std::ptr::eq(v[0], x) && !std::ptr::eq(v[0], y));
 
-        // *scatman's world plays faintly in the distance*
-        *y.as_mut().unwrap().downcast_mut::<i64>().unwrap() = 888;
-        assert_eq!(x.as_ref().unwrap().downcast_ref::<i64>().unwrap(), &888);
-        assert_eq!(y.as_ref().unwrap().downcast_ref::<i64>().unwrap(), &888);
-        assert!(std::ptr::eq(x, y));
-
         let v: Vec<Box<dyn Object>> = v.into_iter().map(|p| Box::from_raw(p)).collect();
         drop(v);
+        drop(Box::from_raw(y));
     }
 }
