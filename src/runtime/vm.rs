@@ -122,12 +122,12 @@ impl Machine {
                     let rhs = self.pop(chunk)?;
                     let lhs = self.pop(chunk)?;
                     if lhs.is_double() {
-                        let lhs = lhs.into::<f64>(&mut self.heap);
+                        let lhs = lhs.into::<f64>();
                         if rhs.is_double() {
-                            let rhs = rhs.into::<f64>(&mut self.heap);
+                            let rhs = rhs.into::<f64>();
                             self.stack.push(Value::Double(lhs $op rhs));
                         } else if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>(&mut self.heap);
+                            let rhs = rhs.into::<i64>();
                             self.stack.push(Value::Double(lhs $op rhs as f64));
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
@@ -138,12 +138,12 @@ impl Machine {
                             .line(chunk.get_line_from_index(self.ip)));
                         }
                     } else if lhs.is_integer() {
-                        let lhs = lhs.into::<i64>(&mut self.heap);
+                        let lhs = lhs.into::<i64>();
                         if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>(&mut self.heap);
+                            let rhs = rhs.into::<i64>();
                             self.stack.push(Value::Integer(lhs $op rhs));
                         } else if rhs.is_double() {
-                            let rhs = rhs.into::<f64>(&mut self.heap);
+                            let rhs = rhs.into::<f64>();
                             self.stack.push(Value::Double(lhs as f64 $op rhs));
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
@@ -192,10 +192,10 @@ impl Machine {
                 Opcode::Negate => {
                     let v = self.pop(chunk)?;
                     if v.is_double() {
-                        let v = v.into::<f64>(&mut self.heap);
+                        let v = v.into::<f64>();
                         self.stack.push(Value::Double(-v));
                     } else if v.is_integer() {
-                        let v = v.into::<i64>(&mut self.heap);
+                        let v = v.into::<i64>();
                         self.stack.push(Value::Integer(-v));
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {

@@ -82,18 +82,6 @@ impl Object for String {
     }
 }
 
-impl Object for i64 {
-    fn type_name(&self) -> &'static str {
-        "integer"
-    }
-}
-
-impl Object for f64 {
-    fn type_name(&self) -> &'static str {
-        "double"
-    }
-}
-
 /// Wrapper type for runtime Piccolo values.
 ///
 /// `Value::Object` is a pointer into a [`Heap`].
@@ -120,14 +108,18 @@ impl Value {
     }
 
     /// Converts the value into a type T for which Value implements Into<T>.
-    pub fn into<T: Object>(self, heap: &mut Heap) -> T
+    pub fn from_object<T: Object>(self, heap: &mut Heap) -> Option<Box<T>> {
+        match self {
+            Value::Object(ptr) => heap.take(ptr).downcast::<T>().ok(),
+            _ => None,
+        }
+    }
+
+    pub fn into<T>(self) -> T
     where
         Value: Into<T>,
     {
-        match self {
-            Value::Object(ptr) => *heap.take(ptr).downcast::<T>().unwrap(),
-            _ => core::convert::Into::<T>::into(self),
-        }
+        std::convert::Into::into(self)
     }
 
     /// Attempts to clone a value. Panics if it doesn't succeed.
