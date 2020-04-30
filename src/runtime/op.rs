@@ -96,5 +96,22 @@ opcodes!(Opcode =>
     SetGlobal       = 0x15,
     DeclareGlobal   = 0x16,
 
+    Jump            = 0x17,
+    JumpFalse       = 0x18,
+
     Assert          = 0xff,
 );
+
+pub(crate) fn op_len(op: Opcode) -> usize {
+    match op {
+        Opcode::Constant
+        | Opcode::GetLocal
+        | Opcode::SetLocal
+        | Opcode::GetGlobal
+        | Opcode::SetGlobal
+        | Opcode::DeclareGlobal
+        | Opcode::Jump
+        | Opcode::JumpFalse => 3,
+        _ => 1,
+    }
+}
