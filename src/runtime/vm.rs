@@ -1,10 +1,9 @@
 //! Contains `Machine`, the Piccolo bytecode interpreter.
 
-use crate::runtime::chunk::Constant;
 use crate::runtime::memory::Heap;
-use crate::{ErrorKind, PiccoloError};
+use crate::{Chunk, Constant, ErrorKind, PiccoloError, Value};
 
-use super::{chunk::Chunk, op::Opcode, value::Value};
+use super::op::Opcode;
 
 use std::collections::HashMap;
 
@@ -99,7 +98,7 @@ impl Machine {
                 } else {
                     " "
                 },
-                super::value::dbg_list(&self.stack, &self.heap),
+                super::memory::dbg_list(&self.stack, &self.heap),
             );
             debug!(
                 " └─{} {}",
@@ -133,7 +132,7 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer or double".into(),
-                                got: format!("double {} {}", stringify!($op), rhs.type_name(&self.heap)),
+                                got: format!("double {} {}", stringify!($op), self.heap.type_name(&rhs)),
                                 op: $opcode,
                             })
                             .line(chunk.get_line_from_index(self.ip)));
@@ -149,19 +148,19 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer or double".into(),
-                                got: format!("integer {} {}", stringify!($op), rhs.type_name(&self.heap)),
+                                got: format!("integer {} {}", stringify!($op), self.heap.type_name(&rhs)),
                                 op: $opcode,
                             })
                             .line(chunk.get_line_from_index(self.ip)));
                         }
-                    } else if $concat && lhs.is_string(&self.heap) {
-                        let value = format!("{}{}", lhs.fmt(&self.heap), rhs.fmt(&self.heap));
+                    } else if $concat && self.heap.is_string(&lhs) {
+                        let value = format!("{}{}", self.heap.fmt(&lhs), self.heap.fmt(&rhs));
                         let ptr = self.heap.alloc(Box::new(value));
                         self.stack.push(Value::Object(ptr));
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("{} {} {}", lhs.type_name(&self.heap), stringify!($op), rhs.type_name(&self.heap)),
+                            got: format!("{} {} {}", self.heap.type_name(&lhs), stringify!($op), self.heap.type_name(&rhs)),
                             op: $opcode,
                         })
                         .line(chunk.get_line_from_index(self.ip)));
@@ -173,17 +172,20 @@ impl Machine {
             match op {
                 Opcode::Pop => {
                     if self.ip == chunk.data.len() {
-                        return Ok(Constant::from_value(self.pop(chunk)?, &mut self.heap));
+                        let value = self.pop(chunk)?;
+                        return Ok(self.heap.value_into_constant(value));
                     }
                     self.pop(chunk)?;
                 }
                 Opcode::Return => {
                     let v = self.pop(chunk)?;
-                    println!("{}", v.fmt(&self.heap));
+                    println!("{}", self.heap.fmt(&v));
                 }
                 Opcode::Constant => {
-                    let c = self.peek_constant(chunk).clone().into_value(&mut self.heap);
-                    self.stack.push(c);
+                    let v = self
+                        .heap
+                        .constant_into_value(self.peek_constant(chunk).clone());
+                    self.stack.push(v);
                     self.ip += 2;
                 }
                 Opcode::Nil => self.stack.push(Value::Nil),
@@ -201,7 +203,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: v.type_name(&self.heap).to_owned(),
+                            got: self.heap.type_name(&v).to_owned(),
                             op: Opcode::Negate,
                         })
                         .line(chunk.get_line_from_index(self.ip - 1)));
@@ -235,11 +237,11 @@ impl Machine {
                     let a = self.pop(chunk)?;
                     let b = self.pop(chunk)?;
                     self.stack
-                        .push(Value::Bool(a.eq(&b, &self.heap).map_or_else(
+                        .push(Value::Bool(self.heap.eq(&a, &b).map_or_else(
                             || {
                                 Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: a.type_name(&self.heap).to_owned(),
-                                    got: b.type_name(&self.heap).to_owned(),
+                                    exp: self.heap.type_name(&a).to_owned(),
+                                    got: self.heap.type_name(&b).to_owned(),
                                     op,
                                 })
                                 .line(chunk.get_line_from_index(self.ip - 1)))
@@ -259,11 +261,11 @@ impl Machine {
                         .line(chunk.get_line_from_index(self.ip - 1)));
                     }
                     self.stack
-                        .push(Value::Bool(lhs.gt(&rhs, &self.heap).map_or_else(
+                        .push(Value::Bool(self.heap.gt(&lhs, &rhs).map_or_else(
                             || {
                                 Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: lhs.type_name(&self.heap).to_owned(),
-                                    got: rhs.type_name(&self.heap).to_owned(),
+                                    exp: self.heap.type_name(&lhs).to_owned(),
+                                    got: self.heap.type_name(&rhs).to_owned(),
                                     op,
                                 })
                                 .line(chunk.get_line_from_index(self.ip - 1)))
@@ -283,11 +285,11 @@ impl Machine {
                         .line(chunk.get_line_from_index(self.ip - 1)));
                     }
                     self.stack
-                        .push(Value::Bool(lhs.lt(&rhs, &self.heap).map_or_else(
+                        .push(Value::Bool(self.heap.lt(&lhs, &rhs).map_or_else(
                             || {
                                 Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: lhs.type_name(&self.heap).to_owned(),
-                                    got: rhs.type_name(&self.heap).to_owned(),
+                                    exp: self.heap.type_name(&lhs).to_owned(),
+                                    got: self.heap.type_name(&rhs).to_owned(),
                                     op,
                                 })
                                 .line(chunk.get_line_from_index(self.ip - 1)))
@@ -307,11 +309,11 @@ impl Machine {
                         .line(chunk.get_line_from_index(self.ip - 1)));
                     }
                     self.stack
-                        .push(Value::Bool(!lhs.lt(&rhs, &self.heap).map_or_else(
+                        .push(Value::Bool(!self.heap.lt(&lhs, &rhs).map_or_else(
                             || {
                                 Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: lhs.type_name(&self.heap).to_owned(),
-                                    got: rhs.type_name(&self.heap).to_owned(),
+                                    exp: self.heap.type_name(&lhs).to_owned(),
+                                    got: self.heap.type_name(&rhs).to_owned(),
                                     op,
                                 })
                                 .line(chunk.get_line_from_index(self.ip - 1)))
@@ -331,11 +333,11 @@ impl Machine {
                         .line(chunk.get_line_from_index(self.ip - 1)));
                     }
                     self.stack
-                        .push(Value::Bool(!lhs.gt(&rhs, &self.heap).map_or_else(
+                        .push(Value::Bool(!self.heap.gt(&lhs, &rhs).map_or_else(
                             || {
                                 Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: lhs.type_name(&self.heap).to_owned(),
-                                    got: rhs.type_name(&self.heap).to_owned(),
+                                    exp: self.heap.type_name(&lhs).to_owned(),
+                                    got: self.heap.type_name(&rhs).to_owned(),
                                     op,
                                 })
                                 .line(chunk.get_line_from_index(self.ip - 1)))
@@ -357,11 +359,11 @@ impl Machine {
                 Opcode::GetGlobal => {
                     let name = self.peek_constant(chunk).ref_string();
                     if let Some(var) = self.globals.get(name) {
-                        if let Some(var) = var.try_clone(&mut self.heap) {
+                        if let Some(var) = self.heap.try_clone(var) {
                             self.stack.push(var);
                         } else {
                             return Err(PiccoloError::new(ErrorKind::CannotClone {
-                                ty: var.type_name(&self.heap).to_owned(),
+                                ty: self.heap.type_name(&var).to_owned(),
                             })
                             .line(chunk.get_line_from_index(self.ip - 1)));
                         }
@@ -407,9 +409,8 @@ impl Machine {
             trace!("next instruction");
         }
 
-        Ok(Constant::from_value(
-            self.stack.pop().unwrap_or(Value::Nil),
-            &mut self.heap,
-        ))
+        Ok(self
+            .heap
+            .value_into_constant(self.stack.pop().unwrap_or(Value::Nil)))
     }
 }

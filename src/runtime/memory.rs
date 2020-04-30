@@ -1,6 +1,6 @@
 //! Contains items for the manipulation of memory at runtime.
 
-use super::object::Object;
+use crate::{Constant, Object, Value};
 
 /// A `Heap` is the main method of runtime variable reference semantics.
 ///
@@ -101,12 +101,193 @@ impl Heap {
         debug!("take {:x}", ptr);
         self.memory[ptr].take().expect("free invalid ptr")
     }
+
+    /// Attempts to clone a value. Panics if it doesn't succeed.
+    pub fn try_clone(&mut self, value: &Value) -> Option<Value> {
+        Some(match value {
+            Value::Object(v) => Value::Object(self.try_copy(*v)?),
+            Value::Bool(v) => Value::Bool(*v),
+            Value::Integer(v) => Value::Integer(*v),
+            Value::Double(v) => Value::Double(*v),
+            Value::Nil => Value::Nil,
+        })
+    }
+
+    pub(crate) fn value_into_constant(&mut self, v: Value) -> Constant {
+        match v {
+            Value::Object(ptr) => {
+                let obj = self.take(ptr);
+                if let Ok(string) = obj.downcast::<String>() {
+                    Constant::String(string.to_string())
+                } else {
+                    panic!("non-string constant");
+                }
+            }
+            Value::Bool(v) => Constant::Bool(v),
+            Value::Integer(v) => Constant::Integer(v),
+            Value::Double(v) => Constant::Double(v),
+            Value::Nil => Constant::Nil,
+        }
+    }
+
+    // TODO: check VM's string table
+    // TODO: make it more obvious that this allocates heap space
+    pub(crate) fn constant_into_value(&mut self, constant: Constant) -> Value {
+        trace!("into_value");
+        match constant {
+            Constant::String(v) => {
+                let ptr = self.alloc(Box::new(v));
+                Value::Object(ptr)
+            }
+            Constant::Integer(v) => Value::Integer(v),
+            Constant::Bool(v) => Value::Bool(v),
+            Constant::Double(v) => Value::Double(v),
+            Constant::Nil => Value::Nil,
+        }
+    }
+
+    /// Returns the type name of a value.
+    pub fn type_name(&self, v: &Value) -> &'static str {
+        match v {
+            Value::Bool(_) => "bool",
+            Value::Integer(_) => "integer",
+            Value::Double(_) => "double",
+            Value::Object(v) => self.deref(*v).type_name(),
+            Value::Nil => "nil",
+        }
+    }
+
+    /// Formats the value.
+    pub fn fmt(&self, v: &Value) -> String {
+        match v {
+            Value::Bool(v) => format!("{}", v),
+            Value::Integer(v) => format!("{}", v),
+            Value::Double(v) => format!("{}", v),
+            Value::Object(v) => format!("{}", self.deref(*v)),
+            Value::Nil => "nil".into(),
+        }
+    }
+
+    /// Formats the value.
+    pub fn dbg(&self, v: &Value) -> String {
+        match v {
+            Value::Bool(v) => format!("bool({})", v),
+            Value::Integer(v) => format!("integer({})", v),
+            Value::Double(v) => format!("double({})", v),
+            Value::Object(v) => format!("*{}({:?})", self.deref(*v).type_name(), self.deref(*v)),
+            Value::Nil => "Nil".into(),
+        }
+    }
+
+    /// Tests a value for equality. Returns `None` if incomparable.
+    pub fn eq(&self, lhs: &Value, rhs: &Value) -> Option<bool> {
+        match lhs {
+            Value::Bool(l) => match rhs {
+                Value::Bool(r) => Some(l == r),
+                _ => None,
+            },
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Some(l == r),
+                Value::Double(r) => Some(*l as f64 == *r),
+                _ => None,
+            },
+            Value::Double(l) => match rhs {
+                Value::Integer(r) => Some(*l == *r as f64),
+                Value::Double(r) => Some(l == r),
+                _ => None,
+            },
+            Value::Object(l) => match rhs {
+                Value::Object(r) => {
+                    if l == r {
+                        Some(true)
+                    } else {
+                        let lhs = self.deref(*l);
+                        let rhs = self.deref(*r);
+                        lhs.eq(rhs)
+                    }
+                }
+                _ => None,
+            },
+            Value::Nil => match rhs {
+                Value::Nil => Some(true),
+                _ => Some(false),
+            },
+        }
+    }
+
+    pub fn lt(&self, lhs: &Value, rhs: &Value) -> Option<bool> {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Some(l < r),
+                Value::Double(r) => Some((*l as f64) < *r),
+                _ => None,
+            },
+            Value::Double(l) => match rhs {
+                Value::Integer(r) => Some(*l < *r as f64),
+                Value::Double(r) => Some(l < r),
+                _ => None,
+            },
+            Value::Object(l) => match rhs {
+                Value::Object(r) => {
+                    let lhs = self.deref(*l);
+                    let rhs = self.deref(*r);
+                    lhs.lt(rhs)
+                }
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    pub fn gt(&self, lhs: &Value, rhs: &Value) -> Option<bool> {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Some(l > r),
+                Value::Double(r) => Some(*l as f64 > *r),
+                _ => None,
+            },
+            Value::Double(l) => match rhs {
+                Value::Integer(r) => Some(*l > *r as f64),
+                Value::Double(r) => Some(l > r),
+                _ => None,
+            },
+            Value::Object(l) => match rhs {
+                Value::Object(r) => {
+                    let lhs = self.deref(*l);
+                    let rhs = self.deref(*r);
+                    lhs.gt(rhs)
+                }
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    pub fn is_string(&self, v: &Value) -> bool {
+        match v {
+            Value::Object(ptr) => self.deref(*ptr).is::<String>(),
+            _ => false,
+        }
+    }
+}
+
+pub(crate) fn dbg_list(l: &[Value], heap: &Heap) -> String {
+    trace!("dbg_list");
+    if l.is_empty() {
+        "[]".into()
+    } else {
+        let mut s = String::from("[");
+        for item in l {
+            s.push_str(&format!("{}, ", heap.dbg(item)));
+        }
+        format!("{}]", &s[..s.len() - 2])
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use super::Heap;
     use super::super::object::Object;
+    use super::Heap;
 
     #[test]
     fn heap_alloc() {

@@ -3,12 +3,11 @@
 //! [`Chunk`]: ../runtime/chunk/struct.Chunk.html
 
 use crate::runtime::op::Opcode;
-use crate::{Chunk, ErrorKind, PiccoloError, Token, TokenKind};
-
-use std::collections::HashMap;
+use crate::{Chunk, Constant, ErrorKind, PiccoloError, Token, TokenKind};
 
 use super::ast::{Arity, Expr, ExprAccept, ExprVisitor, Stmt, StmtAccept, StmtVisitor};
-use crate::runtime::chunk::Constant;
+
+use std::collections::HashMap;
 
 /// Struct for emitting Piccolo virtual machine bytecode.
 ///
