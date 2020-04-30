@@ -1,6 +1,6 @@
 //! Contains items for the manipulation of memory at runtime.
 
-use crate::{Constant, Object, Value};
+use crate::{Constant, ErrorKind, Object, PiccoloError, Value};
 
 /// A `Heap` is the main method of runtime variable reference semantics.
 ///
@@ -95,13 +95,17 @@ impl Heap {
         self.memory[ptr].take().expect("free invalid ptr")
     }
 
-    pub fn deep_copy(&mut self, value: &Value) -> Option<Value> {
-        Some(match value {
+    pub fn try_deep_copy(&mut self, value: &Value) -> Result<Value, PiccoloError> {
+        Ok(match value {
             Value::Object(ptr) => {
                 trace!("try copy {:x}", ptr);
-                let cloned = self.deref(*ptr).try_clone()?;
+                let cloned = self.deref(*ptr).try_clone().ok_or_else(|| {
+                    PiccoloError::new(ErrorKind::CannotClone {
+                        ty: self.deref(*ptr).type_name().to_owned(),
+                    })
+                })?;
                 Value::Object(self.alloc(cloned))
-            },
+            }
             Value::Bool(v) => Value::Bool(*v),
             Value::Integer(v) => Value::Integer(*v),
             Value::Double(v) => Value::Double(*v),
