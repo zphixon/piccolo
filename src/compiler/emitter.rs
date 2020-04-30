@@ -310,22 +310,34 @@ impl StmtVisitor for Emitter {
         else_: Option<&Vec<Stmt>>,
         end: &Token,
     ) -> Self::Output {
+        // compile the condition
         cond.accept(self)?;
 
-        let cond_jump = self.chunk.write_jump(Opcode::JumpFalse, do_.line);
-        self.chunk.write_u8(Opcode::Pop, do_.line);
+        // jump over the do block if the condition is false
+        let cond_false = self.chunk.write_jump(Opcode::JumpFalse, do_.line);
+
+        // compile the do block
         self.visit_block(end, then)?;
 
         if let Some(block) = else_ {
-            let else_jump = self.chunk.write_jump(Opcode::Jump, do_.line); // todo: wrong line number
-            self.chunk.patch_jump(cond_jump);
-            self.chunk.write_u8(Opcode::Pop, do_.line);
+            // if there's an else block, jump over it
+            let cond_true = self.chunk.write_jump(Opcode::Jump, do_.line); // todo: wrong line number
+
+            // jump here if the condition is false
+            self.chunk.patch_jump(cond_false);
+
+            // compile the else block
             self.visit_block(end, block)?;
-            self.chunk.patch_jump(else_jump);
+
+            // jump here if the condition is true
+            self.chunk.patch_jump(cond_true);
         } else {
-            self.chunk.patch_jump(cond_jump);
+            // jump here if the condition is false
+            self.chunk.patch_jump(cond_false);
         }
 
+        // pop the condition, it's still on the stack
+        self.chunk.write_u8(Opcode::Pop, do_.line);
         Ok(())
     }
 
