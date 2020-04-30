@@ -115,7 +115,6 @@ impl Emitter {
 impl ExprVisitor for Emitter {
     type Output = Result<(), PiccoloError>;
 
-    // TODO: actually emit Opcode::Nil/True/False
     fn visit_atom(&mut self, token: &Token) -> Self::Output {
         let i = if token.kind == TokenKind::String && self.strings.contains_key(token.lexeme) {
             trace!("has string {}", token.lexeme);
@@ -125,6 +124,15 @@ impl ExprVisitor for Emitter {
             let i = self.chunk.make_constant(Constant::try_from(*token)?);
             self.strings.insert(token.lexeme.to_string(), i);
             i
+        } else if token.kind == TokenKind::Nil {
+            self.chunk.write_u8(Opcode::Nil, token.line);
+            return Ok(());
+        } else if token.kind == TokenKind::True {
+            self.chunk.write_u8(Opcode::True, token.line);
+            return Ok(());
+        } else if token.kind == TokenKind::False {
+            self.chunk.write_u8(Opcode::False, token.line);
+            return Ok(());
         } else {
             self.chunk
                 .make_constant(Constant::try_from(*token).unwrap())
