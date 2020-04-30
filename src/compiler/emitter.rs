@@ -304,11 +304,29 @@ impl StmtVisitor for Emitter {
 
     fn visit_if(
         &mut self,
-        _cond: &Expr,
-        _then: &[Stmt],
-        _else_: Option<&Vec<Stmt>>,
+        cond: &Expr,
+        do_: &Token,
+        then: &[Stmt],
+        else_: Option<&Vec<Stmt>>,
+        end: &Token,
     ) -> Self::Output {
-        todo!("visit_if")
+        cond.accept(self)?;
+
+        let cond_jump = self.chunk.write_jump(Opcode::JumpFalse, do_.line);
+        self.chunk.write_u8(Opcode::Pop, do_.line);
+        self.visit_block(end, then)?;
+
+        if let Some(block) = else_ {
+            let else_jump = self.chunk.write_jump(Opcode::Jump, do_.line); // todo: wrong line number
+            self.chunk.patch_jump(cond_jump);
+            self.chunk.write_u8(Opcode::Pop, do_.line);
+            self.visit_block(end, block)?;
+            self.chunk.patch_jump(else_jump);
+        } else {
+            self.chunk.patch_jump(cond_jump);
+        }
+
+        Ok(())
     }
 
     fn visit_while(&mut self, _cond: &Expr, _body: &[Stmt]) -> Self::Output {

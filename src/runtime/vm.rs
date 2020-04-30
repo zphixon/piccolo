@@ -390,6 +390,21 @@ impl Machine {
                     }
                 }
 
+                Opcode::Jump => {
+                    let offset = chunk.read_short(self.ip);
+                    debug!("jump ip {:x} -> {:x}", self.ip, self.ip + offset as usize);
+                    self.ip += 2;
+                    self.ip += offset as usize;
+                }
+                Opcode::JumpFalse => {
+                    let offset = chunk.read_short(self.ip);
+                    if !self.peek_back(0, chunk)?.is_truthy() {
+                        debug!("jump false ip {:x} -> {:x}", self.ip, self.ip + offset as usize);
+                        self.ip += offset as usize;
+                    }
+                    self.ip += 2;
+                }
+
                 Opcode::Assert => {
                     let v = self.pop(chunk)?;
                     if !v.is_truthy() {

@@ -10,6 +10,7 @@ use super::ast::Stmt;
 pub fn parse<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
     let mut ast = Vec::new();
     let mut errors = Vec::new();
+
     while scanner.peek_token(0)?.kind != TokenKind::Eof {
         trace!("statement");
 
@@ -64,8 +65,25 @@ fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
 
         scanner.next_token()?;
         let cond = expr_bp(scanner, BindingPower::Assignment)?;
-        let then = consume(scanner, TokenKind::Do)?;
-        Ok(Stmt::Expr(Expr::Atom(then)))
+        let do_ = consume(scanner, TokenKind::Do)?;
+        let then = block_until_else_or_end(scanner)?;
+
+        let else_ = if scanner.peek_token(0)?.kind == TokenKind::Else {
+            consume(scanner, TokenKind::Else)?;
+            Some(block(scanner)?)
+        } else {
+            None
+        };
+
+        let end = consume(scanner, TokenKind::End)?;
+
+        Ok(Stmt::If {
+            cond,
+            do_,
+            then,
+            else_,
+            end,
+        })
     } else {
         trace!("declaration, expr");
 
@@ -73,6 +91,19 @@ fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
 
         Ok(Stmt::Expr(expr))
     }
+}
+
+fn block_until_else_or_end<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, PiccoloError> {
+    let mut stmts = Vec::new();
+
+    while scanner.peek_token(0)?.kind != TokenKind::End
+        && scanner.peek_token(0)?.kind != TokenKind::Else
+    {
+        trace!("declaration in block until else");
+        stmts.push(declaration(scanner)?);
+    }
+
+    Ok(stmts)
 }
 
 fn block<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, PiccoloError> {

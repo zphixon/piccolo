@@ -33,6 +33,26 @@ impl Chunk {
         self.write_u16(arg, line);
     }
 
+    pub(crate) fn write_jump(&mut self, op: Opcode, line: usize) -> usize {
+        trace!("write jump to idx {:x}", self.data.len());
+        self.write_u8(op, line);
+        self.write_u8(Opcode::Assert, line);
+        self.write_u8(Opcode::False, line);
+        self.data.len() - 2
+    }
+
+    pub(crate) fn patch_jump(&mut self, offset: usize) {
+        let jump = self.data.len() - offset - 2;
+        if jump > u16::MAX as usize {
+            panic!("cannot jump further than u16::MAX instructions");
+        } else {
+            let (low, high) = crate::decode_bytes(jump as u16);
+            trace!("patch jump at idx {:x}={:04x}", jump, offset);
+            self.data[offset] = low;
+            self.data[offset + 1] = high;
+        }
+    }
+
     // allows for duplicate constants, non-duplicates are checked in the compiler
     pub(crate) fn make_constant(&mut self, value: Constant) -> u16 {
         trace!("make constant {:?}", value);
