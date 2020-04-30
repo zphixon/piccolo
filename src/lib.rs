@@ -16,16 +16,18 @@ pub mod prelude {
     pub use super::compiler::{emitter::Emitter, parser::Parser, scanner::Scanner};
     pub use super::compiler::{Token, TokenKind};
     pub use super::error::{ErrorKind, PiccoloError};
-    pub use super::runtime::{chunk::Chunk, chunk::Constant, value::Value, vm::Machine};
+    pub use super::runtime::{
+        chunk::Chunk, object::Object, value::Constant, value::Value, vm::Machine,
+    };
 }
+
+use prelude::*;
 
 #[cfg(feature = "pc-debug")]
 pub use compiler::{compile, scan_all};
 
 #[cfg(feature = "fuzzer")]
 pub use compiler::print_tokens;
-
-use prelude::*;
 
 /// Interprets a Piccolo source and returns its result.
 ///

@@ -9,8 +9,7 @@ pub mod vm;
 
 #[test]
 fn ptr_funnies() {
-    use value::Value;
-    use object::Object;
+    use crate::{Object, Value};
 
     #[derive(PartialEq, Debug)]
     struct Upvalue {
@@ -29,20 +28,29 @@ fn ptr_funnies() {
 
     unsafe {
         let mut v: Vec<*mut dyn Object> = vec![Box::into_raw(Box::new(Upvalue {
-            data: Value::Integer(1)
+            data: Value::Integer(1),
         }))];
 
         // ok this seems fine
         let x = v[0];
         x.as_mut().unwrap().downcast_mut::<Upvalue>().unwrap().data = Value::Integer(3);
-        assert_eq!(x.as_ref().unwrap().downcast_ref::<Upvalue>().unwrap().data, Value::Integer(3));
+        assert_eq!(
+            x.as_ref().unwrap().downcast_ref::<Upvalue>().unwrap().data,
+            Value::Integer(3)
+        );
         assert!(std::ptr::eq(v[0], x));
 
         // wtf
         let y = v[0];
         y.as_mut().unwrap().downcast_mut::<Upvalue>().unwrap().data = Value::Integer(32);
-        assert_eq!(x.as_ref().unwrap().downcast_ref::<Upvalue>().unwrap().data, Value::Integer(32));
-        assert_eq!(y.as_ref().unwrap().downcast_ref::<Upvalue>().unwrap().data, Value::Integer(32));
+        assert_eq!(
+            x.as_ref().unwrap().downcast_ref::<Upvalue>().unwrap().data,
+            Value::Integer(32)
+        );
+        assert_eq!(
+            y.as_ref().unwrap().downcast_ref::<Upvalue>().unwrap().data,
+            Value::Integer(32)
+        );
         assert!(std::ptr::eq(v[0], x) && std::ptr::eq(v[0], y));
 
         // y and x still refer to the old box, we need to drop it later
