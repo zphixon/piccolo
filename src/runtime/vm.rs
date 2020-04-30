@@ -359,14 +359,7 @@ impl Machine {
                 Opcode::GetGlobal => {
                     let name = self.peek_constant(chunk).ref_string();
                     if let Some(var) = self.globals.get(name) {
-                        if let Some(var) = self.heap.try_clone(var) {
-                            self.stack.push(var);
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::CannotClone {
-                                ty: self.heap.type_name(&var).to_owned(),
-                            })
-                            .line(chunk.get_line_from_index(self.ip - 1)));
-                        }
+                        self.stack.push(*var);
                     } else {
                         return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                             name: name.to_owned(),

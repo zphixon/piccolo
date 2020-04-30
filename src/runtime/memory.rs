@@ -40,13 +40,6 @@ impl Heap {
         self.alloc_after = 0;
     }
 
-    /// Attempt to clone a value in the heap and return a pointer to it.
-    pub fn try_copy(&mut self, ptr: usize) -> Option<usize> {
-        trace!("try copy {:x}", ptr);
-        let cloned = self.deref(ptr).try_clone()?;
-        Some(self.alloc(cloned))
-    }
-
     /// Allocate space for a new value, and return its pointer.
     pub fn alloc(&mut self, value: Box<dyn Object>) -> usize {
         while self.memory[self.alloc_after].is_some() {
@@ -102,10 +95,13 @@ impl Heap {
         self.memory[ptr].take().expect("free invalid ptr")
     }
 
-    /// Attempts to clone a value. Panics if it doesn't succeed.
-    pub fn try_clone(&mut self, value: &Value) -> Option<Value> {
+    pub fn deep_copy(&mut self, value: &Value) -> Option<Value> {
         Some(match value {
-            Value::Object(v) => Value::Object(self.try_copy(*v)?),
+            Value::Object(ptr) => {
+                trace!("try copy {:x}", ptr);
+                let cloned = self.deref(*ptr).try_clone()?;
+                Value::Object(self.alloc(cloned))
+            },
             Value::Bool(v) => Value::Bool(*v),
             Value::Integer(v) => Value::Integer(*v),
             Value::Double(v) => Value::Double(*v),
@@ -130,7 +126,7 @@ impl Heap {
         }
     }
 
-    // TODO: check VM's string table
+    // TODO: check VM's string table - maybe even own the string table instead of the VM?
     pub(crate) fn constant_into_value(&mut self, constant: Constant) -> Value {
         trace!("into_value");
         match constant {
