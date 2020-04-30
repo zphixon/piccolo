@@ -87,6 +87,7 @@ impl Chunk {
         let mut offset = 0;
         while offset < self.data.len() {
             s.push_str(&self.disassemble_instruction(offset));
+            s.push('\n');
             offset += super::op::op_len(self.data[offset].into());
         }
 
@@ -111,7 +112,7 @@ impl Chunk {
         );
 
         let line = self.get_line_from_index(offset);
-        let line_str = format!("{:>4}", line);
+        let line_str = format!("{:04x} {:>4}", offset, line);
 
         let op_str = format!("{:15}", format!("{:?}", op));
 
@@ -136,7 +137,7 @@ impl Chunk {
         };
 
         format!(
-            "{bytes:9} {line_str} | {op_str} {arg}\n",
+            "{bytes:9} {line_str} | {op_str} {arg}",
             bytes = bytes,
             line_str = line_str,
             op_str = op_str,
