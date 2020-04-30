@@ -12,8 +12,7 @@ use core::fmt;
 #[cfg(feature = "pc-debug")]
 pub fn compile(src: &str) -> Result<crate::Chunk, Vec<PiccoloError>> {
     let mut scanner = super::Scanner::new(src);
-    let mut parser = crate::Parser::new();
-    let ast = parser.parse(&mut scanner)?;
+    let ast = parser::parse(&mut scanner)?;
     let mut emitter = emitter::Emitter::new(crate::Chunk::default());
     emitter.compile(&ast)
 }
