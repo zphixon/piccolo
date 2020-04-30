@@ -13,7 +13,7 @@ pub mod runtime;
 
 /// Commonly used items that you might want access to.
 pub mod prelude {
-    pub use super::compiler::{emitter::Emitter, parser::Parser, scanner::Scanner};
+    pub use super::compiler::{emitter::Emitter, parser::parse, scanner::Scanner};
     pub use super::compiler::{Token, TokenKind};
     pub use super::error::{ErrorKind, PiccoloError};
     pub use super::runtime::{
@@ -43,7 +43,7 @@ pub use compiler::print_tokens;
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     let mut scanner = Scanner::new(src);
     debug!("parse");
-    let ast = Parser::new().parse(&mut scanner)?;
+    let ast = parse(&mut scanner)?;
     debug!("ast\n{}", compiler::ast::AstPrinter::print(&ast));
     debug!("compile");
     let chunk = Emitter::new(Chunk::default()).compile(&ast)?;
@@ -190,7 +190,7 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod integration {
-    use super::{Chunk, Emitter, Machine, Parser, Scanner, Token, TokenKind};
+    use super::{parse, Chunk, Emitter, Machine, Scanner, Token, TokenKind};
     use crate::compiler::ast::{AstPrinter, Expr, ExprAccept, Stmt};
     use crate::Constant;
 
@@ -216,7 +216,7 @@ mod integration {
     fn idk() {
         let src = "a=:1+2";
         let mut scanner = Scanner::new(src);
-        let ast = Parser::new().parse(&mut scanner).unwrap();
+        let ast = parse(&mut scanner).unwrap();
         println!("{}", AstPrinter::print(&ast));
         let mut ne = Emitter::new(Chunk::default());
         let chunk = ne.compile(&ast).unwrap();
@@ -232,7 +232,7 @@ mod integration {
     fn visitor_emitter() {
         let src = "1+2*3+4";
         let mut scanner = Scanner::new(src);
-        let ast = Parser::new().parse(&mut scanner).unwrap();
+        let ast = parse(&mut scanner).unwrap();
         if let Stmt::Expr(expr) = &ast[0] {
             assert_eq!(
                 expr,
