@@ -172,6 +172,7 @@ impl Machine {
             match op {
                 Opcode::Pop => {
                     if self.ip == chunk.data.len() {
+                        trace!("last instruction pop");
                         let value = self.pop(chunk)?;
                         return Ok(self.heap.value_into_constant(value));
                     }
