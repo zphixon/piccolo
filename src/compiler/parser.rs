@@ -132,8 +132,8 @@ impl<'a> Parser<'a> {
                     rhs: Box::new(rhs),
                 }
             } else {
-                return Err(PiccoloError::new(ErrorKind::MalformedExpression {
-                    from: lhs_token.to_string(),
+                return Err(PiccoloError::new(ErrorKind::ExpectedExpression {
+                    got: lhs_token.to_string(),
                 })
                 .line(lhs_token.line));
             }

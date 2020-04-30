@@ -4,6 +4,7 @@ use crate::runtime::op::Opcode;
 
 use core::fmt;
 
+// TODO: impl Error for PiccoloError
 /// The main error-reporting struct.
 #[derive(Debug, Clone)]
 pub struct PiccoloError {
@@ -82,6 +83,7 @@ impl fmt::Display for PiccoloError {
     }
 }
 
+// TODO: split into scan, parse, compile, runtime errors
 /// Types of errors possible in Piccolo.
 #[derive(Debug, Clone)]
 pub enum ErrorKind {
@@ -114,9 +116,6 @@ pub enum ErrorKind {
         obj: String,
         name: String,
     },
-    MalformedExpression {
-        from: String,
-    },
     ExpectedExpression {
         got: String,
     },
@@ -144,7 +143,7 @@ impl fmt::Display for ErrorKind {
             ErrorKind::UnknownFormatCode { code }
                 => write!(f, "Unknown format code '\\{}'", code),
             ErrorKind::InvalidNumberLiteral { literal }
-                =>  write!(f, "Invalid number literal '{}'", literal) ,
+                => write!(f, "Invalid number literal '{}'", literal) ,
             ErrorKind::UnexpectedToken { exp, got }
                 => write!(f, "Unexpected token: expected {}, got {}", exp, got) ,
             ErrorKind::IncorrectType { exp, got, op }
@@ -153,8 +152,6 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Undefined variable '{}'", name),
             ErrorKind::UnknownField { obj, name }
                 => write!(f, "Unknown field '{}' on {}", name, obj) ,
-            ErrorKind::MalformedExpression { from }
-                => write!(f, "Malformed expression from {}", from),
             ErrorKind::ExpectedExpression { got }
                 => write!(f, "Expected expression, got {}", got),
             ErrorKind::CannotClone { ty }
