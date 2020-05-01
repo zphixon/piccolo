@@ -10,7 +10,7 @@ use crate::{ErrorKind, PiccoloError};
 use core::fmt;
 
 #[cfg(feature = "pc-debug")]
-pub fn compile(src: &str) -> Result<crate::Chunk, Vec<PiccoloError>> {
+pub fn compile_chunk(src: &str) -> Result<crate::Chunk, Vec<PiccoloError>> {
     let mut scanner = super::Scanner::new(src);
     let ast = parser::parse(&mut scanner)?;
     let mut emitter = emitter::Emitter::new(crate::Chunk::default());

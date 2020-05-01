@@ -24,7 +24,7 @@ pub mod prelude {
 use prelude::*;
 
 #[cfg(feature = "pc-debug")]
-pub use compiler::{compile, scan_all};
+pub use compiler::{compile_chunk, scan_all};
 
 #[cfg(feature = "fuzzer")]
 pub use compiler::print_tokens;
@@ -117,7 +117,7 @@ pub mod fuzzer {
             src.push_str(&format!("{} ", tk).to_lowercase());
         }
 
-        if let Ok(chunk) = crate::compile(&src) {
+        if let Ok(chunk) = crate::compile_chunk(&src) {
             println!("----- run {} compiles -----", n);
             crate::print_tokens(&crate::compiler::scan_all(&src).unwrap());
             chunk.disassemble("");

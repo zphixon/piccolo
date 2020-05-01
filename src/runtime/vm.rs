@@ -89,6 +89,7 @@ impl Machine {
     }
 
     // TODO: probably even move out the heap from the machine
+    #[allow(clippy::cognitive_complexity)]
     pub fn interpret(&mut self, chunk: &Chunk) -> Result<Constant, PiccoloError> {
         while self.ip < chunk.data.len() {
             debug!(
