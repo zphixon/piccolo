@@ -20,23 +20,25 @@ fn main() {
         .version(env!("CARGO_PKG_VERSION"))
         .author("Zack Hixon <zphixon@gmail.com>")
         .about("Compiles or interprets Piccolo source files")
-        .arg(Arg::with_name("src")
-            .help("Piccolo source file")
-            .index(1))
-        .arg(Arg::with_name("bin")
-            .help("Piccolo binary file")
-            .short("b")
-            .long("bin")
-            .conflicts_with("src")
-            .conflicts_with("compile")
-            .takes_value(true))
-        .arg(Arg::with_name("compile")
-            .help("Compile <src> into <output>")
-            .short("c")
-            .long("compile")
-            .requires("src")
-            .value_name("output")
-            .takes_value(true))
+        .arg(Arg::with_name("src").help("Piccolo source file").index(1))
+        .arg(
+            Arg::with_name("bin")
+                .help("Piccolo binary file")
+                .short("b")
+                .long("bin")
+                .conflicts_with("src")
+                .conflicts_with("compile")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("compile")
+                .help("Compile <src> into <output>")
+                .short("c")
+                .long("compile")
+                .requires("src")
+                .value_name("output")
+                .takes_value(true),
+        )
         .get_matches();
 
     if !matches.is_present("src") && !matches.is_present("bin") {
@@ -44,17 +46,17 @@ fn main() {
     } else {
         if matches.is_present("compile") {
             todo!();
-            //let src = PathBuf::from(matches.value_of("src").unwrap());
-            //let out = PathBuf::from(matches.value_of("compile").unwrap());
-            //if let Err(errors) = piccolo::compile(&src, &out) {
-            //    print_errors(errors);
-            //}
+        //let src = PathBuf::from(matches.value_of("src").unwrap());
+        //let out = PathBuf::from(matches.value_of("compile").unwrap());
+        //if let Err(errors) = piccolo::compile(&src, &out) {
+        //    print_errors(errors);
+        //}
         } else if matches.is_present("bin") {
             todo!();
-            //let src = PathBuf::from(matches.value_of("bin").unwrap());
-            //if let Err(errors) = piccolo::run_bin(&src) {
-            //    print_errors(errors);
-            //}
+        //let src = PathBuf::from(matches.value_of("bin").unwrap());
+        //if let Err(errors) = piccolo::run_bin(&src) {
+        //    print_errors(errors);
+        //}
         } else {
             let src = PathBuf::from(matches.value_of("src").unwrap());
             file(&src);
