@@ -1,0 +1,6 @@
+if false do assert false else assert true end
+if nil do assert false else assert true end
+
+if true do assert true end
+if 0 do assert 0 end
+if "" do assert "empty" end

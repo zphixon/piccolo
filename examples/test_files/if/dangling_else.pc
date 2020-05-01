@@ -1,0 +1,15 @@
+if true do
+  if false do
+    assert false
+  else
+    assert true
+  end
+end
+
+if false do
+  if true do
+    assert false
+  else
+    assert false
+  end
+end

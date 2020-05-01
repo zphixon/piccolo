@@ -1,0 +1,2 @@
+if true do assert true end
+if false do assert false end

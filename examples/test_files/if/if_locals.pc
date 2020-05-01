@@ -1,0 +1,10 @@
+if true do
+  x =: "yeet"
+  y =: "street"
+  z =: ("I live on " + x + " " + y)
+
+  retn z
+  assert z == "I live on yeet street"
+else
+  assert false
+end
