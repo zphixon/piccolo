@@ -175,13 +175,22 @@ fn expr_bp<'a>(scanner: &mut Scanner<'a>, min_bp: BindingPower) -> Result<Expr<'
             break;
         }
 
-        trace!("infix");
         let op = scanner.next_token()?;
         let rhs = expr_bp(scanner, op_prec + 1)?;
-        lhs = Expr::Binary {
-            lhs: Box::new(lhs),
-            op,
-            rhs: Box::new(rhs),
+        lhs = if matches!(op_prec, BindingPower::LogicalAnd | BindingPower::LogicalOr) {
+            trace!("logical");
+            Expr::Logical {
+                lhs: Box::new(lhs),
+                op,
+                rhs: Box::new(rhs),
+            }
+        } else {
+            trace!("infix");
+            Expr::Binary {
+                lhs: Box::new(lhs),
+                op,
+                rhs: Box::new(rhs),
+            }
         }
     }
 
@@ -228,6 +237,9 @@ pub(crate) fn infix_binding_power(kind: TokenKind) -> BindingPower {
         TokenKind::Equal => BindingPower::Equality,
         TokenKind::NotEqual => BindingPower::Equality,
 
+        TokenKind::LogicalAnd => BindingPower::LogicalAnd,
+        TokenKind::LogicalOr => BindingPower::LogicalOr,
+
         TokenKind::Retn => BindingPower::None,
         TokenKind::Identifier => BindingPower::None,
         _ => BindingPower::None,
@@ -271,8 +283,8 @@ macro_rules! prec {
 prec!(BindingPower =>
     None = 0,
     Assignment = 1,
-    Or = 2,
-    And = 3,
+    LogicalOr = 2,
+    LogicalAnd = 3,
     Equality = 4,
     Comparison = 5,
     Term = 6,
@@ -288,6 +300,8 @@ mod test {
 
     #[test]
     fn precedence_ord() {
-        assert!(BindingPower::And > BindingPower::Or);
+        assert!(BindingPower::LogicalAnd > BindingPower::LogicalOr);
+        assert!(BindingPower::LogicalAnd < BindingPower::Comparison);
+        assert!(BindingPower::LogicalOr < BindingPower::Comparison);
     }
 }
