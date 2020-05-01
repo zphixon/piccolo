@@ -1,0 +1,180 @@
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+
+if false do
+  assert false
+else
+  assert true
+end
+
+if true do
+  assert true
+else
+  assert false
+end
+

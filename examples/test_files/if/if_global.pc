@@ -1,0 +1,9 @@
+outer =: "something"
+
+if true do
+  outer = outer + " cool"
+else
+  outer = outer + " sad"
+end
+
+assert outer == "something cool"
