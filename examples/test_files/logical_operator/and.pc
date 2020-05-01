@@ -1,0 +1,10 @@
+# Note: These tests implicitly depend on ints being truthy.
+
+# Return the first non-true argument.
+assert false == (false && 1)
+assert 1 == (true && 1)
+assert false == (1 && 2 && false)
+
+# Return the last argument if all are true.
+assert true == (1 && true)
+assert 3 == (1 && 2 && 3)

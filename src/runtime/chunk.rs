@@ -149,9 +149,9 @@ impl Chunk {
                 let idx = self.read_short(offset + 1);
                 format!("g{:04x} ({:?})", idx, self.constants[idx as usize])
             }
-            Opcode::Jump | Opcode::JumpFalse => {
+            Opcode::Jump | Opcode::JumpFalse | Opcode::JumpTrue => {
                 let idx = self.read_short(offset + 1);
-                format!("%{:04x}", idx)
+                format!("+{:04x}", idx)
             }
             _ => String::new(),
         };

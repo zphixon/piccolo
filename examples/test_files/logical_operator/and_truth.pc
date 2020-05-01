@@ -1,0 +1,8 @@
+# False and nil are false.
+assert false == (false && "bad")
+assert nil == (nil && "bad")
+
+# Everything else is true.
+assert "ok" == (true && "ok")
+assert "ok" == (0 && "ok")
+assert "ok" == ("" && "ok")

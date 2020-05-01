@@ -215,10 +215,25 @@ impl ExprVisitor for Emitter {
         Ok(())
     }
 
-    fn visit_logical(&mut self, lhs: &Expr, _op: &Token, rhs: &Expr) -> Self::Output {
-        trace!("{}: logical {}", _op.line, _op.lexeme);
+    fn visit_logical(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output {
+        trace!("{}: logical {}", op.line, op.lexeme);
+
+        let jump_op = match op.kind {
+            TokenKind::LogicalAnd => Opcode::JumpFalse,
+            TokenKind::LogicalOr => Opcode::JumpTrue,
+            _ => unreachable!("op {:?} for logical", op),
+        };
+
         lhs.accept(self)?;
-        rhs.accept(self)
+
+        let short = self.chunk.write_jump(jump_op, op.line);
+        self.chunk.write_u8(Opcode::Pop, op.line);
+
+        rhs.accept(self)?;
+
+        self.chunk.patch_jump(short);
+
+        Ok(())
     }
 
     fn visit_call(
