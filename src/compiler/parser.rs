@@ -205,6 +205,7 @@ fn prefix_binding_power(kind: TokenKind) -> BindingPower {
     match kind {
         TokenKind::Minus => BindingPower::Unary,
         TokenKind::Not => BindingPower::Unary,
+
         TokenKind::Identifier => BindingPower::None,
         _ => BindingPower::None,
     }
@@ -212,17 +213,21 @@ fn prefix_binding_power(kind: TokenKind) -> BindingPower {
 
 pub(crate) fn infix_binding_power(kind: TokenKind) -> BindingPower {
     match kind {
-        TokenKind::Plus => BindingPower::Term,
-        TokenKind::Minus => BindingPower::Term,
         TokenKind::Multiply => BindingPower::Factor,
         TokenKind::Divide => BindingPower::Factor,
         TokenKind::Modulo => BindingPower::Factor,
-        TokenKind::Equal => BindingPower::Equality,
-        TokenKind::NotEqual => BindingPower::Equality,
+
+        TokenKind::Plus => BindingPower::Term,
+        TokenKind::Minus => BindingPower::Term,
+
         TokenKind::Less => BindingPower::Comparison,
         TokenKind::Greater => BindingPower::Comparison,
         TokenKind::LessEqual => BindingPower::Comparison,
         TokenKind::GreaterEqual => BindingPower::Comparison,
+
+        TokenKind::Equal => BindingPower::Equality,
+        TokenKind::NotEqual => BindingPower::Equality,
+
         TokenKind::Retn => BindingPower::None,
         TokenKind::Identifier => BindingPower::None,
         _ => BindingPower::None,
