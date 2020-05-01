@@ -233,21 +233,29 @@ mod integration {
         let src = "1+2*3+4";
         let mut scanner = Scanner::new(src);
         let ast = parse(&mut scanner).unwrap();
-        if let Stmt::Expr(expr) = &ast[0] {
+        if let Stmt::Expr { expr } = &ast[0] {
             assert_eq!(
                 expr,
                 &Expr::Binary {
                     lhs: Box::new(Expr::Binary {
-                        lhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(1), "1", 1))),
+                        lhs: Box::new(Expr::Literal {
+                            literal: Token::new(TokenKind::Integer(1), "1", 1)
+                        }),
                         op: Token::new(TokenKind::Plus, "+", 1),
                         rhs: Box::new(Expr::Binary {
-                            lhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(2), "2", 1))),
+                            lhs: Box::new(Expr::Literal {
+                                literal: Token::new(TokenKind::Integer(2), "2", 1)
+                            }),
                             op: Token::new(TokenKind::Multiply, "*", 1),
-                            rhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(3), "3", 1)))
+                            rhs: Box::new(Expr::Literal {
+                                literal: Token::new(TokenKind::Integer(3), "3", 1)
+                            })
                         })
                     }),
                     op: Token::new(TokenKind::Plus, "+", 1),
-                    rhs: Box::new(Expr::Atom(Token::new(TokenKind::Integer(4), "4", 1))),
+                    rhs: Box::new(Expr::Literal {
+                        literal: Token::new(TokenKind::Integer(4), "4", 1)
+                    }),
                 }
             );
 

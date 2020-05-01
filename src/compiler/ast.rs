@@ -107,20 +107,22 @@ impl StmtVisitor for AstPrinter {
 
     fn visit_if(
         &mut self,
+        _if_: &Token,
         cond: &Expr,
-        _do: &Token,
-        then: &[Stmt],
-        else_: Option<&Vec<Stmt>>,
+        _do_: &Token,
+        then_block: &[Stmt],
+        _else_: Option<&Token>,
+        else_block: Option<&Vec<Stmt>>,
         _end: &Token,
     ) -> String {
-        if let Some(else_) = else_ {
-            self.parenthesize_lists("if-else", Some(cond), &[then, else_])
+        if let Some(else_block) = else_block {
+            self.parenthesize_lists("if-else", Some(cond), &[then_block, else_block])
         } else {
-            self.parenthesize_list("if", Some(cond), then)
+            self.parenthesize_list("if", Some(cond), then_block)
         }
     }
 
-    fn visit_while(&mut self, cond: &Expr, body: &[Stmt]) -> String {
+    fn visit_while(&mut self, _while_: &Token, cond: &Expr, body: &[Stmt]) -> String {
         self.parenthesize_list("while", Some(cond), body)
     }
 
@@ -148,10 +150,12 @@ impl StmtVisitor for AstPrinter {
         self.parenthesize_list(&s, None, body)
     }
 
-    fn visit_retn(&mut self, keyword: &Token, value: Option<&Expr>) -> String {
+    fn visit_retn(&mut self, retn: &Token, value: Option<&Expr>) -> String {
         self.parenthesize(
             "retn",
-            &[value.unwrap_or(&Expr::Atom(Token::new(TokenKind::Nil, "nil", keyword.line)))],
+            &[value.unwrap_or(&Expr::Literal {
+                literal: Token::new(TokenKind::Nil, "nil", retn.line),
+            })],
         )
     }
 
@@ -173,16 +177,16 @@ impl StmtVisitor for AstPrinter {
 impl ExprVisitor for AstPrinter {
     type Output = String;
 
-    fn visit_atom(&mut self, token: &Token) -> String {
-        format!("{}", token)
+    fn visit_literal(&mut self, literal: &Token) -> String {
+        format!("{}", literal)
     }
 
-    fn visit_paren(&mut self, value: &Expr) -> String {
-        self.parenthesize("paren", &[value])
+    fn visit_paren(&mut self, _right_paren: &Token, expr: &Expr) -> String {
+        self.parenthesize("paren", &[expr])
     }
 
-    fn visit_variable(&mut self, name: &Token) -> String {
-        String::from(name.lexeme)
+    fn visit_variable(&mut self, variable: &Token) -> String {
+        String::from(variable.lexeme)
     }
 
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> String {
@@ -223,7 +227,7 @@ impl ExprVisitor for AstPrinter {
         self.parenthesize(&s, &[object])
     }
 
-    fn visit_index(&mut self, _rb: &Token, object: &Expr, idx: &Expr) -> String {
+    fn visit_index(&mut self, _right_bracket: &Token, object: &Expr, idx: &Expr) -> String {
         let s = format!("index {}", idx.accept(self));
         self.parenthesize(&s, &[object])
     }
@@ -278,13 +282,13 @@ pub trait ExprVisitor {
 
     /// Visit Piccolo value literals, like `nil`, bools, strings, integers, and
     /// floating point numbers.
-    fn visit_atom(&mut self, token: &Token) -> Self::Output;
+    fn visit_literal(&mut self, literal: &Token) -> Self::Output;
 
     /// Visit parenthesized expressions.
-    fn visit_paren(&mut self, value: &Expr) -> Self::Output;
+    fn visit_paren(&mut self, right_paren: &Token, expr: &Expr) -> Self::Output;
 
     /// Visit variable references.
-    fn visit_variable(&mut self, name: &Token) -> Self::Output;
+    fn visit_variable(&mut self, variable: &Token) -> Self::Output;
 
     /// Visit unary operator expressions, like `!` or `-`.
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output;
@@ -307,7 +311,7 @@ pub trait ExprVisitor {
     fn visit_new(&mut self, name: &Token, args: &[(Token, Box<Expr>)]) -> Self::Output;
     fn visit_get(&mut self, object: &Expr, name: &Token) -> Self::Output;
     fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> Self::Output;
-    fn visit_index(&mut self, rb: &Token, object: &Expr, idx: &Expr) -> Self::Output;
+    fn visit_index(&mut self, right_bracket: &Token, object: &Expr, idx: &Expr) -> Self::Output;
     fn visit_func(
         &mut self,
         name: &Token,
@@ -328,9 +332,16 @@ pub trait ExprVisitor {
 /// [`ExprVisitor`]: ./trait.ExprVisitor.html
 #[derive(Debug, PartialEq)]
 pub enum Expr<'a> {
-    Atom(Token<'a>),
-    Paren(Box<Expr<'a>>),
-    Variable(Token<'a>),
+    Literal {
+        literal: Token<'a>,
+    },
+    Paren {
+        right_paren: Token<'a>,
+        expr: Box<Expr<'a>>,
+    },
+    Variable {
+        variable: Token<'a>,
+    },
     Unary {
         op: Token<'a>,
         rhs: Box<Expr<'a>>,
@@ -365,7 +376,7 @@ pub enum Expr<'a> {
         value: Box<Expr<'a>>,
     },
     Index {
-        rb: Token<'a>,
+        right_bracket: Token<'a>,
         object: Box<Expr<'a>>,
         idx: Box<Expr<'a>>,
     },
@@ -382,12 +393,12 @@ pub enum Expr<'a> {
 impl ExprAccept for Expr<'_> {
     fn accept<T: ExprVisitor>(&self, v: &mut T) -> T::Output {
         match self {
-            Expr::Atom(token)
-                => v.visit_atom(token),
-            Expr::Paren(value)
-                => v.visit_paren(value),
-            Expr::Variable(name)
-                => v.visit_variable(name),
+            Expr::Literal { literal }
+                => v.visit_literal(literal),
+            Expr::Paren { right_paren, expr }
+                => v.visit_paren(right_paren, expr),
+            Expr::Variable { variable }
+                => v.visit_variable(variable),
             Expr::Unary { op, rhs }
                 => v.visit_unary(op, rhs),
             Expr::Binary { lhs, op, rhs }
@@ -402,8 +413,8 @@ impl ExprAccept for Expr<'_> {
                 => v.visit_get(object, name),
             Expr::Set { object, name, value }
                 => v.visit_set(object, name, value),
-            Expr::Index { rb, object, idx }
-                => v.visit_index(rb, object, idx),
+            Expr::Index { right_bracket, object, idx }
+                => v.visit_index(right_bracket, object, idx),
             Expr::Func { name, args, arity, body, method }
                 => v.visit_func(name, args, *arity, body, *method),
         }
@@ -449,15 +460,17 @@ pub trait StmtVisitor {
     /// Visit an `if-then` statement.
     fn visit_if(
         &mut self,
+        if_: &Token,
         cond: &Expr,
         do_: &Token,
-        then: &[Stmt],
-        else_: Option<&Vec<Stmt>>,
+        then_block: &[Stmt],
+        else_: Option<&Token>,
+        else_block: Option<&Vec<Stmt>>,
         end: &Token,
     ) -> Self::Output;
 
     /// Visit a `while` loop.
-    fn visit_while(&mut self, cond: &Expr, body: &[Stmt]) -> Self::Output;
+    fn visit_while(&mut self, while_: &Token, cond: &Expr, body: &[Stmt]) -> Self::Output;
 
     /// Visit a `for` loop.
     fn visit_for(&mut self, name: &Token, iter: &Expr, body: &[Stmt]) -> Self::Output;
@@ -470,8 +483,8 @@ pub trait StmtVisitor {
         body: &[Stmt],
         method: bool,
     ) -> Self::Output;
-    fn visit_retn(&mut self, keyword: &Token, value: Option<&Expr>) -> Self::Output;
-    fn visit_assert(&mut self, keyword: &Token, value: &Expr) -> Self::Output;
+    fn visit_retn(&mut self, retn: &Token, value: Option<&Expr>) -> Self::Output;
+    fn visit_assert(&mut self, assert: &Token, value: &Expr) -> Self::Output;
     fn visit_data(
         &mut self,
         name: &Token,
@@ -490,7 +503,9 @@ pub trait StmtVisitor {
 /// [`StmtVisitor`]: ./trait.StmtVisitor.html
 #[derive(Debug, PartialEq)]
 pub enum Stmt<'a> {
-    Expr(Expr<'a>),
+    Expr {
+        expr: Expr<'a>,
+    },
     Block {
         end: Token<'a>,
         body: Vec<Stmt<'a>>,
@@ -501,13 +516,16 @@ pub enum Stmt<'a> {
         value: Expr<'a>,
     },
     If {
+        if_: Token<'a>,
         cond: Expr<'a>,
         do_: Token<'a>,
-        then: Vec<Stmt<'a>>,
-        else_: Option<Vec<Stmt<'a>>>,
+        then_block: Vec<Stmt<'a>>,
+        else_: Option<Token<'a>>,
+        else_block: Option<Vec<Stmt<'a>>>,
         end: Token<'a>,
     },
     While {
+        while_: Token<'a>,
         cond: Expr<'a>,
         body: Vec<Stmt<'a>>,
     },
@@ -524,11 +542,11 @@ pub enum Stmt<'a> {
         method: bool,
     },
     Retn {
-        keyword: Token<'a>,
+        retn: Token<'a>,
         value: Option<Expr<'a>>,
     },
     Assert {
-        keyword: Token<'a>,
+        assert: Token<'a>,
         value: Expr<'a>,
     },
     Data {
@@ -542,24 +560,24 @@ pub enum Stmt<'a> {
 impl StmtAccept for Stmt<'_> {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
         match self {
-            Stmt::Expr(expr)
+            Stmt::Expr { expr }
                 => v.visit_expr(expr),
             Stmt::Block { end, body }
                 => v.visit_block(end, body),
             Stmt::Assignment { name, op, value }
                 => v.visit_assignment(name, op, value),
-            Stmt::If { cond, do_, then, else_, end }
-                => v.visit_if(cond, do_, then, else_.as_ref(), end),
-            Stmt::While { cond, body }
-                => v.visit_while(cond, body),
+            Stmt::If { if_, cond, do_, then_block, else_, else_block, end }
+                => v.visit_if(if_, cond, do_, then_block, else_.as_ref(), else_block.as_ref(), end),
+            Stmt::While { while_, cond, body }
+                => v.visit_while(while_, cond, body),
             Stmt::For { name, iter, body }
                 => v.visit_for(name, iter, body),
             Stmt::Func { name, args, arity, body, method }
                 => v.visit_func(name, args, *arity, body, *method),
-            Stmt::Retn { keyword, value }
-                => v.visit_retn(keyword, value.as_ref()),
-            Stmt::Assert { keyword, value }
-                => v.visit_assert(keyword, value),
+            Stmt::Retn { retn, value }
+                => v.visit_retn(retn, value.as_ref()),
+            Stmt::Assert { assert, value }
+                => v.visit_assert(assert, value),
             Stmt::Data { name, methods, fields }
                 => v.visit_data(name, methods, fields),
         }

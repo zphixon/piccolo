@@ -115,44 +115,47 @@ impl Emitter {
 impl ExprVisitor for Emitter {
     type Output = Result<(), PiccoloError>;
 
-    fn visit_atom(&mut self, token: &Token) -> Self::Output {
-        let i = if token.kind == TokenKind::String && self.strings.contains_key(token.lexeme) {
-            trace!("has string {}", token.lexeme);
+    fn visit_literal(&mut self, literal: &Token) -> Self::Output {
+        let i = if literal.kind == TokenKind::String && self.strings.contains_key(literal.lexeme) {
+            trace!("has string {}", literal.lexeme);
 
-            *self.strings.get(token.lexeme).unwrap()
-        } else if token.kind == TokenKind::String {
-            let i = self.chunk.make_constant(Constant::try_from(*token)?);
-            self.strings.insert(token.lexeme.to_string(), i);
+            *self.strings.get(literal.lexeme).unwrap()
+        } else if literal.kind == TokenKind::String {
+            let i = self.chunk.make_constant(Constant::try_from(*literal)?);
+            self.strings.insert(literal.lexeme.to_string(), i);
             i
-        } else if token.kind == TokenKind::Nil {
-            self.chunk.write_u8(Opcode::Nil, token.line);
+        } else if literal.kind == TokenKind::Nil {
+            self.chunk.write_u8(Opcode::Nil, literal.line);
             return Ok(());
-        } else if token.kind == TokenKind::True {
-            self.chunk.write_u8(Opcode::True, token.line);
+        } else if literal.kind == TokenKind::True {
+            self.chunk.write_u8(Opcode::True, literal.line);
             return Ok(());
-        } else if token.kind == TokenKind::False {
-            self.chunk.write_u8(Opcode::False, token.line);
+        } else if literal.kind == TokenKind::False {
+            self.chunk.write_u8(Opcode::False, literal.line);
             return Ok(());
         } else {
             self.chunk
-                .make_constant(Constant::try_from(*token).unwrap())
+                .make_constant(Constant::try_from(*literal).unwrap())
         };
 
-        self.chunk.write_arg_u16(Opcode::Constant, i, token.line);
+        self.chunk.write_arg_u16(Opcode::Constant, i, literal.line);
 
         Ok(())
     }
 
-    fn visit_paren(&mut self, value: &Expr) -> Self::Output {
+    fn visit_paren(&mut self, _right_paren: &Token, value: &Expr) -> Self::Output {
         value.accept(self)
     }
 
-    fn visit_variable(&mut self, name: &Token) -> Self::Output {
-        match self.get_local_slot(name.lexeme) {
-            Some(idx) => self.chunk.write_arg_u16(Opcode::GetLocal, idx, name.line),
+    fn visit_variable(&mut self, variable: &Token) -> Self::Output {
+        match self.get_local_slot(variable.lexeme) {
+            Some(idx) => self
+                .chunk
+                .write_arg_u16(Opcode::GetLocal, idx, variable.line),
             None => {
-                let i = self.get_ident(name)?;
-                self.chunk.write_arg_u16(Opcode::GetGlobal, i, name.line);
+                let i = self.get_ident(variable)?;
+                self.chunk
+                    .write_arg_u16(Opcode::GetGlobal, i, variable.line);
             }
         }
         Ok(())
@@ -220,7 +223,7 @@ impl ExprVisitor for Emitter {
         todo!("visit_set")
     }
 
-    fn visit_index(&mut self, _rb: &Token, _object: &Expr, _idx: &Expr) -> Self::Output {
+    fn visit_index(&mut self, _right_bracket: &Token, _object: &Expr, _idx: &Expr) -> Self::Output {
         todo!("visit_index")
     }
 
@@ -304,29 +307,33 @@ impl StmtVisitor for Emitter {
 
     fn visit_if(
         &mut self,
+        if_: &Token,
         cond: &Expr,
         do_: &Token,
         then_block: &[Stmt],
-        else_: Option<&Vec<Stmt>>,
+        else_: Option<&Token>,
+        else_block: Option<&Vec<Stmt>>,
         end: &Token,
     ) -> Self::Output {
         // compile the condition
         cond.accept(self)?;
 
         // jump over the do block if the condition is false
-        let jump_else = self.chunk.write_jump(Opcode::JumpFalse, do_.line);
+        let jump_else = self.chunk.write_jump(Opcode::JumpFalse, if_.line);
 
         // pop the condition, it's still on the stack
         self.chunk.write_u8(Opcode::Pop, do_.line);
         // compile the do block
-        self.visit_block(end, then_block)?;
+        self.visit_block(else_.unwrap_or(end), then_block)?;
         // if there's an else block, jump over it
-        let jump_end = self.chunk.write_jump(Opcode::Jump, do_.line); // todo: wrong line number
+        let jump_end = self
+            .chunk
+            .write_jump(Opcode::Jump, else_.unwrap_or(end).line);
 
         // jump here if the condition is false
         self.chunk.patch_jump(jump_else);
 
-        if let Some(else_block) = else_ {
+        if let Some(else_block) = else_block {
             // compile the else block
             self.visit_block(end, else_block)?;
         }
@@ -337,7 +344,7 @@ impl StmtVisitor for Emitter {
         Ok(())
     }
 
-    fn visit_while(&mut self, _cond: &Expr, _body: &[Stmt]) -> Self::Output {
+    fn visit_while(&mut self, _while: &Token, _cond: &Expr, _body: &[Stmt]) -> Self::Output {
         todo!("visit_while")
     }
 
@@ -356,17 +363,17 @@ impl StmtVisitor for Emitter {
         todo!("visit_func")
     }
 
-    fn visit_retn(&mut self, keyword: &Token, value: Option<&Expr>) -> Self::Output {
+    fn visit_retn(&mut self, retn: &Token, value: Option<&Expr>) -> Self::Output {
         if let Some(expr) = value {
             expr.accept(self)?;
         }
-        self.chunk.write_u8(Opcode::Return, keyword.line);
+        self.chunk.write_u8(Opcode::Return, retn.line);
         Ok(())
     }
 
-    fn visit_assert(&mut self, keyword: &Token, value: &Expr) -> Self::Output {
+    fn visit_assert(&mut self, assert: &Token, value: &Expr) -> Self::Output {
         value.accept(self)?;
-        self.chunk.write_u8(Opcode::Assert, keyword.line);
+        self.chunk.write_u8(Opcode::Assert, assert.line);
         Ok(())
     }
 
