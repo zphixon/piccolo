@@ -1,0 +1,17 @@
+x =: 1
+y =: 2
+z =: 3
+
+if x > y do
+  if z > x do
+    assert false
+  else
+    assert false
+  end
+else
+  if z > y do
+    assert true
+  else
+    assert false
+  end
+end

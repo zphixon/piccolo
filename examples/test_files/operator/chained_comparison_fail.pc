@@ -1,0 +1,6 @@
+do
+  x =: 1
+  y =: 2
+  z =: 3
+  assert x < y < z
+end
