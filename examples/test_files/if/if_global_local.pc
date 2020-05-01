@@ -1,0 +1,8 @@
+outer =: "something"
+
+if true do
+  inner =: outer + " cool"
+  assert inner == "something cool"
+else
+  assert false
+end
