@@ -88,6 +88,20 @@ fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
             else_block,
             end,
         })
+    } else if scanner.peek_token(0)?.kind == TokenKind::While {
+        trace!("declaration, while");
+        let while_ = scanner.next_token()?;
+        let cond = expr_bp(scanner, BindingPower::Assignment)?;
+        consume(scanner, TokenKind::Do)?;
+        let body = block(scanner)?;
+        let end = consume(scanner, TokenKind::End)?;
+
+        Ok(Stmt::While {
+            while_,
+            cond,
+            body,
+            end,
+        })
     } else {
         trace!("declaration, expr");
 
