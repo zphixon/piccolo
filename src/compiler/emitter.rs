@@ -8,7 +8,6 @@ use crate::{Chunk, Constant, ErrorKind, PiccoloError, Token, TokenKind};
 use super::ast::{Arity, Expr, ExprAccept, ExprVisitor, Stmt, StmtAccept, StmtVisitor};
 
 use std::collections::HashMap;
-use std::env::var;
 
 /// Struct for emitting Piccolo virtual machine bytecode.
 ///
