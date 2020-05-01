@@ -306,7 +306,7 @@ impl StmtVisitor for Emitter {
         &mut self,
         cond: &Expr,
         do_: &Token,
-        then: &[Stmt],
+        then_block: &[Stmt],
         else_: Option<&Vec<Stmt>>,
         end: &Token,
     ) -> Self::Output {
@@ -314,25 +314,25 @@ impl StmtVisitor for Emitter {
         cond.accept(self)?;
 
         // jump over the do block if the condition is false
-        let cond_false = self.chunk.write_jump(Opcode::JumpFalse, do_.line);
+        let jump_else = self.chunk.write_jump(Opcode::JumpFalse, do_.line);
 
         // pop the condition, it's still on the stack
         self.chunk.write_u8(Opcode::Pop, do_.line);
         // compile the do block
-        self.visit_block(end, then)?;
+        self.visit_block(end, then_block)?;
         // if there's an else block, jump over it
-        let cond_true = self.chunk.write_jump(Opcode::Jump, do_.line); // todo: wrong line number
+        let jump_end = self.chunk.write_jump(Opcode::Jump, do_.line); // todo: wrong line number
 
         // jump here if the condition is false
-        self.chunk.patch_jump(cond_false);
+        self.chunk.patch_jump(jump_else);
 
-        if let Some(block) = else_ {
+        if let Some(else_block) = else_ {
             // compile the else block
-            self.visit_block(end, block)?;
+            self.visit_block(end, else_block)?;
         }
 
         // jump here if the condition is true
-        self.chunk.patch_jump(cond_true);
+        self.chunk.patch_jump(jump_end);
 
         Ok(())
     }
