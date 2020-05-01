@@ -8,6 +8,7 @@ use crate::{Chunk, Constant, ErrorKind, PiccoloError, Token, TokenKind};
 use super::ast::{Arity, Expr, ExprAccept, ExprVisitor, Stmt, StmtAccept, StmtVisitor};
 
 use std::collections::HashMap;
+use std::env::var;
 
 /// Struct for emitting Piccolo virtual machine bytecode.
 ///
@@ -116,6 +117,7 @@ impl ExprVisitor for Emitter {
     type Output = Result<(), PiccoloError>;
 
     fn visit_literal(&mut self, literal: &Token) -> Self::Output {
+        trace!("{}: literal '{}'", literal.line, literal.lexeme);
         let i = if literal.kind == TokenKind::String && self.strings.contains_key(literal.lexeme) {
             trace!("has string {}", literal.lexeme);
 
@@ -144,10 +146,12 @@ impl ExprVisitor for Emitter {
     }
 
     fn visit_paren(&mut self, _right_paren: &Token, value: &Expr) -> Self::Output {
+        trace!("{}: paren", _right_paren.line);
         value.accept(self)
     }
 
     fn visit_variable(&mut self, variable: &Token) -> Self::Output {
+        trace!("{}: variable '{}'", variable.line, variable.lexeme);
         match self.get_local_slot(variable.lexeme) {
             Some(idx) => self
                 .chunk
@@ -162,6 +166,7 @@ impl ExprVisitor for Emitter {
     }
 
     fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output {
+        trace!("{}: unary {}", op.line, op.lexeme);
         rhs.accept(self)?;
         match op.kind {
             TokenKind::Not => self.chunk.write_u8(Opcode::Not, op.line),
@@ -172,6 +177,7 @@ impl ExprVisitor for Emitter {
     }
 
     fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output {
+        trace!("{}: binary {}", op.line, op.lexeme);
         lhs.accept(self)?;
         rhs.accept(self)?;
 
@@ -197,6 +203,7 @@ impl ExprVisitor for Emitter {
     }
 
     fn visit_logical(&mut self, lhs: &Expr, _op: &Token, rhs: &Expr) -> Self::Output {
+        trace!("{}: logical {}", _op.line, _op.lexeme);
         lhs.accept(self)?;
         rhs.accept(self)
     }
@@ -208,22 +215,27 @@ impl ExprVisitor for Emitter {
         _arity: Arity,
         _args: &[Expr],
     ) -> Self::Output {
+        trace!("{}: call", _paren.line);
         todo!("visit_call")
     }
 
     fn visit_new(&mut self, _name: &Token, _args: &[(Token, Box<Expr>)]) -> Self::Output {
+        trace!("{}: new", _name.line);
         todo!("visit_new")
     }
 
     fn visit_get(&mut self, _object: &Expr, _name: &Token) -> Self::Output {
+        trace!("{}: get '{}'", _name.line, _name.lexeme);
         todo!("visit_get")
     }
 
     fn visit_set(&mut self, _object: &Expr, _name: &Token, _value: &Expr) -> Self::Output {
+        trace!("{}: set '{}'", _name.line, _name.lexeme);
         todo!("visit_set")
     }
 
     fn visit_index(&mut self, _right_bracket: &Token, _object: &Expr, _idx: &Expr) -> Self::Output {
+        trace!("{}: index", _right_bracket.line);
         todo!("visit_index")
     }
 
@@ -235,6 +247,7 @@ impl ExprVisitor for Emitter {
         _body: &[Stmt],
         _method: bool,
     ) -> Self::Output {
+        trace!("{}: fn '{}'", _name.line, _name.lexeme);
         todo!("visit_func")
     }
 }
@@ -243,12 +256,14 @@ impl StmtVisitor for Emitter {
     type Output = Result<(), PiccoloError>;
 
     fn visit_expr(&mut self, expr: &Expr) -> Self::Output {
+        trace!("stmt expr");
         expr.accept(self)?;
         self.chunk.write_u8(Opcode::Pop, 1); // TODO: line
         Ok(())
     }
 
     fn visit_block(&mut self, end: &Token, body: &[Stmt]) -> Self::Output {
+        trace!("{}: block", end.line);
         self.scope_depth += 1;
         for stmt in body {
             stmt.accept(self)?;
@@ -262,6 +277,7 @@ impl StmtVisitor for Emitter {
     }
 
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
+        trace!("{}: assign {} {}", name.line, op.lexeme, name.lexeme);
         value.accept(self)?;
         if self.scope_depth > 0 {
             // inside of a block, declaration creates local variables
@@ -315,6 +331,7 @@ impl StmtVisitor for Emitter {
         else_block: Option<&Vec<Stmt>>,
         end: &Token,
     ) -> Self::Output {
+        trace!("{}: if", if_.line);
         // compile the condition
         cond.accept(self)?;
 
@@ -345,10 +362,12 @@ impl StmtVisitor for Emitter {
     }
 
     fn visit_while(&mut self, _while: &Token, _cond: &Expr, _body: &[Stmt]) -> Self::Output {
+        trace!("{}: while", _while.line);
         todo!("visit_while")
     }
 
     fn visit_for(&mut self, _name: &Token, _iter: &Expr, _body: &[Stmt]) -> Self::Output {
+        trace!("{}: for {}", _name.line, _name.lexeme);
         todo!("visit_for")
     }
 
@@ -360,10 +379,12 @@ impl StmtVisitor for Emitter {
         _body: &[Stmt],
         _method: bool,
     ) -> Self::Output {
+        trace!("{}: fn {}", _name.line, _name.lexeme);
         todo!("visit_func")
     }
 
     fn visit_retn(&mut self, retn: &Token, value: Option<&Expr>) -> Self::Output {
+        trace!("{}: retn", retn.line);
         if let Some(expr) = value {
             expr.accept(self)?;
         }
@@ -372,6 +393,7 @@ impl StmtVisitor for Emitter {
     }
 
     fn visit_assert(&mut self, assert: &Token, value: &Expr) -> Self::Output {
+        trace!("{}: assert", assert.line);
         value.accept(self)?;
         self.chunk.write_u8(Opcode::Assert, assert.line);
         Ok(())
@@ -383,6 +405,7 @@ impl StmtVisitor for Emitter {
         _methods: &[Stmt],
         _fields: &[(Token, Expr)],
     ) -> Self::Output {
+        trace!("{}: data {}", _name.line, _name.lexeme);
         todo!("visit_data")
     }
 }
