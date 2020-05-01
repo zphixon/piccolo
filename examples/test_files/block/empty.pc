@@ -1,0 +1,6 @@
+do end
+
+if true do end
+if false do else end
+
+assert true
