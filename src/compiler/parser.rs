@@ -210,7 +210,7 @@ fn prefix_binding_power(kind: TokenKind) -> BindingPower {
     }
 }
 
-fn infix_binding_power(kind: TokenKind) -> BindingPower {
+pub(crate) fn infix_binding_power(kind: TokenKind) -> BindingPower {
     match kind {
         TokenKind::Plus => BindingPower::Term,
         TokenKind::Minus => BindingPower::Term,
