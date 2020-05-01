@@ -458,6 +458,7 @@ pub trait StmtVisitor {
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output;
 
     /// Visit an `if-then` statement.
+    #[allow(clippy::too_many_arguments)]
     fn visit_if(
         &mut self,
         if_: &Token,
@@ -501,6 +502,7 @@ pub trait StmtVisitor {
 /// reflect a difference between the two.
 ///
 /// [`StmtVisitor`]: ./trait.StmtVisitor.html
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, PartialEq)]
 pub enum Stmt<'a> {
     Expr {

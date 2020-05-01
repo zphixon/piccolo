@@ -178,17 +178,14 @@ impl ExprVisitor for Emitter {
     fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output {
         trace!("{}: binary {}", op.line, op.lexeme);
 
-        match lhs {
-            Expr::Binary { op, .. } => {
-                if super::parser::infix_binding_power(op.kind)
-                    == super::parser::BindingPower::Comparison
-                {
-                    return Err(PiccoloError::new(ErrorKind::SyntaxError)
-                        .line(op.line)
-                        .msg("cannot chain comparison operators"));
-                }
+        if let Expr::Binary { op, .. } = lhs {
+            if super::parser::infix_binding_power(op.kind)
+                == super::parser::BindingPower::Comparison
+            {
+                return Err(PiccoloError::new(ErrorKind::SyntaxError)
+                    .line(op.line)
+                    .msg("cannot chain comparison operators"));
             }
-            _ => {}
         }
 
         lhs.accept(self)?;
