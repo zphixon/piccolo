@@ -153,6 +153,10 @@ impl Chunk {
                 let idx = self.read_short(offset + 1);
                 format!("+{:04x}", idx)
             }
+            Opcode::Loop => {
+                let idx = self.read_short(offset + 1);
+                format!("-{:04x}", idx)
+            }
             _ => String::new(),
         };
 

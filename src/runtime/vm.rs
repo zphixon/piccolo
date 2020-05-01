@@ -71,15 +71,21 @@ impl Machine {
     }
 
     // get a constant from the chunk
-    fn peek_constant<'a>(&self, chunk: &'a Chunk) -> &'a Constant {
+    fn peek_constant<'a>(&mut self, chunk: &'a Chunk) -> &'a Constant {
         trace!("peek_constant");
         // Opcode::Constant takes a two-byte operand, meaning it's necessary
         // to decode the high and low bytes. the machine is little-endian with
         // constant addresses.
         chunk
             .constants
-            .get(chunk.read_short(self.ip) as usize)
+            .get(self.read_short(chunk) as usize)
             .unwrap()
+    }
+
+    fn read_short(&mut self, chunk: &Chunk) -> u16 {
+        let short = chunk.read_short(self.ip);
+        self.ip += 2;
+        short
     }
 
     /// Interprets the machine's bytecode, returning a Constant.
@@ -184,11 +190,9 @@ impl Machine {
                     println!("{}", self.heap.fmt(&v));
                 }
                 Opcode::Constant => {
-                    let v = self
-                        .heap
-                        .constant_into_value(self.peek_constant(chunk).clone());
+                    let c = self.peek_constant(chunk).clone();
+                    let v = self.heap.constant_into_value(c);
                     self.stack.push(v);
-                    self.ip += 2;
                 }
                 Opcode::Nil => self.stack.push(Value::Nil),
                 Opcode::True => self.stack.push(Value::Bool(true)),
@@ -208,7 +212,7 @@ impl Machine {
                             got: self.heap.type_name(&v).to_owned(),
                             op: Opcode::Negate,
                         })
-                        .line(chunk.get_line_from_index(self.ip - 1)));
+                        .line(chunk.get_line_from_index(self.ip)));
                     }
                 }
                 Opcode::Not => {
@@ -246,7 +250,7 @@ impl Machine {
                                     got: self.heap.type_name(&b).to_owned(),
                                     op,
                                 })
-                                .line(chunk.get_line_from_index(self.ip - 1)))
+                                .line(chunk.get_line_from_index(self.ip)))
                             },
                             Ok,
                         )?));
@@ -260,7 +264,7 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(chunk.get_line_from_index(self.ip - 1)));
+                        .line(chunk.get_line_from_index(self.ip)));
                     }
                     self.stack
                         .push(Value::Bool(self.heap.gt(&lhs, &rhs).map_or_else(
@@ -270,7 +274,7 @@ impl Machine {
                                     got: self.heap.type_name(&rhs).to_owned(),
                                     op,
                                 })
-                                .line(chunk.get_line_from_index(self.ip - 1)))
+                                .line(chunk.get_line_from_index(self.ip)))
                             },
                             Ok,
                         )?));
@@ -284,7 +288,7 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(chunk.get_line_from_index(self.ip - 1)));
+                        .line(chunk.get_line_from_index(self.ip)));
                     }
                     self.stack
                         .push(Value::Bool(self.heap.lt(&lhs, &rhs).map_or_else(
@@ -294,7 +298,7 @@ impl Machine {
                                     got: self.heap.type_name(&rhs).to_owned(),
                                     op,
                                 })
-                                .line(chunk.get_line_from_index(self.ip - 1)))
+                                .line(chunk.get_line_from_index(self.ip)))
                             },
                             Ok,
                         )?));
@@ -308,7 +312,7 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(chunk.get_line_from_index(self.ip - 1)));
+                        .line(chunk.get_line_from_index(self.ip)));
                     }
                     self.stack
                         .push(Value::Bool(!self.heap.lt(&lhs, &rhs).map_or_else(
@@ -318,7 +322,7 @@ impl Machine {
                                     got: self.heap.type_name(&rhs).to_owned(),
                                     op,
                                 })
-                                .line(chunk.get_line_from_index(self.ip - 1)))
+                                .line(chunk.get_line_from_index(self.ip)))
                             },
                             Ok,
                         )?));
@@ -332,7 +336,7 @@ impl Machine {
                             got: "bool".into(),
                             op,
                         })
-                        .line(chunk.get_line_from_index(self.ip - 1)));
+                        .line(chunk.get_line_from_index(self.ip)));
                     }
                     self.stack
                         .push(Value::Bool(!self.heap.gt(&lhs, &rhs).map_or_else(
@@ -342,21 +346,19 @@ impl Machine {
                                     got: self.heap.type_name(&rhs).to_owned(),
                                     op,
                                 })
-                                .line(chunk.get_line_from_index(self.ip - 1)))
+                                .line(chunk.get_line_from_index(self.ip)))
                             },
                             Ok,
                         )?));
                 }
 
                 Opcode::GetLocal => {
-                    let slot = chunk.read_short(self.ip);
+                    let slot = self.read_short(chunk);
                     self.stack.push(self.stack[slot as usize]);
-                    self.ip += 2;
                 }
                 Opcode::SetLocal => {
-                    let slot = chunk.read_short(self.ip);
+                    let slot = self.read_short(chunk);
                     self.stack[slot as usize] = self.pop(chunk)?;
-                    self.ip += 2;
                 }
                 Opcode::GetGlobal => {
                     let name = self.peek_constant(chunk).ref_string();
@@ -366,9 +368,8 @@ impl Machine {
                         return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                             name: name.to_owned(),
                         })
-                        .line(chunk.get_line_from_index(self.ip - 1)));
+                        .line(chunk.get_line_from_index(self.ip)));
                     }
-                    self.ip += 2;
                 }
                 Opcode::SetGlobal => {
                     if let Constant::String(name) = self.peek_constant(chunk) {
@@ -376,9 +377,8 @@ impl Machine {
                         let value = self.pop(chunk)?;
                         if self.globals.insert(name.clone(), value).is_none() {
                             return Err(PiccoloError::new(ErrorKind::UndefinedVariable { name })
-                                .line(chunk.get_line_from_index(self.ip - 1)));
+                                .line(chunk.get_line_from_index(self.ip)));
                         }
-                        self.ip += 2;
                     }
                 }
                 Opcode::DeclareGlobal => {
@@ -386,41 +386,50 @@ impl Machine {
                         let name = name.clone();
                         let value = self.pop(chunk)?;
                         self.globals.insert(name, value);
-                        self.ip += 2;
                     } else {
                         panic!("defined global with non-string name");
                     }
                 }
 
                 Opcode::Jump => {
-                    let offset = chunk.read_short(self.ip);
-                    debug!("jump ip {:x} -> {:x}", self.ip, self.ip + offset as usize);
-                    self.ip += 2;
+                    let offset = self.read_short(chunk);
+                    debug!(
+                        "jump ip {:x} -> {:x}",
+                        self.ip - 1,
+                        self.ip + 2 + offset as usize
+                    );
                     self.ip += offset as usize;
                 }
                 Opcode::JumpFalse => {
-                    let offset = chunk.read_short(self.ip);
+                    let offset = self.read_short(chunk);
                     if !self.peek_back(0, chunk)?.is_truthy() {
                         debug!(
                             "jump false ip {:x} -> {:x}",
-                            self.ip,
+                            self.ip - 2,
                             self.ip + offset as usize
                         );
                         self.ip += offset as usize;
                     }
-                    self.ip += 2;
                 }
                 Opcode::JumpTrue => {
-                    let offset = chunk.read_short(self.ip);
+                    let offset = self.read_short(chunk);
                     if self.peek_back(0, chunk)?.is_truthy() {
                         debug!(
                             "jump true ip {:x} -> {:x}",
-                            self.ip,
+                            self.ip - 2,
                             self.ip + offset as usize
                         );
                         self.ip += offset as usize;
                     }
-                    self.ip += 2;
+                }
+                Opcode::Loop => {
+                    let offset = self.read_short(chunk);
+                    debug!(
+                        "loop ip {:x} -> {:x}",
+                        self.ip,
+                        self.ip + 2 - offset as usize
+                    );
+                    self.ip -= offset as usize;
                 }
 
                 Opcode::Assert => {

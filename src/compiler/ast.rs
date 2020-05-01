@@ -122,7 +122,7 @@ impl StmtVisitor for AstPrinter {
         }
     }
 
-    fn visit_while(&mut self, _while_: &Token, cond: &Expr, body: &[Stmt]) -> String {
+    fn visit_while(&mut self, _while_: &Token, cond: &Expr, body: &[Stmt], _end: &Token) -> String {
         self.parenthesize_list("while", Some(cond), body)
     }
 
@@ -471,7 +471,13 @@ pub trait StmtVisitor {
     ) -> Self::Output;
 
     /// Visit a `while` loop.
-    fn visit_while(&mut self, while_: &Token, cond: &Expr, body: &[Stmt]) -> Self::Output;
+    fn visit_while(
+        &mut self,
+        while_: &Token,
+        cond: &Expr,
+        body: &[Stmt],
+        end: &Token,
+    ) -> Self::Output;
 
     /// Visit a `for` loop.
     fn visit_for(&mut self, name: &Token, iter: &Expr, body: &[Stmt]) -> Self::Output;
@@ -530,6 +536,7 @@ pub enum Stmt<'a> {
         while_: Token<'a>,
         cond: Expr<'a>,
         body: Vec<Stmt<'a>>,
+        end: Token<'a>,
     },
     For {
         name: Token<'a>,
@@ -570,8 +577,8 @@ impl StmtAccept for Stmt<'_> {
                 => v.visit_assignment(name, op, value),
             Stmt::If { if_, cond, do_, then_block, else_, else_block, end }
                 => v.visit_if(if_, cond, do_, then_block, else_.as_ref(), else_block.as_ref(), end),
-            Stmt::While { while_, cond, body }
-                => v.visit_while(while_, cond, body),
+            Stmt::While { while_, cond, body, end }
+                => v.visit_while(while_, cond, body, end),
             Stmt::For { name, iter, body }
                 => v.visit_for(name, iter, body),
             Stmt::Func { name, args, arity, body, method }

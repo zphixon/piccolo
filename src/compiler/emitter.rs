@@ -386,9 +386,25 @@ impl StmtVisitor for Emitter {
         Ok(())
     }
 
-    fn visit_while(&mut self, _while: &Token, _cond: &Expr, _body: &[Stmt]) -> Self::Output {
-        trace!("{}: while", _while.line);
-        todo!("visit_while")
+    fn visit_while(
+        &mut self,
+        while_: &Token,
+        cond: &Expr,
+        body: &[Stmt],
+        end: &Token,
+    ) -> Self::Output {
+        trace!("{}: while", while_.line);
+        cond.accept(self)?;
+        let loop_start = self.chunk.data.len();
+        let exit_jump = self.chunk.write_jump(Opcode::JumpFalse, while_.line);
+        self.chunk.write_u8(Opcode::Pop, while_.line);
+        self.visit_block(end, body)?;
+        let offset = self.chunk.data.len() - loop_start + 2;
+        self.chunk
+            .write_arg_u16(Opcode::Loop, offset as u16, end.line);
+        self.chunk.patch_jump(exit_jump);
+        self.chunk.write_u8(Opcode::Pop, end.line);
+        Ok(())
     }
 
     fn visit_for(&mut self, _name: &Token, _iter: &Expr, _body: &[Stmt]) -> Self::Output {
