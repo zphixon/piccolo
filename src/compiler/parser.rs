@@ -41,17 +41,17 @@ fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
     } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
         trace!("declaration, retn");
 
-        let keyword = scanner.next_token()?;
+        let retn = scanner.next_token()?;
         let value = Some(expr_bp(scanner, BindingPower::Assignment)?);
 
-        Ok(Stmt::Retn { keyword, value })
+        Ok(Stmt::Retn { retn, value })
     } else if scanner.peek_token(0)?.kind == TokenKind::Assert {
         trace!("declaration, assert");
 
-        let keyword = scanner.next_token()?;
+        let assert = scanner.next_token()?;
         let value = expr_bp(scanner, BindingPower::Assignment)?;
 
-        Ok(Stmt::Assert { keyword, value })
+        Ok(Stmt::Assert { assert, value })
     } else if scanner.peek_token(0)?.kind == TokenKind::Do {
         trace!("declaration, do");
 
@@ -63,25 +63,29 @@ fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
     } else if scanner.peek_token(0)?.kind == TokenKind::If {
         trace!("declaration, if");
 
-        scanner.next_token()?;
+        let if_ = scanner.next_token()?;
         let cond = expr_bp(scanner, BindingPower::Assignment)?;
         let do_ = consume(scanner, TokenKind::Do)?;
-        let then = block_until_else_or_end(scanner)?;
+        let then_block = block_until_else_or_end(scanner)?;
 
-        let else_ = if scanner.peek_token(0)?.kind == TokenKind::Else {
-            consume(scanner, TokenKind::Else)?;
-            Some(block(scanner)?)
+        let (else_, else_block) = if scanner.peek_token(0)?.kind == TokenKind::Else {
+            (
+                Some(consume(scanner, TokenKind::Else)?),
+                Some(block(scanner)?),
+            )
         } else {
-            None
+            (None, None)
         };
 
         let end = consume(scanner, TokenKind::End)?;
 
         Ok(Stmt::If {
+            if_,
             cond,
             do_,
-            then,
+            then_block,
             else_,
+            else_block,
             end,
         })
     } else {
@@ -89,7 +93,7 @@ fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
 
         let expr = expr_bp(scanner, BindingPower::Assignment)?;
 
-        Ok(Stmt::Expr(expr))
+        Ok(Stmt::Expr { expr })
     }
 }
 
@@ -122,17 +126,19 @@ fn expr_bp<'a>(scanner: &mut Scanner<'a>, min_bp: BindingPower) -> Result<Expr<'
     let lhs_token = scanner.next_token()?;
     let mut lhs = if lhs_token.is_value() {
         trace!("atom");
-        Expr::Atom(lhs_token)
+        Expr::Literal { literal: lhs_token }
     } else if lhs_token.kind == TokenKind::Identifier {
         trace!("variable");
-        Expr::Variable(lhs_token)
+        Expr::Variable {
+            variable: lhs_token,
+        }
     } else if lhs_token.kind == TokenKind::LeftParen {
         trace!("grouping");
-        let e = Expr::Paren(Box::new(expr_bp(scanner, BindingPower::Assignment)?));
-        consume(scanner, TokenKind::RightParen).map_err(|e| {
+        let expr = Box::new(expr_bp(scanner, BindingPower::Assignment)?);
+        let right_paren = consume(scanner, TokenKind::RightParen).map_err(|e| {
             e.msg_string(format!("in expression starting on line {}", lhs_token.line))
         })?;
-        e
+        Expr::Paren { right_paren, expr }
     } else if lhs_token.kind == TokenKind::Eof {
         trace!("eof");
         return Err(PiccoloError::new(ErrorKind::ExpectedExpression {
