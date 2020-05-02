@@ -374,24 +374,35 @@ impl StmtVisitor for Emitter {
         // compile the condition
         cond.accept(self)?;
 
-        // jump over the do block if the condition is false
-        let jump_else = self.chunk.start_jump(Opcode::JumpFalse, if_.line);
-
-        // pop the condition, it's still on the stack
-        self.chunk.write_u8(Opcode::Pop, do_.line);
-        // compile the do block
-        self.visit_block(else_.unwrap_or(end), then_block)?;
-        // if there's an else block, jump over it
-        let jump_end = self
-            .chunk
-            .start_jump(Opcode::JumpForward, else_.unwrap_or(end).line);
-
-        // jump here if the condition is false
-        self.chunk.patch_jump(jump_else);
-
         if let Some(else_block) = else_block {
-            // compile the else block
-            self.visit_block(end, else_block)?;
+            // jump if the condition is false
+            let jump_else = self.chunk.start_jump(Opcode::JumpFalse, if_.line);
+            // pop the condition
+            self.chunk.write_u8(Opcode::Pop, if_.line);
+            // evaluate the then-block
+            self.visit_block(end, then_block)?;
+            // skip past the else-block
+            let end_jump = self.chunk.start_jump(Opcode::JumpForward, else_.unwrap().line);
+
+            // pop the condition
+            self.chunk.patch_jump(jump_else);
+            self.chunk.write_u8(Opcode::Pop, else_.unwrap().line);
+            // evaluate the else-block
+            self.visit_block(else_.unwrap(), else_block)?;
+            self.chunk.patch_jump(end_jump);
+        } else {
+            // jump if the condition is false
+            let jump_end = self.chunk.start_jump(Opcode::JumpFalse, if_.line);
+            // pop the condition if true
+            self.chunk.write_u8(Opcode::Pop, if_.line);
+            // evaluate the then-block
+            self.visit_block(end, then_block)?;
+            // skip over the pop instruction
+            let jump_pop = self.chunk.start_jump(Opcode::JumpForward, end.line);
+            // pop the condition if false
+            self.chunk.patch_jump(jump_end);
+            self.chunk.write_u8(Opcode::Pop, end.line);
+            self.chunk.patch_jump(jump_pop);
         }
 
         // jump here if the condition is true
