@@ -426,7 +426,7 @@ impl StmtVisitor for Emitter {
         _name: &Token,
         _init: &Expr,
         _cond: &Expr,
-        _inc: &Expr,
+        _inc: &Stmt,
         _body: &[Stmt],
     ) -> Self::Output {
         trace!("{}: for {}", _name.line, _name.lexeme);

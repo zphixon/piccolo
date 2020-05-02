@@ -135,7 +135,7 @@ impl StmtVisitor for AstPrinter {
         name: &Token,
         init: &Expr,
         cond: &Expr,
-        inc: &Expr,
+        inc: &Stmt,
         body: &[Stmt],
     ) -> String {
         let s = format!(
@@ -143,7 +143,7 @@ impl StmtVisitor for AstPrinter {
             name.lexeme,
             self.visit_expr(init),
             self.visit_expr(cond),
-            self.visit_expr(inc)
+            inc.accept(self),
         );
         self.parenthesize_list(&s, None, body)
     }
@@ -506,7 +506,7 @@ pub trait StmtVisitor {
         name: &Token,
         init: &Expr,
         cond: &Expr,
-        inc: &Expr,
+        inc: &Stmt,
         body: &[Stmt],
     ) -> Self::Output;
 
@@ -575,7 +575,7 @@ pub enum Stmt<'a> {
         name: Token<'a>,
         init: Expr<'a>,
         cond: Expr<'a>,
-        inc: Expr<'a>,
+        inc: Box<Stmt<'a>>,
         body: Vec<Stmt<'a>>,
     },
     Func {
@@ -617,7 +617,7 @@ impl StmtAccept for Stmt<'_> {
             Stmt::While { while_, cond, body, end }
                 => v.visit_while(while_, cond, body, end),
             Stmt::For { name, init, cond, inc, body }
-                => v.visit_for(name, init, cond, inc, body),
+                => v.visit_for(name, init, cond, inc.as_ref(), body),
             Stmt::Func { name, args, arity, body, method }
                 => v.visit_func(name, args, *arity, body, *method),
             Stmt::Retn { retn, value }
