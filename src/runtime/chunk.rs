@@ -53,6 +53,13 @@ impl Chunk {
         }
     }
 
+    pub(crate) fn write_jump_back(&mut self, offset: usize, line: usize) {
+        // we haven't written the JumpBack instruction yet, so we need to add it
+        // in order to calculate the actual offset when we write the jump instruction
+        let offset = self.data.len() - offset + 3;
+        self.write_arg_u16(Opcode::JumpBack, offset as u16, line);
+    }
+
     // allows for duplicate constants, non-duplicates are checked in the compiler
     pub(crate) fn make_constant(&mut self, value: Constant) -> u16 {
         trace!("make constant {:?}", value);
