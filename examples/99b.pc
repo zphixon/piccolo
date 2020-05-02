@@ -1,0 +1,18 @@
+x =: 99
+
+while x > 0 do
+  if x == 2 do
+    retn "" + x + " bottles of beer on the wall, " + x + " bottles of beer,"
+      + " take one down, pass it around, " + (x-1) + " bottle of beer on the wall"
+  else
+    if x == 1 do
+      retn "" + x + " bottle of beer on the wall, " + x + " bottle of beer,"
+        + " take one down, pass it around, " + (x-1) + " bottles of beer on the wall"
+    else
+      retn "" + x + " bottles of beer on the wall, " + x + " bottles of beer,"
+        + " take one down, pass it around, " + (x-1) + " bottles of beer on the wall"
+    end
+  end
+
+  x = x - 1
+end
