@@ -1,18 +1,8 @@
-x =: 99
+for x =: 99, x > 0, x = x - 1 do
+    s =: (x != 1 && "s") || (x == 1 && "")
+    s2 =: (x-1 != 1 && "s") || (x-1 == 1 && "")
 
-while x > 0 do
-  if x == 2 do
-    retn "" + x + " bottles of beer on the wall, " + x + " bottles of beer,"
-      + " take one down, pass it around, " + (x-1) + " bottle of beer on the wall"
-  else
-    if x == 1 do
-      retn "" + x + " bottle of beer on the wall, " + x + " bottle of beer,"
-        + " take one down, pass it around, " + (x-1) + " bottles of beer on the wall"
-    else
-      retn "" + x + " bottles of beer on the wall, " + x + " bottles of beer,"
-        + " take one down, pass it around, " + (x-1) + " bottles of beer on the wall"
-    end
-  end
-
-  x = x - 1
+    retn "" + x + " bottle" + s + " of beer on the wall, " + x + " bottle" + s + " of beer,"
+        + " take one down, pass it around, " + (x-1) + " bottle" + s2 + " of beer on the wall"
 end
+
