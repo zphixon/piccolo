@@ -5,37 +5,42 @@
 //! Index means the index in the chunk's constant table, and slot means the
 //! index from the bottom of the call frame on the [`Machine`] stack.
 //!
-//! | Opcode            | Operands    | Byte   |
-//! |-------------------|-------------|--------|
-//! | `Pop`             |             | `0x00` |
-//! | `Return`          |             | `0x01` |
-//! |                   |             |        |
-//! | `Constant`        | index       | `0x02` |
-//! | `Nil`             |             | `0x03` |
-//! | `True`            |             | `0x04` |
-//! | `False`           |             | `0x05` |
-//! |                   |             |        |
-//! | `Negate`          |             | `0x06` |
-//! | `Not`             |             | `0x07` |
-//! | `Add`             |             | `0x08` |
-//! | `Subtract`        |             | `0x09` |
-//! | `Multiply`        |             | `0x0a` |
-//! | `Divide`          |             | `0x0b` |
-//! | `Modulo`          |             | `0x0c` |
-//! |                   |             |        |
-//! | `Equal`           |             | `0x0d` |
-//! | `Greater`         |             | `0x0e` |
-//! | `Less`            |             | `0x0f` |
-//! | `GreaterEqual`    |             | `0x10` |
-//! | `LessEqual`       |             | `0x11` |
-//! |                   |             |        |
-//! | `GetLocal`        | slot        | `0x12` |
-//! | `SetLocal`        | slot        | `0x13` |
-//! | `GetGlobal`       | index       | `0x14` |
-//! | `SetGlobal`       | index       | `0x15` |
-//! | `DeclareGlobal`   | index       | `0x16` |
-//! |                   |             |        |
-//! | `Assert`          |             | `0xff` |
+//! | Opcode            | Operands                  | Byte   |
+//! |-------------------|---------------------------|--------|
+//! | `Pop`             |                           | `0x00` |
+//! | `Return`          |                           | `0x01` |
+//! | <b>Constants</b>  |                           |        |
+//! | `Constant`        | index into constant table | `0x02` |
+//! | `Nil`             |                           | `0x03` |
+//! | `True`            |                           | `0x04` |
+//! | `False`           |                           | `0x05` |
+//! | <b>Math</b>       |                           |        |
+//! | `Negate`          |                           | `0x06` |
+//! | `Not`             |                           | `0x07` |
+//! | `Add`             |                           | `0x08` |
+//! | `Subtract`        |                           | `0x09` |
+//! | `Multiply`        |                           | `0x0a` |
+//! | `Divide`          |                           | `0x0b` |
+//! | `Modulo`          |                           | `0x0c` |
+//! | <b>Comparison</b> |                           |        |
+//! | `Equal`           |                           | `0x0d` |
+//! | `Greater`         |                           | `0x0e` |
+//! | `Less`            |                           | `0x0f` |
+//! | `GreaterEqual`    |                           | `0x10` |
+//! | `LessEqual`       |                           | `0x11` |
+//! | <b>Variables</b>  |                           |        |
+//! | `GetLocal`        | slot on stack             | `0x12` |
+//! | `SetLocal`        | slot on stack             | `0x13` |
+//! | `GetGlobal`       | index into constant table | `0x14` |
+//! | `SetGlobal`       | index into constant table | `0x15` |
+//! | `DeclareGlobal`   | index into constant table | `0x16` |
+//! | <b>Jumps</b>      |                           |        |
+//! | `Jump`            | forward offset            | `0x17` |
+//! | `JumpFalse`       | forward offset            | `0x18` |
+//! | `JumpTrue`        | forward offset            | `0x19` |
+//! | `Loop`            | backward offset           | `0x1A` |
+//! | <b>Misc</b>       |                           |        |
+//! | `Assert`          |                           | `0xff` |
 //!
 //! [`Machine`]: ../vm/struct.Machine.html
 
