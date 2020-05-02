@@ -394,14 +394,22 @@ impl StmtVisitor for Emitter {
         end: &Token,
     ) -> Self::Output {
         trace!("{}: while", while_.line);
-        cond.accept(self)?;
+        // calculate condition
         let loop_start = self.chunk.data.len();
+        cond.accept(self)?;
+
+        // jump over the loop if it's false, pop if not
         let exit_jump = self.chunk.write_jump(Opcode::JumpFalse, while_.line);
         self.chunk.write_u8(Opcode::Pop, while_.line);
+
         self.visit_block(end, body)?;
-        let offset = self.chunk.data.len() - loop_start + 2;
+
+        // go back to the condition
+        let offset = self.chunk.data.len() - loop_start + 3; // TODO: the 3 doesn't feel correct but it is...
         self.chunk
             .write_arg_u16(Opcode::Loop, offset as u16, end.line);
+
+        // pop the condition
         self.chunk.patch_jump(exit_jump);
         self.chunk.write_u8(Opcode::Pop, end.line);
         Ok(())
