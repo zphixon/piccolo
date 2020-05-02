@@ -1,0 +1,23 @@
+c =: 0
+while c < 3 do
+  c = c + 1
+end
+assert c == 3
+
+a =: 0
+while a < 3 do
+  a = a + 1
+end
+assert a == 3
+
+while false do
+  if true do
+    assert false
+  else
+    assert false
+  end
+end
+
+while false do
+  while true do end
+end
