@@ -14,7 +14,7 @@ pub fn parse<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<Piccolo
     while scanner.peek_token(0)?.kind != TokenKind::Eof {
         trace!("statement");
 
-        match declaration(scanner) {
+        match statement(scanner) {
             Ok(stmt) => ast.push(stmt),
             Err(e) => errors.push(e),
         }
@@ -27,7 +27,7 @@ pub fn parse<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<Piccolo
     }
 }
 
-fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+fn statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     if scanner.peek_token(1)?.kind == TokenKind::Assign {
         trace!("declaration, declare");
 
@@ -124,7 +124,7 @@ fn block_until_else_or_end<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>
         && scanner.peek_token(0)?.kind != TokenKind::Else
     {
         trace!("declaration in block until else");
-        stmts.push(declaration(scanner)?);
+        stmts.push(statement(scanner)?);
     }
 
     Ok(stmts)
@@ -135,7 +135,7 @@ fn block<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, PiccoloError> {
 
     while scanner.peek_token(0)?.kind != TokenKind::End {
         trace!("declaration in block");
-        stmts.push(declaration(scanner)?);
+        stmts.push(statement(scanner)?);
     }
 
     Ok(stmts)
