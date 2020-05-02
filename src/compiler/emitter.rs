@@ -110,6 +110,18 @@ impl Emitter {
             .line(name.line))
         }
     }
+
+    fn begin_scope(&mut self) {
+        self.scope_depth += 1;
+    }
+
+    fn end_scope(&mut self, line: usize) {
+        self.scope_depth -= 1;
+        while !self.locals.is_empty() && self.locals[self.locals.len() - 1].1 > self.scope_depth {
+            self.chunk.write_u8(Opcode::Pop, line);
+            self.locals.pop().unwrap();
+        }
+    }
 }
 
 impl ExprVisitor for Emitter {
@@ -289,19 +301,15 @@ impl StmtVisitor for Emitter {
 
     fn visit_block(&mut self, end: &Token, body: &[Stmt]) -> Self::Output {
         trace!("{}: block", end.line);
-        self.scope_depth += 1;
+        self.begin_scope();
         for stmt in body {
             stmt.accept(self)?;
         }
-        self.scope_depth -= 1;
-        while !self.locals.is_empty() && self.locals[self.locals.len() - 1].1 > self.scope_depth {
-            self.chunk.write_u8(Opcode::Pop, end.line);
-            self.locals.pop().unwrap();
-        }
+        self.end_scope(end.line);
         Ok(())
     }
 
-    fn visit_declaration(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
+    fn visit_declaration(&mut self, name: &Token, _op: &Token, value: &Expr) -> Self::Output {
         trace!("{}: declare {}", name.line, name.lexeme);
         value.accept(self)?;
         if self.scope_depth > 0 {
@@ -423,14 +431,16 @@ impl StmtVisitor for Emitter {
 
     fn visit_for(
         &mut self,
-        _name: &Token,
-        _init: &Expr,
-        _cond: &Expr,
-        _inc: &Stmt,
-        _body: &[Stmt],
+        name: &Token,
+        init: &Expr,
+        cond: &Expr,
+        inc: &Stmt,
+        body: &[Stmt],
+        end: &Token,
     ) -> Self::Output {
-        trace!("{}: for {}", _name.line, _name.lexeme);
-        todo!("visit_for")
+        trace!("{}: for {}", name.line, name.lexeme);
+        let condition = self.chunk.data.len();
+        Ok(())
     }
 
     fn visit_func(

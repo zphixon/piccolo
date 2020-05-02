@@ -137,6 +137,7 @@ impl StmtVisitor for AstPrinter {
         cond: &Expr,
         inc: &Stmt,
         body: &[Stmt],
+        _end: &Token,
     ) -> String {
         let s = format!(
             "for {} = {}, {}, {}",
@@ -508,6 +509,7 @@ pub trait StmtVisitor {
         cond: &Expr,
         inc: &Stmt,
         body: &[Stmt],
+        end: &Token,
     ) -> Self::Output;
 
     fn visit_func(
@@ -577,6 +579,7 @@ pub enum Stmt<'a> {
         cond: Expr<'a>,
         inc: Box<Stmt<'a>>,
         body: Vec<Stmt<'a>>,
+        end: Token<'a>,
     },
     Func {
         name: Token<'a>,
@@ -616,8 +619,8 @@ impl StmtAccept for Stmt<'_> {
                 => v.visit_if(if_, cond, do_, then_block, else_.as_ref(), else_block.as_ref(), end),
             Stmt::While { while_, cond, body, end }
                 => v.visit_while(while_, cond, body, end),
-            Stmt::For { name, init, cond, inc, body }
-                => v.visit_for(name, init, cond, inc.as_ref(), body),
+            Stmt::For { name, init, cond, inc, body, end }
+                => v.visit_for(name, init, cond, inc.as_ref(), body, end),
             Stmt::Func { name, args, arity, body, method }
                 => v.visit_func(name, args, *arity, body, *method),
             Stmt::Retn { retn, value }

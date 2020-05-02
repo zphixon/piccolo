@@ -163,7 +163,7 @@ fn for_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
 
     consume(scanner, TokenKind::Do)?;
     let body = block(scanner)?;
-    consume(scanner, TokenKind::End)?;
+    let end = consume(scanner, TokenKind::End)?;
 
     Ok(Stmt::For {
         name,
@@ -171,6 +171,7 @@ fn for_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
         cond,
         inc,
         body,
+        end,
     })
 }
 
