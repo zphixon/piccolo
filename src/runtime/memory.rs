@@ -13,7 +13,7 @@ use crate::{Constant, ErrorKind, Object, PiccoloError, Value};
 /// are two levels of indirection, the negative impact on performance comes with static memory
 /// safety guarantees.
 ///
-/// [`Object`]: ../value/trait.Object.html
+/// [`Object`]: ../object/trait.Object.html
 pub struct Heap {
     memory: Vec<Option<Box<dyn Object>>>,
     alloc_after: usize,

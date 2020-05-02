@@ -1,3 +1,5 @@
+//! Contains `Object` and its implementors.
+
 use crate::runtime::value::Value;
 
 use downcast_rs::Downcast;
