@@ -235,7 +235,7 @@ impl ExprVisitor for Emitter {
 
         lhs.accept(self)?;
 
-        let short = self.chunk.write_jump(jump_op, op.line);
+        let short = self.chunk.start_jump(jump_op, op.line);
         self.chunk.write_u8(Opcode::Pop, op.line);
 
         rhs.accept(self)?;
@@ -375,7 +375,7 @@ impl StmtVisitor for Emitter {
         cond.accept(self)?;
 
         // jump over the do block if the condition is false
-        let jump_else = self.chunk.write_jump(Opcode::JumpFalse, if_.line);
+        let jump_else = self.chunk.start_jump(Opcode::JumpFalse, if_.line);
 
         // pop the condition, it's still on the stack
         self.chunk.write_u8(Opcode::Pop, do_.line);
@@ -384,7 +384,7 @@ impl StmtVisitor for Emitter {
         // if there's an else block, jump over it
         let jump_end = self
             .chunk
-            .write_jump(Opcode::Jump, else_.unwrap_or(end).line);
+            .start_jump(Opcode::JumpForward, else_.unwrap_or(end).line);
 
         // jump here if the condition is false
         self.chunk.patch_jump(jump_else);
@@ -413,7 +413,7 @@ impl StmtVisitor for Emitter {
         cond.accept(self)?;
 
         // jump over the loop if it's false, pop if not
-        let exit_jump = self.chunk.write_jump(Opcode::JumpFalse, while_.line);
+        let exit_jump = self.chunk.start_jump(Opcode::JumpFalse, while_.line);
         self.chunk.write_u8(Opcode::Pop, while_.line);
 
         self.visit_block(end, body)?;
@@ -421,7 +421,7 @@ impl StmtVisitor for Emitter {
         // go back to the condition
         let offset = self.chunk.data.len() - loop_start + 3; // TODO: the 3 doesn't feel correct but it is...
         self.chunk
-            .write_arg_u16(Opcode::Loop, offset as u16, end.line);
+            .write_arg_u16(Opcode::JumpBack, offset as u16, end.line);
 
         // pop the condition
         self.chunk.patch_jump(exit_jump);
@@ -445,14 +445,15 @@ impl StmtVisitor for Emitter {
 
         let start_offset = self.chunk.data.len();
         cond.accept(self)?;
-        let end_jump = self.chunk.write_jump(Opcode::JumpFalse, for_.line);
+        let end_jump = self.chunk.start_jump(Opcode::JumpFalse, for_.line);
         self.chunk.write_u8(Opcode::Pop, for_.line);
 
         self.visit_block(end, body)?;
         inc.accept(self)?;
 
         let offset = self.chunk.data.len() - start_offset + 3;
-        self.chunk.write_arg_u16(Opcode::Loop, offset as u16, end.line);
+        self.chunk
+            .write_arg_u16(Opcode::JumpBack, offset as u16, end.line);
 
         self.chunk.patch_jump(end_jump);
         self.chunk.write_u8(Opcode::Pop, end.line);
