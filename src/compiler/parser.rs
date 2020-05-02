@@ -57,7 +57,7 @@ fn assign<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     trace!("assign");
 
     let name = consume(scanner, TokenKind::Identifier)?;
-    let op = scanner.next_token()?;
+    let op = consume(scanner, TokenKind::Assign)?;
     let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
 
     Ok(Stmt::Assignment { name, op, value })
@@ -67,7 +67,7 @@ fn declare<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     trace!("declare");
 
     let name = consume(scanner, TokenKind::Identifier)?;
-    let op = scanner.next_token()?;
+    let op = consume(scanner, TokenKind::Declare)?;
     let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
 
     Ok(Stmt::Declaration { name, op, value })
@@ -159,9 +159,11 @@ fn for_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     let cond = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
 
     consume(scanner, TokenKind::Comma)?;
-    let inc = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
+    let inc = Box::new(assign(scanner)?);
 
+    consume(scanner, TokenKind::Do)?;
     let body = block(scanner)?;
+    consume(scanner, TokenKind::End)?;
 
     Ok(Stmt::For {
         name,
