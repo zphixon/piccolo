@@ -29,85 +29,21 @@ pub fn parse<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<Piccolo
 
 fn statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     if scanner.peek_token(1)?.kind == TokenKind::Assign {
-        trace!("declaration, declare");
-
-        let name = consume(scanner, TokenKind::Identifier)?;
-        let op = scanner.next_token()?;
-        let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
-
-        Ok(Stmt::Assignment { name, op, value })
+        assign(scanner)
     } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
-        trace!("declaration, declare");
-
-        let name = consume(scanner, TokenKind::Identifier)?;
-        let op = scanner.next_token()?;
-        let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
-
-        Ok(Stmt::Declaration { name, op, value })
+        declare(scanner)
     } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
-        trace!("declaration, retn");
-
-        let retn = scanner.next_token()?;
-        let value = Some(expr_bp(scanner, BindingPower::ExpressionBoundary)?);
-
-        Ok(Stmt::Retn { retn, value })
+        retn(scanner)
     } else if scanner.peek_token(0)?.kind == TokenKind::Assert {
-        trace!("declaration, assert");
-
-        let assert = scanner.next_token()?;
-        let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
-
-        Ok(Stmt::Assert { assert, value })
+        assert(scanner)
     } else if scanner.peek_token(0)?.kind == TokenKind::Do {
-        trace!("declaration, do");
-
-        scanner.next_token()?;
-        let body = block(scanner)?;
-        let end = consume(scanner, TokenKind::End)?;
-
-        Ok(Stmt::Block { end, body })
+        do_(scanner)
     } else if scanner.peek_token(0)?.kind == TokenKind::If {
-        trace!("declaration, if");
-
-        let if_ = scanner.next_token()?;
-        let cond = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
-        let do_ = consume(scanner, TokenKind::Do)?;
-        let then_block = block_until_else_or_end(scanner)?;
-
-        let (else_, else_block) = if scanner.peek_token(0)?.kind == TokenKind::Else {
-            (
-                Some(consume(scanner, TokenKind::Else)?),
-                Some(block(scanner)?),
-            )
-        } else {
-            (None, None)
-        };
-
-        let end = consume(scanner, TokenKind::End)?;
-
-        Ok(Stmt::If {
-            if_,
-            cond,
-            do_,
-            then_block,
-            else_,
-            else_block,
-            end,
-        })
+        if_(scanner)
     } else if scanner.peek_token(0)?.kind == TokenKind::While {
-        trace!("declaration, while");
-        let while_ = scanner.next_token()?;
-        let cond = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
-        consume(scanner, TokenKind::Do)?;
-        let body = block(scanner)?;
-        let end = consume(scanner, TokenKind::End)?;
-
-        Ok(Stmt::While {
-            while_,
-            cond,
-            body,
-            end,
-        })
+        while_(scanner)
+    } else if scanner.peek_token(0)?.kind == TokenKind::For {
+        for_(scanner)
     } else {
         trace!("declaration, expr");
 
@@ -115,6 +51,125 @@ fn statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
 
         Ok(Stmt::Expr { expr })
     }
+}
+
+fn assign<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    trace!("assign");
+
+    let name = consume(scanner, TokenKind::Identifier)?;
+    let op = scanner.next_token()?;
+    let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
+
+    Ok(Stmt::Assignment { name, op, value })
+}
+
+fn declare<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    trace!("declare");
+
+    let name = consume(scanner, TokenKind::Identifier)?;
+    let op = scanner.next_token()?;
+    let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
+
+    Ok(Stmt::Declaration { name, op, value })
+}
+
+fn retn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    trace!("retn");
+
+    let retn = scanner.next_token()?;
+    let value = Some(expr_bp(scanner, BindingPower::ExpressionBoundary)?);
+
+    Ok(Stmt::Retn { retn, value })
+}
+
+fn assert<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    trace!("assert");
+
+    let assert = scanner.next_token()?;
+    let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
+
+    Ok(Stmt::Assert { assert, value })
+}
+
+fn do_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    trace!("do");
+
+    scanner.next_token()?;
+    let body = block(scanner)?;
+    let end = consume(scanner, TokenKind::End)?;
+
+    Ok(Stmt::Block { end, body })
+}
+
+fn if_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    trace!("if");
+
+    let if_ = scanner.next_token()?;
+    let cond = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
+    let do_ = consume(scanner, TokenKind::Do)?;
+    let then_block = block_until_else_or_end(scanner)?;
+
+    let (else_, else_block) = if scanner.peek_token(0)?.kind == TokenKind::Else {
+        (
+            Some(consume(scanner, TokenKind::Else)?),
+            Some(block(scanner)?),
+        )
+    } else {
+        (None, None)
+    };
+
+    let end = consume(scanner, TokenKind::End)?;
+
+    Ok(Stmt::If {
+        if_,
+        cond,
+        do_,
+        then_block,
+        else_,
+        else_block,
+        end,
+    })
+}
+
+fn while_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    trace!("while");
+    let while_ = scanner.next_token()?;
+    let cond = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
+    consume(scanner, TokenKind::Do)?;
+    let body = block(scanner)?;
+    let end = consume(scanner, TokenKind::End)?;
+
+    Ok(Stmt::While {
+        while_,
+        cond,
+        body,
+        end,
+    })
+}
+
+fn for_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    trace!("for");
+    scanner.next_token()?;
+
+    let name = consume(scanner, TokenKind::Identifier)?;
+    consume(scanner, TokenKind::Declare)?;
+    let init = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
+
+    consume(scanner, TokenKind::Comma)?;
+    let cond = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
+
+    consume(scanner, TokenKind::Comma)?;
+    let inc = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
+
+    let body = block(scanner)?;
+
+    Ok(Stmt::For {
+        name,
+        init,
+        cond,
+        inc,
+        body,
+    })
 }
 
 fn block_until_else_or_end<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, PiccoloError> {
