@@ -28,16 +28,22 @@ pub fn parse<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<Piccolo
 }
 
 fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    if scanner.peek_token(1)?.kind == TokenKind::Assign
-        || scanner.peek_token(1)?.kind == TokenKind::Declare
-    {
-        trace!("declaration, assign/declare");
+    if scanner.peek_token(1)?.kind == TokenKind::Assign {
+        trace!("declaration, declare");
 
         let name = consume(scanner, TokenKind::Identifier)?;
         let op = scanner.next_token()?;
         let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
 
         Ok(Stmt::Assignment { name, op, value })
+    } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
+        trace!("declaration, declare");
+
+        let name = consume(scanner, TokenKind::Identifier)?;
+        let op = scanner.next_token()?;
+        let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
+
+        Ok(Stmt::Declaration { name, op, value })
     } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
         trace!("declaration, retn");
 

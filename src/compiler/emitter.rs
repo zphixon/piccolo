@@ -301,48 +301,54 @@ impl StmtVisitor for Emitter {
         Ok(())
     }
 
-    fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
-        trace!("{}: assign {} {}", name.line, op.lexeme, name.lexeme);
+    fn visit_declaration(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
+        trace!("{}: declare {}", name.line, name.lexeme);
         value.accept(self)?;
         if self.scope_depth > 0 {
-            // inside of a block, declaration creates local variables
-            if op.kind == TokenKind::Assign {
-                if let Some(idx) = self.get_local_slot(name.lexeme) {
-                    // local variable exists, reassign it
-                    self.chunk.write_arg_u16(Opcode::SetLocal, idx, op.line);
-                } else {
-                    // reassign global variable, checking for existence at runtime
-                    let i = self.get_ident(name)?;
-                    self.chunk.write_arg_u16(Opcode::SetGlobal, i, name.line);
-                }
-            } else if op.kind == TokenKind::Declare {
-                // if there exists some local with this name
-                if let Some(idx) = self.get_local_depth(name.lexeme) {
-                    if idx != self.scope_depth {
-                        // create a new local if we're in a different scope
-                        self.locals.push((name.lexeme.to_owned(), self.scope_depth));
-                    } else {
-                        // error if we're in the same scope
-                        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-                            .line(name.line)
-                            .msg_string(format!(
-                                "cannot shadow local variable '{}'",
-                                self.locals[idx as usize - 1].0
-                            )));
-                    }
-                } else {
-                    // create a new local with this name
+            // if there exists some local with this name
+            if let Some(idx) = self.get_local_depth(name.lexeme) {
+                if idx != self.scope_depth {
+                    // create a new local if we're in a different scope
                     self.locals.push((name.lexeme.to_owned(), self.scope_depth));
+                } else {
+                    // error if we're in the same scope
+                    return Err(PiccoloError::new(ErrorKind::SyntaxError)
+                        .line(name.line)
+                        .msg_string(format!(
+                            "variable with name '{}' already exists",
+                            self.locals[idx as usize - 1].0
+                        )));
                 }
+            } else {
+                // create a new local with this name
+                self.locals.push((name.lexeme.to_owned(), self.scope_depth));
             }
-        } else if op.kind == TokenKind::Assign {
-            let idx = self.get_ident(name)?;
-            self.chunk.write_arg_u16(Opcode::SetGlobal, idx, name.line);
-        } else if op.kind == TokenKind::Declare {
+        } else {
             let idx = self.make_ident(name.lexeme);
             self.chunk
                 .write_arg_u16(Opcode::DeclareGlobal, idx, name.line);
         }
+
+        Ok(())
+    }
+
+    fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
+        trace!("{}: assign {}", name.line, name.lexeme);
+        value.accept(self)?;
+        if self.scope_depth > 0 {
+            if let Some(idx) = self.get_local_slot(name.lexeme) {
+                // local variable exists, reassign it
+                self.chunk.write_arg_u16(Opcode::SetLocal, idx, op.line);
+            } else {
+                // reassign global variable, checking for existence at runtime
+                let i = self.get_ident(name)?;
+                self.chunk.write_arg_u16(Opcode::SetGlobal, i, name.line);
+            }
+        } else {
+            let idx = self.get_ident(name)?;
+            self.chunk.write_arg_u16(Opcode::SetGlobal, idx, name.line);
+        }
+
         Ok(())
     }
 

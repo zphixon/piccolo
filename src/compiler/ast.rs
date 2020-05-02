@@ -101,6 +101,10 @@ impl StmtVisitor for AstPrinter {
         self.parenthesize_list("do", None, body)
     }
 
+    fn visit_declaration(&mut self, name: &Token, op: &Token, value: &Expr) -> String {
+        self.parenthesize(&format!("{} {}", op.lexeme, name.lexeme), &[value])
+    }
+
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> String {
         self.parenthesize(&format!("{} {}", op.lexeme, name.lexeme), &[value])
     }
@@ -468,7 +472,10 @@ pub trait StmtVisitor {
     /// Visit a bare block.
     fn visit_block(&mut self, end: &Token, body: &[Stmt]) -> Self::Output;
 
-    /// Visit a variable assignment or declaration.
+    /// Visit a variable declaration.
+    fn visit_declaration(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output;
+
+    /// Visit a variable assignment.
     fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output;
 
     /// Visit an `if-then` statement.
@@ -544,6 +551,11 @@ pub enum Stmt<'a> {
         op: Token<'a>,
         value: Expr<'a>,
     },
+    Declaration {
+        name: Token<'a>,
+        op: Token<'a>,
+        value: Expr<'a>,
+    },
     If {
         if_: Token<'a>,
         cond: Expr<'a>,
@@ -596,6 +608,8 @@ impl StmtAccept for Stmt<'_> {
                 => v.visit_expr(expr),
             Stmt::Block { end, body }
                 => v.visit_block(end, body),
+            Stmt::Declaration { name, op, value }
+                => v.visit_declaration(name, op, value),
             Stmt::Assignment { name, op, value }
                 => v.visit_assignment(name, op, value),
             Stmt::If { if_, cond, do_, then_block, else_, else_block, end }
