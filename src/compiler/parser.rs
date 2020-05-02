@@ -35,21 +35,21 @@ fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
 
         let name = consume(scanner, TokenKind::Identifier)?;
         let op = scanner.next_token()?;
-        let value = expr_bp(scanner, BindingPower::Assignment)?;
+        let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
 
         Ok(Stmt::Assignment { name, op, value })
     } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
         trace!("declaration, retn");
 
         let retn = scanner.next_token()?;
-        let value = Some(expr_bp(scanner, BindingPower::Assignment)?);
+        let value = Some(expr_bp(scanner, BindingPower::ExpressionBoundary)?);
 
         Ok(Stmt::Retn { retn, value })
     } else if scanner.peek_token(0)?.kind == TokenKind::Assert {
         trace!("declaration, assert");
 
         let assert = scanner.next_token()?;
-        let value = expr_bp(scanner, BindingPower::Assignment)?;
+        let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
 
         Ok(Stmt::Assert { assert, value })
     } else if scanner.peek_token(0)?.kind == TokenKind::Do {
@@ -64,7 +64,7 @@ fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
         trace!("declaration, if");
 
         let if_ = scanner.next_token()?;
-        let cond = expr_bp(scanner, BindingPower::Assignment)?;
+        let cond = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
         let do_ = consume(scanner, TokenKind::Do)?;
         let then_block = block_until_else_or_end(scanner)?;
 
@@ -91,7 +91,7 @@ fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
     } else if scanner.peek_token(0)?.kind == TokenKind::While {
         trace!("declaration, while");
         let while_ = scanner.next_token()?;
-        let cond = expr_bp(scanner, BindingPower::Assignment)?;
+        let cond = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
         consume(scanner, TokenKind::Do)?;
         let body = block(scanner)?;
         let end = consume(scanner, TokenKind::End)?;
@@ -105,7 +105,7 @@ fn declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
     } else {
         trace!("declaration, expr");
 
-        let expr = expr_bp(scanner, BindingPower::Assignment)?;
+        let expr = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
 
         Ok(Stmt::Expr { expr })
     }
@@ -148,7 +148,7 @@ fn expr_bp<'a>(scanner: &mut Scanner<'a>, min_bp: BindingPower) -> Result<Expr<'
         }
     } else if lhs_token.kind == TokenKind::LeftParen {
         trace!("grouping");
-        let expr = Box::new(expr_bp(scanner, BindingPower::Assignment)?);
+        let expr = Box::new(expr_bp(scanner, BindingPower::ExpressionBoundary)?);
         let right_paren = consume(scanner, TokenKind::RightParen).map_err(|e| {
             e.msg_string(format!("in expression starting on line {}", lhs_token.line))
         })?;
@@ -182,16 +182,16 @@ fn expr_bp<'a>(scanner: &mut Scanner<'a>, min_bp: BindingPower) -> Result<Expr<'
             break;
         }
 
-        let op_prec = infix_binding_power(op_token.kind);
+        let op_bp = infix_binding_power(op_token.kind);
 
-        if op_prec < min_bp {
+        if op_bp < min_bp {
             trace!("end of infix at {:?}", op_token.kind);
             break;
         }
 
         let op = scanner.next_token()?;
-        let rhs = expr_bp(scanner, op_prec + 1)?;
-        lhs = if matches!(op_prec, BindingPower::LogicalAnd | BindingPower::LogicalOr) {
+        let rhs = expr_bp(scanner, op_bp + 1)?;
+        lhs = if matches!(op_bp, BindingPower::LogicalAnd | BindingPower::LogicalOr) {
             trace!("logical");
             Expr::Logical {
                 lhs: Box::new(lhs),
@@ -296,7 +296,7 @@ macro_rules! prec {
 
 prec!(BindingPower =>
     None = 0,
-    Assignment = 1,
+    ExpressionBoundary = 1,
     LogicalOr = 2,
     LogicalAnd = 3,
     Equality = 4,
