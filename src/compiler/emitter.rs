@@ -419,9 +419,7 @@ impl StmtVisitor for Emitter {
         self.visit_block(end, body)?;
 
         // go back to the condition
-        let offset = self.chunk.data.len() - loop_start + 3; // TODO: the 3 doesn't feel correct but it is...
-        self.chunk
-            .write_arg_u16(Opcode::JumpBack, offset as u16, end.line);
+        self.chunk.write_jump_back(loop_start, end.line);
 
         // pop the condition
         self.chunk.patch_jump(exit_jump);
@@ -451,9 +449,7 @@ impl StmtVisitor for Emitter {
         self.visit_block(end, body)?;
         inc.accept(self)?;
 
-        let offset = self.chunk.data.len() - start_offset + 3;
-        self.chunk
-            .write_arg_u16(Opcode::JumpBack, offset as u16, end.line);
+        self.chunk.write_jump_back(start_offset, end.line);
 
         self.chunk.patch_jump(end_jump);
         self.chunk.write_u8(Opcode::Pop, end.line);
