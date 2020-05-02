@@ -149,11 +149,9 @@ fn while_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
 
 fn for_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     trace!("for");
-    scanner.next_token()?;
+    let for_ = scanner.next_token()?;
 
-    let name = consume(scanner, TokenKind::Identifier)?;
-    consume(scanner, TokenKind::Declare)?;
-    let init = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
+    let init = Box::new(declare(scanner)?);
 
     consume(scanner, TokenKind::Comma)?;
     let cond = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
@@ -166,7 +164,7 @@ fn for_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     let end = consume(scanner, TokenKind::End)?;
 
     Ok(Stmt::For {
-        name,
+        for_,
         init,
         cond,
         inc,
