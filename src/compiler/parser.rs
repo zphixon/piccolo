@@ -106,7 +106,7 @@ fn if_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
 
     let if_ = scanner.next_token()?;
     let cond = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
-    let do_ = consume(scanner, TokenKind::Do)?;
+    consume(scanner, TokenKind::Do)?;
     let then_block = block_until_else_or_end(scanner)?;
 
     let (else_, else_block) = if scanner.peek_token(0)?.kind == TokenKind::Else {
@@ -123,7 +123,6 @@ fn if_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     Ok(Stmt::If {
         if_,
         cond,
-        do_,
         then_block,
         else_,
         else_block,
