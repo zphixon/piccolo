@@ -393,11 +393,7 @@ impl Machine {
 
                 Opcode::Jump => {
                     let offset = self.read_short(chunk);
-                    debug!(
-                        "jump ip {:x} -> {:x}",
-                        self.ip - 1,
-                        self.ip + 2 + offset as usize
-                    );
+                    debug!("jump ip {:x} -> {:x}", self.ip, self.ip + offset as usize);
                     self.ip += offset as usize;
                 }
                 Opcode::JumpFalse => {
@@ -405,7 +401,7 @@ impl Machine {
                     if !self.peek_back(0, chunk)?.is_truthy() {
                         debug!(
                             "jump false ip {:x} -> {:x}",
-                            self.ip - 2,
+                            self.ip,
                             self.ip + offset as usize
                         );
                         self.ip += offset as usize;
@@ -416,7 +412,7 @@ impl Machine {
                     if self.peek_back(0, chunk)?.is_truthy() {
                         debug!(
                             "jump true ip {:x} -> {:x}",
-                            self.ip - 2,
+                            self.ip,
                             self.ip + offset as usize
                         );
                         self.ip += offset as usize;
@@ -424,11 +420,7 @@ impl Machine {
                 }
                 Opcode::Loop => {
                     let offset = self.read_short(chunk);
-                    debug!(
-                        "loop ip {:x} -> {:x}",
-                        self.ip,
-                        self.ip + 2 - offset as usize
-                    );
+                    debug!("loop ip {:x} -> {:x}", self.ip, self.ip - offset as usize);
                     self.ip -= offset as usize;
                 }
 
