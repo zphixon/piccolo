@@ -431,15 +431,33 @@ impl StmtVisitor for Emitter {
 
     fn visit_for(
         &mut self,
-        name: &Token,
-        init: &Expr,
+        for_: &Token,
+        init: &Stmt,
         cond: &Expr,
         inc: &Stmt,
         body: &[Stmt],
         end: &Token,
     ) -> Self::Output {
-        trace!("{}: for {}", name.line, name.lexeme);
-        let condition = self.chunk.data.len();
+        trace!("{}: for {}", for_.line, for_.lexeme);
+
+        self.begin_scope();
+        init.accept(self)?;
+
+        let start_offset = self.chunk.data.len();
+        cond.accept(self)?;
+        let end_jump = self.chunk.write_jump(Opcode::JumpFalse, for_.line);
+        self.chunk.write_u8(Opcode::Pop, for_.line);
+
+        self.visit_block(end, body)?;
+        inc.accept(self)?;
+
+        let offset = self.chunk.data.len() - start_offset + 3;
+        self.chunk.write_arg_u16(Opcode::Loop, offset as u16, end.line);
+
+        self.chunk.patch_jump(end_jump);
+        self.chunk.write_u8(Opcode::Pop, end.line);
+
+        self.end_scope(end.line);
         Ok(())
     }
 
