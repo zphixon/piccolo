@@ -391,7 +391,7 @@ impl Machine {
                     }
                 }
 
-                Opcode::Jump => {
+                Opcode::JumpForward => {
                     let offset = self.read_short(chunk);
                     debug!("jump ip {:x} -> {:x}", self.ip, self.ip + offset as usize);
                     self.ip += offset as usize;
@@ -418,7 +418,7 @@ impl Machine {
                         self.ip += offset as usize;
                     }
                 }
-                Opcode::Loop => {
+                Opcode::JumpBack => {
                     let offset = self.read_short(chunk);
                     debug!("loop ip {:x} -> {:x}", self.ip, self.ip - offset as usize);
                     self.ip -= offset as usize;

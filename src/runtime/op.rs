@@ -101,10 +101,10 @@ opcodes!(Opcode =>
     SetGlobal       = 0x15,
     DeclareGlobal   = 0x16,
 
-    Jump            = 0x17,
+    JumpForward     = 0x17,
     JumpFalse       = 0x18,
     JumpTrue        = 0x19,
-    Loop            = 0x1A,
+    JumpBack        = 0x1A,
 
     Assert          = 0xff,
 );
@@ -117,10 +117,10 @@ pub(crate) fn op_len(op: Opcode) -> usize {
         | Opcode::GetGlobal
         | Opcode::SetGlobal
         | Opcode::DeclareGlobal
-        | Opcode::Jump
+        | Opcode::JumpForward
         | Opcode::JumpFalse
         | Opcode::JumpTrue
-        | Opcode::Loop => 3,
+        | Opcode::JumpBack => 3,
         _ => 1,
     }
 }

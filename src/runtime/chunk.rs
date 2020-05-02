@@ -33,7 +33,7 @@ impl Chunk {
         self.write_u16(arg, line);
     }
 
-    pub(crate) fn write_jump(&mut self, op: Opcode, line: usize) -> usize {
+    pub(crate) fn start_jump(&mut self, op: Opcode, line: usize) -> usize {
         trace!("write jump to idx {:x}", self.data.len());
         self.write_u8(op, line);
         self.write_u8(Opcode::Assert, line);
@@ -149,11 +149,11 @@ impl Chunk {
                 let idx = self.read_short(offset + 1);
                 format!("g{:04x} ({:?})", idx, self.constants[idx as usize])
             }
-            Opcode::Jump | Opcode::JumpFalse | Opcode::JumpTrue => {
+            Opcode::JumpForward | Opcode::JumpFalse | Opcode::JumpTrue => {
                 let idx = self.read_short(offset + 1);
                 format!("+{:04x}", idx)
             }
-            Opcode::Loop => {
+            Opcode::JumpBack => {
                 let idx = self.read_short(offset + 1);
                 format!("-{:04x}", idx)
             }
