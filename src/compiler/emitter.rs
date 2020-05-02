@@ -415,7 +415,14 @@ impl StmtVisitor for Emitter {
         Ok(())
     }
 
-    fn visit_for(&mut self, _name: &Token, _iter: &Expr, _body: &[Stmt]) -> Self::Output {
+    fn visit_for(
+        &mut self,
+        _name: &Token,
+        _init: &Expr,
+        _cond: &Expr,
+        _inc: &Expr,
+        _body: &[Stmt],
+    ) -> Self::Output {
         trace!("{}: for {}", _name.line, _name.lexeme);
         todo!("visit_for")
     }

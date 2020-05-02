@@ -126,8 +126,22 @@ impl StmtVisitor for AstPrinter {
         self.parenthesize_list("while", Some(cond), body)
     }
 
-    fn visit_for(&mut self, name: &Token, iter: &Expr, body: &[Stmt]) -> String {
-        self.parenthesize_list(&format!("for {} in ", name.lexeme), Some(iter), body)
+    fn visit_for(
+        &mut self,
+        name: &Token,
+        init: &Expr,
+        cond: &Expr,
+        inc: &Expr,
+        body: &[Stmt],
+    ) -> String {
+        let s = format!(
+            "for {} = {}, {}, {}",
+            name.lexeme,
+            self.visit_expr(init),
+            self.visit_expr(cond),
+            self.visit_expr(inc)
+        );
+        self.parenthesize_list(&s, None, body)
     }
 
     fn visit_func(
@@ -480,7 +494,14 @@ pub trait StmtVisitor {
     ) -> Self::Output;
 
     /// Visit a `for` loop.
-    fn visit_for(&mut self, name: &Token, iter: &Expr, body: &[Stmt]) -> Self::Output;
+    fn visit_for(
+        &mut self,
+        name: &Token,
+        init: &Expr,
+        cond: &Expr,
+        inc: &Expr,
+        body: &[Stmt],
+    ) -> Self::Output;
 
     fn visit_func(
         &mut self,
@@ -540,7 +561,9 @@ pub enum Stmt<'a> {
     },
     For {
         name: Token<'a>,
-        iter: Expr<'a>,
+        init: Expr<'a>,
+        cond: Expr<'a>,
+        inc: Expr<'a>,
         body: Vec<Stmt<'a>>,
     },
     Func {
@@ -579,8 +602,8 @@ impl StmtAccept for Stmt<'_> {
                 => v.visit_if(if_, cond, do_, then_block, else_.as_ref(), else_block.as_ref(), end),
             Stmt::While { while_, cond, body, end }
                 => v.visit_while(while_, cond, body, end),
-            Stmt::For { name, iter, body }
-                => v.visit_for(name, iter, body),
+            Stmt::For { name, init, cond, inc, body }
+                => v.visit_for(name, init, cond, inc, body),
             Stmt::Func { name, args, arity, body, method }
                 => v.visit_func(name, args, *arity, body, *method),
             Stmt::Retn { retn, value }
