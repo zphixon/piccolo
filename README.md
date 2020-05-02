@@ -20,7 +20,7 @@ fn main() {
     piccolo::interpret(r#"
         # lifetime 'prog
 
-        function closes() do
+        fn closes() do
             # let x: &'src str = "hello "; // a.k.a 'static
             # let y: &'src str = "world!"; // a.k.a 'static
             x =: "hello "
@@ -53,13 +53,9 @@ fn main() {
 ```
 
 ### Design decisions that have been made
-* Explicit constructors using slightly modified
+* Explicit constructors using slightly modified syntax
     * `foo =: Foo(x=3, y=4)`
     * Don't use the `new` keyword
-* Algol-style loop constructs
-    * `for i from 0 to 10 by 1 while condition do end`
-    * `for item in iterator do end`
-    * `for index, item in iterator do end`
 * String indexing
     * `.len()` method that returns byte length
     * `.egc_len()` method that returns extended grapheme cluster length
