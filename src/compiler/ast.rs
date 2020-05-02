@@ -113,7 +113,6 @@ impl StmtVisitor for AstPrinter {
         &mut self,
         _if_: &Token,
         cond: &Expr,
-        _do_: &Token,
         then_block: &[Stmt],
         _else_: Option<&Token>,
         else_block: Option<&Vec<Stmt>>,
@@ -484,7 +483,6 @@ pub trait StmtVisitor {
         &mut self,
         if_: &Token,
         cond: &Expr,
-        do_: &Token,
         then_block: &[Stmt],
         else_: Option<&Token>,
         else_block: Option<&Vec<Stmt>>,
@@ -560,7 +558,6 @@ pub enum Stmt<'a> {
     If {
         if_: Token<'a>,
         cond: Expr<'a>,
-        do_: Token<'a>,
         then_block: Vec<Stmt<'a>>,
         else_: Option<Token<'a>>,
         else_block: Option<Vec<Stmt<'a>>>,
@@ -614,8 +611,8 @@ impl StmtAccept for Stmt<'_> {
                 => v.visit_declaration(name, op, value),
             Stmt::Assignment { name, op, value }
                 => v.visit_assignment(name, op, value),
-            Stmt::If { if_, cond, do_, then_block, else_, else_block, end }
-                => v.visit_if(if_, cond, do_, then_block, else_.as_ref(), else_block.as_ref(), end),
+            Stmt::If { if_, cond, then_block, else_, else_block, end }
+                => v.visit_if(if_, cond, then_block, else_.as_ref(), else_block.as_ref(), end),
             Stmt::While { while_, cond, body, end }
                 => v.visit_while(while_, cond, body, end),
             Stmt::For { for_, init, cond, inc, body, end }

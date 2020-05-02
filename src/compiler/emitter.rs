@@ -364,7 +364,6 @@ impl StmtVisitor for Emitter {
         &mut self,
         if_: &Token,
         cond: &Expr,
-        do_: &Token,
         then_block: &[Stmt],
         else_: Option<&Token>,
         else_block: Option<&Vec<Stmt>>,
@@ -382,7 +381,9 @@ impl StmtVisitor for Emitter {
             // evaluate the then-block
             self.visit_block(end, then_block)?;
             // skip past the else-block
-            let end_jump = self.chunk.start_jump(Opcode::JumpForward, else_.unwrap().line);
+            let end_jump = self
+                .chunk
+                .start_jump(Opcode::JumpForward, else_.unwrap().line);
 
             // pop the condition
             self.chunk.patch_jump(jump_else);
@@ -404,9 +405,6 @@ impl StmtVisitor for Emitter {
             self.chunk.write_u8(Opcode::Pop, end.line);
             self.chunk.patch_jump(jump_pop);
         }
-
-        // jump here if the condition is true
-        self.chunk.patch_jump(jump_end);
 
         Ok(())
     }
