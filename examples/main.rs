@@ -91,6 +91,7 @@ fn repl() {
         match rl.readline("-- ") {
             Ok(line) => {
                 rl.add_history_entry(&line);
+                rl.save_history(".piccolo_history").unwrap();
 
                 match piccolo::interpret(&line) {
                     Ok(v) => {
@@ -106,5 +107,4 @@ fn repl() {
             _ => break,
         }
     }
-    rl.save_history(".piccolo_history").unwrap();
 }
