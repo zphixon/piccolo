@@ -167,6 +167,14 @@ impl StmtVisitor for AstPrinter {
         self.parenthesize_list(&s, None, body)
     }
 
+    fn visit_break(&mut self, _break: &Token) -> String {
+        String::from("(break)")
+    }
+
+    fn visit_continue(&mut self, _continue: &Token) -> String {
+        String::from("(continue)")
+    }
+
     fn visit_retn(&mut self, retn: &Token, value: Option<&Expr>) -> String {
         self.parenthesize(
             "retn",
@@ -517,6 +525,11 @@ pub trait StmtVisitor {
         body: &[Stmt],
         method: bool,
     ) -> Self::Output;
+
+    fn visit_break(&mut self, break_: &Token) -> Self::Output;
+
+    fn visit_continue(&mut self, continue_: &Token) -> Self::Output;
+
     fn visit_retn(&mut self, retn: &Token, value: Option<&Expr>) -> Self::Output;
     fn visit_assert(&mut self, assert: &Token, value: &Expr) -> Self::Output;
     fn visit_data(
@@ -584,6 +597,14 @@ pub enum Stmt<'a> {
         body: Vec<Stmt<'a>>,
         method: bool,
     },
+    Break {
+        break_: Token<'a>,
+        // label: Token<'a>,
+    },
+    Continue {
+        continue_: Token<'a>,
+        // label: Token<'a>,
+    },
     Retn {
         retn: Token<'a>,
         value: Option<Expr<'a>>,
@@ -619,6 +640,10 @@ impl StmtAccept for Stmt<'_> {
                 => v.visit_for(for_, init.as_ref(), cond, inc.as_ref(), body, end),
             Stmt::Func { name, args, arity, body, method }
                 => v.visit_func(name, args, *arity, body, *method),
+            Stmt::Break { break_ }
+                => v.visit_break(break_),
+            Stmt::Continue { continue_ }
+                => v.visit_continue(continue_),
             Stmt::Retn { retn, value }
                 => v.visit_retn(retn, value.as_ref()),
             Stmt::Assert { assert, value }

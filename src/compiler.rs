@@ -93,23 +93,25 @@ pub(crate) fn escape_string(t: &Token) -> Result<String, PiccoloError> {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     // keywords
-    Do,     // do
-    End,    // end
-    Fn,     // fn
-    If,     // if
-    Else,   // else
-    While,  // while
-    For,    // for
-    In,     // in
-    Data,   // data
-    Let,    // let
-    Is,     // is
-    Me,     // me
-    New,    // new
-    Err,    // err
-    Retn,   // retn
-    Assert, // nil
-    Nil,    // nil
+    Do,       // do
+    End,      // end
+    Fn,       // fn
+    If,       // if
+    Else,     // else
+    While,    // while
+    For,      // for
+    In,       // in
+    Data,     // data
+    Let,      // let
+    Is,       // is
+    Me,       // me
+    New,      // new
+    Err,      // err
+    Break,    // break
+    Continue, // continue
+    Retn,     // retn
+    Assert,   // nil
+    Nil,      // nil
 
     // syntax
     LeftBracket,    // [
@@ -249,6 +251,8 @@ impl fmt::Display for TokenKind {
             TokenKind::Me => write!(f, "me"),
             TokenKind::New => write!(f, "new"),
             TokenKind::Err => write!(f, "err"),
+            TokenKind::Break => write!(f, "break"),
+            TokenKind::Continue => write!(f, "continue"),
             TokenKind::Retn => write!(f, "retn"),
             TokenKind::Assert => write!(f, "assert"),
             TokenKind::Nil => write!(f, "nil"),
