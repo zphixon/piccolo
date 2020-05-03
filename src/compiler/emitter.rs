@@ -296,10 +296,10 @@ impl ExprVisitor for Emitter {
 impl StmtVisitor for Emitter {
     type Output = Result<(), PiccoloError>;
 
-    fn visit_expr(&mut self, expr: &Expr) -> Self::Output {
+    fn visit_expr(&mut self, token: &Token, expr: &Expr) -> Self::Output {
         trace!("stmt expr");
         expr.accept(self)?;
-        self.chunk.write_u8(Opcode::Pop, 1); // TODO: line
+        self.chunk.write_u8(Opcode::Pop, token.line);
         Ok(())
     }
 

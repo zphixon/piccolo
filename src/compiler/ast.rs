@@ -93,7 +93,7 @@ impl AstPrinter {
 impl StmtVisitor for AstPrinter {
     type Output = String;
 
-    fn visit_expr(&mut self, expr: &Expr) -> String {
+    fn visit_expr(&mut self, _token: &Token, expr: &Expr) -> String {
         self.parenthesize("expr", &[&expr])
     }
 
@@ -474,7 +474,7 @@ pub trait StmtVisitor {
     type Output;
 
     /// Visit an expression statement, like function calls, method calls, or property sets.
-    fn visit_expr(&mut self, expr: &Expr) -> Self::Output;
+    fn visit_expr(&mut self, token: &Token, expr: &Expr) -> Self::Output;
 
     /// Visit a bare block.
     fn visit_block(&mut self, end: &Token, body: &[Stmt]) -> Self::Output;
@@ -552,6 +552,7 @@ pub trait StmtVisitor {
 #[derive(Debug, PartialEq)]
 pub enum Stmt<'a> {
     Expr {
+        token: Token<'a>,
         expr: Expr<'a>,
     },
     Block {
@@ -624,8 +625,8 @@ pub enum Stmt<'a> {
 impl StmtAccept for Stmt<'_> {
     fn accept<T: StmtVisitor>(&self, v: &mut T) -> T::Output {
         match self {
-            Stmt::Expr { expr }
-                => v.visit_expr(expr),
+            Stmt::Expr { token, expr }
+                => v.visit_expr(token, expr),
             Stmt::Block { end, body }
                 => v.visit_block(end, body),
             Stmt::Declaration { name, op, value }

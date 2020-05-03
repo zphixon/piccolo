@@ -51,9 +51,10 @@ fn statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     } else {
         trace!("declaration, expr");
 
+        let token = scanner.peek_token(0)?.clone();
         let expr = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
 
-        Ok(Stmt::Expr { expr })
+        Ok(Stmt::Expr { token, expr })
     }
 }
 
