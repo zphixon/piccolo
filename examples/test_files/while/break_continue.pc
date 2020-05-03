@@ -1,0 +1,11 @@
+x =: 0
+while true do
+    if x == 10 do
+        break
+    end
+    if x % 2 == 0 do
+        x = x + 2
+        continue
+    end
+    assert false
+end

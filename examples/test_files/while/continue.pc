@@ -1,0 +1,9 @@
+x =: 0
+
+while x < 10000 do
+    if x % 2 == 0 do
+        x = x + 2
+        continue
+    end
+    assert false
+end

@@ -69,5 +69,8 @@ fn main() {
 * How inter-operation will exist
     * `Object` trait needs to be fleshed out some more, they will likely
       need access to the `Machine` instance
+* Labels on break/continue and goto
+    * Break and continue should at least exist, but labels kind of imply
+      the existence of goto, which I'm kind of on the fence about.
 
 [❤](http://craftinginterpreters.com/)

@@ -23,6 +23,8 @@ pub struct Emitter {
     identifiers: HashMap<String, u16>,
     scope_depth: u16,
     locals: Vec<(String, u16)>,
+    continue_offsets: Vec<Vec<usize>>,
+    break_offsets: Vec<Vec<usize>>,
 }
 
 impl Emitter {
@@ -34,6 +36,8 @@ impl Emitter {
             identifiers: HashMap::new(),
             scope_depth: 0,
             locals: Vec::new(),
+            continue_offsets: Vec::new(),
+            break_offsets: Vec::new(),
         }
     }
 
@@ -419,13 +423,23 @@ impl StmtVisitor for Emitter {
         trace!("{}: while", while_.line);
         // calculate condition
         let loop_start = self.chunk.data.len();
+        self.continue_offsets.push(Vec::new());
+        self.break_offsets.push(Vec::new());
         cond.accept(self)?;
 
         // jump over the loop if it's false, pop if not
         let exit_jump = self.chunk.start_jump(Opcode::JumpFalse, while_.line);
         self.chunk.write_u8(Opcode::Pop, while_.line);
 
+        // execute the body
         self.visit_block(end, body)?;
+
+        // if there were any continue statements, jump
+        // to the jump which goes back to the condition
+        for offset in self.continue_offsets.pop().unwrap() {
+            trace!("patch continue while at {:x}", offset);
+            self.chunk.patch_jump(offset);
+        }
 
         // go back to the condition
         self.chunk.write_jump_back(loop_start, end.line);
@@ -433,6 +447,13 @@ impl StmtVisitor for Emitter {
         // pop the condition
         self.chunk.patch_jump(exit_jump);
         self.chunk.write_u8(Opcode::Pop, end.line);
+
+        // if there were any break statements, jump out of the loop
+        for offset in self.break_offsets.pop().unwrap() {
+            trace!("patch break while at {:x}", offset);
+            self.chunk.patch_jump(offset);
+        }
+
         Ok(())
     }
 
@@ -447,22 +468,45 @@ impl StmtVisitor for Emitter {
     ) -> Self::Output {
         trace!("{}: for {}", for_.line, for_.lexeme);
 
+        // execute the initializer
         self.begin_scope();
         init.accept(self)?;
 
+        // jump to the condition at the end of a cycle
         let start_offset = self.chunk.data.len();
         cond.accept(self)?;
+        // jump over the body if the condition fails
         let end_jump = self.chunk.start_jump(Opcode::JumpFalse, for_.line);
         self.chunk.write_u8(Opcode::Pop, for_.line);
 
+        // execute the body
+        self.break_offsets.push(Vec::new());
+        self.continue_offsets.push(Vec::new());
         self.visit_block(end, body)?;
+
+        // if there were any continue statements, jump to the increment
+        for offset in self.continue_offsets.pop().unwrap() {
+            trace!("patch continue in for at {:x}", offset);
+            self.chunk.patch_jump(offset);
+        }
+
+        // execute the increment
         inc.accept(self)?;
 
+        // unconditional jump back to the condition
         self.chunk.write_jump_back(start_offset, end.line);
 
+        // jump here if the condition fails
         self.chunk.patch_jump(end_jump);
         self.chunk.write_u8(Opcode::Pop, end.line);
 
+        // if there were any break statements, jump out of the loop
+        for offset in self.break_offsets.pop().unwrap() {
+            trace!("patch break in for at {:x}", offset);
+            self.chunk.patch_jump(offset);
+        }
+
+        // drop all the local variables
         self.end_scope(end.line);
         Ok(())
     }
@@ -477,6 +521,34 @@ impl StmtVisitor for Emitter {
     ) -> Self::Output {
         trace!("{}: fn {}", _name.line, _name.lexeme);
         todo!("visit_func")
+    }
+
+    fn visit_break(&mut self, break_: &Token) -> Self::Output {
+        let offset = self.chunk.start_jump(Opcode::JumpForward, break_.line);
+        self.break_offsets
+            .last_mut()
+            .ok_or_else(|| {
+                PiccoloError::new(ErrorKind::SyntaxError)
+                    .msg("cannot break outside of a loop")
+                    .line(break_.line)
+            })?
+            .push(offset);
+        trace!("start break at {:x}", offset);
+        Ok(())
+    }
+
+    fn visit_continue(&mut self, continue_: &Token) -> Self::Output {
+        let offset = self.chunk.start_jump(Opcode::JumpForward, continue_.line);
+        self.continue_offsets
+            .last_mut()
+            .ok_or_else(|| {
+                PiccoloError::new(ErrorKind::SyntaxError)
+                    .msg("cannot continue outside of a loop")
+                    .line(continue_.line)
+            })?
+            .push(offset);
+        trace!("start continue at {:x}", offset);
+        Ok(())
     }
 
     fn visit_retn(&mut self, retn: &Token, value: Option<&Expr>) -> Self::Output {

@@ -358,6 +358,8 @@ fn into_keyword(s: &str) -> Option<TokenKind> {
         "me" => Some(TokenKind::Me),
         "new" => Some(TokenKind::New),
         "err" => Some(TokenKind::Err),
+        "break" => Some(TokenKind::Break),
+        "continue" => Some(TokenKind::Continue),
         "retn" => Some(TokenKind::Retn),
         "assert" => Some(TokenKind::Assert),
         "true" => Some(TokenKind::True),

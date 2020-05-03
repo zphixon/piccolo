@@ -32,6 +32,10 @@ fn statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
         assign(scanner)
     } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
         declare(scanner)
+    } else if scanner.peek_token(0)?.kind == TokenKind::Break {
+        break_(scanner)
+    } else if scanner.peek_token(0)?.kind == TokenKind::Continue {
+        continue_(scanner)
     } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
         retn(scanner)
     } else if scanner.peek_token(0)?.kind == TokenKind::Assert {
@@ -71,6 +75,22 @@ fn declare<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     let value = expr_bp(scanner, BindingPower::ExpressionBoundary)?;
 
     Ok(Stmt::Declaration { name, op, value })
+}
+
+fn break_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    trace!("break");
+
+    let break_ = scanner.next_token()?;
+
+    Ok(Stmt::Break { break_ })
+}
+
+fn continue_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    trace!("continue");
+
+    let continue_ = scanner.next_token()?;
+
+    Ok(Stmt::Continue { continue_ })
 }
 
 fn retn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
