@@ -233,7 +233,7 @@ mod integration {
         let src = "1+2*3+4";
         let mut scanner = Scanner::new(src);
         let ast = parse(&mut scanner).unwrap();
-        if let Stmt::Expr { expr } = &ast[0] {
+        if let Stmt::Expr { expr, .. } = &ast[0] {
             assert_eq!(
                 expr,
                 &Expr::Binary {
