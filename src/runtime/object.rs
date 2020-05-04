@@ -66,10 +66,10 @@ pub trait Object: Downcast + fmt::Debug + fmt::Display {
 downcast_rs::impl_downcast!(Object);
 
 #[derive(Debug)]
-struct Function {
-    arity: usize,
-    chunk: super::chunk::Chunk,
-    name: String,
+pub(crate) struct Function {
+    pub(crate) arity: usize,
+    pub(crate) chunk: super::chunk::Chunk,
+    pub(crate) name: String,
 }
 
 impl Object for Function {
