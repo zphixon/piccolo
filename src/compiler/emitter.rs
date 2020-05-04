@@ -299,7 +299,7 @@ impl ExprVisitor for Emitter {
         &mut self,
         _callee: &Expr,
         _paren: &Token,
-        _arity: Arity,
+        _arity: usize,
         _args: &[Expr],
     ) -> Self::Output {
         trace!("{}: call", _paren.line);
@@ -330,7 +330,7 @@ impl ExprVisitor for Emitter {
         &mut self,
         _name: &Token,
         _args: &[Token],
-        _arity: Arity,
+        _arity: usize,
         _body: &[Stmt],
         _method: bool,
     ) -> Self::Output {
@@ -539,8 +539,8 @@ impl StmtVisitor for Emitter {
         &mut self,
         _name: &Token,
         _args: &[Token],
-        _arity: Arity,
-        _body: &[Stmt],
+        _arity: usize,
+        body: &[Stmt],
         _method: bool,
     ) -> Self::Output {
         trace!("{}: fn {}", _name.line, _name.lexeme);
