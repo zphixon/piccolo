@@ -14,6 +14,7 @@ pub enum Value {
     Bool(bool),
     Integer(i64),
     Double(f64),
+    String(usize),
     Object(usize),
     Nil,
 }
@@ -34,6 +35,13 @@ impl Value {
         Value: Into<T>,
     {
         std::convert::Into::into(self)
+    }
+
+    pub fn is_string(&self) -> bool {
+        match self {
+            Value::String(_) => true,
+            _ => false,
+        }
     }
 
     pub fn is_bool(&self) -> bool {

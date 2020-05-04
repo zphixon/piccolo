@@ -4,6 +4,7 @@
 //! for embedding in Rust projects.
 
 pub extern crate downcast_rs;
+pub extern crate fnv;
 #[macro_use]
 pub extern crate log;
 
