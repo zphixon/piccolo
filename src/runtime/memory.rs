@@ -1,7 +1,7 @@
 //! Contains items for the manipulation of memory at runtime.
 
-use crate::{Constant, ErrorKind, Object, PiccoloError, Value};
 use crate::fnv::FnvHashMap;
+use crate::{Constant, ErrorKind, Object, PiccoloError, Value};
 
 use super::object::ObjectPtr;
 
@@ -154,7 +154,10 @@ impl Heap {
 
         let kind = value.kind();
         self.memory[self.alloc_after] = Some(value);
-        Value::Object(ObjectPtr { idx: self.alloc_after, kind })
+        Value::Object(ObjectPtr {
+            idx: self.alloc_after,
+            kind,
+        })
     }
 
     /// De-reference a pointer.

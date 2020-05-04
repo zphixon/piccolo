@@ -17,10 +17,7 @@ struct Local {
 
 impl Local {
     fn new(name: String, depth: u16) -> Self {
-        Self {
-            name,
-            depth,
-        }
+        Self { name, depth }
     }
 }
 
@@ -83,13 +80,14 @@ impl Emitter {
         }
     }
 
-    fn make_variable(&mut self, name: &Token) -> Result<(), PiccoloError>{
+    fn make_variable(&mut self, name: &Token) -> Result<(), PiccoloError> {
         if self.scope_depth > 0 {
             // if there exists some local with this name
             if let Some(idx) = self.get_local_depth(name.lexeme) {
                 if idx != self.scope_depth {
                     // create a new local if we're in a different scope
-                    self.locals.push(Local::new(name.lexeme.to_owned(), self.scope_depth));
+                    self.locals
+                        .push(Local::new(name.lexeme.to_owned(), self.scope_depth));
                 } else {
                     // error if we're in the same scope
                     return Err(PiccoloError::new(ErrorKind::SyntaxError)
@@ -101,7 +99,8 @@ impl Emitter {
                 }
             } else {
                 // create a new local with this name
-                self.locals.push(Local::new(name.lexeme.to_owned(), self.scope_depth));
+                self.locals
+                    .push(Local::new(name.lexeme.to_owned(), self.scope_depth));
             }
         } else {
             let idx = self.make_ident(name.lexeme);
@@ -167,7 +166,8 @@ impl Emitter {
 
     fn end_scope(&mut self, line: usize) {
         self.scope_depth -= 1;
-        while !self.locals.is_empty() && self.locals[self.locals.len() - 1].depth > self.scope_depth {
+        while !self.locals.is_empty() && self.locals[self.locals.len() - 1].depth > self.scope_depth
+        {
             self.chunk.write_u8(Opcode::Pop, line);
             self.locals.pop().unwrap();
         }
