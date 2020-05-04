@@ -134,13 +134,12 @@ impl Heap {
         self.alloc_after = 0;
     }
 
-    pub fn alloc_string(&mut self, s: &str) -> usize {
-        self.interner.intern(s)
+    pub fn alloc_string(&mut self, s: &str) -> Value {
+        Value::String(self.interner.intern(s))
     }
 
-    // TODO: probably wrap the raw usizes into Values instead
     /// Allocate space for a new value, and return its pointer.
-    pub fn alloc(&mut self, value: Box<dyn Object>) -> usize {
+    pub fn alloc(&mut self, value: Box<dyn Object>) -> Value {
         while self.memory[self.alloc_after].is_some() {
             self.alloc_after += 1;
         }
@@ -153,7 +152,7 @@ impl Heap {
         debug!("insert {:x} = {:?}", self.alloc_after, value);
 
         self.memory[self.alloc_after] = Some(value);
-        self.alloc_after
+        Value::Object(self.alloc_after)
     }
 
     /// De-reference a pointer.
@@ -163,9 +162,14 @@ impl Heap {
     /// This method panics if the pointer points to memory outside the range of the heap,
     /// or if the object pointed at is `None`.
     #[inline]
-    pub fn deref(&self, ptr: usize) -> &dyn Object {
-        trace!("deref {:x}", ptr);
-        self.memory[ptr].as_deref().expect("deref invalid ptr")
+    pub fn deref(&self, ptr: Value) -> &dyn Object {
+        match ptr {
+            Value::Object(ptr) => {
+                trace!("deref {:x}", ptr);
+                self.memory[ptr].as_deref().expect("deref invalid ptr")
+            }
+            _ => panic!("deref with non-ptr {:?}", ptr),
+        }
     }
 
     /// De-reference a pointer, and get a mutable reference.
@@ -175,11 +179,16 @@ impl Heap {
     /// This method panics if the pointer points to memory outside the range of the heap,
     /// or if the object pointed at is `None`.
     #[inline]
-    pub fn deref_mut(&mut self, ptr: usize) -> &mut dyn Object {
-        trace!("deref mut {:x}", ptr);
-        self.memory[ptr]
-            .as_deref_mut()
-            .expect("deref_mut invalid ptr")
+    pub fn deref_mut(&mut self, ptr: Value) -> &mut dyn Object {
+        match ptr {
+            Value::Object(ptr) => {
+                trace!("deref mut {:x}", ptr);
+                self.memory[ptr]
+                    .as_deref_mut()
+                    .expect("deref_mut invalid ptr")
+            }
+            _ => panic!("deref_mut with non-ptr {:?}", ptr),
+        }
     }
 
     /// Move a value out of the heap, de-allocating it.
@@ -189,21 +198,26 @@ impl Heap {
     /// This method panics if the pointer points to memory outside the range of the heap,
     /// or if the object pointed at is `None`.
     #[inline]
-    pub fn take(&mut self, ptr: usize) -> Box<dyn Object> {
-        debug!("take {:x}", ptr);
-        self.memory[ptr].take().expect("free invalid ptr")
+    pub fn take(&mut self, ptr: Value) -> Box<dyn Object> {
+        match ptr {
+            Value::Object(ptr) => {
+                debug!("take {:x}", ptr);
+                self.memory[ptr].take().expect("free invalid ptr")
+            }
+            _ => panic!("take with non-ptr {:?}", ptr),
+        }
     }
 
     pub fn try_deep_copy(&mut self, value: &Value) -> Result<Value, PiccoloError> {
         Ok(match value {
             Value::Object(ptr) => {
                 trace!("try copy {:x}", ptr);
-                let cloned = self.deref(*ptr).try_clone().ok_or_else(|| {
+                let cloned = self.deref(*value).try_clone().ok_or_else(|| {
                     PiccoloError::new(ErrorKind::CannotClone {
-                        ty: self.deref(*ptr).type_name().to_owned(),
+                        ty: self.deref(*value).type_name().to_owned(),
                     })
                 })?;
-                Value::Object(self.alloc(cloned))
+                self.alloc(cloned)
             }
             Value::String(v) => Value::String(*v),
             Value::Bool(v) => Value::Bool(*v),
@@ -245,7 +259,7 @@ impl Heap {
             Value::Bool(_) => "bool",
             Value::Integer(_) => "integer",
             Value::Double(_) => "double",
-            Value::Object(v) => self.deref(*v).type_name(),
+            Value::Object(_) => self.deref(*v).type_name(),
             Value::String(_) => "string",
             Value::Nil => "nil",
         }
@@ -257,7 +271,7 @@ impl Heap {
             Value::Bool(v) => format!("{}", v),
             Value::Integer(v) => format!("{}", v),
             Value::Double(v) => format!("{}", v),
-            Value::Object(v) => format!("{}", self.deref(*v)),
+            Value::Object(_) => format!("{}", self.deref(*v)),
             Value::String(v) => format!("{}", self.interner.lookup(*v)),
             Value::Nil => "nil".into(),
         }
@@ -269,7 +283,7 @@ impl Heap {
             Value::Bool(v) => format!("bool({})", v),
             Value::Integer(v) => format!("integer({})", v),
             Value::Double(v) => format!("double({})", v),
-            Value::Object(v) => format!("*{}({:?})", self.deref(*v).type_name(), self.deref(*v)),
+            Value::Object(_) => format!("*{}({:?})", self.deref(*v).type_name(), self.deref(*v)),
             Value::String(v) => format!("string({:?})", self.interner.lookup(*v)),
             Value::Nil => "Nil".into(),
         }
@@ -297,8 +311,8 @@ impl Heap {
                     if *l == *r {
                         Some(true)
                     } else {
-                        let lhs = self.deref(*l);
-                        let rhs = self.deref(*r);
+                        let lhs = self.deref(*lhs);
+                        let rhs = self.deref(*rhs);
                         lhs.eq(rhs)
                     }
                 }
@@ -327,10 +341,10 @@ impl Heap {
                 Value::Double(r) => Some(l < r),
                 _ => None,
             },
-            Value::Object(l) => match rhs {
-                Value::Object(r) => {
-                    let lhs = self.deref(*l);
-                    let rhs = self.deref(*r);
+            Value::Object(_) => match rhs {
+                Value::Object(_) => {
+                    let lhs = self.deref(*lhs);
+                    let rhs = self.deref(*rhs);
                     lhs.lt(rhs)
                 }
                 _ => None,
@@ -359,10 +373,10 @@ impl Heap {
                 Value::Double(r) => Some(l > r),
                 _ => None,
             },
-            Value::Object(l) => match rhs {
-                Value::Object(r) => {
-                    let lhs = self.deref(*l);
-                    let rhs = self.deref(*r);
+            Value::Object(_) => match rhs {
+                Value::Object(_) => {
+                    let lhs = self.deref(*lhs);
+                    let rhs = self.deref(*rhs);
                     lhs.gt(rhs)
                 }
                 _ => None,

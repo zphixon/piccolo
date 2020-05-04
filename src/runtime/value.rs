@@ -6,9 +6,13 @@ use core::fmt;
 
 /// Wrapper type for runtime Piccolo values.
 ///
-/// `Value::Object` is a pointer into a [`Heap`].
+/// `Value::Object` is a pointer into a [`Heap`], and `Value::String` is a
+/// pointer into an [`Interner`]. The end-user will never directly interact with this type,
+/// instead values passed into and out of Piccolo will be [`Constant`]s.
 ///
 /// [`Heap`]: ../memory/struct.Heap.html
+/// [`Interner`]: ../memory/struct.Interner.html
+/// [`Constant`]: ./enum.Constant.html
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Value {
     Bool(bool),

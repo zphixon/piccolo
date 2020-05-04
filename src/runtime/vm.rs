@@ -163,7 +163,7 @@ impl Machine {
                     } else if $concat && lhs.is_string() {
                         let value = format!("{}{}", self.heap.fmt(&lhs), self.heap.fmt(&rhs));
                         let ptr = self.heap.alloc_string(&value);
-                        self.stack.push(Value::String(ptr));
+                        self.stack.push(ptr);
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
