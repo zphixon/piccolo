@@ -64,3 +64,34 @@ pub trait Object: Downcast + fmt::Debug + fmt::Display {
 }
 
 downcast_rs::impl_downcast!(Object);
+
+#[derive(Debug)]
+struct Function {
+    arity: usize,
+    chunk: super::chunk::Chunk,
+    name: String,
+}
+
+impl Object for Function {
+    fn type_name(&self) -> &'static str {
+        "function"
+    }
+
+    fn kind(&self) -> ObjectKind {
+        ObjectKind::Function
+    }
+
+    fn eq(&self, other: &dyn Object) -> Option<bool> {
+        if let Some(other) = other.downcast_ref::<Function>() {
+            Some(other.name == self.name)
+        } else {
+            None
+        }
+    }
+}
+
+impl fmt::Display for Function {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<fn {}>", self.name)
+    }
+}
