@@ -2,6 +2,98 @@
 
 use crate::{Constant, ErrorKind, Object, PiccoloError, Value};
 
+use std::mem;
+
+use crate::fnv::FnvHashMap;
+
+/// Simple string interner.
+///
+/// Discussed on [matklad's blog post.] Further discussion on reddit [here.]
+/// Uses FNV hashing provided by [`FnvHashMap`].
+///
+/// [matklad's blog post.]: https://matklad.github.io/2020/03/22/fast-simple-rust-interner.html
+/// [here.]: https://www.reddit.com/r/rust/comments/fn1jxf/blog_post_fast_and_simple_rust_interner/
+/// [`FnvHashMap`]: https://doc.servo.org/fnv/
+pub struct Interner {
+    map: FnvHashMap<&'static str, usize>,
+    strings: Vec<&'static str>,
+    current_buffer: String,
+    previous_buffers: Vec<String>,
+}
+
+impl Interner {
+    pub fn with_capacity(cap: usize) -> Self {
+        let cap = cap.next_power_of_two();
+        Self {
+            map: FnvHashMap::default(),
+            strings: Vec::new(),
+            current_buffer: String::with_capacity(cap),
+            previous_buffers: Vec::new(),
+        }
+    }
+
+    pub fn intern(&mut self, s: &str) -> usize {
+        if let Some(&id) = self.map.get(s) {
+            trace!("str exists {:x}", id);
+            return id;
+        }
+
+        let s = unsafe { self.alloc(s) };
+        let id = self.map.len();
+        self.map.insert(s, id);
+        self.strings.push(s);
+
+        trace!("str does not exist {:x}", id);
+        debug_assert!(self.lookup(id) == s);
+        debug_assert!(self.intern(s) == id);
+
+        id
+    }
+
+    pub fn lookup(&self, id: usize) -> &str {
+        self.strings
+            .get(id)
+            .unwrap_or_else(|| panic!("str does not exist: {:x}", id))
+    }
+
+    // this is OK because:
+    //  1. we are the only user of this function
+    //  2. we don't drop or deallocate the old buffers when we reallocate the current one,
+    //     so any &str that are floating around will always point to valid data
+    //  3. the &str from Intern::lookup is bounded by the lifetime of self anyway, so we can't
+    //     hold on to a &str at all if we want to add new ones
+    unsafe fn alloc(&mut self, s: &str) -> &'static str {
+        let current_capacity = self.current_buffer.capacity();
+
+        // if adding a new string will cause reallocation of the buffer
+        if current_capacity < self.current_buffer.len() + s.len() {
+            // create the next buffer
+            let new_capacity = (current_capacity.max(s.len()) + 1).next_power_of_two();
+            let next_buffer = String::with_capacity(new_capacity);
+            trace!(
+                "reallocate interner: {} -> {}",
+                self.current_buffer.len(),
+                new_capacity
+            );
+
+            // swap them out
+            let previous_buffer = mem::replace(&mut self.current_buffer, next_buffer);
+
+            // retain ownership of the old buffer so &str references don't become invalid
+            self.previous_buffers.push(previous_buffer);
+        }
+
+        // add s to the current buffer
+        let interned = {
+            let start = self.current_buffer.len();
+            self.current_buffer.push_str(s);
+            &self.current_buffer[start..]
+        };
+
+        &*(interned as *const str)
+    }
+}
+
 /// A `Heap` is the main method of runtime variable reference semantics.
 ///
 /// The only way of implementing the dynamic lifetimes of values that need to exist in
@@ -16,6 +108,7 @@ use crate::{Constant, ErrorKind, Object, PiccoloError, Value};
 /// [`Object`]: ../object/trait.Object.html
 pub struct Heap {
     memory: Vec<Option<Box<dyn Object>>>,
+    interner: Interner,
     alloc_after: usize,
 }
 
@@ -28,6 +121,7 @@ impl Heap {
         memory.resize_with(capacity, || None);
         Heap {
             memory,
+            interner: Interner::with_capacity(32),
             alloc_after: 0,
         }
     }
@@ -40,6 +134,11 @@ impl Heap {
         self.alloc_after = 0;
     }
 
+    pub fn alloc_string(&mut self, s: &str) -> usize {
+        self.interner.intern(s)
+    }
+
+    // TODO: probably wrap the raw usizes into Values instead
     /// Allocate space for a new value, and return its pointer.
     pub fn alloc(&mut self, value: Box<dyn Object>) -> usize {
         while self.memory[self.alloc_after].is_some() {
@@ -106,6 +205,7 @@ impl Heap {
                 })?;
                 Value::Object(self.alloc(cloned))
             }
+            Value::String(v) => Value::String(*v),
             Value::Bool(v) => Value::Bool(*v),
             Value::Integer(v) => Value::Integer(*v),
             Value::Double(v) => Value::Double(*v),
@@ -115,32 +215,26 @@ impl Heap {
 
     pub(crate) fn value_into_constant(&mut self, v: Value) -> Constant {
         match v {
-            Value::Object(ptr) => {
-                let obj = self.take(ptr);
-                if let Ok(string) = obj.downcast::<String>() {
-                    Constant::String(string.to_string())
-                } else {
-                    panic!("non-string constant");
-                }
-            }
+            Value::String(ptr) => Constant::String(self.interner.lookup(ptr).to_owned()),
             Value::Bool(v) => Constant::Bool(v),
             Value::Integer(v) => Constant::Integer(v),
             Value::Double(v) => Constant::Double(v),
             Value::Nil => Constant::Nil,
+            _ => panic!("cannot make constant from object"),
         }
     }
 
-    // TODO: check VM's string table - maybe even own the string table instead of the VM?
-    pub(crate) fn constant_into_value(&mut self, constant: Constant) -> Value {
+    pub(crate) fn constant_into_value(&mut self, constant: &Constant) -> Value {
         trace!("into_value");
         match constant {
             Constant::String(v) => {
-                let ptr = self.alloc(Box::new(v));
-                Value::Object(ptr)
+                let ptr = self.interner.intern(v);
+                trace!("string ptr {:x}", ptr);
+                Value::String(ptr)
             }
-            Constant::Integer(v) => Value::Integer(v),
-            Constant::Bool(v) => Value::Bool(v),
-            Constant::Double(v) => Value::Double(v),
+            Constant::Integer(v) => Value::Integer(*v),
+            Constant::Bool(v) => Value::Bool(*v),
+            Constant::Double(v) => Value::Double(*v),
             Constant::Nil => Value::Nil,
         }
     }
@@ -152,6 +246,7 @@ impl Heap {
             Value::Integer(_) => "integer",
             Value::Double(_) => "double",
             Value::Object(v) => self.deref(*v).type_name(),
+            Value::String(_) => "string",
             Value::Nil => "nil",
         }
     }
@@ -163,6 +258,7 @@ impl Heap {
             Value::Integer(v) => format!("{}", v),
             Value::Double(v) => format!("{}", v),
             Value::Object(v) => format!("{}", self.deref(*v)),
+            Value::String(v) => format!("{}", self.interner.lookup(*v)),
             Value::Nil => "nil".into(),
         }
     }
@@ -174,6 +270,7 @@ impl Heap {
             Value::Integer(v) => format!("integer({})", v),
             Value::Double(v) => format!("double({})", v),
             Value::Object(v) => format!("*{}({:?})", self.deref(*v).type_name(), self.deref(*v)),
+            Value::String(v) => format!("string({:?})", self.interner.lookup(*v)),
             Value::Nil => "Nil".into(),
         }
     }
@@ -197,7 +294,7 @@ impl Heap {
             },
             Value::Object(l) => match rhs {
                 Value::Object(r) => {
-                    if l == r {
+                    if *l == *r {
                         Some(true)
                     } else {
                         let lhs = self.deref(*l);
@@ -205,6 +302,10 @@ impl Heap {
                         lhs.eq(rhs)
                     }
                 }
+                _ => None,
+            },
+            Value::String(l) => match rhs {
+                Value::String(r) => Some(*l == *r),
                 _ => None,
             },
             Value::Nil => match rhs {
@@ -234,6 +335,14 @@ impl Heap {
                 }
                 _ => None,
             },
+            Value::String(l) => match rhs {
+                Value::String(r) => {
+                    let lhs = self.interner.lookup(*l);
+                    let rhs = self.interner.lookup(*r);
+                    Some(lhs < rhs)
+                }
+                _ => None,
+            },
             _ => None,
         }
     }
@@ -258,14 +367,15 @@ impl Heap {
                 }
                 _ => None,
             },
+            Value::String(l) => match rhs {
+                Value::String(r) => {
+                    let lhs = self.interner.lookup(*l);
+                    let rhs = self.interner.lookup(*r);
+                    Some(lhs > rhs)
+                }
+                _ => None,
+            },
             _ => None,
-        }
-    }
-
-    pub fn is_string(&self, v: &Value) -> bool {
-        match v {
-            Value::Object(ptr) => self.deref(*ptr).is::<String>(),
-            _ => false,
         }
     }
 }
@@ -285,64 +395,65 @@ pub(crate) fn dbg_list(l: &[Value], heap: &Heap) -> String {
 
 #[cfg(test)]
 mod test {
+    use crate::Value;
+
     use super::super::object::Object;
     use super::Heap;
+
+    #[derive(Debug, PartialEq)]
+    struct S(i64);
+    impl Object for S {
+        fn type_name(&self) -> &'static str {
+            "S"
+        }
+        fn eq(&self, rhs: &dyn Object) -> Option<bool> {
+            Some(rhs.downcast_ref::<S>()?.0 == self.0)
+        }
+        fn set(&mut self, _property: &str, value: Value) -> Option<()> {
+            match value {
+                Value::Integer(v) => self.0 = v,
+                _ => panic!(),
+            }
+            Some(())
+        }
+    }
+    impl core::fmt::Display for S {
+        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+            write!(f, "{:?}", self)
+        }
+    }
 
     #[test]
     fn heap_alloc() {
         let mut h = Heap::new(30);
-        let _ = h.alloc(Box::new(String::from("something")));
+        let _ = h.alloc(Box::new(S(32)));
     }
 
     #[test]
     fn heap_deref() {
         let mut h = Heap::new(30);
-        let s = h.alloc(Box::new(String::from("hello")));
-        assert!(h.deref(s).eq(&String::from("hello")).unwrap());
+        let s = h.alloc(Box::new(S(342)));
+        assert!(h.deref(s).eq(&S(342)).unwrap());
     }
 
     #[test]
     fn heap_free() {
         let mut h = Heap::new(30);
-        let s = h.alloc(Box::new(String::from("world")));
-        assert!(h.take(s).eq(&String::from("world")).unwrap());
+        let s = h.alloc(Box::new(S(32)));
+        assert!(h.take(s).eq(&S(32)).unwrap());
     }
 
     #[test]
     #[should_panic]
     fn use_after_free() {
         let mut h = Heap::new(30);
-        let s = h.alloc(Box::new(String::from("world")));
-        assert!(h.take(s).eq(&String::from("world")).unwrap());
+        let s = h.alloc(Box::new(S(34232)));
+        assert!(h.take(s).eq(&S(34232)).unwrap());
         h.deref(s);
     }
 
     #[test]
     fn mutable() {
-        use crate::Value;
-        #[derive(Debug, PartialEq)]
-        struct S(i64);
-        impl Object for S {
-            fn type_name(&self) -> &'static str {
-                "S"
-            }
-            fn eq(&self, rhs: &dyn Object) -> Option<bool> {
-                Some(rhs.downcast_ref::<S>()?.0 == self.0)
-            }
-            fn set(&mut self, _property: &str, value: Value) -> Option<()> {
-                match value {
-                    Value::Integer(v) => self.0 = v,
-                    _ => panic!(),
-                }
-                Some(())
-            }
-        }
-        impl core::fmt::Display for S {
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                write!(f, "{:?}", self)
-            }
-        }
-
         let mut heap = Heap::new(8);
         let ptr = heap.alloc(Box::new(S(32)));
         heap.deref_mut(ptr).set("", Value::Integer(78));
@@ -351,22 +462,6 @@ mod test {
 
     #[test]
     fn bunches() {
-        #[derive(Debug)]
-        struct S(usize);
-        impl Object for S {
-            fn type_name(&self) -> &'static str {
-                "S"
-            }
-            fn eq(&self, rhs: &dyn Object) -> Option<bool> {
-                Some(rhs.downcast_ref::<S>()?.0 == self.0)
-            }
-        }
-        impl core::fmt::Display for S {
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                write!(f, "{:?}", self)
-            }
-        }
-
         let mut pointers = vec![];
         let mut h = Heap::new(32);
 
@@ -374,7 +469,7 @@ mod test {
             pointers.push(h.alloc(Box::new(S(i))));
         }
         for i in 0..10 {
-            assert!(h.deref(pointers[i]).eq(&S(i)).unwrap());
+            assert!(h.deref(pointers[i]).eq(&S(i as i64)).unwrap());
         }
         for ptr in pointers {
             h.take(ptr);
@@ -383,25 +478,6 @@ mod test {
 
     #[test]
     fn non_contiguous2() {
-        #[derive(Debug, PartialEq)]
-        struct S(usize);
-        impl Object for S {
-            fn type_name(&self) -> &'static str {
-                "S"
-            }
-            fn eq(&self, rhs: &dyn Object) -> Option<bool> {
-                Some(rhs.downcast_ref::<S>()?.0 == self.0)
-            }
-            fn try_clone(&self) -> Option<Box<dyn Object>> {
-                Some(Box::new(S(self.0)))
-            }
-        }
-        impl core::fmt::Display for S {
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                write!(f, "{:?}", self)
-            }
-        }
-
         let mut pointers = vec![];
         let mut heap = Heap::new(32);
 
@@ -439,25 +515,6 @@ mod test {
 
     #[test]
     fn non_contiguous() {
-        #[derive(Debug, PartialEq)]
-        struct S(usize);
-        impl Object for S {
-            fn type_name(&self) -> &'static str {
-                "S"
-            }
-            fn eq(&self, rhs: &dyn Object) -> Option<bool> {
-                Some(rhs.downcast_ref::<S>()?.0 == self.0)
-            }
-            fn try_clone(&self) -> Option<Box<dyn Object>> {
-                Some(Box::new(S(self.0)))
-            }
-        }
-        impl core::fmt::Display for S {
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                write!(f, "{:?}", self)
-            }
-        }
-
         let mut pointers = vec![];
         let mut heap = Heap::new(32);
 

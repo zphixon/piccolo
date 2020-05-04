@@ -26,6 +26,29 @@ fn ptr_funnies() {
         }
     }
 
+    #[derive(Debug, PartialEq)]
+    struct S(i64);
+    impl Object for S {
+        fn type_name(&self) -> &'static str {
+            "S"
+        }
+        fn eq(&self, rhs: &dyn Object) -> Option<bool> {
+            Some(rhs.downcast_ref::<S>()?.0 == self.0)
+        }
+        fn set(&mut self, _property: &str, value: Value) -> Option<()> {
+            match value {
+                Value::Integer(v) => self.0 = v,
+                _ => panic!(),
+            }
+            Some(())
+        }
+    }
+    impl core::fmt::Display for S {
+        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+            write!(f, "{:?}", self)
+        }
+    }
+
     unsafe {
         let mut v: Vec<*mut dyn Object> = vec![Box::into_raw(Box::new(Upvalue {
             data: Value::Integer(1),
@@ -54,11 +77,8 @@ fn ptr_funnies() {
         assert!(std::ptr::eq(v[0], x) && std::ptr::eq(v[0], y));
 
         // y and x still refer to the old box, we need to drop it later
-        v[0] = Box::into_raw(Box::new(String::from("haha")));
-        assert_eq!(
-            v[0].as_ref().unwrap().downcast_ref::<String>().unwrap(),
-            &String::from("haha")
-        );
+        v[0] = Box::into_raw(Box::new(S(32)));
+        assert_eq!(v[0].as_ref().unwrap().downcast_ref::<S>().unwrap(), &S(32));
         assert!(!std::ptr::eq(v[0], x) && !std::ptr::eq(v[0], y));
 
         let v: Vec<Box<dyn Object>> = v.into_iter().map(|p| Box::from_raw(p)).collect();

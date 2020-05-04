@@ -48,36 +48,3 @@ pub trait Object: Downcast + fmt::Debug + fmt::Display {
 }
 
 downcast_rs::impl_downcast!(Object);
-
-impl Object for String {
-    fn type_name(&self) -> &'static str {
-        "string"
-    }
-
-    fn gt(&self, other: &dyn Object) -> Option<bool> {
-        other.downcast_ref::<String>().map(|s| self > s)
-    }
-
-    fn lt(&self, other: &dyn Object) -> Option<bool> {
-        other.downcast_ref::<String>().map(|s| self < s)
-    }
-
-    fn eq(&self, other: &dyn Object) -> Option<bool> {
-        other.downcast_ref::<String>().map(|s| self == s)
-    }
-
-    fn get(&self, property: &str) -> Option<Value> {
-        match property {
-            "len" => Some(Value::Integer(self.len() as i64)),
-            _ => None,
-        }
-    }
-
-    fn set(&mut self, _property: &str, _value: Value) -> Option<()> {
-        None
-    }
-
-    fn try_clone(&self) -> Option<Box<dyn Object>> {
-        Some(Box::new(self.clone()))
-    }
-}

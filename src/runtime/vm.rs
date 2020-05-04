@@ -160,10 +160,10 @@ impl Machine {
                             })
                             .line(chunk.get_line_from_index(self.ip)));
                         }
-                    } else if $concat && self.heap.is_string(&lhs) {
+                    } else if $concat && lhs.is_string() {
                         let value = format!("{}{}", self.heap.fmt(&lhs), self.heap.fmt(&rhs));
-                        let ptr = self.heap.alloc(Box::new(value));
-                        self.stack.push(Value::Object(ptr));
+                        let ptr = self.heap.alloc_string(&value);
+                        self.stack.push(Value::String(ptr));
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
@@ -190,7 +190,7 @@ impl Machine {
                     println!("{}", self.heap.fmt(&v));
                 }
                 Opcode::Constant => {
-                    let c = self.peek_constant(chunk).clone();
+                    let c = self.peek_constant(chunk);
                     let v = self.heap.constant_into_value(c);
                     self.stack.push(v);
                 }

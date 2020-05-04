@@ -13,6 +13,7 @@ fuzzer = ["pc-debug"]
 
 [dependencies]
 downcast-rs = "1.1.1"
+fnv = "1.0.6"
 rand = "0.7.3"
 log = "0.4.8"
 
