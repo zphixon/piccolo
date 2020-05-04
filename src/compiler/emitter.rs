@@ -9,6 +9,27 @@ use super::ast::{Arity, Expr, ExprAccept, ExprVisitor, Stmt, StmtAccept, StmtVis
 
 use std::collections::HashMap;
 
+#[derive(PartialEq)]
+struct Local {
+    pub(crate) name: String,
+    pub(crate) depth: u16,
+    pub(crate) initialized: bool,
+}
+
+impl Local {
+    fn new(name: String, depth: u16) -> Self {
+        Self {
+            name,
+            depth,
+            initialized: false,
+        }
+    }
+
+    fn initialize(&mut self) {
+        self.initialized = true;
+    }
+}
+
 /// Struct for emitting Piccolo virtual machine bytecode.
 ///
 /// Implements [`StmtVisitor`] and [`ExprVisitor`] to walk the AST, compiling
@@ -22,7 +43,7 @@ pub struct Emitter {
     strings: HashMap<String, u16>,
     identifiers: HashMap<String, u16>,
     scope_depth: u16,
-    locals: Vec<(String, u16)>,
+    locals: Vec<Local>,
     continue_offsets: Vec<Vec<usize>>,
     break_offsets: Vec<Vec<usize>>,
 }
@@ -71,22 +92,24 @@ impl Emitter {
     fn get_local_slot(&self, name: &str) -> Option<u16> {
         trace!("get local slot for '{}'", name);
 
-        for (i, (k, _)) in self.locals.iter().enumerate().rev() {
-            if k == name {
+        for (i, local) in self.locals.iter().enumerate().rev() {
+            if &local.name == name {
                 return Some(i as u16);
             }
         }
+
         None
     }
 
     fn get_local_depth(&self, name: &str) -> Option<u16> {
         trace!("get local depth for '{}'", name);
 
-        for (k, v) in self.locals.iter().rev() {
-            if k == name {
-                return Some(*v);
+        for local in self.locals.iter().rev() {
+            if &local.name == name {
+                return Some(local.depth);
             }
         }
+
         None
     }
 
@@ -121,7 +144,7 @@ impl Emitter {
 
     fn end_scope(&mut self, line: usize) {
         self.scope_depth -= 1;
-        while !self.locals.is_empty() && self.locals[self.locals.len() - 1].1 > self.scope_depth {
+        while !self.locals.is_empty() && self.locals[self.locals.len() - 1].depth > self.scope_depth {
             self.chunk.write_u8(Opcode::Pop, line);
             self.locals.pop().unwrap();
         }
@@ -321,19 +344,19 @@ impl StmtVisitor for Emitter {
             if let Some(idx) = self.get_local_depth(name.lexeme) {
                 if idx != self.scope_depth {
                     // create a new local if we're in a different scope
-                    self.locals.push((name.lexeme.to_owned(), self.scope_depth));
+                    self.locals.push(Local::new(name.lexeme.to_owned(), self.scope_depth));
                 } else {
                     // error if we're in the same scope
                     return Err(PiccoloError::new(ErrorKind::SyntaxError)
                         .line(name.line)
                         .msg_string(format!(
                             "variable with name '{}' already exists",
-                            self.locals[idx as usize - 1].0
+                            self.locals[idx as usize - 1].name
                         )));
                 }
             } else {
                 // create a new local with this name
-                self.locals.push((name.lexeme.to_owned(), self.scope_depth));
+                self.locals.push(Local::new(name.lexeme.to_owned(), self.scope_depth));
             }
         } else {
             let idx = self.make_ident(name.lexeme);
