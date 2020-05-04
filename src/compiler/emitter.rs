@@ -32,7 +32,7 @@ impl Local {
 pub struct Emitter {
     chunk: Chunk,
     strings: HashMap<String, u16>,
-    identifiers: HashMap<String, u16>,
+    global_identifiers: HashMap<String, u16>,
     scope_depth: u16,
     locals: Vec<Local>,
     continue_offsets: Vec<Vec<usize>>,
@@ -45,7 +45,7 @@ impl Emitter {
         Emitter {
             chunk,
             strings: HashMap::new(),
-            identifiers: HashMap::new(),
+            global_identifiers: HashMap::new(),
             scope_depth: 0,
             locals: Vec::new(),
             continue_offsets: Vec::new(),
@@ -103,7 +103,7 @@ impl Emitter {
                     .push(Local::new(name.lexeme.to_owned(), self.scope_depth));
             }
         } else {
-            let idx = self.make_ident(name.lexeme);
+            let idx = self.make_global_ident(name.lexeme);
             self.chunk
                 .write_arg_u16(Opcode::DeclareGlobal, idx, name.line);
         }
@@ -135,23 +135,23 @@ impl Emitter {
         None
     }
 
-    fn make_ident(&mut self, name: &str) -> u16 {
+    fn make_global_ident(&mut self, name: &str) -> u16 {
         trace!("make ident '{}'", name);
 
-        if self.identifiers.contains_key(name) {
-            self.identifiers[name]
+        if self.global_identifiers.contains_key(name) {
+            self.global_identifiers[name]
         } else {
             let idx = self.chunk.make_constant(Constant::String(name.to_owned()));
-            self.identifiers.insert(name.to_owned(), idx);
+            self.global_identifiers.insert(name.to_owned(), idx);
             idx
         }
     }
 
-    fn get_ident(&self, name: &Token) -> Result<u16, PiccoloError> {
+    fn get_global_ident(&self, name: &Token) -> Result<u16, PiccoloError> {
         trace!("get ident '{}'", name.lexeme);
 
-        if self.identifiers.contains_key(name.lexeme) {
-            Ok(self.identifiers[name.lexeme])
+        if self.global_identifiers.contains_key(name.lexeme) {
+            Ok(self.global_identifiers[name.lexeme])
         } else {
             Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                 name: name.lexeme.to_owned(),
@@ -218,7 +218,7 @@ impl ExprVisitor for Emitter {
                 .chunk
                 .write_arg_u16(Opcode::GetLocal, idx, variable.line),
             None => {
-                let i = self.get_ident(variable)?;
+                let i = self.get_global_ident(variable)?;
                 self.chunk
                     .write_arg_u16(Opcode::GetGlobal, i, variable.line);
             }
@@ -377,11 +377,11 @@ impl StmtVisitor for Emitter {
                 self.chunk.write_arg_u16(Opcode::SetLocal, idx, op.line);
             } else {
                 // reassign global variable, checking for existence at runtime
-                let i = self.get_ident(name)?;
+                let i = self.get_global_ident(name)?;
                 self.chunk.write_arg_u16(Opcode::SetGlobal, i, name.line);
             }
         } else {
-            let idx = self.get_ident(name)?;
+            let idx = self.get_global_ident(name)?;
             self.chunk.write_arg_u16(Opcode::SetGlobal, idx, name.line);
         }
 
