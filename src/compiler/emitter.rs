@@ -13,7 +13,6 @@ use std::collections::HashMap;
 struct Local {
     pub(crate) name: String,
     pub(crate) depth: u16,
-    pub(crate) initialized: bool,
 }
 
 impl Local {
@@ -21,12 +20,7 @@ impl Local {
         Self {
             name,
             depth,
-            initialized: false,
         }
-    }
-
-    fn initialize(&mut self) {
-        self.initialized = true;
     }
 }
 
@@ -87,6 +81,35 @@ impl Emitter {
         } else {
             Err(errs)
         }
+    }
+
+    fn make_variable(&mut self, name: &Token) -> Result<(), PiccoloError>{
+        if self.scope_depth > 0 {
+            // if there exists some local with this name
+            if let Some(idx) = self.get_local_depth(name.lexeme) {
+                if idx != self.scope_depth {
+                    // create a new local if we're in a different scope
+                    self.locals.push(Local::new(name.lexeme.to_owned(), self.scope_depth));
+                } else {
+                    // error if we're in the same scope
+                    return Err(PiccoloError::new(ErrorKind::SyntaxError)
+                        .line(name.line)
+                        .msg_string(format!(
+                            "variable with name '{}' already exists",
+                            self.locals[idx as usize - 1].name
+                        )));
+                }
+            } else {
+                // create a new local with this name
+                self.locals.push(Local::new(name.lexeme.to_owned(), self.scope_depth));
+            }
+        } else {
+            let idx = self.make_ident(name.lexeme);
+            self.chunk
+                .write_arg_u16(Opcode::DeclareGlobal, idx, name.line);
+        }
+
+        Ok(())
     }
 
     fn get_local_slot(&self, name: &str) -> Option<u16> {
@@ -338,31 +361,9 @@ impl StmtVisitor for Emitter {
 
     fn visit_declaration(&mut self, name: &Token, _op: &Token, value: &Expr) -> Self::Output {
         trace!("{}: declare {}", name.line, name.lexeme);
+
         value.accept(self)?;
-        if self.scope_depth > 0 {
-            // if there exists some local with this name
-            if let Some(idx) = self.get_local_depth(name.lexeme) {
-                if idx != self.scope_depth {
-                    // create a new local if we're in a different scope
-                    self.locals.push(Local::new(name.lexeme.to_owned(), self.scope_depth));
-                } else {
-                    // error if we're in the same scope
-                    return Err(PiccoloError::new(ErrorKind::SyntaxError)
-                        .line(name.line)
-                        .msg_string(format!(
-                            "variable with name '{}' already exists",
-                            self.locals[idx as usize - 1].name
-                        )));
-                }
-            } else {
-                // create a new local with this name
-                self.locals.push(Local::new(name.lexeme.to_owned(), self.scope_depth));
-            }
-        } else {
-            let idx = self.make_ident(name.lexeme);
-            self.chunk
-                .write_arg_u16(Opcode::DeclareGlobal, idx, name.line);
-        }
+        self.make_variable(name)?;
 
         Ok(())
     }
