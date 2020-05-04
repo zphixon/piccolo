@@ -93,19 +93,19 @@ impl AstPrinter {
 impl StmtVisitor for AstPrinter {
     type Output = String;
 
-    fn visit_expr(&mut self, _token: &Token, expr: &Expr) -> String {
+    fn visit_expr(&mut self, _token: &Token, expr: &Expr) -> Self::Output {
         self.parenthesize("expr", &[&expr])
     }
 
-    fn visit_block(&mut self, _do_: &Token, body: &[Stmt]) -> String {
+    fn visit_block(&mut self, _do_: &Token, body: &[Stmt]) -> Self::Output {
         self.parenthesize_list("do", None, body)
     }
 
-    fn visit_declaration(&mut self, name: &Token, op: &Token, value: &Expr) -> String {
+    fn visit_declaration(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
         self.parenthesize(&format!("{} {}", op.lexeme, name.lexeme), &[value])
     }
 
-    fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> String {
+    fn visit_assignment(&mut self, name: &Token, op: &Token, value: &Expr) -> Self::Output {
         self.parenthesize(&format!("{} {}", op.lexeme, name.lexeme), &[value])
     }
 
@@ -117,7 +117,7 @@ impl StmtVisitor for AstPrinter {
         _else_: Option<&Token>,
         else_block: Option<&Vec<Stmt>>,
         _end: &Token,
-    ) -> String {
+    ) -> Self::Output {
         if let Some(else_block) = else_block {
             self.parenthesize_lists("if-else", Some(cond), &[then_block, else_block])
         } else {
@@ -125,7 +125,7 @@ impl StmtVisitor for AstPrinter {
         }
     }
 
-    fn visit_while(&mut self, _while_: &Token, cond: &Expr, body: &[Stmt], _end: &Token) -> String {
+    fn visit_while(&mut self, _while_: &Token, cond: &Expr, body: &[Stmt], _end: &Token) -> Self::Output {
         self.parenthesize_list("while", Some(cond), body)
     }
 
@@ -137,7 +137,7 @@ impl StmtVisitor for AstPrinter {
         inc: &Stmt,
         body: &[Stmt],
         _end: &Token,
-    ) -> String {
+    ) -> Self::Output {
         let s = format!(
             "for {}, {}, {}",
             init.accept(self),
@@ -154,7 +154,7 @@ impl StmtVisitor for AstPrinter {
         _arity: Arity,
         body: &[Stmt],
         _method: bool,
-    ) -> String {
+    ) -> Self::Output {
         let mut s = format!("fn {} (", name.lexeme);
         for (n, arg) in args.iter().enumerate() {
             if n + 1 != args.len() {
@@ -167,15 +167,15 @@ impl StmtVisitor for AstPrinter {
         self.parenthesize_list(&s, None, body)
     }
 
-    fn visit_break(&mut self, _break: &Token) -> String {
+    fn visit_break(&mut self, _break: &Token) -> Self::Output {
         String::from("(break)")
     }
 
-    fn visit_continue(&mut self, _continue: &Token) -> String {
+    fn visit_continue(&mut self, _continue: &Token) -> Self::Output {
         String::from("(continue)")
     }
 
-    fn visit_retn(&mut self, retn: &Token, value: Option<&Expr>) -> String {
+    fn visit_retn(&mut self, retn: &Token, value: Option<&Expr>) -> Self::Output {
         self.parenthesize(
             "retn",
             &[value.unwrap_or(&Expr::Literal {
@@ -184,7 +184,7 @@ impl StmtVisitor for AstPrinter {
         )
     }
 
-    fn visit_assert(&mut self, _keyword: &Token, value: &Expr) -> String {
+    fn visit_assert(&mut self, _keyword: &Token, value: &Expr) -> Self::Output {
         self.parenthesize("assert", &[value])
     }
 
@@ -193,7 +193,7 @@ impl StmtVisitor for AstPrinter {
         _name: &Token,
         _methods: &[Stmt],
         _fields: &[(Token, Expr)],
-    ) -> String {
+    ) -> Self::Output {
         // TODO
         self.parenthesize("data", &[])
     }
@@ -202,27 +202,27 @@ impl StmtVisitor for AstPrinter {
 impl ExprVisitor for AstPrinter {
     type Output = String;
 
-    fn visit_literal(&mut self, literal: &Token) -> String {
+    fn visit_literal(&mut self, literal: &Token) -> Self::Output {
         format!("{}", literal)
     }
 
-    fn visit_paren(&mut self, _right_paren: &Token, expr: &Expr) -> String {
+    fn visit_paren(&mut self, _right_paren: &Token, expr: &Expr) -> Self::Output {
         self.parenthesize("paren", &[expr])
     }
 
-    fn visit_variable(&mut self, variable: &Token) -> String {
+    fn visit_variable(&mut self, variable: &Token) -> Self::Output {
         String::from(variable.lexeme)
     }
 
-    fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> String {
+    fn visit_unary(&mut self, op: &Token, rhs: &Expr) -> Self::Output {
         self.parenthesize(op.lexeme, &[rhs])
     }
 
-    fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> String {
+    fn visit_binary(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output {
         self.parenthesize(op.lexeme, &[lhs, rhs])
     }
 
-    fn visit_logical(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> String {
+    fn visit_logical(&mut self, lhs: &Expr, op: &Token, rhs: &Expr) -> Self::Output {
         self.parenthesize(op.lexeme, &[lhs, rhs])
     }
 
@@ -232,27 +232,27 @@ impl ExprVisitor for AstPrinter {
         _paren: &Token,
         _arity: Arity,
         args: &[Expr],
-    ) -> String {
+    ) -> Self::Output {
         let s = format!("call {}", callee.accept(self));
         let args: Vec<&Expr> = args.iter().map(|arg| arg).collect();
         self.parenthesize(&s, &args)
     }
 
-    fn visit_new(&mut self, name: &Token, args: &[(Token, Box<Expr>)]) -> String {
+    fn visit_new(&mut self, name: &Token, args: &[(Token, Box<Expr>)]) -> Self::Output {
         let args: Vec<&Expr> = args.iter().map(|tb| tb.1.as_ref()).collect();
         self.parenthesize(&format!("new {}", name.lexeme), &args)
     }
 
-    fn visit_get(&mut self, object: &Expr, name: &Token) -> String {
+    fn visit_get(&mut self, object: &Expr, name: &Token) -> Self::Output {
         self.parenthesize(&format!("get {}", name.lexeme), &[object])
     }
 
-    fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> String {
+    fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> Self::Output {
         let s = format!("set {} = {}", name.lexeme, value.accept(self));
         self.parenthesize(&s, &[object])
     }
 
-    fn visit_index(&mut self, _right_bracket: &Token, object: &Expr, idx: &Expr) -> String {
+    fn visit_index(&mut self, _right_bracket: &Token, object: &Expr, idx: &Expr) -> Self::Output {
         let s = format!("index {}", idx.accept(self));
         self.parenthesize(&s, &[object])
     }
@@ -264,7 +264,7 @@ impl ExprVisitor for AstPrinter {
         _arity: Arity,
         body: &[Stmt],
         _method: bool,
-    ) -> String {
+    ) -> Self::Output {
         let mut s = format!("fn {} (", name.lexeme);
         for (n, arg) in args.iter().enumerate() {
             if n + 1 != args.len() {
