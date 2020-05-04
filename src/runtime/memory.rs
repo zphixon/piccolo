@@ -1,10 +1,11 @@
 //! Contains items for the manipulation of memory at runtime.
 
 use crate::{Constant, ErrorKind, Object, PiccoloError, Value};
+use crate::fnv::FnvHashMap;
+
+use super::object::ObjectPtr;
 
 use std::mem;
-
-use crate::fnv::FnvHashMap;
 
 /// Simple string interner.
 ///
@@ -151,8 +152,9 @@ impl Heap {
 
         debug!("insert {:x} = {:?}", self.alloc_after, value);
 
+        let kind = value.kind();
         self.memory[self.alloc_after] = Some(value);
-        Value::Object(self.alloc_after)
+        Value::Object(ObjectPtr { idx: self.alloc_after, kind })
     }
 
     /// De-reference a pointer.
@@ -165,8 +167,8 @@ impl Heap {
     pub fn deref(&self, ptr: Value) -> &dyn Object {
         match ptr {
             Value::Object(ptr) => {
-                trace!("deref {:x}", ptr);
-                self.memory[ptr].as_deref().expect("deref invalid ptr")
+                trace!("deref {:x}", ptr.idx);
+                self.memory[ptr.idx].as_deref().expect("deref invalid ptr")
             }
             _ => panic!("deref with non-ptr {:?}", ptr),
         }
@@ -182,8 +184,8 @@ impl Heap {
     pub fn deref_mut(&mut self, ptr: Value) -> &mut dyn Object {
         match ptr {
             Value::Object(ptr) => {
-                trace!("deref mut {:x}", ptr);
-                self.memory[ptr]
+                trace!("deref mut {:x}", ptr.idx);
+                self.memory[ptr.idx]
                     .as_deref_mut()
                     .expect("deref_mut invalid ptr")
             }
@@ -201,8 +203,8 @@ impl Heap {
     pub fn take(&mut self, ptr: Value) -> Box<dyn Object> {
         match ptr {
             Value::Object(ptr) => {
-                debug!("take {:x}", ptr);
-                self.memory[ptr].take().expect("free invalid ptr")
+                debug!("take {:x}", ptr.idx);
+                self.memory[ptr.idx].take().expect("free invalid ptr")
             }
             _ => panic!("take with non-ptr {:?}", ptr),
         }
@@ -211,7 +213,7 @@ impl Heap {
     pub fn try_deep_copy(&mut self, value: &Value) -> Result<Value, PiccoloError> {
         Ok(match value {
             Value::Object(ptr) => {
-                trace!("try copy {:x}", ptr);
+                trace!("try copy {:x}", ptr.idx);
                 let cloned = self.deref(*value).try_clone().ok_or_else(|| {
                     PiccoloError::new(ErrorKind::CannotClone {
                         ty: self.deref(*value).type_name().to_owned(),

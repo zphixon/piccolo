@@ -6,6 +6,18 @@ use downcast_rs::Downcast;
 
 use core::fmt;
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum ObjectKind {
+    Function,
+    Other,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ObjectPtr {
+    pub idx: usize,
+    pub kind: ObjectKind,
+}
+
 /// Trait for Piccolo objects that will be stored in a [`Heap`].
 ///
 /// [`Heap`]: ../memory/struct.Heap.html
@@ -14,6 +26,10 @@ pub trait Object: Downcast + fmt::Debug + fmt::Display {
     /// Piccolo via the `type()` builtin function.
     fn type_name(&self) -> &'static str {
         "object"
+    }
+
+    fn kind(&self) -> ObjectKind {
+        ObjectKind::Other
     }
 
     /// Compare self to another object. Returns `None` if incomparable.
