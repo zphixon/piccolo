@@ -48,6 +48,8 @@ fn statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
         while_(scanner)
     } else if scanner.peek_token(0)?.kind == TokenKind::For {
         for_(scanner)
+    } else if scanner.peek_token(0)?.kind == TokenKind::Fn {
+        fn_(scanner)
     } else {
         trace!("declaration, expr");
 
@@ -190,6 +192,38 @@ fn for_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
         inc,
         body,
         end,
+    })
+}
+
+fn fn_<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    trace!("fn");
+    scanner.next_token()?.lexeme;
+    let name = consume(scanner, TokenKind::Identifier)?;
+
+    let mut arity = 0;
+    let mut args = Vec::new();
+    consume(scanner, TokenKind::LeftParen)?.lexeme;
+    while scanner.peek_token(0)?.kind != TokenKind::RightParen {
+        args.push(consume(scanner, TokenKind::Identifier)?);
+        arity += 1;
+        if scanner.peek_token(0)?.kind != TokenKind::RightParen
+            && scanner.peek_token(1)?.kind == TokenKind::Identifier
+        {
+            consume(scanner, TokenKind::Comma)?.lexeme;
+        }
+    }
+    consume(scanner, TokenKind::RightParen)?.lexeme;
+
+    consume(scanner, TokenKind::Do)?;
+    let body = block(scanner)?;
+    consume(scanner, TokenKind::End)?;
+
+    Ok(Stmt::Func {
+        name,
+        args,
+        arity,
+        body,
+        method: false,
     })
 }
 

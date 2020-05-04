@@ -20,13 +20,6 @@
 
 use crate::{Token, TokenKind};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Arity {
-    None,
-    Multi,
-    Some(usize),
-}
-
 /// Pretty-prints a Piccolo AST using the ExprVisitor and StmtVisitor traits.
 #[derive(Copy, Clone)]
 pub struct AstPrinter {
@@ -125,7 +118,13 @@ impl StmtVisitor for AstPrinter {
         }
     }
 
-    fn visit_while(&mut self, _while_: &Token, cond: &Expr, body: &[Stmt], _end: &Token) -> Self::Output {
+    fn visit_while(
+        &mut self,
+        _while_: &Token,
+        cond: &Expr,
+        body: &[Stmt],
+        _end: &Token,
+    ) -> Self::Output {
         self.parenthesize_list("while", Some(cond), body)
     }
 
@@ -151,7 +150,7 @@ impl StmtVisitor for AstPrinter {
         &mut self,
         name: &Token,
         args: &[Token],
-        _arity: Arity,
+        _arity: usize,
         body: &[Stmt],
         _method: bool,
     ) -> Self::Output {
@@ -230,7 +229,7 @@ impl ExprVisitor for AstPrinter {
         &mut self,
         callee: &Expr,
         _paren: &Token,
-        _arity: Arity,
+        _arity: usize,
         args: &[Expr],
     ) -> Self::Output {
         let s = format!("call {}", callee.accept(self));
@@ -261,7 +260,7 @@ impl ExprVisitor for AstPrinter {
         &mut self,
         name: &Token,
         args: &[Token],
-        _arity: Arity,
+        _arity: usize,
         body: &[Stmt],
         _method: bool,
     ) -> Self::Output {
@@ -329,7 +328,7 @@ pub trait ExprVisitor {
         &mut self,
         callee: &Expr,
         paren: &Token,
-        arity: Arity,
+        arity: usize,
         args: &[Expr],
     ) -> Self::Output;
 
@@ -341,7 +340,7 @@ pub trait ExprVisitor {
         &mut self,
         name: &Token,
         args: &[Token],
-        arity: Arity,
+        arity: usize,
         body: &[Stmt],
         method: bool,
     ) -> Self::Output;
@@ -384,7 +383,7 @@ pub enum Expr<'a> {
     Call {
         callee: Box<Expr<'a>>,
         paren: Token<'a>,
-        arity: Arity,
+        arity: usize,
         args: Vec<Expr<'a>>,
     },
     New {
@@ -408,7 +407,7 @@ pub enum Expr<'a> {
     Func {
         name: Token<'a>,
         args: Vec<Token<'a>>,
-        arity: Arity,
+        arity: usize,
         body: Vec<Stmt<'a>>,
         method: bool,
     },
@@ -521,7 +520,7 @@ pub trait StmtVisitor {
         &mut self,
         name: &Token,
         args: &[Token],
-        arity: Arity,
+        arity: usize,
         body: &[Stmt],
         method: bool,
     ) -> Self::Output;
@@ -594,7 +593,7 @@ pub enum Stmt<'a> {
     Func {
         name: Token<'a>,
         args: Vec<Token<'a>>,
-        arity: Arity,
+        arity: usize,
         body: Vec<Stmt<'a>>,
         method: bool,
     },
