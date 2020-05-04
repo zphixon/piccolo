@@ -4,9 +4,8 @@ use crate::Constant;
 
 use super::op::Opcode;
 
-// TODO: don't let chunk be cloned
 /// Stores a piece of compiled Piccolo bytecode.
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug)]
 pub struct Chunk {
     pub(crate) data: Vec<u8>,
     pub(crate) lines: Vec<usize>,
