@@ -5,7 +5,7 @@
 use crate::runtime::op::Opcode;
 use crate::{Chunk, Constant, ErrorKind, PiccoloError, Token, TokenKind};
 
-use super::ast::{Arity, Expr, ExprAccept, ExprVisitor, Stmt, StmtAccept, StmtVisitor};
+use super::ast::{Expr, ExprAccept, ExprVisitor, Stmt, StmtAccept, StmtVisitor};
 
 use std::collections::HashMap;
 
@@ -326,7 +326,7 @@ impl ExprVisitor for Emitter {
         todo!("visit_index")
     }
 
-    fn visit_func(
+    fn visit_fn(
         &mut self,
         _name: &Token,
         _args: &[Token],
@@ -535,12 +535,12 @@ impl StmtVisitor for Emitter {
         Ok(())
     }
 
-    fn visit_func(
+    fn visit_fn(
         &mut self,
         _name: &Token,
         _args: &[Token],
         _arity: usize,
-        body: &[Stmt],
+        _body: &[Stmt],
         _method: bool,
     ) -> Self::Output {
         trace!("{}: fn {}", _name.line, _name.lexeme);

@@ -149,7 +149,7 @@ impl StmtVisitor for AstPrinter {
         self.parenthesize_list(&s, None, body)
     }
 
-    fn visit_func(
+    fn visit_fn(
         &mut self,
         name: &Token,
         args: &[Token],
@@ -259,7 +259,7 @@ impl ExprVisitor for AstPrinter {
         self.parenthesize(&s, &[object])
     }
 
-    fn visit_func(
+    fn visit_fn(
         &mut self,
         name: &Token,
         args: &[Token],
@@ -339,7 +339,7 @@ pub trait ExprVisitor {
     fn visit_get(&mut self, object: &Expr, name: &Token) -> Self::Output;
     fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> Self::Output;
     fn visit_index(&mut self, right_bracket: &Token, object: &Expr, idx: &Expr) -> Self::Output;
-    fn visit_func(
+    fn visit_fn(
         &mut self,
         name: &Token,
         args: &[Token],
@@ -443,7 +443,7 @@ impl ExprAccept for Expr<'_> {
             Expr::Index { right_bracket, object, idx }
                 => v.visit_index(right_bracket, object, idx),
             Expr::Func { name, args, arity, body, method }
-                => v.visit_func(name, args, *arity, body, *method),
+                => v.visit_fn(name, args, *arity, body, *method),
         }
     }
 }
@@ -519,7 +519,7 @@ pub trait StmtVisitor {
         end: &Token,
     ) -> Self::Output;
 
-    fn visit_func(
+    fn visit_fn(
         &mut self,
         name: &Token,
         args: &[Token],
@@ -593,7 +593,7 @@ pub enum Stmt<'a> {
         body: Vec<Stmt<'a>>,
         end: Token<'a>,
     },
-    Func {
+    Fn {
         name: Token<'a>,
         args: Vec<Token<'a>>,
         arity: usize,
@@ -641,8 +641,8 @@ impl StmtAccept for Stmt<'_> {
                 => v.visit_while(while_, cond, body, end),
             Stmt::For { for_, init, cond, inc, body, end }
                 => v.visit_for(for_, init.as_ref(), cond, inc.as_ref(), body, end),
-            Stmt::Func { name, args, arity, body, method }
-                => v.visit_func(name, args, *arity, body, *method),
+            Stmt::Fn { name, args, arity, body, method }
+                => v.visit_fn(name, args, *arity, body, *method),
             Stmt::Break { break_ }
                 => v.visit_break(break_),
             Stmt::Continue { continue_ }
