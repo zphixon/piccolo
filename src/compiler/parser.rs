@@ -251,7 +251,10 @@ fn parse_block<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, PiccoloEr
     Ok(stmts)
 }
 
-fn parse_expression<'a>(scanner: &mut Scanner<'a>, min_bp: BindingPower) -> Result<Expr<'a>, PiccoloError> {
+fn parse_expression<'a>(
+    scanner: &mut Scanner<'a>,
+    min_bp: BindingPower,
+) -> Result<Expr<'a>, PiccoloError> {
     trace!("expr_bp {:?}", min_bp);
     let lhs_token = scanner.next_token()?;
     let mut lhs = if lhs_token.is_value() {
