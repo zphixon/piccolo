@@ -6,20 +6,9 @@ use crate::runtime::op::Opcode;
 use crate::{Chunk, Constant, ErrorKind, PiccoloError, Token, TokenKind};
 
 use super::ast::{Expr, ExprAccept, ExprVisitor, Stmt, StmtAccept, StmtVisitor};
+use super::Local;
 
 use std::collections::HashMap;
-
-#[derive(PartialEq)]
-struct Local {
-    pub(crate) name: String,
-    pub(crate) depth: u16,
-}
-
-impl Local {
-    fn new(name: String, depth: u16) -> Self {
-        Self { name, depth }
-    }
-}
 
 /// Struct for emitting Piccolo virtual machine bytecode.
 ///
