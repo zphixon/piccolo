@@ -2,12 +2,25 @@
 
 pub mod ast;
 pub mod emitter;
+pub mod emitter3;
 pub mod parser;
 pub mod scanner;
 
 use crate::{ErrorKind, PiccoloError};
 
 use core::fmt;
+
+#[derive(PartialEq)]
+pub(crate) struct Local {
+    pub(crate) name: String,
+    pub(crate) depth: u16,
+}
+
+impl Local {
+    pub(crate) fn new(name: String, depth: u16) -> Self {
+        Self { name, depth }
+    }
+}
 
 #[cfg(feature = "pc-debug")]
 pub fn compile_chunk(src: &str) -> Result<crate::Chunk, Vec<PiccoloError>> {
