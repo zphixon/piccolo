@@ -5,7 +5,9 @@ use crate::{Chunk, Constant, ErrorKind, PiccoloError, Value};
 
 use super::op::Opcode;
 
-use std::collections::HashMap;
+//use std::collections::HashMap;
+
+use fnv::FnvHashMap as HashMap;
 
 /// Interprets compiled Piccolo bytecode.
 ///
@@ -33,7 +35,7 @@ impl Machine {
     pub fn new() -> Self {
         Machine {
             ip: 0,
-            globals: HashMap::new(),
+            globals: HashMap::default(),
             stack: Vec::new(),
             heap: Heap::new(1024),
         }
