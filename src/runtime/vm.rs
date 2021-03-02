@@ -235,10 +235,10 @@ impl Machine {
                     bin_op!(Opcode::Multiply, *);
                 }
                 Opcode::Divide => {
-                    bin_op!(Opcode::Multiply, /);
+                    bin_op!(Opcode::Divide, /);
                 }
                 Opcode::Modulo => {
-                    bin_op!(Opcode::Multiply, %);
+                    bin_op!(Opcode::Modulo, %);
                 }
 
                 Opcode::Equal => {
