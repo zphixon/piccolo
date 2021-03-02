@@ -18,7 +18,6 @@
 //! [`Emitter`]: ../emitter/struct.Emitter.html
 //! [`Chunk`]: ../runtime/struct.Chunk.html
 
-// TODO: rip out ExprVisitor, StmtVisitor
 // https://github.com/Darksecond/lox/blob/master/lox-compiler/src/bettercompiler/statements.rs
 
 use crate::{Token, TokenKind};

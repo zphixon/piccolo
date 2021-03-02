@@ -2,7 +2,6 @@
 
 pub mod ast;
 pub mod emitter;
-pub mod emitter3;
 pub mod parser;
 pub mod scanner;
 
@@ -26,8 +25,9 @@ impl Local {
 pub fn compile_chunk(src: &str) -> Result<crate::Chunk, Vec<PiccoloError>> {
     let mut scanner = super::Scanner::new(src);
     let ast = parser::parse(&mut scanner)?;
-    let mut emitter = emitter::Emitter::new(crate::Chunk::default());
-    emitter.compile(&ast)
+    let mut emitter = emitter::Emitter::new();
+    emitter::compile_ast(&mut emitter, &ast)?;
+    Ok(emitter.into_chunk())
 }
 
 #[cfg(feature = "pc-debug")]

@@ -47,7 +47,11 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     let ast = parse(&mut scanner)?;
     debug!("ast\n{}", compiler::ast::AstPrinter::print(&ast));
     debug!("compile");
-    let chunk = Emitter::new(Chunk::default()).compile(&ast)?;
+
+    let mut emitter = compiler::emitter::Emitter::new();
+    compiler::emitter::compile_ast(&mut emitter, &ast)?;
+    let chunk = emitter.current_chunk();
+
     debug!("chunk\n{}", chunk.disassemble(""));
     debug!("interpret");
     Ok(Machine::new().interpret(&chunk)?)
@@ -191,8 +195,8 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod integration {
-    use super::{parse, Chunk, Emitter, Machine, Scanner, Token, TokenKind};
-    use crate::compiler::ast::{AstPrinter, Expr, ExprAccept, Stmt};
+    use super::{parse, Emitter, Machine, Scanner, Token, TokenKind};
+    use crate::compiler::ast::{AstPrinter, Expr, Stmt};
     use crate::Constant;
 
     #[test]
@@ -219,8 +223,9 @@ mod integration {
         let mut scanner = Scanner::new(src);
         let ast = parse(&mut scanner).unwrap();
         println!("{}", AstPrinter::print(&ast));
-        let mut ne = Emitter::new(Chunk::default());
-        let chunk = ne.compile(&ast).unwrap();
+        let mut ne = Emitter::new();
+        crate::compiler::emitter::compile_ast(&mut ne, &ast).unwrap();
+        let chunk = ne.into_chunk();
         #[cfg(feature = "pc-debug")]
         {
             chunk.disassemble("idklol");
@@ -260,15 +265,18 @@ mod integration {
                 }
             );
 
-            let mut ne = Emitter::new(Chunk::default());
             println!("{}", AstPrinter::print_expr(expr));
-            expr.accept(&mut ne).unwrap();
+
+            let mut ne = Emitter::new();
+            crate::compiler::emitter::compile_ast(&mut ne, &ast).unwrap();
+            let chunk = ne.into_chunk();
+
             #[cfg(feature = "pc-debug")]
             {
-                ne.chunk().disassemble("idklol");
+                println!("{}", chunk.disassemble("idklol"));
             }
             let mut vm = Machine::new();
-            assert_eq!(vm.interpret(ne.chunk()).unwrap(), Constant::Integer(11));
+            assert_eq!(vm.interpret(&chunk).unwrap(), Constant::Integer(11));
         } else {
             panic!("ast not initialized")
         }
