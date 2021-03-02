@@ -27,32 +27,32 @@ pub fn compile_ast(emitter: &mut Emitter3, ast: &Ast) -> Result<(), Vec<PiccoloE
 #[rustfmt::skip]
 fn compile_stmt(emitter: &mut Emitter3, stmt: &Stmt) -> Result<(), PiccoloError> {
     match stmt {
-        Stmt::Expr { expr, .. }
-            => compile_expr(emitter, expr),
-        // Stmt::Block { end, body }
-        //     => compile_block(end, body),
+        Stmt::Expr { token, expr }
+            => compile_expr_stmt(emitter, token, expr),
+        Stmt::Block { end, body }
+            => compile_block(emitter, end, body),
         Stmt::Declaration { name, value, .. }
             => compile_declaration(emitter, name, value),
-        // Stmt::Assignment { name, op, value }
-        //     => compile_assignment(name, op, value),
-        // Stmt::If { if_, cond, then_block, else_, else_block, end }
-        //     => compile_if(if_, cond, then_block, else_.as_ref(), else_block.as_ref(), end),
-        // Stmt::While { while_, cond, body, end }
-        //     => compile_while(while_, cond, body, end),
-        // Stmt::For { for_, init, cond, inc, body, end }
-        //     => compile_for(for_, init.as_ref(), cond, inc.as_ref(), body, end),
+        Stmt::Assignment { name, op, value }
+            => compile_assignment(emitter, name, op, value),
+        Stmt::If { if_, cond, then_block, else_, else_block, end }
+            => compile_if(emitter, if_, cond, then_block, else_.as_ref(), else_block.as_ref(), end),
+        Stmt::While { while_, cond, body, end }
+            => compile_while(emitter, while_, cond, body, end),
+        Stmt::For { for_, init, cond, inc, body, end }
+            => compile_for(emitter, for_, init.as_ref(), cond, inc.as_ref(), body, end),
         // Stmt::Func { name, args, arity, body, method }
-        //     => compile_func(name, args, *arity, body, *method),
-        // Stmt::Break { break_ }
-        //     => compile_break(break_),
-        // Stmt::Continue { continue_ }
-        //     => compile_continue(continue_),
+        //     => compile_func(emitter, name, args, *arity, body, *method),
+        Stmt::Break { break_ }
+            => compile_break(emitter, break_),
+        Stmt::Continue { continue_ }
+            => compile_continue(emitter, continue_),
         Stmt::Retn { retn, value }
             => compile_retn(emitter, retn, value.as_ref()),
-        // Stmt::Assert { assert, value }
-        //     => compile_assert(assert, value),
+        Stmt::Assert { assert, value }
+            => compile_assert(emitter, assert, value),
         // Stmt::Data { name, methods, fields }
-        //     => compile_data(name, methods, fields),
+        //     => compile_data(emitter, name, methods, fields),
         _ => todo!("{:?}", stmt),
     }
 }
@@ -70,22 +70,41 @@ fn compile_expr(emitter: &mut Emitter3, expr: &Expr) -> Result<(), PiccoloError>
             => compile_unary(emitter, op, rhs),
         Expr::Binary { lhs, op, rhs }
             => compile_binary(emitter, lhs, op, rhs),
-        // Expr::Logical { lhs, op, rhs }
-        //     => compile_logical(lhs, op, rhs),
+        Expr::Logical { lhs, op, rhs }
+            => compile_logical(emitter, lhs, op, rhs),
         // Expr::Call { callee, paren, arity, args }
-        //     => compile_call(callee, paren, *arity, args),
+        //     => compile_call(emitter, callee, paren, *arity, args),
         // Expr::New { name, args }
-        //     => compile_new(name, args),
+        //     => compile_new(emitter, name, args),
         // Expr::Get { object, name }
-        //     => compile_get(object, name),
+        //     => compile_get(emitter, object, name),
         // Expr::Set { object, name, value }
-        //     => compile_set(object, name, value),
+        //     => compile_set(emitter, object, name, value),
         // Expr::Index { right_bracket, object, idx }
-        //     => compile_index(right_bracket, object, idx),
+        //     => compile_index(emitter, right_bracket, object, idx),
         // Expr::Func { name, args, arity, body, method }
-        //     => compile_func(name, args, *arity, body, *method),
+        //     => compile_func(emitter, name, args, *arity, body, *method),
         _ => todo!("{:?}", expr),
     }
+}
+
+fn compile_expr_stmt(
+    emitter: &mut Emitter3,
+    token: &Token,
+    expr: &Expr,
+) -> Result<(), PiccoloError> {
+    compile_expr(emitter, expr)?;
+    emitter.add_instruction(Opcode::Pop, token.line);
+    Ok(())
+}
+
+fn compile_block(emitter: &mut Emitter3, end: &Token, body: &[Stmt]) -> Result<(), PiccoloError> {
+    emitter.begin_scope();
+    for stmt in body {
+        compile_stmt(emitter, stmt)?;
+    }
+    emitter.end_scope(end.line);
+    Ok(())
 }
 
 fn compile_declaration(
@@ -95,6 +114,172 @@ fn compile_declaration(
 ) -> Result<(), PiccoloError> {
     compile_expr(emitter, value)?;
     emitter.make_variable(name)
+}
+
+fn compile_assignment(
+    emitter: &mut Emitter3,
+    name: &Token,
+    op: &Token,
+    value: &Expr,
+) -> Result<(), PiccoloError> {
+    compile_expr(emitter, value)?;
+
+    if emitter.is_local() {
+        if let Some(idx) = emitter.get_local_slot(name) {
+            emitter.add_instruction_arg(Opcode::SetLocal, idx, op.line);
+        } else {
+            let idx = emitter.get_global_ident(name)?;
+            emitter.add_instruction_arg(Opcode::SetGlobal, idx, op.line);
+        }
+    } else {
+        let idx = emitter.get_global_ident(name)?;
+        emitter.add_instruction_arg(Opcode::SetGlobal, idx, op.line);
+    }
+
+    Ok(())
+}
+
+fn compile_if(
+    emitter: &mut Emitter3,
+    if_: &Token,
+    cond: &Expr,
+    then_block: &[Stmt],
+    else_: Option<&Token>,
+    else_block: Option<&Vec<Stmt>>,
+    end: &Token,
+) -> Result<(), PiccoloError> {
+    // compile the condition
+    compile_expr(emitter, cond)?;
+
+    if let (Some(else_), Some(else_block)) = (else_, else_block) {
+        // if the condition is false, jump to patch_jump(jump_else)
+        let jump_else = emitter.start_jump(Opcode::JumpFalse, if_.line);
+        // pop the condition after skipping the jump instruction
+        emitter.add_instruction(Opcode::Pop, if_.line);
+        // compile the then block
+        compile_block(emitter, end, then_block)?;
+        // jump unconditionally past the else block to patch_jump(end_jump)
+        let end_jump = emitter.start_jump(Opcode::JumpForward, else_.line);
+
+        // jump here if the condition is false
+        emitter.patch_jump(jump_else);
+        // pop the condition
+        emitter.add_instruction(Opcode::Pop, else_.line);
+        // compile the else block
+        compile_block(emitter, else_, else_block)?;
+
+        emitter.patch_jump(end_jump);
+    } else {
+        // there is no else block, jump to patch_jump(jump_end) if false
+        let jump_end = emitter.start_jump(Opcode::JumpFalse, if_.line);
+        // pop the condition after skipping the jump instruction
+        emitter.add_instruction(Opcode::Pop, if_.line);
+
+        // compile then block
+        compile_block(emitter, end, then_block)?;
+
+        // jump over the condition pop if we jumped over the else block
+        let jump_pop = emitter.start_jump(Opcode::JumpForward, end.line);
+        emitter.patch_jump(jump_end);
+        emitter.add_instruction(Opcode::Pop, end.line);
+        emitter.patch_jump(jump_pop);
+    }
+
+    Ok(())
+}
+
+fn compile_while(
+    emitter: &mut Emitter3,
+    while_: &Token,
+    cond: &Expr,
+    body: &[Stmt],
+    end: &Token,
+) -> Result<(), PiccoloError> {
+    // loop condition
+    let loop_start = emitter.start_loop_jumps();
+    compile_expr(emitter, cond)?;
+
+    // jump to the end if the condition was false, pop if true
+    let exit_jump = emitter.start_jump(Opcode::JumpFalse, while_.line);
+    emitter.add_instruction(Opcode::Pop, while_.line);
+
+    // loop body
+    compile_block(emitter, end, body)?;
+
+    // here after the body if we encounter a continue
+    emitter.patch_continue_jumps();
+
+    // jump back to the loop condition
+    emitter.add_jump_back(loop_start, end.line);
+
+    // pop the condition after false
+    emitter.patch_jump(exit_jump);
+    emitter.add_instruction(Opcode::Pop, end.line);
+
+    // here after the whole thing if we encounter a break
+    emitter.patch_break_jumps();
+
+    Ok(())
+}
+
+fn compile_for(
+    emitter: &mut Emitter3,
+    for_: &Token,
+    init: &Stmt,
+    cond: &Expr,
+    inc: &Stmt,
+    body: &[Stmt],
+    end: &Token,
+) -> Result<(), PiccoloError> {
+    // initializer
+    emitter.begin_scope();
+    compile_stmt(emitter, init)?;
+
+    // condition
+    let start_offset = emitter.start_loop_jumps();
+    compile_expr(emitter, cond)?;
+
+    // if false jump to the end
+    let end_jump = emitter.start_jump(Opcode::JumpFalse, for_.line);
+    emitter.add_instruction(Opcode::Pop, for_.line);
+
+    // loop body
+    compile_block(emitter, end, body)?;
+
+    // here if we encounter a continue
+    emitter.patch_continue_jumps();
+
+    // increment
+    compile_stmt(emitter, inc)?;
+
+    // unconditional jump back to condition
+    emitter.add_jump_back(start_offset, end.line);
+
+    // here if condition is false
+    emitter.patch_jump(end_jump);
+    emitter.add_instruction(Opcode::Pop, end.line);
+
+    // here if we encounter a break
+    emitter.patch_break_jumps();
+
+    // pop loop variable (local variable)
+    emitter.end_scope(end.line);
+
+    Ok(())
+}
+
+fn compile_break(emitter: &mut Emitter3, break_: &Token) -> Result<(), PiccoloError> {
+    let offset = emitter.start_jump(Opcode::JumpForward, break_.line);
+    emitter.add_break(offset, break_)?;
+
+    Ok(())
+}
+
+fn compile_continue(emitter: &mut Emitter3, continue_: &Token) -> Result<(), PiccoloError> {
+    let offset = emitter.start_jump(Opcode::JumpForward, continue_.line);
+    emitter.add_continue(offset, continue_)?;
+
+    Ok(())
 }
 
 fn compile_retn(
@@ -111,7 +296,18 @@ fn compile_retn(
     Ok(())
 }
 
+fn compile_assert(
+    emitter: &mut Emitter3,
+    assert: &Token,
+    value: &Expr,
+) -> Result<(), PiccoloError> {
+    compile_expr(emitter, value)?;
+    emitter.add_instruction(Opcode::Assert, assert.line);
+    Ok(())
+}
+
 fn compile_literal(emitter: &mut Emitter3, literal: &Token) -> Result<(), PiccoloError> {
+    // TODO: use constant ops instead of Constant ops
     emitter.add_constant(Constant::try_from(*literal)?, literal.line);
     Ok(())
 }
@@ -181,37 +377,73 @@ fn compile_binary(
     Ok(())
 }
 
+fn compile_logical(
+    emitter: &mut Emitter3,
+    lhs: &Expr,
+    op: &Token,
+    rhs: &Expr,
+) -> Result<(), PiccoloError> {
+    let jump_op = match op.kind {
+        TokenKind::LogicalAnd => Opcode::JumpFalse,
+        TokenKind::LogicalOr => Opcode::JumpTrue,
+        _ => unreachable!("op {:?} for logical", op),
+    };
+
+    compile_expr(emitter, lhs)?;
+
+    let short = emitter.start_jump(jump_op, op.line);
+    emitter.add_instruction(Opcode::Pop, op.line);
+
+    compile_expr(emitter, rhs)?;
+
+    emitter.patch_jump(short);
+
+    Ok(())
+}
+
 pub struct Emitter3 {
     chunk: Chunk,
     locals: Vec<Local>,
     global_identifiers: FnvHashMap<String, u16>,
     scope_depth: u16,
+    continue_offsets: Vec<Vec<usize>>,
+    break_offsets: Vec<Vec<usize>>,
 }
 
 impl Emitter3 {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             chunk: Chunk::default(),
             locals: Vec::new(),
             global_identifiers: FnvHashMap::default(),
             scope_depth: 0,
+            continue_offsets: Vec::new(),
+            break_offsets: Vec::new(),
         }
     }
 
-    fn current_chunk(&self) -> &Chunk {
+    fn is_local(&self) -> bool {
+        self.scope_depth > 0
+    }
+
+    pub fn current_chunk(&self) -> &Chunk {
         &self.chunk
     }
 
-    fn current_chunk_mut(&mut self) -> &mut Chunk {
+    pub fn current_chunk_mut(&mut self) -> &mut Chunk {
         &mut self.chunk
     }
 
     fn add_instruction(&mut self, op: Opcode, line: usize) {
-        self.current_chunk_mut().write_u8(op, line)
+        self.current_chunk_mut().write_u8(op, line);
     }
 
     fn add_instruction_arg(&mut self, op: Opcode, arg: u16, line: usize) {
         self.current_chunk_mut().write_arg_u16(op, arg, line);
+    }
+
+    fn add_jump_back(&mut self, offset: usize, line: usize) {
+        self.current_chunk_mut().write_jump_back(offset, line);
     }
 
     fn add_constant(&mut self, value: Constant, line: usize) {
@@ -254,11 +486,21 @@ impl Emitter3 {
         None
     }
 
+    fn get_local_depth(&self, name: &Token) -> Option<u16> {
+        for local in self.locals.iter().rev() {
+            if &local.name == name.lexeme {
+                return Some(local.depth);
+            }
+        }
+
+        None
+    }
+
     fn make_variable(&mut self, name: &Token) -> Result<(), PiccoloError> {
         // are we in global scope?
         if self.scope_depth > 0 {
             // check if we have a local with this name
-            if let Some(idx) = self.get_local_slot(name) {
+            if let Some(idx) = self.get_local_depth(name) {
                 // if we do,
                 if idx != self.scope_depth {
                     // create a new local if we're in a different scope
@@ -281,9 +523,73 @@ impl Emitter3 {
         } else {
             // yes, make a global
             let idx = self.make_global_ident(name);
-            self.chunk
-                .write_arg_u16(Opcode::DeclareGlobal, idx, name.line);
+            self.add_instruction_arg(Opcode::DeclareGlobal, idx, name.line);
         }
+
+        Ok(())
+    }
+
+    fn begin_scope(&mut self) {
+        self.scope_depth += 1;
+    }
+
+    fn end_scope(&mut self, line: usize) {
+        self.scope_depth -= 1;
+        while !self.locals.is_empty() && self.locals[self.locals.len() - 1].depth > self.scope_depth
+        {
+            self.add_instruction(Opcode::Pop, line);
+            self.locals.pop().unwrap();
+        }
+    }
+
+    fn start_jump(&mut self, op: Opcode, line: usize) -> usize {
+        self.current_chunk_mut().start_jump(op, line)
+    }
+
+    fn patch_jump(&mut self, offset: usize) {
+        self.current_chunk_mut().patch_jump(offset);
+    }
+
+    fn start_loop_jumps(&mut self) -> usize {
+        self.continue_offsets.push(Vec::new());
+        self.break_offsets.push(Vec::new());
+        self.current_chunk().data.len()
+    }
+
+    fn patch_continue_jumps(&mut self) {
+        for offset in self.continue_offsets.pop().unwrap() {
+            self.patch_jump(offset);
+        }
+    }
+
+    fn patch_break_jumps(&mut self) {
+        for offset in self.break_offsets.pop().unwrap() {
+            self.patch_jump(offset);
+        }
+    }
+
+    fn add_break(&mut self, offset: usize, break_: &Token) -> Result<(), PiccoloError> {
+        self.break_offsets
+            .last_mut()
+            .ok_or_else(|| {
+                PiccoloError::new(ErrorKind::SyntaxError)
+                    .msg("cannot break outside of a loop")
+                    .line(break_.line)
+            })?
+            .push(offset);
+
+        Ok(())
+    }
+
+    fn add_continue(&mut self, offset: usize, continue_: &Token) -> Result<(), PiccoloError> {
+        self.continue_offsets
+            .last_mut()
+            .ok_or_else(|| {
+                PiccoloError::new(ErrorKind::SyntaxError)
+                    .msg("cannot continue outside of a loop")
+                    .line(continue_.line)
+            })?
+            .push(offset);
 
         Ok(())
     }
@@ -291,6 +597,8 @@ impl Emitter3 {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+
     #[test]
     fn emitter3() {
         let ast = crate::parse(&mut crate::Scanner::new(
@@ -299,8 +607,8 @@ mod test {
         ))
         .unwrap();
 
-        let mut e = super::Emitter3::new();
-        super::compile_ast(&mut e, &ast).unwrap();
+        let mut e = Emitter3::new();
+        compile_ast(&mut e, &ast).unwrap();
         println!("{}", e.current_chunk().disassemble("jioew"));
 
         crate::runtime::vm::Machine::new()
