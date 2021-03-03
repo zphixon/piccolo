@@ -104,7 +104,13 @@ opcodes!(Opcode =>
     JumpForward     = 0x17,
     JumpFalse       = 0x18,
     JumpTrue        = 0x19,
-    JumpBack        = 0x1A,
+    JumpBack        = 0x1a,
+
+    BitAnd          = 0x1b,
+    BitOr           = 0x1c,
+    BitXor          = 0x1d,
+    ShiftLeft       = 0x1e,
+    ShiftRight      = 0x1f,
 
     Assert          = 0xff,
 );
