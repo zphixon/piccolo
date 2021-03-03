@@ -101,12 +101,55 @@ impl<'a> Scanner<'a> {
             b'(' => TokenKind::LeftParen,
             b')' => TokenKind::RightParen,
             b',' => TokenKind::Comma,
-            b'-' => TokenKind::Minus,
-            b'+' => TokenKind::Plus,
-            b'*' => TokenKind::Multiply,
-            b'/' => TokenKind::Divide,
-            b'^' => TokenKind::BitwiseXor,
-            b'%' => TokenKind::Modulo,
+
+            b'+' => {
+                if self.peek_char() == b'=' {
+                    self.advance_char();
+                    TokenKind::PlusAssign
+                } else {
+                    TokenKind::Plus
+                }
+            }
+            b'-' => {
+                if self.peek_char() == b'=' {
+                    self.advance_char();
+                    TokenKind::MinusAssign
+                } else {
+                    TokenKind::Minus
+                }
+            }
+            b'*' => {
+                if self.peek_char() == b'=' {
+                    self.advance_char();
+                    TokenKind::MultiplyAssign
+                } else {
+                    TokenKind::Multiply
+                }
+            }
+            b'/' => {
+                if self.peek_char() == b'=' {
+                    self.advance_char();
+                    TokenKind::DivideAssign
+                } else {
+                    TokenKind::Divide
+                }
+            }
+            b'^' => {
+                if self.peek_char() == b'=' {
+                    self.advance_char();
+                    TokenKind::BitwiseXorAssign
+                } else {
+                    TokenKind::BitwiseXor
+                }
+            }
+            b'%' => {
+                if self.peek_char() == b'=' {
+                    self.advance_char();
+                    TokenKind::ModuloAssign
+                } else {
+                    TokenKind::Modulo
+                }
+            }
 
             b'@' => TokenKind::At,
             b'$' => TokenKind::Dollar,
@@ -124,6 +167,9 @@ impl<'a> Scanner<'a> {
                 if self.peek_char() == b'&' {
                     self.advance_char();
                     TokenKind::LogicalAnd
+                } else if self.peek_char() == b'=' {
+                    self.advance_char();
+                    TokenKind::BitwiseAndAssign
                 } else {
                     TokenKind::BitwiseAnd
                 }
@@ -133,6 +179,9 @@ impl<'a> Scanner<'a> {
                 if self.peek_char() == b'|' {
                     self.advance_char();
                     TokenKind::LogicalOr
+                } else if self.peek_char() == b'=' {
+                    self.advance_char();
+                    TokenKind::BitwiseOrAssign
                 } else {
                     TokenKind::BitwiseOr
                 }
@@ -179,7 +228,12 @@ impl<'a> Scanner<'a> {
                     TokenKind::GreaterEqual
                 } else if self.peek_char() == b'>' {
                     self.advance_char();
-                    TokenKind::ShiftRight
+                    if self.peek_char() == b'=' {
+                        self.advance_char();
+                        TokenKind::ShiftRightAssign
+                    } else {
+                        TokenKind::ShiftRight
+                    }
                 } else {
                     TokenKind::Greater
                 }
@@ -191,7 +245,12 @@ impl<'a> Scanner<'a> {
                     TokenKind::LessEqual
                 } else if self.peek_char() == b'<' {
                     self.advance_char();
-                    TokenKind::ShiftLeft
+                    if self.peek_char() == b'=' {
+                        self.advance_char();
+                        TokenKind::ShiftLeftAssign
+                    } else {
+                        TokenKind::ShiftLeft
+                    }
                 } else {
                     TokenKind::Less
                 }
@@ -424,6 +483,69 @@ fn is_non_identifier(c: u8) -> bool {
 #[cfg(test)]
 mod test {
     use super::{Scanner, Token, TokenKind};
+
+    #[test]
+    fn multi_char_ops() {
+        let src = "++=--=//=**=%%=";
+
+        let mut scanner = Scanner::new(src);
+        while scanner.next().unwrap().kind != TokenKind::Eof {}
+        let tokens: Vec<TokenKind> = scanner.tokens.drain(0..).map(|t| t.kind).collect();
+
+        assert_eq!(
+            tokens,
+            &[
+                TokenKind::Plus,
+                TokenKind::PlusAssign,
+                TokenKind::Minus,
+                TokenKind::MinusAssign,
+                TokenKind::Divide,
+                TokenKind::DivideAssign,
+                TokenKind::Multiply,
+                TokenKind::MultiplyAssign,
+                TokenKind::Modulo,
+                TokenKind::ModuloAssign,
+                TokenKind::Eof,
+            ],
+        );
+
+        let src = "&&&=&|||=|";
+
+        let mut scanner = Scanner::new(src);
+        while scanner.next().unwrap().kind != TokenKind::Eof {}
+        let tokens: Vec<TokenKind> = scanner.tokens.drain(0..).map(|t| t.kind).collect();
+
+        assert_eq!(
+            tokens,
+            &[
+                TokenKind::LogicalAnd,
+                TokenKind::BitwiseAndAssign,
+                TokenKind::BitwiseAnd,
+                TokenKind::LogicalOr,
+                TokenKind::BitwiseOrAssign,
+                TokenKind::BitwiseOr,
+                TokenKind::Eof,
+            ]
+        );
+
+        let src = "<<<=<<==<";
+
+        let mut scanner = Scanner::new(src);
+        while scanner.next().unwrap().kind != TokenKind::Eof {}
+        let tokens: Vec<TokenKind> = scanner.tokens.drain(0..).map(|t| t.kind).collect();
+
+        assert_eq!(
+            tokens,
+            &[
+                TokenKind::ShiftLeft,
+                TokenKind::LessEqual,
+                TokenKind::ShiftLeftAssign,
+                TokenKind::Assign,
+                TokenKind::Less,
+                TokenKind::Eof
+            ]
+        );
+    }
 
     #[test]
     fn scanner() {

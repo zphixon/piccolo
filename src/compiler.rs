@@ -172,6 +172,17 @@ pub enum TokenKind {
     ShiftLeft,    // <<
     ShiftRight,   // >>
 
+    PlusAssign,       // +=
+    MinusAssign,      // -=
+    DivideAssign,     // /=
+    MultiplyAssign,   // *=
+    ModuloAssign,     // %=
+    BitwiseAndAssign, // &=
+    BitwiseOrAssign,  // |=
+    BitwiseXorAssign, // ^=
+    ShiftLeftAssign,  // <<=
+    ShiftRightAssign, // >>=
+
     // other syntax elements
     Identifier,
     String,
@@ -209,6 +220,40 @@ impl<'a> Token<'a> {
                 | TokenKind::Double(_)
                 | TokenKind::Integer(_)
         )
+    }
+
+    pub fn is_assign(&self) -> bool {
+        matches!(
+            self.kind,
+            TokenKind::Assign
+                | TokenKind::PlusAssign
+                | TokenKind::MinusAssign
+                | TokenKind::DivideAssign
+                | TokenKind::MultiplyAssign
+                | TokenKind::ModuloAssign
+                | TokenKind::BitwiseAndAssign
+                | TokenKind::BitwiseOrAssign
+                | TokenKind::BitwiseXorAssign
+                | TokenKind::ShiftLeftAssign
+                | TokenKind::ShiftRightAssign
+        )
+    }
+
+    pub fn assign_by_mutate_op(&self) -> Option<crate::runtime::op::Opcode> {
+        use crate::runtime::op::Opcode;
+        Some(match self.kind {
+            TokenKind::PlusAssign => Opcode::Add,
+            TokenKind::MinusAssign => Opcode::Subtract,
+            TokenKind::DivideAssign => Opcode::Divide,
+            TokenKind::MultiplyAssign => Opcode::Multiply,
+            TokenKind::ModuloAssign => Opcode::Modulo,
+            TokenKind::BitwiseAndAssign => Opcode::BitAnd,
+            TokenKind::BitwiseOrAssign => Opcode::BitOr,
+            TokenKind::BitwiseXorAssign => Opcode::BitXor,
+            TokenKind::ShiftLeftAssign => Opcode::ShiftLeft,
+            TokenKind::ShiftRightAssign => Opcode::ShiftRight,
+            _ => None?,
+        })
     }
 }
 
@@ -309,6 +354,16 @@ impl fmt::Display for TokenKind {
             TokenKind::GreaterEqual => write!(f, ">="),
             TokenKind::ShiftLeft => write!(f, "<<"),
             TokenKind::ShiftRight => write!(f, ">>"),
+            TokenKind::PlusAssign => write!(f, "+="),
+            TokenKind::MinusAssign => write!(f, "-="),
+            TokenKind::DivideAssign => write!(f, "/="),
+            TokenKind::MultiplyAssign => write!(f, "*="),
+            TokenKind::ModuloAssign => write!(f, "%="),
+            TokenKind::BitwiseAndAssign => write!(f, "&="),
+            TokenKind::BitwiseOrAssign => write!(f, "|="),
+            TokenKind::BitwiseXorAssign => write!(f, "^="),
+            TokenKind::ShiftLeftAssign => write!(f, "<<="),
+            TokenKind::ShiftRightAssign => write!(f, ">>="),
             TokenKind::Identifier => write!(f, "ident"),
             TokenKind::String => write!(f, "\"str\""),
             TokenKind::True => write!(f, "true"),
