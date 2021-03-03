@@ -1,28 +1,20 @@
-//! Contains types and traits useful for working with a Piccolo AST.
+//! The Piccolo abstract syntax tree.
 //!
 //! The main Piccolo AST is fit into enums [`Expr`] and [`Stmt`]. `Expr` contains
 //! variants for working with Piccolo expressions, and `Stmt` for statements. Generally,
 //! `Stmt` AST nodes have some block component to them, like a function, object, or
 //! control flow.
 //!
-//! [`ExprVisitor`] and [`StmtVisitor`] are traits for implementing the [visitor]
-//! pattern. They allow a struct implementing them to walk the AST to perform some
-//! operation without modifying it. Piccolo's bytecode [`Emitter`] implements these
-//! traits to compile an AST into a [`Chunk`].
-//!
 //! [`Expr`]: ./enum.Expr.html
 //! [`Stmt`]: ./enum.Stmt.html
-//! [`ExprVisitor`]: ./trait.ExprVisitor.html
-//! [`StmtVisitor`]: ./trait.StmtVisitor.html
 //! [visitor]: https://github.com/rust-unofficial/patterns/blob/master/patterns/visitor.md
-//! [`Emitter`]: ../emitter/struct.Emitter.html
-//! [`Chunk`]: ../runtime/struct.Chunk.html
 
 // https://github.com/Darksecond/lox/blob/master/lox-compiler/src/bettercompiler/statements.rs
 
 use crate::{Token, TokenKind};
 
-type Ast<'a> = [Stmt<'a>];
+/// Simple type alias for the abstract syntax tree.
+pub type Ast<'a> = [Stmt<'a>];
 
 /// Piccolo expression AST node.
 ///
@@ -172,6 +164,7 @@ pub enum Stmt<'a> {
     },
 }
 
+/// Print an abstract syntax tree.
 pub fn print_ast(ast: &Ast) -> String {
     let mut s = String::new();
     for stmt in ast.iter() {
@@ -181,6 +174,7 @@ pub fn print_ast(ast: &Ast) -> String {
     s
 }
 
+/// Print a single expression.
 pub fn print_expression(expr: &Expr) -> String {
     print_expr(0, expr)
 }

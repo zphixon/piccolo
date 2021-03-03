@@ -1,4 +1,4 @@
-//! Contains types for working with Piccolo values at runtime.
+//! Contains types for working with Piccolo values.
 
 use crate::{PiccoloError, Token, TokenKind};
 

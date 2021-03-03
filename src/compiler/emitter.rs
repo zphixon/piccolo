@@ -1,4 +1,6 @@
-use super::ast::{Expr, Stmt};
+//! Bytecode compiler.
+
+use super::ast::{Ast, Expr, Stmt};
 use super::Local;
 use crate::compiler::{Token, TokenKind};
 use crate::error::{ErrorKind, PiccoloError};
@@ -8,8 +10,7 @@ use crate::runtime::value::Constant;
 
 use fnv::FnvHashMap;
 
-type Ast<'a> = [Stmt<'a>];
-
+/// Compile an abstract syntax tree into bytecode.
 pub fn compile_ast(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloError>> {
     let errors: Vec<_> = ast
         .iter()
@@ -397,6 +398,11 @@ fn compile_logical(
     Ok(())
 }
 
+/// Bytecode compiler object
+///
+/// Construct an Emitter, and pass a `&mut` reference to `compile_ast` along with
+/// the abstract syntax tree. Extract the `Chunk` with `current_chunk{_mut}()` or
+/// `into_chunk()`.
 pub struct Emitter {
     chunk: Chunk,
     locals: Vec<Local>,
@@ -413,6 +419,7 @@ impl Default for Emitter {
 }
 
 impl Emitter {
+    /// Make a new emitter, equivalent to `Default::default()`
     pub fn new() -> Self {
         Self {
             chunk: Chunk::default(),

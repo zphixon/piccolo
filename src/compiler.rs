@@ -183,7 +183,7 @@ pub enum TokenKind {
     Eof,
 }
 
-/// Main token struct.
+/// Represents a token in source code.
 ///
 /// Maintains a reference to the original source.
 #[derive(Debug, Clone, Copy, PartialEq)]
