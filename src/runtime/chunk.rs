@@ -1,4 +1,4 @@
-//! Contains types for working with compiled Piccolo bytecode.
+//! Types for working with compiled Piccolo bytecode.
 
 use crate::Constant;
 

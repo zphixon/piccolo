@@ -95,7 +95,7 @@ impl Interner {
     }
 }
 
-/// A `Heap` is the main method of runtime variable reference semantics.
+/// The main method of runtime variable reference semantics.
 ///
 /// The only way of implementing the dynamic lifetimes of values that need to exist in
 /// a scripting language like Piccolo is to circumvent Rust's system of borrows and lifetimes

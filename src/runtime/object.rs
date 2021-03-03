@@ -1,4 +1,4 @@
-//! Contains `Object` and its implementors.
+//! Objects defined in Rust that may exist at runtime.
 
 use crate::runtime::value::Value;
 
