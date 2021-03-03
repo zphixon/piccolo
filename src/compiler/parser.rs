@@ -53,7 +53,7 @@ fn parse_statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloErr
     } else {
         trace!("expr");
 
-        let token = scanner.peek_token(0)?.clone();
+        let token = *scanner.peek_token(0)?;
         let expr = parse_expression(scanner, BindingPower::ExpressionBoundary)?;
 
         Ok(Stmt::Expr { token, expr })
@@ -197,22 +197,22 @@ fn parse_for<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
 
 fn parse_fn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     trace!("fn");
-    scanner.next_token()?.lexeme;
+    scanner.next_token()?;
     let name = consume(scanner, TokenKind::Identifier)?;
 
     let mut arity = 0;
     let mut args = Vec::new();
-    consume(scanner, TokenKind::LeftParen)?.lexeme;
+    consume(scanner, TokenKind::LeftParen)?;
     while scanner.peek_token(0)?.kind != TokenKind::RightParen {
         args.push(consume(scanner, TokenKind::Identifier)?);
         arity += 1;
         if scanner.peek_token(0)?.kind != TokenKind::RightParen
             && scanner.peek_token(1)?.kind == TokenKind::Identifier
         {
-            consume(scanner, TokenKind::Comma)?.lexeme;
+            consume(scanner, TokenKind::Comma)?;
         }
     }
-    consume(scanner, TokenKind::RightParen)?.lexeme;
+    consume(scanner, TokenKind::RightParen)?;
 
     consume(scanner, TokenKind::Do)?;
     let body = parse_block(scanner)?;

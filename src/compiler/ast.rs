@@ -34,7 +34,7 @@ impl AstPrinter {
         let mut s = String::new();
         for stmt in ast.iter() {
             s.push_str(&stmt.accept(&mut AstPrinter { indent: 0 }));
-            s.push_str("\n");
+            s.push('\n');
         }
         s
     }
@@ -52,10 +52,10 @@ impl AstPrinter {
     fn parenthesize(&mut self, name: &str, expressions: &[&Expr]) -> String {
         let mut s = format!("({}", name);
         for expr in expressions {
-            s.push_str(" ");
+            s.push(' ');
             s.push_str(&expr.accept(self));
         }
-        s.push_str(")");
+        s.push(')');
         s
     }
 
@@ -67,19 +67,19 @@ impl AstPrinter {
         self.indent += 1;
         let mut s = format!("({}", name);
         if expr.is_some() {
-            s.push_str(" ");
+            s.push(' ');
             s.push_str(&expr.as_ref().unwrap().accept(self));
         }
         for stmt_list in stmts.iter() {
             for stmt in stmt_list.iter() {
-                s.push_str("\n");
+                s.push('\n');
                 for _ in 0..self.indent {
                     s.push_str("  ");
                 }
                 s.push_str(&stmt.accept(self));
             }
         }
-        s.push_str(")");
+        s.push(')');
         self.indent -= 1;
         s
     }
@@ -164,7 +164,7 @@ impl StmtVisitor for AstPrinter {
                 s.push_str(arg.lexeme);
             }
         }
-        s.push_str(")");
+        s.push(')');
         self.parenthesize_list(&s, None, body)
     }
 
@@ -235,7 +235,7 @@ impl ExprVisitor for AstPrinter {
         args: &[Expr],
     ) -> Self::Output {
         let s = format!("call {}", callee.accept(self));
-        let args: Vec<&Expr> = args.iter().map(|arg| arg).collect();
+        let args: Vec<&Expr> = args.iter().collect();
         self.parenthesize(&s, &args)
     }
 
@@ -274,7 +274,7 @@ impl ExprVisitor for AstPrinter {
                 s.push_str(arg.lexeme);
             }
         }
-        s.push_str(")");
+        s.push(')');
         self.parenthesize_list(&s, None, body)
     }
 }

@@ -8,7 +8,7 @@ use crate::runtime::value::Constant;
 
 use fnv::FnvHashMap;
 
-type Ast<'a> = Vec<Stmt<'a>>;
+type Ast<'a> = [Stmt<'a>];
 
 pub fn compile_ast(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloError>> {
     let errors: Vec<_> = ast
@@ -406,6 +406,12 @@ pub struct Emitter {
     break_offsets: Vec<Vec<usize>>,
 }
 
+impl Default for Emitter {
+    fn default() -> Emitter {
+        Emitter::new()
+    }
+}
+
 impl Emitter {
     pub fn new() -> Self {
         Self {
@@ -413,8 +419,8 @@ impl Emitter {
             locals: Vec::new(),
             global_identifiers: FnvHashMap::default(),
             scope_depth: 0,
-            continue_offsets: Vec::new(),
-            break_offsets: Vec::new(),
+            continue_offsets: Vec::with_capacity(0),
+            break_offsets: Vec::with_capacity(0),
         }
     }
 
@@ -467,7 +473,7 @@ impl Emitter {
     fn get_global_ident(&self, name: &Token) -> Result<u16, PiccoloError> {
         self.global_identifiers
             .get(name.lexeme)
-            .map(|u| *u)
+            .copied()
             .ok_or_else(|| {
                 PiccoloError::new(ErrorKind::UndefinedVariable {
                     name: name.lexeme.to_owned(),
@@ -478,7 +484,7 @@ impl Emitter {
 
     fn get_local_slot(&self, name: &Token) -> Option<u16> {
         for (i, local) in self.locals.iter().enumerate().rev() {
-            if &local.name == name.lexeme {
+            if local.name == name.lexeme {
                 return Some(i as u16);
             }
         }
@@ -488,7 +494,7 @@ impl Emitter {
 
     fn get_local_depth(&self, name: &Token) -> Option<u16> {
         for local in self.locals.iter().rev() {
-            if &local.name == name.lexeme {
+            if local.name == name.lexeme {
                 return Some(local.depth);
             }
         }

@@ -277,7 +277,7 @@ impl Heap {
             Value::Integer(v) => format!("{}", v),
             Value::Double(v) => format!("{}", v),
             Value::Object(_) => format!("{}", self.deref(*v)),
-            Value::String(v) => format!("{}", self.interner.lookup(*v)),
+            Value::String(v) => self.interner.lookup(*v).to_string(),
             Value::Nil => "nil".into(),
         }
     }
