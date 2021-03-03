@@ -45,7 +45,7 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     let mut scanner = Scanner::new(src);
     debug!("parse");
     let ast = parse(&mut scanner)?;
-    debug!("ast\n{}", compiler::ast::AstPrinter::print(&ast));
+    debug!("ast\n{}", compiler::ast::print_ast(&ast));
     debug!("compile");
 
     let mut emitter = compiler::emitter::Emitter::new();
@@ -196,7 +196,7 @@ pub mod fuzzer {
 #[cfg(test)]
 mod integration {
     use super::{parse, Emitter, Machine, Scanner, Token, TokenKind};
-    use crate::compiler::ast::{AstPrinter, Expr, Stmt};
+    use crate::compiler::ast::{self, Expr, Stmt};
     use crate::Constant;
 
     #[test]
@@ -222,7 +222,7 @@ mod integration {
         let src = "a=:1+2";
         let mut scanner = Scanner::new(src);
         let ast = parse(&mut scanner).unwrap();
-        println!("{}", AstPrinter::print(&ast));
+        println!("{}", ast::print_ast(&ast));
         let mut ne = Emitter::new();
         crate::compiler::emitter::compile_ast(&mut ne, &ast).unwrap();
         let chunk = ne.into_chunk();
@@ -265,7 +265,7 @@ mod integration {
                 }
             );
 
-            println!("{}", AstPrinter::print_expr(expr));
+            println!("{}", ast::print_expression(expr));
 
             let mut ne = Emitter::new();
             crate::compiler::emitter::compile_ast(&mut ne, &ast).unwrap();
