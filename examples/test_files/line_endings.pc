@@ -1,0 +1,96 @@
+
+a =: "ayyyy lmao"
+b =: a + "ooo"
+b = b + "323"
+c =: b
+b = c + b
+a = "z"
+b = c + a + b
+assert b + a == "ayyyy lmaoooo323zayyyy lmaoooo323ayyyy lmaoooo323z"
+
+x =: "hello \
+      world"
+
+assert x == "hello world"
+
+# fn thing(arg_juan, arg_deux) is
+#     sum = arg_juan + arg_deux
+#     if sum == 23 do
+#         # daniel
+#         sys.panic("stop following me")
+#     else
+#         retn sum
+#     end
+# end
+#
+# data foobar is
+#     a = true
+#     b = "perhapด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็s?"
+#     c = 23
+#
+#     fn shout_b() is
+#         io.prln(me.c)
+#     end
+#     fn c_times(t) is
+#         me.set_c(me.c * t)
+#     end
+#     fn compare_c(other) is
+#         retn me.c > other.get_c()
+#     end
+#     fn get_c() is
+#         retn me.c
+#     end
+#     fn set_c(c) is
+#         me.c = c
+#     end
+# end
+#
+# io.prln("hello!")
+#
+# b = true
+# if b do
+#     # maybe only false/nil be falsey?
+#     io.prln("semantics be damned")
+# end
+#
+# x = 37
+# while x > 30.2999 do
+#     io.prln(thing(x, x / 2), " bottles of beer on the wall")
+#     x = x / 2
+# end
+#
+#
+# j = new foobar
+# q = new foobar(a = false, b = "oof ouch owie")
+# q.shout_b()
+# j.set_c(55)
+# io.prln(q.compare_c(j))
+#
+# arr = [1, 2, 3, 4, "five"]
+# io.prln()
+# io.prln(arr[0]!=1)
+# if arr[0] != 1 do
+#     sys.panic("array machine broke")
+# end
+#
+# for item in arr do
+#     for x in 0..23 do # exclusive range: [0, 23)
+#         if x == item && x % 2 == 1 do
+#             io.prln("wowie")
+#         else
+#             #io.prln(str(item) + str(x))
+#             if type(item) == "int" && type(x) == "int" do
+#                 io.prln(item + x)
+#             else
+#                 io.prln(str(item) + str(x))
+#             end
+#         end
+#     end
+# end
+#
+# sys.show_env()
+#
+a﷽ =: "表ポあA鷗ŒéＢ逍Üßªąñ丂㐀𠀀"
+b =: "᚛ᚄᚓᚐᚋᚒᚄ ᚑᚄᚂᚑᚏᚅ᚜"
+dollar =: "c"
+d =: "𝕋𝕙𝕖 𝕢𝕦𝕚𝕔𝕜 𝕓𝕣𝕠𝕨𝕟 𝕗𝕠𝕩 𝕛𝕦𝕞𝕡𝕤 𝕠𝕧𝕖𝕣 𝕥𝕙𝕖 𝕝𝕒𝕫𝕪 𝕕𝕠𝕘"
