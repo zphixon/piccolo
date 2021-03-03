@@ -69,7 +69,7 @@ pub(crate) fn escape_string(t: &Token) -> Result<String, PiccoloError> {
                         b't' => {
                             value.push(b'\t');
                         }
-                        b'\n' => {
+                        b'\r' | b'\n' => {
                             while i < s.as_bytes().len() - 1
                                 && scanner::is_whitespace(s.as_bytes()[i])
                             {
