@@ -129,8 +129,26 @@ fn compile_assignment(
 ) -> Result<(), PiccoloError> {
     trace!("{} assign {}", name.line, name.lexeme);
 
-    compile_expr(emitter, value)?;
+    if let Some(opcode) = op.assign_by_mutate_op() {
+        // if this is an assignment-by-mutation operator, first get the value of the variable
+        if let Some(idx) = emitter.get_local_slot(name) {
+            emitter.add_instruction_arg(Opcode::GetLocal, idx, op.line);
+        } else {
+            let idx = emitter.get_global_ident(name)?;
+            emitter.add_instruction_arg(Opcode::GetGlobal, idx, op.line);
+        }
 
+        // calculate the value to mutate with
+        compile_expr(emitter, value)?;
+
+        // then mutate
+        emitter.add_instruction(opcode, op.line);
+    } else {
+        // otherwise just calculate the value
+        compile_expr(emitter, value)?;
+    }
+
+    // then assign
     if emitter.is_local() {
         if let Some(idx) = emitter.get_local_slot(name) {
             emitter.add_instruction_arg(Opcode::SetLocal, idx, op.line);

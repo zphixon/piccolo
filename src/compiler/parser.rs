@@ -28,7 +28,7 @@ pub fn parse<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<Piccolo
 }
 
 fn parse_statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    if scanner.peek_token(1)?.kind == TokenKind::Assign {
+    if scanner.peek_token(1)?.is_assign() {
         parse_assignment(scanner)
     } else if scanner.peek_token(1)?.kind == TokenKind::Declare {
         parse_declaration(scanner)
@@ -64,7 +64,7 @@ fn parse_assignment<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloEr
     trace!("assign");
 
     let name = consume(scanner, TokenKind::Identifier)?;
-    let op = consume(scanner, TokenKind::Assign)?;
+    let op = scanner.next_token()?;
     let value = parse_expression(scanner, BindingPower::ExpressionBoundary)?;
 
     Ok(Stmt::Assignment { name, op, value })
@@ -452,5 +452,21 @@ mod test {
         assert!(BindingPower::LogicalAnd > BindingPower::LogicalOr);
         assert!(BindingPower::LogicalAnd < BindingPower::Comparison);
         assert!(BindingPower::LogicalOr < BindingPower::Comparison);
+    }
+
+    #[test]
+    fn assign() {
+        let src = "a += 3";
+        let ast = parse(&mut Scanner::new(src)).unwrap();
+        assert_eq!(
+            ast,
+            &[Stmt::Assignment {
+                name: Token::new(TokenKind::Identifier, "a", 1),
+                op: Token::new(TokenKind::PlusAssign, "+=", 1),
+                value: Expr::Literal {
+                    literal: Token::new(TokenKind::Integer(3), "3", 1),
+                }
+            }]
+        );
     }
 }
