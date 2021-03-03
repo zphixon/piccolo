@@ -398,6 +398,13 @@ fn compile_binary(
         TokenKind::Less => emitter.add_instruction(Opcode::Less, op.line),
         TokenKind::LessEqual => emitter.add_instruction(Opcode::LessEqual, op.line),
         TokenKind::Modulo => emitter.add_instruction(Opcode::Modulo, op.line),
+
+        TokenKind::ShiftLeft => emitter.add_instruction(Opcode::ShiftLeft, op.line),
+        TokenKind::ShiftRight => emitter.add_instruction(Opcode::ShiftRight, op.line),
+        TokenKind::BitwiseAnd => emitter.add_instruction(Opcode::BitAnd, op.line),
+        TokenKind::BitwiseOr => emitter.add_instruction(Opcode::BitOr, op.line),
+        TokenKind::BitwiseXor => emitter.add_instruction(Opcode::BitXor, op.line),
+
         _ => unreachable!("binary {:?}", op),
     }
 

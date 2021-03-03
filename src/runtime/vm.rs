@@ -122,12 +122,39 @@ impl Machine {
             let inst = chunk.data[self.ip];
             self.ip += 1;
 
+            macro_rules! bit_op {
+                ($opcode:path, $op:tt) => {
+                    let rhs = self.pop(chunk)?;
+                    let lhs = self.pop(chunk)?;
+                    if lhs.is_integer() && rhs.is_integer() {
+                        let rhs = rhs.into::<i64>();
+                        let lhs = lhs.into::<i64>();
+                        self.stack.push(Value::Integer(lhs $op rhs));
+                    } else {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                            exp: "integer".into(),
+                            got: format!(
+                                "{} {} {}",
+                                self.heap.type_name(&lhs),
+                                stringify!($op),
+                                self.heap.type_name(&rhs)
+                            ),
+                            op: $opcode,
+                        })
+                        .line(chunk.get_line_from_index(self.ip)));
+                    }
+                };
+            }
+
             // boolean argument to enable/disable string concatenation
             macro_rules! bin_op {
-                ($opcode:path, $op:tt) => {
+                ($opcode:path, $op:tt, nostring) => {
                     bin_op!($opcode, $op, false)
                 };
-                ($opcode:path, $op:tt, $concat:tt) => {
+                ($opcode:path, $op:tt, string) => {
+                    bin_op!($opcode, $op, true)
+                };
+                ($opcode:path, $op:tt, $allow_string:tt) => {
                     let rhs = self.pop(chunk)?;
                     let lhs = self.pop(chunk)?;
                     if lhs.is_double() {
@@ -162,7 +189,7 @@ impl Machine {
                             })
                             .line(chunk.get_line_from_index(self.ip)));
                         }
-                    } else if $concat && lhs.is_string() {
+                    } else if $allow_string && lhs.is_string() {
                         let value = format!("{}{}", self.heap.fmt(&lhs), self.heap.fmt(&rhs));
                         let ptr = self.heap.alloc_string(&value);
                         self.stack.push(ptr);
@@ -226,19 +253,19 @@ impl Machine {
                     }
                 }
                 Opcode::Add => {
-                    bin_op!(Opcode::Add, +, true);
+                    bin_op!(Opcode::Add, +, string);
                 }
                 Opcode::Subtract => {
-                    bin_op!(Opcode::Subtract, -);
+                    bin_op!(Opcode::Subtract, -, nostring);
                 }
                 Opcode::Multiply => {
-                    bin_op!(Opcode::Multiply, *);
+                    bin_op!(Opcode::Multiply, *, nostring);
                 }
                 Opcode::Divide => {
-                    bin_op!(Opcode::Divide, /);
+                    bin_op!(Opcode::Divide, /, nostring);
                 }
                 Opcode::Modulo => {
-                    bin_op!(Opcode::Modulo, %);
+                    bin_op!(Opcode::Modulo, %, nostring);
                 }
 
                 Opcode::Equal => {
@@ -424,6 +451,22 @@ impl Machine {
                     let offset = self.read_short(chunk);
                     debug!("loop ip {:x} -> {:x}", self.ip, self.ip - offset as usize);
                     self.ip -= offset as usize;
+                }
+
+                Opcode::BitAnd => {
+                    bit_op!(Opcode::BitAnd, &);
+                }
+                Opcode::BitOr => {
+                    bit_op!(Opcode::BitOr, |);
+                }
+                Opcode::BitXor => {
+                    bit_op!(Opcode::BitXor, ^);
+                }
+                Opcode::ShiftLeft => {
+                    bit_op!(Opcode::ShiftLeft, <<);
+                }
+                Opcode::ShiftRight => {
+                    bit_op!(Opcode::ShiftRight, >>);
                 }
 
                 Opcode::Assert => {

@@ -353,22 +353,34 @@ fn prefix_binding_power(kind: TokenKind) -> BindingPower {
     }
 }
 
+#[rustfmt::skip]
 pub(crate) fn infix_binding_power(kind: TokenKind) -> BindingPower {
     match kind {
-        TokenKind::Multiply => BindingPower::Factor,
-        TokenKind::Divide => BindingPower::Factor,
-        TokenKind::Modulo => BindingPower::Factor,
+          TokenKind::Multiply
+        | TokenKind::Divide
+        | TokenKind::Modulo
+            => BindingPower::Factor,
 
-        TokenKind::Plus => BindingPower::Term,
-        TokenKind::Minus => BindingPower::Term,
+          TokenKind::Plus
+        | TokenKind::Minus
+            => BindingPower::Term,
 
-        TokenKind::Less => BindingPower::Comparison,
-        TokenKind::Greater => BindingPower::Comparison,
-        TokenKind::LessEqual => BindingPower::Comparison,
-        TokenKind::GreaterEqual => BindingPower::Comparison,
+          TokenKind::ShiftLeft
+        | TokenKind::ShiftRight
+            => BindingPower::BitShift,
 
-        TokenKind::Equal => BindingPower::Equality,
-        TokenKind::NotEqual => BindingPower::Equality,
+          TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::LessEqual
+        | TokenKind::GreaterEqual
+            => BindingPower::Comparison,
+
+          TokenKind::Equal
+        | TokenKind::NotEqual => BindingPower::Equality,
+
+        TokenKind::BitwiseAnd => BindingPower::BitAnd,
+        TokenKind::BitwiseXor => BindingPower::BitXor,
+        TokenKind::BitwiseOr => BindingPower::BitOr,
 
         TokenKind::LogicalAnd => BindingPower::LogicalAnd,
         TokenKind::LogicalOr => BindingPower::LogicalOr,
@@ -418,18 +430,22 @@ prec!(BindingPower =>
     ExpressionBoundary = 1,
     LogicalOr = 2,
     LogicalAnd = 3,
-    Equality = 4,
-    Comparison = 5,
-    Term = 6,
-    Factor = 7,
-    Unary = 8,
-    Call = 9,
-    Primary = 10,
+    BitOr = 4,
+    BitXor = 5,
+    BitAnd = 6,
+    Equality = 7,
+    Comparison = 8,
+    BitShift = 9,
+    Term = 10,
+    Factor = 11,
+    Unary = 12,
+    Call = 13,
+    Primary = 14,
 );
 
 #[cfg(test)]
 mod test {
-    use super::BindingPower;
+    use super::*;
 
     #[test]
     fn precedence_ord() {
