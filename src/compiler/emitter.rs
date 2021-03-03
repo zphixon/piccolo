@@ -42,7 +42,7 @@ fn compile_stmt(emitter: &mut Emitter, stmt: &Stmt) -> Result<(), PiccoloError> 
             => compile_while(emitter, while_, cond, body, end),
         Stmt::For { for_, init, cond, inc, body, end }
             => compile_for(emitter, for_, init.as_ref(), cond, inc.as_ref(), body, end),
-        // Stmt::Func { name, args, arity, body, method }
+        // Stmt::Fn { name, args, arity, body, method }
         //     => compile_func(emitter, name, args, *arity, body, *method),
         Stmt::Break { break_ }
             => compile_break(emitter, break_),
@@ -83,7 +83,7 @@ fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> 
         //     => compile_set(emitter, object, name, value),
         // Expr::Index { right_bracket, object, idx }
         //     => compile_index(emitter, right_bracket, object, idx),
-        // Expr::Func { name, args, arity, body, method }
+        // Expr::Fn { name, args, arity, body, method }
         //     => compile_func(emitter, name, args, *arity, body, *method),
         _ => todo!("{:?}", expr),
     }
