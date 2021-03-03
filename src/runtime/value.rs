@@ -44,45 +44,27 @@ impl Value {
     }
 
     pub fn is_string(&self) -> bool {
-        match self {
-            Value::String(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::String(_))
     }
 
     pub fn is_bool(&self) -> bool {
-        match self {
-            Value::Bool(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::Bool(_))
     }
 
     pub fn is_integer(&self) -> bool {
-        match self {
-            Value::Integer(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::Integer(_))
     }
 
     pub fn is_double(&self) -> bool {
-        match self {
-            Value::Double(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::Double(_))
     }
 
     pub fn is_object(&self) -> bool {
-        match self {
-            Value::Object(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::Object(_))
     }
 
     pub fn is_nil(&self) -> bool {
-        match self {
-            Value::Nil => true,
-            _ => false,
-        }
+        matches!(self, Value::Nil)
     }
 }
 
@@ -156,10 +138,7 @@ impl Constant {
     }
 
     pub fn is_string(&self) -> bool {
-        match self {
-            Constant::String(_) => true,
-            _ => false,
-        }
+        matches!(self, Constant::String(_))
     }
 }
 

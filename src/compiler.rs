@@ -200,15 +200,15 @@ impl<'a> Token<'a> {
 
     /// Whether or not the token is a value literal.
     pub fn is_value(&self) -> bool {
-        match self.kind {
+        matches!(
+            self.kind,
             TokenKind::Nil
-            | TokenKind::String
-            | TokenKind::True
-            | TokenKind::False
-            | TokenKind::Double(_)
-            | TokenKind::Integer(_) => true,
-            _ => false,
-        }
+                | TokenKind::String
+                | TokenKind::True
+                | TokenKind::False
+                | TokenKind::Double(_)
+                | TokenKind::Integer(_)
+        )
     }
 }
 

@@ -370,7 +370,7 @@ fn into_keyword(s: &str) -> Option<TokenKind> {
 }
 
 fn is_digit(c: u8) -> bool {
-    b'0' <= c && c <= b'9'
+    (b'0'..=b'9').contains(&c)
 }
 
 pub(super) fn is_whitespace(c: u8) -> bool {
