@@ -74,7 +74,7 @@ pub enum Expr<'a> {
         object: Box<Expr<'a>>,
         idx: Box<Expr<'a>>,
     },
-    Func {
+    Fn {
         name: Token<'a>,
         args: Vec<Token<'a>>,
         arity: usize,
@@ -269,7 +269,7 @@ fn print_expr(indent: usize, expr: &Expr) -> String {
             => print_set(indent, object, name, value),
         Expr::Index { object, idx, .. }
             => print_index(indent, object, idx),
-        Expr::Func { name, args, body, .. }
+        Expr::Fn { name, args, body, .. }
             => print_fn(indent, name, args, body),
     }
 }
