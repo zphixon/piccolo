@@ -261,9 +261,21 @@ fn parse_expression<'a>(
         trace!("atom");
         Expr::Literal { literal: lhs_token }
     } else if lhs_token.kind == TokenKind::Identifier {
-        trace!("variable");
-        Expr::Variable {
-            variable: lhs_token,
+        if scanner.peek_token(0)?.kind == TokenKind::Colon {
+            trace!("path");
+            let mut names = vec![lhs_token];
+            while scanner.peek_token(0)?.kind == TokenKind::Colon
+                && scanner.peek_token(1)?.kind == TokenKind::Identifier
+            {
+                consume(scanner, TokenKind::Colon)?;
+                names.push(consume(scanner, TokenKind::Identifier)?);
+            }
+            Expr::Path { names }
+        } else {
+            trace!("variable");
+            Expr::Variable {
+                variable: lhs_token,
+            }
         }
     } else if lhs_token.kind == TokenKind::LeftParen {
         trace!("grouping");
@@ -468,5 +480,34 @@ mod test {
                 }
             }]
         );
+    }
+
+    #[test]
+    fn path() {
+        let src = "a:b:c:d";
+        let ast = parse(&mut Scanner::new(src)).unwrap();
+        assert_eq!(
+            ast,
+            &[Stmt::Expr {
+                token: Token::new(TokenKind::Identifier, "a", 1),
+                expr: Expr::Path {
+                    names: vec![
+                        Token::new(TokenKind::Identifier, "a", 1),
+                        Token::new(TokenKind::Identifier, "b", 1),
+                        Token::new(TokenKind::Identifier, "c", 1),
+                        Token::new(TokenKind::Identifier, "d", 1),
+                    ],
+                }
+            }]
+        );
+
+        let src = "a:3";
+        assert!(parse(&mut Scanner::new(src)).is_err());
+
+        let src = "a:";
+        assert!(parse(&mut Scanner::new(src)).is_err());
+
+        let src = ":a";
+        assert!(parse(&mut Scanner::new(src)).is_err());
     }
 }
