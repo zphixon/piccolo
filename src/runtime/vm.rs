@@ -1,6 +1,6 @@
 //! Contains `Machine`, the Piccolo bytecode interpreter.
 
-use crate::runtime::{memory::Heap, ChunkOffset};
+use crate::runtime::ChunkOffset;
 use crate::{Chunk, Constant, ErrorKind, PiccoloError, Value};
 
 use super::op::Opcode;
@@ -21,7 +21,6 @@ pub struct Machine {
     ip: ChunkOffset,
     globals: HashMap<String, Value>,
     stack: Vec<Value>,
-    heap: Heap,
 }
 
 impl Default for Machine {
@@ -37,15 +36,7 @@ impl Machine {
             ip: 0,
             globals: HashMap::default(),
             stack: Vec::new(),
-            heap: Heap::new(1024),
         }
-    }
-
-    /// Get the [`Heap`] of a VM.
-    ///
-    /// [`Heap`]: ../memory/struct.Heap.html
-    pub fn heap(&mut self) -> &mut Heap {
-        &mut self.heap
     }
 
     // TODO: determine if self.ip - 1 is necessary
@@ -105,13 +96,13 @@ impl Machine {
         while self.ip < chunk.data.len() {
             // debug/macros {{{
             debug!(
-                " ┌─{}{}",
+                " ┌─{}{:?}",
                 if self.ip + 1 == chunk.data.len() {
                     "─vm─exit─ "
                 } else {
                     " "
                 },
-                super::memory::dbg_list(&self.stack, &self.heap),
+                self.stack
             );
             debug!(
                 " └─{} {}",
@@ -136,9 +127,9 @@ impl Machine {
                             exp: "integer".into(),
                             got: format!(
                                 "{} {} {}",
-                                self.heap.type_name(&lhs),
+                                lhs.type_name(),
                                 stringify!($op),
-                                self.heap.type_name(&rhs)
+                                rhs.type_name(),
                             ),
                             op: $opcode,
                         })
@@ -169,7 +160,7 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer or double".into(),
-                                got: format!("double {} {}", stringify!($op), self.heap.type_name(&rhs)),
+                                got: format!("double {} {}", stringify!($op), rhs.type_name()),
                                 op: $opcode,
                             })
                             .line(chunk.get_line_from_index(self.ip)));
@@ -185,19 +176,18 @@ impl Machine {
                         } else {
                             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                                 exp: "integer or double".into(),
-                                got: format!("integer {} {}", stringify!($op), self.heap.type_name(&rhs)),
+                                got: format!("integer {} {}", stringify!($op), rhs.type_name()),
                                 op: $opcode,
                             })
                             .line(chunk.get_line_from_index(self.ip)));
                         }
                     } else if $allow_string && lhs.is_string() {
-                        let value = format!("{}{}", self.heap.fmt(&lhs), self.heap.fmt(&rhs));
-                        let ptr = self.heap.alloc_string(&value);
-                        self.stack.push(ptr);
+                        let value = format!("{}{}", &lhs, &rhs);
+                        self.stack.push(Value::String(value));
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("{} {} {}", self.heap.type_name(&lhs), stringify!($op), self.heap.type_name(&rhs)),
+                            got: format!("{} {} {}", lhs.type_name(), stringify!($op), rhs.type_name()),
                             op: $opcode,
                         })
                         .line(chunk.get_line_from_index(self.ip)));
@@ -215,17 +205,17 @@ impl Machine {
                     if self.ip == chunk.data.len() {
                         trace!("last instruction pop");
                         let value = self.pop(chunk)?;
-                        return Ok(self.heap.value_into_constant(value));
+                        return Ok(value.to_constant());
                     }
                     self.pop(chunk)?;
                 }
                 Opcode::Return => {
                     let v = self.pop(chunk)?;
-                    println!("{}", self.heap.fmt(&v));
+                    println!("{}", v);
                 }
                 Opcode::Constant => {
                     let c = self.peek_constant(chunk);
-                    let v = self.heap.constant_into_value(c);
+                    let v = c.to_value();
                     self.stack.push(v);
                 }
                 Opcode::Nil => self.stack.push(Value::Nil),
@@ -243,7 +233,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: self.heap.type_name(&v).to_owned(),
+                            got: v.type_name().to_owned(),
                             op: Opcode::Negate,
                         })
                         .line(chunk.get_line_from_index(self.ip)));
@@ -277,119 +267,114 @@ impl Machine {
                 Opcode::Equal => {
                     let a = self.pop(chunk)?;
                     let b = self.pop(chunk)?;
-                    self.stack
-                        .push(Value::Bool(self.heap.eq(&a, &b).map_or_else(
-                            || {
-                                Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: self.heap.type_name(&a).to_owned(),
-                                    got: self.heap.type_name(&b).to_owned(),
-                                    op,
-                                })
-                                .line(chunk.get_line_from_index(self.ip)))
-                            },
-                            Ok,
-                        )?));
+                    self.stack.push(Value::Bool(a.eq(&b).map_or_else(
+                        || {
+                            Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                exp: a.type_name().to_owned(),
+                                got: b.type_name().to_owned(),
+                                op,
+                            })
+                            .line(chunk.get_line_from_index(self.ip)))
+                        },
+                        Ok,
+                    )?));
                 }
                 Opcode::Greater => {
                     let rhs = self.pop(chunk)?;
                     let lhs = self.pop(chunk)?;
                     if rhs.is_bool() || lhs.is_bool() {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "that isn't bool".into(),
+                            exp: "anything but bool".into(),
                             got: "bool".into(),
                             op,
                         })
                         .line(chunk.get_line_from_index(self.ip)));
                     }
-                    self.stack
-                        .push(Value::Bool(self.heap.gt(&lhs, &rhs).map_or_else(
-                            || {
-                                Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: self.heap.type_name(&lhs).to_owned(),
-                                    got: self.heap.type_name(&rhs).to_owned(),
-                                    op,
-                                })
-                                .line(chunk.get_line_from_index(self.ip)))
-                            },
-                            Ok,
-                        )?));
+                    self.stack.push(Value::Bool(lhs.gt(&rhs).map_or_else(
+                        || {
+                            Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                exp: lhs.type_name().to_owned(),
+                                got: rhs.type_name().to_owned(),
+                                op,
+                            })
+                            .line(chunk.get_line_from_index(self.ip)))
+                        },
+                        Ok,
+                    )?));
                 }
                 Opcode::Less => {
                     let rhs = self.pop(chunk)?;
                     let lhs = self.pop(chunk)?;
                     if rhs.is_bool() || lhs.is_bool() {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "that isn't bool".into(),
+                            exp: "anything but bool".into(),
                             got: "bool".into(),
                             op,
                         })
                         .line(chunk.get_line_from_index(self.ip)));
                     }
-                    self.stack
-                        .push(Value::Bool(self.heap.lt(&lhs, &rhs).map_or_else(
-                            || {
-                                Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: self.heap.type_name(&lhs).to_owned(),
-                                    got: self.heap.type_name(&rhs).to_owned(),
-                                    op,
-                                })
-                                .line(chunk.get_line_from_index(self.ip)))
-                            },
-                            Ok,
-                        )?));
+                    self.stack.push(Value::Bool(lhs.lt(&rhs).map_or_else(
+                        || {
+                            Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                exp: lhs.type_name().to_owned(),
+                                got: rhs.type_name().to_owned(),
+                                op,
+                            })
+                            .line(chunk.get_line_from_index(self.ip)))
+                        },
+                        Ok,
+                    )?));
                 }
                 Opcode::GreaterEqual => {
                     let rhs = self.pop(chunk)?;
                     let lhs = self.pop(chunk)?;
                     if rhs.is_bool() || lhs.is_bool() {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "that isn't bool".into(),
+                            exp: "anything but bool".into(),
                             got: "bool".into(),
                             op,
                         })
                         .line(chunk.get_line_from_index(self.ip)));
                     }
-                    self.stack
-                        .push(Value::Bool(!self.heap.lt(&lhs, &rhs).map_or_else(
-                            || {
-                                Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: self.heap.type_name(&lhs).to_owned(),
-                                    got: self.heap.type_name(&rhs).to_owned(),
-                                    op,
-                                })
-                                .line(chunk.get_line_from_index(self.ip)))
-                            },
-                            Ok,
-                        )?));
+                    self.stack.push(Value::Bool(!lhs.lt(&rhs).map_or_else(
+                        || {
+                            Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                exp: lhs.type_name().to_owned(),
+                                got: rhs.type_name().to_owned(),
+                                op,
+                            })
+                            .line(chunk.get_line_from_index(self.ip)))
+                        },
+                        Ok,
+                    )?));
                 }
                 Opcode::LessEqual => {
                     let rhs = self.pop(chunk)?;
                     let lhs = self.pop(chunk)?;
                     if rhs.is_bool() || lhs.is_bool() {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "type that isn't bool".into(),
+                            exp: "anything but bool".into(),
                             got: "bool".into(),
                             op,
                         })
                         .line(chunk.get_line_from_index(self.ip)));
                     }
-                    self.stack
-                        .push(Value::Bool(!self.heap.gt(&lhs, &rhs).map_or_else(
-                            || {
-                                Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: self.heap.type_name(&lhs).to_owned(),
-                                    got: self.heap.type_name(&rhs).to_owned(),
-                                    op,
-                                })
-                                .line(chunk.get_line_from_index(self.ip)))
-                            },
-                            Ok,
-                        )?));
+                    self.stack.push(Value::Bool(!lhs.gt(&rhs).map_or_else(
+                        || {
+                            Err(PiccoloError::new(ErrorKind::IncorrectType {
+                                exp: lhs.type_name().to_owned(),
+                                got: rhs.type_name().to_owned(),
+                                op,
+                            })
+                            .line(chunk.get_line_from_index(self.ip)))
+                        },
+                        Ok,
+                    )?));
                 } // }}}
 
                 Opcode::GetLocal => {
                     let slot = self.read_short(chunk);
-                    self.stack.push(self.stack[slot as usize]);
+                    self.stack.push(self.stack[slot as usize].clone());
                 }
                 Opcode::SetLocal => {
                     let slot = self.read_short(chunk);
@@ -398,7 +383,7 @@ impl Machine {
                 Opcode::GetGlobal => {
                     let name = self.peek_constant(chunk).ref_string();
                     if let Some(var) = self.globals.get(name) {
-                        self.stack.push(*var);
+                        self.stack.push(var.clone());
                     } else {
                         return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                             name: name.to_owned(),
@@ -487,8 +472,6 @@ impl Machine {
             trace!("next instruction");
         }
 
-        Ok(self
-            .heap
-            .value_into_constant(self.stack.pop().unwrap_or(Value::Nil)))
+        Ok(self.stack.pop().unwrap_or(Value::Nil).to_constant())
     }
 }

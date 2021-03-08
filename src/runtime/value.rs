@@ -1,9 +1,6 @@
 //! Contains types for working with Piccolo values.
 
-use crate::runtime::StringPtr;
 use crate::{PiccoloError, Token, TokenKind};
-
-use super::object::ObjectPtr;
 
 use core::fmt;
 
@@ -16,13 +13,12 @@ use core::fmt;
 /// [`Heap`]: ../memory/struct.Heap.html
 /// [`Interner`]: ../memory/struct.Interner.html
 /// [`Constant`]: ./enum.Constant.html
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     Bool(bool),
     Integer(i64),
     Double(f64),
-    String(StringPtr),
-    Object(ObjectPtr),
+    String(String),
     Nil,
 }
 
@@ -34,6 +30,26 @@ impl Value {
             Value::Bool(b) => *b,
             Value::Nil => false,
             _ => true,
+        }
+    }
+
+    pub fn to_constant(&self) -> Constant {
+        match self {
+            Value::Bool(v) => Constant::Bool(*v),
+            Value::Integer(v) => Constant::Integer(*v),
+            Value::Double(v) => Constant::Double(*v),
+            Value::String(v) => Constant::String(v.clone()),
+            Value::Nil => Constant::Nil,
+        }
+    }
+
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            Value::Bool(_) => "bool",
+            Value::Integer(_) => "integer",
+            Value::Double(_) => "double",
+            Value::String(_) => "string",
+            Value::Nil => "nil",
         }
     }
 
@@ -60,12 +76,79 @@ impl Value {
         matches!(self, Value::Double(_))
     }
 
-    pub fn is_object(&self) -> bool {
-        matches!(self, Value::Object(_))
-    }
-
     pub fn is_nil(&self) -> bool {
         matches!(self, Value::Nil)
+    }
+
+    pub fn eq(&self, other: &Value) -> Option<bool> {
+        Some(match self {
+            Value::Bool(l) => match other {
+                Value::Bool(r) => l == r,
+                _ => None?,
+            },
+            Value::Integer(l) => match other {
+                Value::Integer(r) => l == r,
+                Value::Double(r) => *l as f64 == *r,
+                _ => None?,
+            },
+            Value::Double(l) => match other {
+                Value::Integer(r) => *l == *r as f64,
+                Value::Double(r) => l == r,
+                _ => None?,
+            },
+            Value::String(l) => match other {
+                Value::String(r) => l == r,
+                _ => None?,
+            },
+            Value::Nil => match other {
+                Value::Nil => true,
+                _ => None?,
+            },
+        })
+    }
+
+    pub fn gt(&self, other: &Value) -> Option<bool> {
+        Some(match self {
+            Value::Integer(l) => match other {
+                Value::Integer(r) => l > r,
+                Value::Double(r) => *l as f64 > *r,
+                _ => None?,
+            },
+            Value::Double(l) => match other {
+                Value::Integer(r) => *l > *r as f64,
+                Value::Double(r) => l > r,
+                _ => None?,
+            },
+            _ => None?,
+        })
+    }
+
+    pub fn lt(&self, other: &Value) -> Option<bool> {
+        Some(match self {
+            Value::Integer(l) => match other {
+                Value::Integer(r) => l < r,
+                Value::Double(r) => (*l as f64) < (*r),
+                _ => None?,
+            },
+            Value::Double(l) => match other {
+                Value::Integer(r) => *l < *r as f64,
+                Value::Double(r) => l < r,
+                _ => None?,
+            },
+            _ => None?,
+        })
+    }
+}
+
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Value::Bool(v) => write!(f, "{}", v),
+            Value::Integer(v) => write!(f, "{}", v),
+            Value::Double(v) => write!(f, "{}", v),
+            Value::String(v) => write!(f, "{}", v),
+            Value::Nil => write!(f, "nil"),
+        }
     }
 }
 
@@ -140,6 +223,16 @@ impl Constant {
 
     pub fn is_string(&self) -> bool {
         matches!(self, Constant::String(_))
+    }
+
+    pub fn to_value(&self) -> Value {
+        match self {
+            Constant::Bool(v) => Value::Bool(*v),
+            Constant::Integer(v) => Value::Integer(*v),
+            Constant::Double(v) => Value::Double(*v),
+            Constant::String(v) => Value::String(v.clone()),
+            Constant::Nil => Value::Nil,
+        }
     }
 }
 
