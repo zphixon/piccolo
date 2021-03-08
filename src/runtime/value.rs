@@ -1,5 +1,6 @@
 //! Contains types for working with Piccolo values.
 
+use crate::runtime::StringPtr;
 use crate::{PiccoloError, Token, TokenKind};
 
 use super::object::ObjectPtr;
@@ -20,7 +21,7 @@ pub enum Value {
     Bool(bool),
     Integer(i64),
     Double(f64),
-    String(usize),
+    String(StringPtr),
     Object(ObjectPtr),
     Nil,
 }

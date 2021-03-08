@@ -1,6 +1,6 @@
 //! Contains `Machine`, the Piccolo bytecode interpreter.
 
-use crate::runtime::memory::Heap;
+use crate::runtime::{memory::Heap, ChunkOffset};
 use crate::{Chunk, Constant, ErrorKind, PiccoloError, Value};
 
 use super::op::Opcode;
@@ -18,7 +18,7 @@ use fnv::FnvHashMap as HashMap;
 /// [`Chunk`]: ../chunk/struct.Chunk.html
 /// [`Heap`]: ../memory/struct.Heap.html
 pub struct Machine {
-    ip: usize,
+    ip: ChunkOffset,
     globals: HashMap<String, Value>,
     stack: Vec<Value>,
     heap: Heap,
@@ -91,7 +91,11 @@ impl Machine {
     }
 
     /// Interprets the machine's bytecode, returning a Constant.
-    pub fn start_at(&mut self, chunk: &Chunk, start: usize) -> Result<Constant, PiccoloError> {
+    pub fn start_at(
+        &mut self,
+        chunk: &Chunk,
+        start: ChunkOffset,
+    ) -> Result<Constant, PiccoloError> {
         self.ip = start;
         self.interpret(chunk)
     }

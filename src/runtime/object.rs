@@ -1,6 +1,6 @@
 //! Objects defined in Rust that may exist at runtime.
 
-use crate::runtime::value::Value;
+use crate::runtime::{value::Value, HeapPtr};
 
 use downcast_rs::Downcast;
 
@@ -14,7 +14,7 @@ pub enum ObjectKind {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ObjectPtr {
-    pub idx: usize,
+    pub idx: HeapPtr,
     pub kind: ObjectKind,
 }
 

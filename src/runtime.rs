@@ -7,6 +7,14 @@ pub mod op;
 pub mod value;
 pub mod vm;
 
+pub type ConstantIdx = u16;
+pub type LocalSlotIdx = u16;
+pub type LocalScopeDepth = u16;
+pub type Line = usize;
+pub type ChunkOffset = usize;
+pub type HeapPtr = usize;
+pub type StringPtr = usize;
+
 #[test]
 fn ptr_funnies() {
     use crate::{Object, Value};

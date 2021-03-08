@@ -4,10 +4,10 @@ use super::ast::{Ast, Expr, Stmt};
 use super::Local;
 use crate::compiler::{Token, TokenKind};
 use crate::error::{ErrorKind, PiccoloError};
-use crate::runtime::chunk::Chunk;
-use crate::runtime::object::Function;
-use crate::runtime::op::Opcode;
-use crate::runtime::value::Constant;
+use crate::runtime::{
+    chunk::Chunk, object::Function, op::Opcode, value::Constant, ChunkOffset, ConstantIdx, Line,
+    LocalScopeDepth, LocalSlotIdx,
+};
 
 use fnv::FnvHashMap;
 
@@ -464,10 +464,10 @@ fn compile_logical(
 pub struct Emitter {
     function: Function,
     locals: Vec<Local>,
-    global_identifiers: FnvHashMap<String, u16>,
-    scope_depth: u16,
-    continue_offsets: Vec<Vec<usize>>,
-    break_offsets: Vec<Vec<usize>>,
+    global_identifiers: FnvHashMap<String, ConstantIdx>,
+    scope_depth: LocalScopeDepth,
+    continue_offsets: Vec<Vec<ChunkOffset>>,
+    break_offsets: Vec<Vec<ChunkOffset>>,
 }
 
 impl Default for Emitter {
@@ -505,25 +505,25 @@ impl Emitter {
         self.function.chunk_mut()
     }
 
-    fn add_instruction(&mut self, op: Opcode, line: usize) {
+    fn add_instruction(&mut self, op: Opcode, line: Line) {
         self.current_chunk_mut().write_u8(op, line);
     }
 
-    fn add_instruction_arg(&mut self, op: Opcode, arg: u16, line: usize) {
+    fn add_instruction_arg(&mut self, op: Opcode, arg: u16, line: Line) {
         self.current_chunk_mut().write_arg_u16(op, arg, line);
     }
 
-    fn add_jump_back(&mut self, offset: usize, line: usize) {
+    fn add_jump_back(&mut self, offset: ChunkOffset, line: Line) {
         self.current_chunk_mut().write_jump_back(offset, line);
     }
 
-    fn add_constant(&mut self, value: Constant, line: usize) {
+    fn add_constant(&mut self, value: Constant, line: Line) {
         let idx = self.current_chunk_mut().make_constant(value);
         self.current_chunk_mut()
             .write_arg_u16(Opcode::Constant, idx, line);
     }
 
-    fn make_global_ident(&mut self, name: &Token) -> u16 {
+    fn make_global_ident(&mut self, name: &Token) -> ConstantIdx {
         trace!("{} make global {}", name.line, name.lexeme);
 
         if self.global_identifiers.contains_key(name.lexeme) {
@@ -537,7 +537,7 @@ impl Emitter {
         }
     }
 
-    fn get_global_ident(&self, name: &Token) -> Result<u16, PiccoloError> {
+    fn get_global_ident(&self, name: &Token) -> Result<ConstantIdx, PiccoloError> {
         trace!("{} get global {}", name.line, name.lexeme);
 
         self.global_identifiers
@@ -551,7 +551,7 @@ impl Emitter {
             })
     }
 
-    fn get_local_slot(&self, name: &Token) -> Option<u16> {
+    fn get_local_slot(&self, name: &Token) -> Option<LocalSlotIdx> {
         trace!("{} get local slot {}", name.line, name.lexeme);
 
         for (i, local) in self.locals.iter().enumerate().rev() {
@@ -563,7 +563,7 @@ impl Emitter {
         None
     }
 
-    fn get_local_depth(&self, name: &Token) -> Option<u16> {
+    fn get_local_depth(&self, name: &Token) -> Option<LocalScopeDepth> {
         trace!("{} get local depth {}", name.line, name.lexeme);
 
         for local in self.locals.iter().rev() {
@@ -614,7 +614,7 @@ impl Emitter {
         self.scope_depth += 1;
     }
 
-    fn end_scope(&mut self, line: usize) {
+    fn end_scope(&mut self, line: Line) {
         self.scope_depth -= 1;
         while !self.locals.is_empty() && self.locals[self.locals.len() - 1].depth > self.scope_depth
         {
@@ -623,15 +623,15 @@ impl Emitter {
         }
     }
 
-    fn start_jump(&mut self, op: Opcode, line: usize) -> usize {
+    fn start_jump(&mut self, op: Opcode, line: Line) -> ChunkOffset {
         self.current_chunk_mut().start_jump(op, line)
     }
 
-    fn patch_jump(&mut self, offset: usize) {
+    fn patch_jump(&mut self, offset: ChunkOffset) {
         self.current_chunk_mut().patch_jump(offset);
     }
 
-    fn start_loop_jumps(&mut self) -> usize {
+    fn start_loop_jumps(&mut self) -> ChunkOffset {
         self.continue_offsets.push(Vec::new());
         self.break_offsets.push(Vec::new());
         self.current_chunk().data.len()
@@ -649,7 +649,7 @@ impl Emitter {
         }
     }
 
-    fn add_break(&mut self, offset: usize, break_: &Token) -> Result<(), PiccoloError> {
+    fn add_break(&mut self, offset: ChunkOffset, break_: &Token) -> Result<(), PiccoloError> {
         self.break_offsets
             .last_mut()
             .ok_or_else(|| {
@@ -662,7 +662,7 @@ impl Emitter {
         Ok(())
     }
 
-    fn add_continue(&mut self, offset: usize, continue_: &Token) -> Result<(), PiccoloError> {
+    fn add_continue(&mut self, offset: ChunkOffset, continue_: &Token) -> Result<(), PiccoloError> {
         self.continue_offsets
             .last_mut()
             .ok_or_else(|| {
