@@ -61,7 +61,6 @@ impl Machine {
         })
     }
 
-    #[allow(dead_code)]
     fn peek_back(&self, dist: usize, chunk: &Chunk) -> Result<&Value, PiccoloError> {
         self.stack.get(self.stack.len() - dist - 1).ok_or_else(|| {
             PiccoloError::new(ErrorKind::StackUnderflow {
@@ -104,6 +103,7 @@ impl Machine {
     #[allow(clippy::cognitive_complexity)]
     pub fn interpret(&mut self, chunk: &Chunk) -> Result<Constant, PiccoloError> {
         while self.ip < chunk.data.len() {
+            // debug/macros {{{
             debug!(
                 " ┌─{}{}",
                 if self.ip + 1 == chunk.data.len() {
@@ -122,9 +122,6 @@ impl Machine {
                 },
                 chunk.disassemble_instruction(self.ip)
             );
-
-            let inst = chunk.data[self.ip];
-            self.ip += 1;
 
             macro_rules! bit_op {
                 ($opcode:path, $op:tt) => {
@@ -207,6 +204,10 @@ impl Machine {
                     }
                 };
             }
+            // }}}
+
+            let inst = chunk.data[self.ip];
+            self.ip += 1;
 
             let op = inst.into();
             match op {
@@ -272,6 +273,7 @@ impl Machine {
                     bin_op!(Opcode::Modulo, %, nostring);
                 }
 
+                // comparison {{{
                 Opcode::Equal => {
                     let a = self.pop(chunk)?;
                     let b = self.pop(chunk)?;
@@ -383,7 +385,7 @@ impl Machine {
                             },
                             Ok,
                         )?));
-                }
+                } // }}}
 
                 Opcode::GetLocal => {
                     let slot = self.read_short(chunk);
