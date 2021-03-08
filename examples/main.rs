@@ -39,9 +39,16 @@ fn main() {
                 .value_name("output")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("string")
+                .help("Run string argument")
+                .short("e")
+                .value_name("string")
+                .takes_value(true),
+        )
         .get_matches();
 
-    if !matches.is_present("src") && !matches.is_present("bin") {
+    if !matches.is_present("src") && !matches.is_present("bin") && !matches.is_present("string") {
         repl();
     } else {
         if matches.is_present("compile") {
@@ -57,6 +64,11 @@ fn main() {
         //if let Err(errors) = piccolo::run_bin(&src) {
         //    print_errors(errors);
         //}
+        } else if matches.is_present("string") {
+            let src = matches.value_of("string").unwrap();
+            if let Err(errors) = piccolo::interpret(&src) {
+                print_errors(errors);
+            }
         } else {
             let src = PathBuf::from(matches.value_of("src").unwrap());
             file(&src);
