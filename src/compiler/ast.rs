@@ -7,7 +7,6 @@
 //!
 //! [`Expr`]: ./enum.Expr.html
 //! [`Stmt`]: ./enum.Stmt.html
-//! [visitor]: https://github.com/rust-unofficial/patterns/blob/master/patterns/visitor.md
 
 // https://github.com/Darksecond/lox/blob/master/lox-compiler/src/bettercompiler/statements.rs
 
@@ -19,11 +18,6 @@ pub type Ast<'a> = [Stmt<'a>];
 /// Piccolo expression AST node.
 ///
 /// This enum contains every expression variant available in Piccolo.
-/// Generally, if one expression could be built in terms of another,
-/// for example `Binary` and `Logical`, the behavior for an implementor
-/// of [`ExprVisitor`] should reflect a difference between the two.
-///
-/// [`ExprVisitor`]: ./trait.ExprVisitor.html
 #[derive(Debug, PartialEq)]
 pub enum Expr<'a> {
     Literal {
@@ -88,12 +82,7 @@ pub enum Expr<'a> {
 
 /// Piccolo statement AST node.
 ///
-/// This enum contains every statement variant available in Piccolo. Generally,
-/// if one statement could be built in terms of another, for example `Assignment`
-/// and `Declaration`, the behavior for an implementor of [`StmtVisitor`] should
-/// reflect a difference between the two.
-///
-/// [`StmtVisitor`]: ./trait.StmtVisitor.html
+/// This enum contains every statement variant available in Piccolo.
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, PartialEq)]
 pub enum Stmt<'a> {
