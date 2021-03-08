@@ -1,5 +1,6 @@
 //! Contains `Scanner`, an on-demand producer of tokens.
 
+use crate::runtime::Line;
 use crate::{ErrorKind, PiccoloError, Token, TokenKind};
 
 use std::collections::VecDeque;
@@ -26,7 +27,7 @@ pub struct Scanner<'a> {
     tokens: VecDeque<Token<'a>>,
     start: usize,
     current: usize,
-    line: usize,
+    line: Line,
 }
 
 impl<'a> Scanner<'a> {

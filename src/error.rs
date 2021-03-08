@@ -1,6 +1,6 @@
 //! Types for dealing with errors in scanning, parsing, compiling, or executing Piccolo.
 
-use crate::runtime::op::Opcode;
+use crate::runtime::{op::Opcode, Line};
 
 use core::fmt;
 
@@ -9,7 +9,7 @@ use core::fmt;
 #[derive(Debug, Clone)]
 pub struct PiccoloError {
     kind: ErrorKind,
-    line: Option<usize>,
+    line: Option<Line>,
     file: Option<String>,
     msg: Option<String>,
 }
@@ -24,7 +24,7 @@ impl PiccoloError {
         }
     }
 
-    pub fn line(self, line: usize) -> Self {
+    pub fn line(self, line: Line) -> Self {
         PiccoloError {
             line: Some(line),
             ..self

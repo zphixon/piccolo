@@ -1,6 +1,7 @@
 //! Contains items for the manipulation of memory at runtime.
 
 use crate::fnv::FnvHashMap;
+use crate::runtime::StringPtr;
 use crate::{Constant, ErrorKind, Object, PiccoloError, Value};
 
 use super::object::ObjectPtr;
@@ -16,7 +17,7 @@ use std::mem;
 /// [here.]: https://www.reddit.com/r/rust/comments/fn1jxf/blog_post_fast_and_simple_rust_interner/
 /// [`FnvHashMap`]: https://doc.servo.org/fnv/
 pub struct Interner {
-    map: FnvHashMap<&'static str, usize>,
+    map: FnvHashMap<&'static str, StringPtr>,
     strings: Vec<&'static str>,
     current_buffer: String,
     previous_buffers: Vec<String>,
@@ -33,7 +34,7 @@ impl Interner {
         }
     }
 
-    pub fn intern(&mut self, s: &str) -> usize {
+    pub fn intern(&mut self, s: &str) -> StringPtr {
         if let Some(&id) = self.map.get(s) {
             trace!("str exists {:x}", id);
             return id;
@@ -51,7 +52,7 @@ impl Interner {
         id
     }
 
-    pub fn lookup(&self, id: usize) -> &str {
+    pub fn lookup(&self, id: StringPtr) -> &str {
         self.strings
             .get(id)
             .unwrap_or_else(|| panic!("str does not exist: {:x}", id))
