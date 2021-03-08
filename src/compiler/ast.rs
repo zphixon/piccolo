@@ -33,6 +33,9 @@ pub enum Expr<'a> {
         right_paren: Token<'a>,
         expr: Box<Expr<'a>>,
     },
+    Path {
+        names: Vec<Token<'a>>,
+    },
     Variable {
         variable: Token<'a>,
     },
@@ -251,6 +254,8 @@ fn print_expr(indent: usize, expr: &Expr) -> String {
             => print_literal(literal),
         Expr::Paren { expr, .. }
             => print_paren(indent, expr),
+        Expr::Path { names }
+            => print_path(names),
         Expr::Variable { variable }
             => print_variable(variable),
         Expr::Unary { op, rhs }
@@ -368,6 +373,17 @@ fn print_literal(literal: &Token) -> String {
 
 fn print_paren(indent: usize, expr: &Expr) -> String {
     parenthesize(indent, "paren", &[expr])
+}
+
+fn print_path(names: &[Token]) -> String {
+    let mut s = String::new();
+    for (i, name) in names.iter().enumerate() {
+        s.push_str(name.lexeme);
+        if i + 1 != names.len() {
+            s.push(':');
+        }
+    }
+    s
 }
 
 fn print_variable(variable: &Token) -> String {
