@@ -361,7 +361,7 @@ impl Machine {
                     let lhs = self.pop(chunk)?;
                     if rhs.is_bool() || lhs.is_bool() {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "that isn't bool".into(),
+                            exp: "type that isn't bool".into(),
                             got: "bool".into(),
                             op,
                         })
