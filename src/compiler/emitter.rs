@@ -5,6 +5,7 @@ use super::Local;
 use crate::compiler::{Token, TokenKind};
 use crate::error::{ErrorKind, PiccoloError};
 use crate::runtime::chunk::Chunk;
+use crate::runtime::object::Function;
 use crate::runtime::op::Opcode;
 use crate::runtime::value::Constant;
 
@@ -461,7 +462,7 @@ fn compile_logical(
 /// the abstract syntax tree. Extract the `Chunk` with `current_chunk{_mut}()` or
 /// `into_chunk()`.
 pub struct Emitter {
-    chunk: Chunk,
+    function: Function,
     locals: Vec<Local>,
     global_identifiers: FnvHashMap<String, u16>,
     scope_depth: u16,
@@ -479,7 +480,7 @@ impl Emitter {
     /// Make a new emitter, equivalent to `Default::default()`
     pub fn new() -> Self {
         Self {
-            chunk: Chunk::default(),
+            function: Function::default(),
             locals: Vec::new(),
             global_identifiers: FnvHashMap::default(),
             scope_depth: 0,
@@ -493,15 +494,15 @@ impl Emitter {
     }
 
     pub fn into_chunk(self) -> Chunk {
-        self.chunk
+        self.function.into_chunk()
     }
 
     pub fn current_chunk(&self) -> &Chunk {
-        &self.chunk
+        self.function.chunk()
     }
 
     pub fn current_chunk_mut(&mut self) -> &mut Chunk {
-        &mut self.chunk
+        self.function.chunk_mut()
     }
 
     fn add_instruction(&mut self, op: Opcode, line: usize) {
@@ -529,7 +530,7 @@ impl Emitter {
             self.global_identifiers[name.lexeme]
         } else {
             let idx = self
-                .chunk
+                .current_chunk_mut()
                 .make_constant(Constant::String(name.lexeme.to_owned()));
             self.global_identifiers.insert(name.lexeme.to_owned(), idx);
             idx
