@@ -432,7 +432,10 @@ fn parse_factor<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError>
 
     loop {
         let t = scanner.peek_token(0)?;
-        if matches!(t.kind, TokenKind::Multiply | TokenKind::Divide) {
+        if matches!(
+            t.kind,
+            TokenKind::Multiply | TokenKind::Divide | TokenKind::Modulo
+        ) {
             let lhs = Box::new(unary);
             let op = scanner.next_token()?;
             let rhs = Box::new(parse_unary(scanner)?);
@@ -528,7 +531,11 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
     } else if t.kind == TokenKind::Me {
         todo!()
     } else {
-        unreachable!("{:?}", t)
+        let t = scanner.next_token()?;
+        Err(PiccoloError::new(ErrorKind::ExpectedExpression {
+            got: format!("{}", t.lexeme),
+        })
+        .line(t.line))
     }
 }
 
