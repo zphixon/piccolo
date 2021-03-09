@@ -72,7 +72,7 @@ pub enum Expr<'a> {
         idx: Box<Expr<'a>>,
     },
     Fn {
-        name: Token<'a>,
+        name: Token<'a>, // TODO: remove name
         args: Vec<Token<'a>>,
         arity: usize,
         body: Vec<Stmt<'a>>,

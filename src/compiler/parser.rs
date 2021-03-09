@@ -510,4 +510,296 @@ mod test {
         let src = ":a";
         assert!(parse(&mut Scanner::new(src)).is_err());
     }
+
+    #[test]
+    fn pexp2() {
+        let src = &[
+            "(a)",
+            "fn(a, b, c) do end",
+            "a.b().c()(d)",
+            "a()()()",
+            "!-true",
+            "--------1",
+            "1*-3",
+            "1*2*3*4",
+            "a.b--c*a.d",
+            "1<<-3*a()<<3",
+            "\"\"+1<<3==8+3==4",
+            "3&5==1",
+            "3^5&1",
+            "3^5|1",
+            "1+2==3+4&&5+6==(7^8)",
+        ];
+
+        for src in src {
+            let mut scanner = Scanner::new(src);
+            println!(
+                "{} -> {}",
+                src,
+                crate::compiler::ast::print_expression(&parse_expression2(&mut scanner).unwrap())
+            );
+        }
+
+        panic!("its good m8");
+    }
+}
+
+// ree {{{
+
+fn parse_expression2<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    parse_logic_or(scanner)
+}
+
+fn parse_logic_or<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let logic_and = parse_logic_and(scanner)?;
+
+    let t = scanner.peek_token(0)?;
+    if t.kind == TokenKind::LogicalOr {
+        let lhs = Box::new(logic_and);
+        let op = scanner.next_token()?;
+        let rhs = Box::new(parse_logic_or(scanner)?);
+        Ok(Expr::Logical { lhs, op, rhs })
+    } else {
+        Ok(logic_and)
+    }
+}
+
+fn parse_logic_and<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let bit_or = parse_bit_or(scanner)?;
+
+    let t = scanner.peek_token(0)?;
+    if t.kind == TokenKind::LogicalAnd {
+        let lhs = Box::new(bit_or);
+        let op = scanner.next_token()?;
+        let rhs = Box::new(parse_logic_and(scanner)?);
+        Ok(Expr::Logical { lhs, op, rhs })
+    } else {
+        Ok(bit_or)
+    }
+}
+
+// TODO: probably move these below equality
+fn parse_bit_or<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let bit_xor = parse_bit_xor(scanner)?;
+
+    let t = scanner.peek_token(0)?;
+    if t.kind == TokenKind::BitwiseOr {
+        let lhs = Box::new(bit_xor);
+        let op = scanner.next_token()?;
+        let rhs = Box::new(parse_bit_or(scanner)?);
+        Ok(Expr::Binary { lhs, op, rhs })
+    } else {
+        Ok(bit_xor)
+    }
+}
+
+fn parse_bit_xor<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let bit_and = parse_bit_and(scanner)?;
+
+    let t = scanner.peek_token(0)?;
+    if t.kind == TokenKind::BitwiseXor {
+        let lhs = Box::new(bit_and);
+        let op = scanner.next_token()?;
+        let rhs = Box::new(parse_bit_xor(scanner)?);
+        Ok(Expr::Binary { lhs, op, rhs })
+    } else {
+        Ok(bit_and)
+    }
+}
+
+fn parse_bit_and<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let equality = parse_equality(scanner)?;
+
+    let t = scanner.peek_token(0)?;
+    if t.kind == TokenKind::BitwiseAnd {
+        let lhs = Box::new(equality);
+        let op = scanner.next_token()?;
+        let rhs = Box::new(parse_bit_and(scanner)?);
+        Ok(Expr::Binary { lhs, op, rhs })
+    } else {
+        Ok(equality)
+    }
+}
+
+fn parse_equality<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let comparison = parse_comparison(scanner)?;
+
+    let t = scanner.peek_token(0)?;
+    if matches!(t.kind, TokenKind::Equal | TokenKind::NotEqual) {
+        let lhs = Box::new(comparison);
+        let op = scanner.next_token()?;
+        let rhs = Box::new(parse_equality(scanner)?);
+        Ok(Expr::Binary { lhs, op, rhs })
+    } else {
+        Ok(comparison)
+    }
+}
+
+fn parse_comparison<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let bit_shift = parse_bit_shift(scanner)?;
+
+    let t = scanner.peek_token(0)?;
+    if matches!(
+        t.kind,
+        TokenKind::Less | TokenKind::Greater | TokenKind::LessEqual | TokenKind::GreaterEqual
+    ) {
+        let lhs = Box::new(bit_shift);
+        let op = scanner.next_token()?;
+        let rhs = Box::new(parse_comparison(scanner)?);
+        Ok(Expr::Binary { lhs, op, rhs })
+    } else {
+        Ok(bit_shift)
+    }
+}
+
+fn parse_bit_shift<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let term = parse_term(scanner)?;
+
+    let t = scanner.peek_token(0)?;
+    if matches!(t.kind, TokenKind::ShiftLeft | TokenKind::ShiftRight) {
+        let lhs = Box::new(term);
+        let op = scanner.next_token()?;
+        let rhs = Box::new(parse_bit_shift(scanner)?);
+        Ok(Expr::Binary { lhs, op, rhs })
+    } else {
+        Ok(term)
+    }
+}
+
+fn parse_term<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let factor = parse_factor(scanner)?;
+
+    let t = scanner.peek_token(0)?;
+    if matches!(t.kind, TokenKind::Plus | TokenKind::Minus) {
+        let lhs = Box::new(factor);
+        let op = scanner.next_token()?;
+        let rhs = Box::new(parse_term(scanner)?);
+        Ok(Expr::Binary { lhs, op, rhs })
+    } else {
+        Ok(factor)
+    }
+}
+
+fn parse_factor<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let mut unary = parse_unary(scanner)?;
+
+    let t = scanner.peek_token(0)?;
+    if matches!(t.kind, TokenKind::Multiply | TokenKind::Divide) {
+        let lhs = Box::new(unary);
+        let op = scanner.next_token()?;
+        let rhs = Box::new(parse_factor(scanner)?);
+        Ok(Expr::Binary { lhs, op, rhs })
+    } else {
+        return Ok(unary);
+    }
+}
+
+fn parse_unary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let t = scanner.peek_token(0)?;
+    if matches!(t.kind, TokenKind::Not | TokenKind::Minus) {
+        let op = scanner.next_token()?;
+        let rhs = Box::new(parse_unary(scanner)?);
+        Ok(Expr::Unary { op, rhs })
+    } else {
+        parse_call(scanner)
+    }
+}
+
+fn parse_call<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let mut primary = parse_primary(scanner)?;
+
+    loop {
+        let t = scanner.peek_token(0)?;
+        if t.kind == TokenKind::LeftParen {
+            let callee = Box::new(primary);
+            let paren = consume(scanner, TokenKind::LeftParen)?;
+            let args = parse_arguments(scanner)?;
+            consume(scanner, TokenKind::RightParen)?;
+            let arity = args.len();
+            primary = Expr::Call {
+                callee,
+                paren,
+                arity,
+                args,
+            };
+        } else if t.kind == TokenKind::Period {
+            consume(scanner, TokenKind::Period)?;
+            let object = Box::new(primary);
+            let name = consume(scanner, TokenKind::Identifier)?;
+            primary = Expr::Get { object, name };
+        } else {
+            return Ok(primary);
+        }
+    }
+}
+
+fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+    let t = scanner.peek_token(0)?;
+    if t.kind == TokenKind::LeftParen {
+        consume(scanner, TokenKind::LeftParen)?;
+
+        let expr = Box::new(parse_expression2(scanner)?);
+        let right_paren = consume(scanner, TokenKind::RightParen)?;
+
+        Ok(Expr::Paren { right_paren, expr })
+    } else if t.is_value() {
+        let literal = scanner.next_token()?;
+
+        Ok(Expr::Literal { literal })
+    } else if t.kind == TokenKind::Identifier {
+        let variable = scanner.next_token()?;
+
+        Ok(Expr::Variable { variable })
+    } else if t.kind == TokenKind::Fn {
+        // TODO: remove name field from Expr::Fn
+        let fn_ = consume(scanner, TokenKind::Fn)?;
+        let name = Token::new(fn_.kind, "<anon>", fn_.line);
+
+        consume(scanner, TokenKind::LeftParen)?;
+        let params = parse_parameters(scanner)?;
+        let arity = params.len();
+        consume(scanner, TokenKind::RightParen)?;
+
+        consume(scanner, TokenKind::Do)?;
+        let body = parse_block(scanner)?;
+        consume(scanner, TokenKind::End)?;
+
+        let method = false;
+
+        Ok(Expr::Fn {
+            name,
+            args: params, // TODO
+            arity,
+            body,
+            method,
+        })
+    } else if t.kind == TokenKind::Me {
+        todo!()
+    } else {
+        unreachable!()
+    }
+}
+
+fn parse_parameters<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Token<'a>>, PiccoloError> {
+    let mut params = vec![];
+    if scanner.peek_token(0)?.kind == TokenKind::Identifier {
+        params.push(consume(scanner, TokenKind::Identifier)?);
+        while scanner.peek_token(0)?.kind == TokenKind::Comma {
+            consume(scanner, TokenKind::Comma)?;
+            params.push(consume(scanner, TokenKind::Identifier)?);
+        }
+    }
+    Ok(params)
+}
+
+fn parse_arguments<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Expr<'a>>, PiccoloError> {
+    let mut args = vec![];
+    if scanner.peek_token(0)?.kind == TokenKind::Identifier {
+        args.push(parse_expression2(scanner)?);
+        while scanner.peek_token(0)?.kind == TokenKind::Comma {
+            consume(scanner, TokenKind::Comma)?;
+            args.push(parse_expression2(scanner)?);
+        }
+    }
+    Ok(args)
 }

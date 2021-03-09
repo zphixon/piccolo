@@ -21,7 +21,7 @@ block -> 'do' {statement} 'end'
 if -> 'if' expression 'do' {statement} ['else' {statement}] 'end'
 while -> 'while' expression block
 for -> 'for' declare ',' expression ',' assign block
-fn -> 'fn' ident '(' parameters ')' block
+fn -> 'fn' ident parameters block
 data -> 'data' ident 'do' {declare} {fn} 'end'
 
 expression -> logic_or
@@ -39,11 +39,12 @@ factor -> unary {('*' | '/') unary}
 unary -> ('!' | '-') unary | call
 
 call -> primary {arguments | ('.' ident)}
-primary -> '(' expression ')' | 'true' | 'false' | 'nil' | 'me' | number | string | ident
+primary -> '(' expression ')' | 'true' | 'false' | 'nil' | 'me' | number | string | ident | anon_fn
 
 arguments -> '(' [expression {',' expression}] ')'
 parameters -> '(' [ident {',' ident}] ')'
 
+anon_fn -> 'fn' parameters block
 assign_op -> '=' | '+=' | '-=' | '/=' | '*=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>='
 ident -> /NON_WHITESPACE+/
 number -> /INTEGER(.INTEGER)?/
