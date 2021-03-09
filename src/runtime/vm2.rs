@@ -304,6 +304,11 @@ impl<'a> Vm2<'a> {
     }
 
     fn interpret_next_instruction(&mut self, heap: &mut Heap) -> Result<VmState, PiccoloError> {
+        // TODO: move to Opcode::Return
+        if self.current_ip() + 1 > self.current_chunk().len() {
+            return Ok(VmState::Stop);
+        }
+
         // debug {{{
         debug!(
             " ┌─{}{:04x} {:?}",
@@ -405,11 +410,6 @@ impl<'a> Vm2<'a> {
             };
         }
         // }}}
-
-        // TODO: move to Opcode::Return
-        if self.current_ip() + 1 > self.current_chunk().len() {
-            return Ok(VmState::Stop);
-        }
 
         let op = self.current_frame_mut().step();
         match op {
