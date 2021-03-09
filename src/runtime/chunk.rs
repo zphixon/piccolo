@@ -3,7 +3,7 @@
 use crate::Constant;
 
 use super::op::Opcode;
-use super::{ChunkOffset, Line};
+use super::{ChunkOffset, ConstantIdx, Line};
 
 /// Stores a piece of compiled Piccolo bytecode.
 #[derive(Default, Debug)]
@@ -75,6 +75,12 @@ impl Chunk {
         } else {
             idx as u16
         }
+    }
+
+    pub(crate) fn get_constant(&self, index: ConstantIdx) -> &Constant {
+        self.constants
+            .get(index as usize)
+            .unwrap_or_else(|| panic!("{} out of constant bounds", index))
     }
 
     pub(crate) fn read_short(&self, offset: ChunkOffset) -> u16 {

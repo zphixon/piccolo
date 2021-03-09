@@ -1,10 +1,34 @@
 //! Objects defined in Rust that may exist at runtime.
-use super::chunk::Chunk;
 
-use crate::runtime::memory::Object;
-use crate::runtime::ChunkIndex;
+use crate::{Chunk, ChunkIndex, Object, Value};
 
 use core::fmt;
+
+pub struct NativeFunction {
+    arity: usize,
+    name: String,
+    function: fn(&[Value]) -> Value,
+}
+
+impl Object for NativeFunction {
+    fn trace(&self) {}
+
+    fn type_name(&self) -> &'static str {
+        "native_fn"
+    }
+}
+
+impl fmt::Debug for NativeFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<native fn {}>", self.name)
+    }
+}
+
+impl fmt::Display for NativeFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 
 #[derive(Default)]
 pub struct Function {
@@ -15,14 +39,12 @@ pub struct Function {
 
 impl fmt::Debug for Function {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        trace!("ufveowsi");
         write!(f, "<fn {}>", self.name)
     }
 }
 
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        trace!("hLLEOO");
         write!(f, "<fn {}>", self.name)
     }
 }
@@ -51,7 +73,7 @@ impl Object for Function {
     }
 
     fn type_name(&self) -> &'static str {
-        "func"
+        "fn"
     }
 }
 
@@ -94,6 +116,30 @@ impl<K: Eq + std::hash::Hash, T: Object> Object for fnv::FnvHashMap<K, T> {
 
     fn type_name(&self) -> &'static str {
         "map"
+    }
+}
+
+impl Object for bool {
+    fn trace(&self) {}
+
+    fn type_name(&self) -> &'static str {
+        "bool"
+    }
+}
+
+impl Object for i64 {
+    fn trace(&self) {}
+
+    fn type_name(&self) -> &'static str {
+        "int"
+    }
+}
+
+impl Object for f64 {
+    fn trace(&self) {}
+
+    fn type_name(&self) -> &'static str {
+        "float"
     }
 }
 

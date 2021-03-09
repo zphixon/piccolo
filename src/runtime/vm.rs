@@ -1,7 +1,7 @@
 //! Contains `Machine`, the Piccolo bytecode interpreter.
 
 use crate::runtime::ChunkOffset;
-use crate::{Chunk, Constant, ErrorKind, Object, PiccoloError, Value};
+use crate::{Chunk, Constant, ErrorKind, PiccoloError, Value};
 
 use super::op::Opcode;
 

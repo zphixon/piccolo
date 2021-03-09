@@ -20,6 +20,7 @@ pub mod prelude {
     pub use super::runtime::{
         chunk::Chunk,
         memory::{Gc, Heap, Object, Root, UniqueRoot},
+        object::{Function, NativeFunction},
         value::Constant,
         value::Value,
         vm::Machine,
@@ -59,13 +60,36 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
 
     debug!("chunk\n{}", chunk.disassemble(""));
     debug!("interpret");
+
     Ok(Machine::new().interpret(&chunk)?)
+}
+
+pub fn interpret2(src: &str) -> Result<Constant, Vec<PiccoloError>> {
+    debug!("parse");
+    let ast = crate::compiler::parser::parse(&mut crate::compiler::scanner::Scanner::new(src))?;
+    debug!("ast\n{}", compiler::ast::print_ast(&ast));
+
+    debug!("compile");
+    let mut emitter = crate::compiler::emitter::Emitter::new();
+    crate::compiler::emitter::compile_ast(&mut emitter, &ast)?;
+    let chunk = emitter.into_chunk();
+    debug!("{}", chunk.disassemble(""));
+
+    let constants = chunk.constants.clone();
+    let mut module = runtime::vm2::Module::new(vec![chunk], constants);
+
+    let mut heap = crate::runtime::memory::Heap::default();
+
+    debug!("interpret");
+    let mut vm = runtime::vm2::Vm2::new(&mut heap, &module);
+    vm.interpret(&mut heap)?;
+    Ok(Constant::Nil)
 }
 
 /// Reads a file and interprets its contents.
 pub fn do_file(file: &std::path::Path) -> Result<Constant, Vec<PiccoloError>> {
     let contents = std::fs::read_to_string(file).map_err(|e| vec![PiccoloError::from(e)])?;
-    interpret(&contents).map_err(|v| {
+    interpret2(&contents).map_err(|v| {
         v.into_iter()
             .map(|e| e.file(file.to_str().unwrap().to_owned()))
             .collect()
