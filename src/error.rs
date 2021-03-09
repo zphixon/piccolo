@@ -109,6 +109,10 @@ pub enum ErrorKind {
         got: String,
         op: Opcode,
     },
+    CannotCompare {
+        got: String,
+        exp: String,
+    },
     UndefinedVariable {
         name: String,
     },
@@ -145,15 +149,17 @@ impl fmt::Display for ErrorKind {
             ErrorKind::UnknownFormatCode { code }
                 => write!(f, "Unknown format code '\\{}'", code),
             ErrorKind::InvalidNumberLiteral { literal }
-                => write!(f, "Invalid number literal '{}'", literal) ,
+                => write!(f, "Invalid number literal '{}'", literal),
             ErrorKind::UnexpectedToken { exp, got }
-                => write!(f, "Unexpected token: expected {}, got {}", exp, got) ,
+                => write!(f, "Unexpected token: expected {}, got {}", exp, got),
             ErrorKind::IncorrectType { exp, got, op }
                 => write!(f, "Incorrect type: expected {}, got {} for op {:?}", exp, got, op),
+            ErrorKind::CannotCompare { exp, got }
+                => write!(f, "Cannot compare {} and {}", exp, got),
             ErrorKind::UndefinedVariable { name }
                 => write!(f, "Undefined variable '{}'", name),
             ErrorKind::UnknownField { obj, name }
-                => write!(f, "Unknown field '{}' on {}", name, obj) ,
+                => write!(f, "Unknown field '{}' on {}", name, obj),
             ErrorKind::ExpectedExpression { got }
                 => write!(f, "Expected expression, got {}", got),
             ErrorKind::CannotClone { ty }

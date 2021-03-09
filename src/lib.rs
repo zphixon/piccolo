@@ -15,17 +15,19 @@ pub mod runtime;
 /// Commonly used items that you might want access to.
 pub mod prelude {
     pub use super::compiler::{
-        ast::print_expression, emitter::Emitter, parser::parse, scanner::Scanner, Token, TokenKind,
+        ast::print_expression, emitter::Emitter, parser::parse, scanner::Scanner, Module, Token,
+        TokenKind,
     };
     pub use super::error::{ErrorKind, PiccoloError};
     pub use super::runtime::{
         chunk::Chunk,
         memory::{Gc, Heap, Object, Root, UniqueRoot},
         object::{Function, NativeFunction},
+        op::Opcode,
         value::Constant,
         value::Value,
         vm::Machine,
-        ChunkIndex, ChunkOffset, ConstantIdx, Line, LocalSlotIdx,
+        ChunkIndex, ChunkOffset, ConstantIndex, Line, LocalSlotIndex,
     };
 }
 
@@ -67,19 +69,19 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
 
 pub fn interpret2(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     debug!("parse");
-    let ast = crate::compiler::parser::parse(&mut crate::compiler::scanner::Scanner::new(src))?;
+    let ast = parse(&mut Scanner::new(src))?;
     debug!("ast\n{}", compiler::ast::print_ast(&ast));
 
     debug!("compile");
-    let mut emitter = crate::compiler::emitter::Emitter::new();
-    crate::compiler::emitter::compile_ast(&mut emitter, &ast)?;
+    let mut emitter = Emitter::new();
+    compiler::emitter::compile_ast(&mut emitter, &ast)?;
     let chunk = emitter.into_chunk();
     debug!("{}", chunk.disassemble(""));
 
     let constants = chunk.constants.clone();
-    let mut module = runtime::vm2::Module::new(vec![chunk], constants);
+    let mut module = Module::new(vec![chunk], constants);
 
-    let mut heap = crate::runtime::memory::Heap::default();
+    let mut heap = Heap::default();
 
     debug!("interpret");
     let mut vm = runtime::vm2::Vm2::new(&mut heap, &module);

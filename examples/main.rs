@@ -105,7 +105,7 @@ fn repl() {
                 rl.add_history_entry(&line);
                 rl.save_history(".piccolo_history").unwrap();
 
-                match piccolo::interpret(&line) {
+                match piccolo::interpret2(&line) {
                     Ok(v) => {
                         if v != Constant::Nil {
                             println!("{:?}", v);

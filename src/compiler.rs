@@ -6,9 +6,25 @@ pub mod parser;
 pub mod scanner;
 
 use crate::runtime::{Line, LocalScopeDepth};
-use crate::{ErrorKind, PiccoloError};
+use crate::{Chunk, Constant, ErrorKind, PiccoloError};
 
 use core::fmt;
+
+#[derive(Default)]
+pub struct Module {
+    chunks: Vec<Chunk>,
+    constants: Vec<Constant>,
+}
+
+impl Module {
+    pub fn new(chunks: Vec<Chunk>, constants: Vec<Constant>) -> Self {
+        Self { chunks, constants }
+    }
+
+    pub(crate) fn chunk(&self, idx: crate::runtime::ChunkIndex) -> &Chunk {
+        &self.chunks[idx]
+    }
+}
 
 #[derive(PartialEq)]
 pub(crate) struct Local {

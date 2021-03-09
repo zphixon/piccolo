@@ -1,5 +1,5 @@
 use crate::{
-    Chunk, ChunkOffset, Constant, ErrorKind, Function, Gc, Heap, Line, LocalSlotIdx,
+    Chunk, ChunkOffset, Constant, ErrorKind, Function, Gc, Heap, Line, LocalSlotIndex, Module,
     NativeFunction, Object, PiccoloError, Root, UniqueRoot,
 };
 
@@ -205,18 +205,6 @@ impl Into<f64> for Value2 {
 }
 // }}}
 
-#[derive(Default)]
-pub struct Module {
-    chunks: Vec<Chunk>,
-    constants: Vec<Constant>,
-}
-
-impl Module {
-    pub fn new(chunks: Vec<Chunk>, constants: Vec<Constant>) -> Self {
-        Self { chunks, constants }
-    }
-}
-
 pub struct Frame<'a> {
     ip: ChunkOffset,
     base: ChunkOffset,
@@ -291,7 +279,7 @@ impl<'a> Vm2<'a> {
         self.frames.push(Frame {
             base: 0,
             ip: 0,
-            chunk: &self.module.chunks[0],
+            chunk: &self.module.chunk(0),
         });
 
         while self
@@ -480,10 +468,9 @@ impl<'a> Vm2<'a> {
                 let b = self.pop();
                 self.push(Value2::Bool(a.eq(&b).map_or_else(
                     || {
-                        Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        Err(PiccoloError::new(ErrorKind::CannotCompare {
                             exp: a.type_name().to_owned(),
                             got: b.type_name().to_owned(),
-                            op,
                         }))
                     },
                     Ok,
@@ -492,19 +479,11 @@ impl<'a> Vm2<'a> {
             Opcode::Greater => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                if rhs.is_bool() || lhs.is_bool() {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                        exp: "anything but bool".into(),
-                        got: "bool".into(),
-                        op,
-                    }));
-                }
                 self.push(Value2::Bool(lhs.gt(&rhs).map_or_else(
                     || {
-                        Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        Err(PiccoloError::new(ErrorKind::CannotCompare {
                             exp: lhs.type_name().to_owned(),
                             got: rhs.type_name().to_owned(),
-                            op,
                         }))
                     },
                     Ok,
@@ -513,19 +492,11 @@ impl<'a> Vm2<'a> {
             Opcode::Less => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                if rhs.is_bool() || lhs.is_bool() {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                        exp: "anything but bool".into(),
-                        got: "bool".into(),
-                        op,
-                    }));
-                }
                 self.push(Value2::Bool(lhs.lt(&rhs).map_or_else(
                     || {
-                        Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        Err(PiccoloError::new(ErrorKind::CannotCompare {
                             exp: lhs.type_name().to_owned(),
                             got: rhs.type_name().to_owned(),
-                            op,
                         }))
                     },
                     Ok,
@@ -534,19 +505,11 @@ impl<'a> Vm2<'a> {
             Opcode::GreaterEqual => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                if rhs.is_bool() || lhs.is_bool() {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                        exp: "anything but bool".into(),
-                        got: "bool".into(),
-                        op,
-                    }));
-                }
                 self.push(Value2::Bool(!lhs.lt(&rhs).map_or_else(
                     || {
-                        Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        Err(PiccoloError::new(ErrorKind::CannotCompare {
                             exp: lhs.type_name().to_owned(),
                             got: rhs.type_name().to_owned(),
-                            op,
                         }))
                     },
                     Ok,
@@ -555,19 +518,11 @@ impl<'a> Vm2<'a> {
             Opcode::LessEqual => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                if rhs.is_bool() || lhs.is_bool() {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                        exp: "anything but bool".into(),
-                        got: "bool".into(),
-                        op,
-                    }));
-                }
                 self.push(Value2::Bool(!lhs.gt(&rhs).map_or_else(
                     || {
-                        Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        Err(PiccoloError::new(ErrorKind::CannotCompare {
                             exp: lhs.type_name().to_owned(),
                             got: rhs.type_name().to_owned(),
-                            op,
                         }))
                     },
                     Ok,
@@ -575,11 +530,11 @@ impl<'a> Vm2<'a> {
             } // }}}
 
             Opcode::GetLocal => {
-                let slot = self.read_short() as LocalSlotIdx;
+                let slot = self.read_short() as LocalSlotIndex;
                 self.push(self.stack[slot as usize].clone());
             }
             Opcode::SetLocal => {
-                let slot = self.read_short() as LocalSlotIdx;
+                let slot = self.read_short() as LocalSlotIndex;
                 self.stack[slot as usize] = self.pop();
             }
             Opcode::GetGlobal => {

@@ -1,15 +1,38 @@
 //! Bytecode compiler.
 
-use super::ast::{Ast, Expr, Stmt};
-use super::Local;
-use crate::compiler::{Token, TokenKind};
-use crate::error::{ErrorKind, PiccoloError};
-use crate::runtime::{
-    chunk::Chunk, object::Function, op::Opcode, value::Constant, ChunkOffset, ConstantIdx, Line,
-    LocalScopeDepth, LocalSlotIdx,
+use crate::{
+    compiler::ast::{Ast, Expr, Stmt},
+    Chunk, ChunkIndex, ChunkOffset, Constant, ConstantIndex, ErrorKind, Line, LocalSlotIndex,
+    Module, Opcode, PiccoloError, Token, TokenKind,
 };
 
+use super::Local;
+use crate::runtime::LocalScopeDepth;
+
 use fnv::FnvHashMap;
+
+pub fn compile2(ast: &Ast) -> Result<Module, Vec<PiccoloError>> {
+    panic!()
+}
+
+#[derive(Copy, Clone, PartialEq)]
+enum ContextType {
+    Function,
+    Initializer,
+    Method,
+    Top,
+}
+
+pub struct Emitter4 {
+    module: Module,
+    contexts: Vec<Emitter4Context>,
+    errors: Vec<PiccoloError>,
+}
+
+struct Emitter4Context {
+    context_type: ContextType,
+    chunk_index: ChunkIndex,
+}
 
 /// Compile an abstract syntax tree into bytecode.
 pub fn compile_ast(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloError>> {
@@ -470,7 +493,7 @@ fn compile_logical(
 pub struct Emitter {
     chunk: Chunk,
     locals: Vec<Local>,
-    global_identifiers: FnvHashMap<String, ConstantIdx>,
+    global_identifiers: FnvHashMap<String, ConstantIndex>,
     scope_depth: LocalScopeDepth,
     continue_offsets: Vec<Vec<ChunkOffset>>,
     break_offsets: Vec<Vec<ChunkOffset>>,
@@ -529,7 +552,7 @@ impl Emitter {
             .write_arg_u16(Opcode::Constant, idx, line);
     }
 
-    fn make_global_ident(&mut self, name: &Token) -> ConstantIdx {
+    fn make_global_ident(&mut self, name: &Token) -> ConstantIndex {
         trace!("{} make global {}", name.line, name.lexeme);
 
         if self.global_identifiers.contains_key(name.lexeme) {
@@ -543,7 +566,7 @@ impl Emitter {
         }
     }
 
-    fn get_global_ident(&self, name: &Token) -> Result<ConstantIdx, PiccoloError> {
+    fn get_global_ident(&self, name: &Token) -> Result<ConstantIndex, PiccoloError> {
         trace!("{} get global {}", name.line, name.lexeme);
 
         self.global_identifiers
@@ -557,7 +580,7 @@ impl Emitter {
             })
     }
 
-    fn get_local_slot(&self, name: &Token) -> Option<LocalSlotIdx> {
+    fn get_local_slot(&self, name: &Token) -> Option<LocalSlotIndex> {
         trace!("{} get local slot {}", name.line, name.lexeme);
 
         for (i, local) in self.locals.iter().enumerate().rev() {

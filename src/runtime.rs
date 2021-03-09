@@ -8,8 +8,8 @@ pub mod value;
 pub mod vm;
 pub mod vm2;
 
-pub type ConstantIdx = u16;
-pub type LocalSlotIdx = u16;
+pub type ConstantIndex = u16;
+pub type LocalSlotIndex = u16;
 pub type LocalScopeDepth = u16;
 pub type Line = usize;
 pub type ChunkOffset = usize;
