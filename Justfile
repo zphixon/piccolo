@@ -1,3 +1,4 @@
+# you might want to set $Env:RUST_LOG='piccolo=trace' if you're looking at the logs
 
 set shell := ["powershell"]
 
