@@ -270,32 +270,31 @@ mod integration {
         let mut scanner = Scanner::new(src);
         let ast = parse(&mut scanner).unwrap();
         if let Stmt::Expr { expr, .. } = &ast[0] {
-            assert_eq!(
-                expr,
-                &Expr::Binary {
-                    lhs: Box::new(Expr::Binary {
-                        lhs: Box::new(Expr::Literal {
-                            literal: Token::new(TokenKind::Integer(1), "1", 1)
-                        }),
-                        op: Token::new(TokenKind::Plus, "+", 1),
-                        rhs: Box::new(Expr::Binary {
-                            lhs: Box::new(Expr::Literal {
-                                literal: Token::new(TokenKind::Integer(2), "2", 1)
-                            }),
-                            op: Token::new(TokenKind::Multiply, "*", 1),
-                            rhs: Box::new(Expr::Literal {
-                                literal: Token::new(TokenKind::Integer(3), "3", 1)
-                            })
-                        })
+            let equiv = Expr::Binary {
+                lhs: Box::new(Expr::Binary {
+                    lhs: Box::new(Expr::Literal {
+                        literal: Token::new(TokenKind::Integer(1), "1", 1),
                     }),
                     op: Token::new(TokenKind::Plus, "+", 1),
-                    rhs: Box::new(Expr::Literal {
-                        literal: Token::new(TokenKind::Integer(4), "4", 1)
+                    rhs: Box::new(Expr::Binary {
+                        lhs: Box::new(Expr::Literal {
+                            literal: Token::new(TokenKind::Integer(2), "2", 1),
+                        }),
+                        op: Token::new(TokenKind::Multiply, "*", 1),
+                        rhs: Box::new(Expr::Literal {
+                            literal: Token::new(TokenKind::Integer(3), "3", 1),
+                        }),
                     }),
-                }
-            );
+                }),
+                op: Token::new(TokenKind::Plus, "+", 1),
+                rhs: Box::new(Expr::Literal {
+                    literal: Token::new(TokenKind::Integer(4), "4", 1),
+                }),
+            };
 
-            println!("{}", ast::print_expression(expr));
+            println!("got:  {}", ast::print_expression(expr));
+            println!("want: {}", ast::print_expression(&equiv));
+            assert_eq!(expr, &equiv);
 
             let mut ne = Emitter::new();
             crate::compiler::emitter::compile_ast(&mut ne, &ast).unwrap();
