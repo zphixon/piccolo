@@ -338,7 +338,13 @@ fn compile_assert(emitter: &mut Emitter, assert: &Token, value: &Expr) -> Result
     trace!("{} assert", assert.line);
 
     compile_expr(emitter, value)?;
-    emitter.add_instruction(Opcode::Assert, assert.line);
+    //emitter.add_instruction(Opcode::Assert, assert.line);
+
+    let c = emitter
+        .current_chunk_mut()
+        .make_constant(Constant::String(super::ast::print_expression(value)));
+    emitter.add_instruction_arg(Opcode::Assert, c, assert.line);
+
     Ok(())
 }
 

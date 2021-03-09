@@ -122,7 +122,9 @@ pub enum ErrorKind {
     CannotClone {
         ty: String,
     },
-    AssertFailed,
+    AssertFailed {
+        assertion: String,
+    },
     SyntaxError,
 }
 
@@ -156,8 +158,8 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Expected expression, got {}", got),
             ErrorKind::CannotClone { ty }
                 => write!(f, "Cannot clone type {}", ty),
-            ErrorKind::AssertFailed
-                => write!(f, "Assertion failed"),
+            ErrorKind::AssertFailed { assertion }
+                => write!(f, "Assertion failed: {}", assertion),
             ErrorKind::SyntaxError
                 => write!(f, "Syntax error"),
         }

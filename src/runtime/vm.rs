@@ -462,8 +462,10 @@ impl Machine {
 
                 Opcode::Assert => {
                     let v = self.pop(chunk)?;
+                    let assertion = self.peek_constant(chunk);
                     if !v.is_truthy() {
-                        return Err(PiccoloError::new(ErrorKind::AssertFailed)
+                        let assertion = assertion.to_string();
+                        return Err(PiccoloError::new(ErrorKind::AssertFailed { assertion })
                             .line(chunk.get_line_from_index(self.ip - 1)));
                     }
                 }

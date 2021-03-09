@@ -126,7 +126,8 @@ pub(crate) fn op_len(op: Opcode) -> usize {
         | Opcode::JumpForward
         | Opcode::JumpFalse
         | Opcode::JumpTrue
-        | Opcode::JumpBack => 3,
+        | Opcode::JumpBack
+        | Opcode::Assert => 3,
         _ => 1,
     }
 }
