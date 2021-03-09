@@ -1,0 +1,51 @@
+# simple grammar. ignores string escapes
+
+# if we wanted explicit argument names (I'm not sure about yet) just do
+# arguments -> '(' [argument {',' argument}] ')'
+# argument -> expression | declare
+
+program -> {statement}
+
+statement -> assign | declare | break | continue | retn | assert | block | if
+           | while | for | fn | expression | data
+
+assign -> [call '.'] ident assign_op expression
+declare -> ident '=:' expression
+
+break -> 'break'
+continue -> 'continue'
+retn -> 'retn' expression
+assert -> 'assert' expression
+
+block -> 'do' {statement} 'end'
+if -> 'if' expression 'do' {statement} ['else' {statement}] 'end'
+while -> 'while' expression block
+for -> 'for' declare ',' expression ',' assign block
+fn -> 'fn' ident '(' parameters ')' block
+data -> 'data' ident 'do' {declare} {fn} 'end'
+
+expression -> logic_or
+
+logic_or -> logic_and {'||' logic_and}
+logic_and -> bit_or {'&&' bit_or}
+bit_or -> bit_xor {'|' bit_xor}
+bit_xor -> bit_and {'^' bit_and}
+bit_and -> equality {'&' equality}
+equality -> comparison {('!=' | '==') comparison}
+comparison -> bit_shift {('>' | '>=' | '<' | '<=') bit_shift}
+bit_shift -> term {('>>' | '<<') term}
+term -> factor {('+' | '-') factor}
+factor -> unary {('*' | '/') unary}
+unary -> ('!' | '-') unary | call
+
+call -> primary {arguments | ('.' ident)}
+primary -> '(' expression ')' | 'true' | 'false' | 'nil' | 'me' | number | string | ident
+
+arguments -> '(' [expression {',' expression}] ')'
+parameters -> '(' [ident {',' ident}] ')'
+
+assign_op -> '=' | '+=' | '-=' | '/=' | '*=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>='
+ident -> /NON_WHITESPACE+/
+number -> /INTEGER(.INTEGER)?/
+string -> /".*"/
+
