@@ -160,9 +160,13 @@ impl Heap {
     }
 
     /// Take out the trash.
-    pub fn collect(&mut self) {
+    ///
+    /// Return number of bytes cleared.
+    pub fn collect(&mut self) -> usize {
         self.mark();
+        let bytes = self.bytes_unmarked();
         self.sweep();
+        bytes
     }
 
     // Mark rooted objects
@@ -180,6 +184,22 @@ impl Heap {
     // Delete all unmarked objects. If there are any roots to an object,
     fn sweep(&mut self) {
         self.objects.retain(|obj| obj.header.marked.get());
+    }
+
+    // number of unmarked bytes
+    fn bytes_unmarked(&self) -> usize {
+        self.objects.iter().fold(0, |bytes, obj| {
+            if !obj.header.marked.get() {
+                bytes + std::mem::size_of_val(&obj.data)
+            } else {
+                bytes
+            }
+        })
+    }
+
+    /// Number of objects in the heap.
+    pub fn objects(&self) -> usize {
+        self.objects.len()
     }
 }
 
@@ -231,6 +251,11 @@ impl<T: 'static + Object + ?Sized> Root<T> {
     // safety: the lifetime of the returned allocation is bound to self
     fn as_allocation(&self) -> &Allocation<T> {
         unsafe { &self.ptr.as_ref() }
+    }
+
+    // TODO: this might allow accidental copying of stuff we didn't want to copy...
+    fn as_gc(&self) -> Gc<T> {
+        Gc { ptr: self.ptr }
     }
 
     /// Upgrade to a unique root.
@@ -337,19 +362,56 @@ impl<T: 'static + Object + ?Sized> Drop for UniqueRoot<T> {
 mod test {
     use super::*;
     #[test]
-    fn heap_stuff() {
+    fn clean_up_roots() {
+        let mut heap = Heap::default();
+        {
+            let root = heap.manage(String::from("h"));
+            assert_eq!(*root, "h");
+        }
+        assert_eq!(1, heap.objects());
+        assert_eq!(std::mem::size_of::<String>(), heap.collect());
+        assert_eq!(0, heap.objects());
+    }
+
+    #[test]
+    fn dont_clean_up_unique_roots() {
+        let mut heap = Heap::default();
+
+        {
+            let root = heap.manage(String::new());
+            let mut root = root.upgrade();
+        }
+
+        assert_eq!(1, heap.objects());
+        assert_eq!(0, heap.collect());
+        assert_eq!(1, heap.objects());
+    }
+
+    #[test]
+    fn aliasing_what() {
+        // probably shouldn't allow this to happen haha
         let mut heap = Heap::default();
         let root = heap.manage(String::new());
-        let mut s = root.upgrade();
-        s.push_str("hi");
-        println!("{}", s);
+        let gc = root.as_gc();
 
-        let root2 = heap.manage(String::new());
-        let mut s2 = root2.upgrade();
-        s2.push_str(&s);
-        s2.push_str("jfo3iawjoeio");
-        println!("{}", s2);
+        {
+            let mut unique = root.upgrade();
 
-        assert_eq!("hijfo3iawjoeio", *s2);
+            println!("{}", gc);
+            println!("{}", unique);
+
+            unique.push_str("dingus");
+
+            println!("{}", gc);
+            println!("{}", unique);
+
+            drop(unique);
+        }
+        heap.collect();
+
+        println!("{}", gc);
+
+        // hmmmm
+        assert_eq!(*gc, "dingus");
     }
 }
