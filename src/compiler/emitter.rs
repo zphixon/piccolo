@@ -468,7 +468,7 @@ fn compile_logical(
 /// the abstract syntax tree. Extract the `Chunk` with `current_chunk{_mut}()` or
 /// `into_chunk()`.
 pub struct Emitter {
-    function: Function,
+    chunk: Chunk,
     locals: Vec<Local>,
     global_identifiers: FnvHashMap<String, ConstantIdx>,
     scope_depth: LocalScopeDepth,
@@ -486,7 +486,7 @@ impl Emitter {
     /// Make a new emitter, equivalent to `Default::default()`
     pub fn new() -> Self {
         Self {
-            function: Function::default(),
+            chunk: Chunk::default(),
             locals: Vec::new(),
             global_identifiers: FnvHashMap::default(),
             scope_depth: 0,
@@ -500,15 +500,15 @@ impl Emitter {
     }
 
     pub fn into_chunk(self) -> Chunk {
-        self.function.into_chunk()
+        self.chunk
     }
 
     pub fn current_chunk(&self) -> &Chunk {
-        self.function.chunk()
+        &self.chunk
     }
 
     pub fn current_chunk_mut(&mut self) -> &mut Chunk {
-        self.function.chunk_mut()
+        &mut self.chunk
     }
 
     fn add_instruction(&mut self, op: Opcode, line: Line) {

@@ -14,6 +14,10 @@ pub struct Chunk {
 }
 
 impl Chunk {
+    pub(crate) fn len(&self) -> usize {
+        self.data.len()
+    }
+
     pub(crate) fn write_u8<T: Into<u8>>(&mut self, byte: T, line: Line) {
         let byte = byte.into();
         trace!("write u8 {:04x}={:02x}", self.data.len(), byte);

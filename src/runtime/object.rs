@@ -1,40 +1,46 @@
 //! Objects defined in Rust that may exist at runtime.
+use super::chunk::Chunk;
 
 use crate::runtime::memory::Object;
+use crate::runtime::ChunkIndex;
 
 use core::fmt;
 
-#[derive(Debug, Default)]
-pub(crate) struct Function {
+#[derive(Default)]
+pub struct Function {
     arity: usize,
     name: String,
-    chunk: super::chunk::Chunk,
+    chunk: ChunkIndex,
+}
+
+impl fmt::Debug for Function {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        trace!("ufveowsi");
+        write!(f, "<fn {}>", self.name)
+    }
 }
 
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        trace!("hLLEOO");
         write!(f, "<fn {}>", self.name)
     }
 }
 
 impl Function {
-    pub(crate) fn arity(&self) -> &usize {
+    pub fn new(arity: usize, name: String, chunk: ChunkIndex) -> Self {
+        Self { arity, name, chunk }
+    }
+
+    pub fn arity(&self) -> &usize {
         &self.arity
     }
 
-    pub(crate) fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub(crate) fn chunk(&self) -> &super::chunk::Chunk {
-        &self.chunk
-    }
-
-    pub(crate) fn chunk_mut(&mut self) -> &mut super::chunk::Chunk {
-        &mut self.chunk
-    }
-
-    pub(crate) fn into_chunk(self) -> super::chunk::Chunk {
+    pub fn chunk(&self) -> ChunkIndex {
         self.chunk
     }
 }
@@ -61,6 +67,10 @@ impl<T: Object> Object for Vec<T> {
             item.trace();
         }
     }
+
+    fn type_name(&self) -> &'static str {
+        "list"
+    }
 }
 
 impl<T: Object> Object for &Vec<T> {
@@ -69,16 +79,28 @@ impl<T: Object> Object for &Vec<T> {
             item.trace();
         }
     }
+
+    fn type_name(&self) -> &'static str {
+        "list"
+    }
 }
 
-impl<K: Eq + std::hash::Hash, T: Object> Object for std::collections::HashMap<K, T> {
+impl<K: Eq + std::hash::Hash, T: Object> Object for fnv::FnvHashMap<K, T> {
     fn trace(&self) {
         for value in self.values() {
             value.trace();
         }
     }
+
+    fn type_name(&self) -> &'static str {
+        "map"
+    }
 }
 
 impl Object for String {
     fn trace(&self) {}
+
+    fn type_name(&self) -> &'static str {
+        "string"
+    }
 }

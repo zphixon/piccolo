@@ -18,7 +18,12 @@ pub mod prelude {
     pub use super::compiler::{Token, TokenKind};
     pub use super::error::{ErrorKind, PiccoloError};
     pub use super::runtime::{
-        chunk::Chunk, /*object::Object,*/ value::Constant, value::Value, vm::Machine,
+        chunk::Chunk,
+        memory::{Gc, Heap, Object, Root, UniqueRoot},
+        value::Constant,
+        value::Value,
+        vm::Machine,
+        ChunkIndex, ChunkOffset, ConstantIdx, Line, LocalSlotIdx,
     };
 }
 

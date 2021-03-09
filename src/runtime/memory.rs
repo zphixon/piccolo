@@ -15,26 +15,6 @@ pub trait Object {
     fn type_name(&self) -> &'static str {
         "object"
     }
-
-    fn gt(&self, _other: &dyn Object) -> Option<bool> {
-        None
-    }
-
-    fn lt(&self, _other: &dyn Object) -> Option<bool> {
-        None
-    }
-
-    fn eq(&self, _other: &dyn Object) -> Option<bool> {
-        None
-    }
-
-    fn get(&self, _other: &dyn Object) -> Option<bool> {
-        None
-    }
-
-    fn set(&self, _other: &dyn Object) -> Option<bool> {
-        None
-    }
 }
 
 impl fmt::Debug for dyn Object {
@@ -151,7 +131,7 @@ impl Heap {
     /// Manage an uncopyable object on the heap.
     ///
     /// As in manage, data will be GCable.
-    pub fn unique<T: 'static + Object>(&mut self, data: T) -> UniqueRoot<T> {
+    pub fn manage_unique<T: 'static + Object>(&mut self, data: T) -> UniqueRoot<T> {
         let root = UniqueRoot {
             ptr: self.allocate(data),
         };
@@ -255,7 +235,7 @@ impl<T: 'static + Object + ?Sized> Root<T> {
     }
 
     // TODO: this might allow accidental copying of stuff we didn't want to copy...
-    fn as_gc(&self) -> Gc<T> {
+    pub(crate) fn as_gc(&self) -> Gc<T> {
         self.as_allocation().root();
         Gc { ptr: self.ptr }
     }
@@ -270,6 +250,7 @@ impl<T: 'static + Object + ?Sized> Root<T> {
             self.as_allocation().header.roots.load(Ordering::Relaxed),
             "cannot upgrade if there is more than one root"
         );
+        self.as_allocation().root();
         UniqueRoot { ptr: self.ptr }
     }
 }
@@ -290,16 +271,17 @@ impl<T: 'static + Object + ?Sized> Deref for Root<T> {
 
 impl<T: fmt::Debug + 'static + Object + ?Sized> fmt::Debug for Root<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Root({:?})", &*self)
+        let inner: &T = &*self;
+        write!(f, "Root({:?})", inner)
     }
 }
 
-impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for Root<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let inner: &T = &*self;
-        inner.fmt(f)
-    }
-}
+//impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for Root<T> {
+//    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//        let inner: &T = &*self;
+//        inner.fmt(f)
+//    }
+//}
 
 impl<T: 'static + Object + ?Sized> Object for Root<T> {
     fn trace(&self) {
@@ -341,20 +323,25 @@ impl<T: 'static + Object + ?Sized> DerefMut for UniqueRoot<T> {
 
 impl<T: fmt::Debug + 'static + Object + ?Sized> fmt::Debug for UniqueRoot<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "UniqueRoot({:?})", &*self)
+        let inner: &T = &*self;
+        write!(f, "UniqueRoot({:?})", inner)
     }
 }
 
-impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for UniqueRoot<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let inner: &T = &*self;
-        inner.fmt(f)
-    }
-}
+//impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for UniqueRoot<T> {
+//    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//        let inner: &T = &*self;
+//        inner.fmt(f)
+//    }
+//}
 
 impl<T: 'static + Object + ?Sized> Object for UniqueRoot<T> {
     fn trace(&self) {
         self.as_allocation().trace()
+    }
+
+    fn type_name(&self) -> &'static str {
+        "jiof3jio8w3jio"
     }
 }
 
@@ -383,7 +370,7 @@ mod test {
     }
 
     #[test]
-    fn dont_clean_up_unique_roots() {
+    fn clean_up_unique_roots() {
         let mut heap = Heap::default();
 
         {
@@ -392,8 +379,8 @@ mod test {
         }
 
         assert_eq!(1, heap.objects());
-        assert_eq!(0, heap.collect());
-        assert_eq!(1, heap.objects());
+        assert_eq!(std::mem::size_of::<String>(), heap.collect());
+        assert_eq!(0, heap.objects());
     }
 
     #[test]

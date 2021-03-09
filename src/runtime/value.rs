@@ -1,6 +1,6 @@
 //! Contains types for working with Piccolo values.
 
-use crate::{PiccoloError, Token, TokenKind};
+use crate::{Gc, Object, PiccoloError, Token, TokenKind};
 
 use core::fmt;
 
@@ -137,6 +137,18 @@ impl Value {
             },
             _ => None?,
         })
+    }
+}
+
+impl Object for Value {
+    fn trace(&self) {
+        match self {
+            Value::Bool(_) => {}
+            Value::Integer(_) => {}
+            Value::Double(_) => {}
+            Value::String(v) => v.trace(),
+            Value::Nil => {}
+        }
     }
 }
 
