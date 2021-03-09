@@ -276,12 +276,12 @@ impl<T: fmt::Debug + 'static + Object + ?Sized> fmt::Debug for Root<T> {
     }
 }
 
-//impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for Root<T> {
-//    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//        let inner: &T = &*self;
-//        inner.fmt(f)
-//    }
-//}
+impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for Root<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let inner: &T = &*self;
+        inner.fmt(f)
+    }
+}
 
 impl<T: 'static + Object + ?Sized> Object for Root<T> {
     fn trace(&self) {
@@ -328,12 +328,12 @@ impl<T: fmt::Debug + 'static + Object + ?Sized> fmt::Debug for UniqueRoot<T> {
     }
 }
 
-//impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for UniqueRoot<T> {
-//    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//        let inner: &T = &*self;
-//        inner.fmt(f)
-//    }
-//}
+impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for UniqueRoot<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let inner: &T = &*self;
+        inner.fmt(f)
+    }
+}
 
 impl<T: 'static + Object + ?Sized> Object for UniqueRoot<T> {
     fn trace(&self) {
