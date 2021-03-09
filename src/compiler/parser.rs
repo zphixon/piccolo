@@ -54,7 +54,7 @@ fn parse_statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloErr
         trace!("expr");
 
         let token = *scanner.peek_token(0)?;
-        let expr = parse_expression(scanner, BindingPower::ExpressionBoundary)?;
+        let expr = parse_expression(scanner)?;
 
         Ok(Stmt::Expr { token, expr })
     }
@@ -65,7 +65,7 @@ fn parse_assignment<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloEr
 
     let name = consume(scanner, TokenKind::Identifier)?;
     let op = scanner.next_token()?;
-    let value = parse_expression(scanner, BindingPower::ExpressionBoundary)?;
+    let value = parse_expression(scanner)?;
 
     Ok(Stmt::Assignment { name, op, value })
 }
@@ -75,7 +75,7 @@ fn parse_declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloE
 
     let name = consume(scanner, TokenKind::Identifier)?;
     let op = consume(scanner, TokenKind::Declare)?;
-    let value = parse_expression(scanner, BindingPower::ExpressionBoundary)?;
+    let value = parse_expression(scanner)?;
 
     Ok(Stmt::Declaration { name, op, value })
 }
@@ -100,7 +100,7 @@ fn parse_retn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     trace!("retn");
 
     let retn = scanner.next_token()?;
-    let value = Some(parse_expression(scanner, BindingPower::ExpressionBoundary)?);
+    let value = Some(parse_expression(scanner)?);
 
     Ok(Stmt::Retn { retn, value })
 }
@@ -109,7 +109,7 @@ fn parse_assert<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError>
     trace!("assert");
 
     let assert = scanner.next_token()?;
-    let value = parse_expression(scanner, BindingPower::ExpressionBoundary)?;
+    let value = parse_expression(scanner)?;
 
     Ok(Stmt::Assert { assert, value })
 }
@@ -128,7 +128,7 @@ fn parse_if<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     trace!("if");
 
     let if_ = scanner.next_token()?;
-    let cond = parse_expression(scanner, BindingPower::ExpressionBoundary)?;
+    let cond = parse_expression(scanner)?;
     consume(scanner, TokenKind::Do)?;
     let then_block = block_until_else_or_end(scanner)?;
 
@@ -156,7 +156,7 @@ fn parse_if<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
 fn parse_while<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     trace!("while");
     let while_ = scanner.next_token()?;
-    let cond = parse_expression(scanner, BindingPower::ExpressionBoundary)?;
+    let cond = parse_expression(scanner)?;
     consume(scanner, TokenKind::Do)?;
     let body = parse_block(scanner)?;
     let end = consume(scanner, TokenKind::End)?;
@@ -176,7 +176,7 @@ fn parse_for<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     let init = Box::new(parse_declaration(scanner)?);
 
     consume(scanner, TokenKind::Comma)?;
-    let cond = parse_expression(scanner, BindingPower::ExpressionBoundary)?;
+    let cond = parse_expression(scanner)?;
 
     consume(scanner, TokenKind::Comma)?;
     let inc = Box::new(parse_assignment(scanner)?);
@@ -251,97 +251,6 @@ fn parse_block<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, PiccoloEr
     Ok(stmts)
 }
 
-fn parse_expression<'a>(
-    scanner: &mut Scanner<'a>,
-    min_bp: BindingPower,
-) -> Result<Expr<'a>, PiccoloError> {
-    trace!("expr_bp {:?}", min_bp);
-    let lhs_token = scanner.next_token()?;
-    let mut lhs = if lhs_token.is_value() {
-        trace!("atom");
-        Expr::Literal { literal: lhs_token }
-    } else if lhs_token.kind == TokenKind::Identifier {
-        if scanner.peek_token(0)?.kind == TokenKind::Colon {
-            trace!("path");
-            let mut names = vec![lhs_token];
-            while scanner.peek_token(0)?.kind == TokenKind::Colon
-                && scanner.peek_token(1)?.kind == TokenKind::Identifier
-            {
-                consume(scanner, TokenKind::Colon)?;
-                names.push(consume(scanner, TokenKind::Identifier)?);
-            }
-            Expr::Path { names }
-        } else {
-            trace!("variable");
-            Expr::Variable {
-                variable: lhs_token,
-            }
-        }
-    } else if lhs_token.kind == TokenKind::LeftParen {
-        trace!("grouping");
-        let expr = Box::new(parse_expression(scanner, BindingPower::ExpressionBoundary)?);
-        let right_paren = consume(scanner, TokenKind::RightParen).map_err(|e| {
-            e.msg_string(format!("in expression starting on line {}", lhs_token.line))
-        })?;
-        Expr::Paren { right_paren, expr }
-    } else if lhs_token.kind == TokenKind::Eof {
-        trace!("eof");
-        return Err(PiccoloError::new(ErrorKind::ExpectedExpression {
-            got: lhs_token.to_string(),
-        })
-        .line(lhs_token.line));
-    } else {
-        trace!("prefix");
-        let pbp = prefix_binding_power(lhs_token.kind);
-        if pbp != BindingPower::None {
-            let rhs = parse_expression(scanner, pbp)?;
-            Expr::Unary {
-                op: lhs_token,
-                rhs: Box::new(rhs),
-            }
-        } else {
-            return Err(PiccoloError::new(ErrorKind::ExpectedExpression {
-                got: lhs_token.to_string(),
-            })
-            .line(lhs_token.line));
-        }
-    };
-
-    loop {
-        let op_token = scanner.peek_token(0)?;
-        if op_token.kind == TokenKind::Eof {
-            break;
-        }
-
-        let op_bp = infix_binding_power(op_token.kind);
-
-        if op_bp < min_bp {
-            trace!("end of infix at {:?}", op_token.kind);
-            break;
-        }
-
-        let op = scanner.next_token()?;
-        let rhs = parse_expression(scanner, op_bp + 1)?;
-        lhs = if matches!(op_bp, BindingPower::LogicalAnd | BindingPower::LogicalOr) {
-            trace!("logical");
-            Expr::Logical {
-                lhs: Box::new(lhs),
-                op,
-                rhs: Box::new(rhs),
-            }
-        } else {
-            trace!("infix");
-            Expr::Binary {
-                lhs: Box::new(lhs),
-                op,
-                rhs: Box::new(rhs),
-            }
-        }
-    }
-
-    Ok(lhs)
-}
-
 fn consume<'a>(scanner: &mut Scanner<'a>, kind: TokenKind) -> Result<Token<'a>, PiccoloError> {
     let tok = scanner.next_token()?;
     if tok.kind == kind {
@@ -355,116 +264,9 @@ fn consume<'a>(scanner: &mut Scanner<'a>, kind: TokenKind) -> Result<Token<'a>, 
     }
 }
 
-fn prefix_binding_power(kind: TokenKind) -> BindingPower {
-    match kind {
-        TokenKind::Minus => BindingPower::Unary,
-        TokenKind::Not => BindingPower::Unary,
-
-        TokenKind::Identifier => BindingPower::None,
-        _ => BindingPower::None,
-    }
-}
-
-#[rustfmt::skip]
-pub(crate) fn infix_binding_power(kind: TokenKind) -> BindingPower {
-    match kind {
-          TokenKind::Multiply
-        | TokenKind::Divide
-        | TokenKind::Modulo
-            => BindingPower::Factor,
-
-          TokenKind::Plus
-        | TokenKind::Minus
-            => BindingPower::Term,
-
-          TokenKind::ShiftLeft
-        | TokenKind::ShiftRight
-            => BindingPower::BitShift,
-
-          TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::LessEqual
-        | TokenKind::GreaterEqual
-            => BindingPower::Comparison,
-
-          TokenKind::Equal
-        | TokenKind::NotEqual => BindingPower::Equality,
-
-        TokenKind::BitwiseAnd => BindingPower::BitAnd,
-        TokenKind::BitwiseXor => BindingPower::BitXor,
-        TokenKind::BitwiseOr => BindingPower::BitOr,
-
-        TokenKind::LogicalAnd => BindingPower::LogicalAnd,
-        TokenKind::LogicalOr => BindingPower::LogicalOr,
-
-        TokenKind::Retn => BindingPower::None,
-        TokenKind::Identifier => BindingPower::None,
-        _ => BindingPower::None,
-    }
-}
-
-macro_rules! prec {
-    ($name:ident => $($item:ident = $num:expr,)*) => {
-        #[derive(Debug, Clone, Copy, PartialOrd, PartialEq)]
-        pub(crate) enum $name {
-            $($item = $num,)*
-        }
-
-        impl Into<u8> for $name {
-            fn into(self) -> u8 {
-                match self {
-                    $($name::$item => $num,)*
-                }
-            }
-        }
-
-        impl From<u8> for $name {
-            fn from(v: u8) -> $name {
-                match v {
-                    $($num => $name::$item,)*
-                    _ => panic!("{} does not correspond to any item in {}", v, stringify!($name))
-                }
-            }
-        }
-
-        impl std::ops::Add<u8> for $name {
-            type Output = $name;
-            fn add(self, rhs: u8) -> $name {
-                let lhs: u8 = self.into();
-                (lhs + rhs).into()
-            }
-        }
-    };
-}
-
-prec!(BindingPower =>
-    None = 0,
-    ExpressionBoundary = 1,
-    LogicalOr = 2,
-    LogicalAnd = 3,
-    BitOr = 4,
-    BitXor = 5,
-    BitAnd = 6,
-    Equality = 7,
-    Comparison = 8,
-    BitShift = 9,
-    Term = 10,
-    Factor = 11,
-    Unary = 12,
-    Call = 13,
-    Primary = 14,
-);
-
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    fn precedence_ord() {
-        assert!(BindingPower::LogicalAnd > BindingPower::LogicalOr);
-        assert!(BindingPower::LogicalAnd < BindingPower::Comparison);
-        assert!(BindingPower::LogicalOr < BindingPower::Comparison);
-    }
 
     #[test]
     fn assign() {
@@ -538,17 +340,14 @@ mod test {
             println!(
                 "{} -> {}",
                 src,
-                crate::compiler::ast::print_expression(&parse_expression2(&mut scanner).unwrap())
+                crate::compiler::ast::print_expression(&parse_expression(&mut scanner).unwrap())
             );
         }
-
-        panic!("its good m8");
+        panic!();
     }
 }
 
-// ree {{{
-
-fn parse_expression2<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
+fn parse_expression<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
     parse_logic_or(scanner)
 }
 
@@ -760,7 +559,7 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
     if t.kind == TokenKind::LeftParen {
         consume(scanner, TokenKind::LeftParen)?;
 
-        let expr = Box::new(parse_expression2(scanner)?);
+        let expr = Box::new(parse_expression(scanner)?);
         let right_paren = consume(scanner, TokenKind::RightParen)?;
 
         Ok(Expr::Paren { right_paren, expr })
@@ -817,10 +616,10 @@ fn parse_parameters<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Token<'a>>, Pic
 fn parse_arguments<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Expr<'a>>, PiccoloError> {
     let mut args = vec![];
     if scanner.peek_token(0)?.kind == TokenKind::Identifier {
-        args.push(parse_expression2(scanner)?);
+        args.push(parse_expression(scanner)?);
         while scanner.peek_token(0)?.kind == TokenKind::Comma {
             consume(scanner, TokenKind::Comma)?;
-            args.push(parse_expression2(scanner)?);
+            args.push(parse_expression(scanner)?);
         }
     }
     Ok(args)
