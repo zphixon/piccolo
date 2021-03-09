@@ -264,89 +264,6 @@ fn consume<'a>(scanner: &mut Scanner<'a>, kind: TokenKind) -> Result<Token<'a>, 
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn assign() {
-        let src = "a += 3";
-        let ast = parse(&mut Scanner::new(src)).unwrap();
-        assert_eq!(
-            ast,
-            &[Stmt::Assignment {
-                name: Token::new(TokenKind::Identifier, "a", 1),
-                op: Token::new(TokenKind::PlusAssign, "+=", 1),
-                value: Expr::Literal {
-                    literal: Token::new(TokenKind::Integer(3), "3", 1),
-                }
-            }]
-        );
-    }
-
-    #[test]
-    #[ignore]
-    fn path() {
-        // TODO think about modules more
-        let src = "a:b:c:d";
-        let ast = parse(&mut Scanner::new(src)).unwrap();
-        assert_eq!(
-            ast,
-            &[Stmt::Expr {
-                token: Token::new(TokenKind::Identifier, "a", 1),
-                expr: Expr::Path {
-                    names: vec![
-                        Token::new(TokenKind::Identifier, "a", 1),
-                        Token::new(TokenKind::Identifier, "b", 1),
-                        Token::new(TokenKind::Identifier, "c", 1),
-                        Token::new(TokenKind::Identifier, "d", 1),
-                    ],
-                }
-            }]
-        );
-
-        let src = "a:3";
-        assert!(parse(&mut Scanner::new(src)).is_err());
-
-        let src = "a:";
-        assert!(parse(&mut Scanner::new(src)).is_err());
-
-        let src = ":a";
-        assert!(parse(&mut Scanner::new(src)).is_err());
-    }
-
-    #[test]
-    fn pexp2() {
-        let src = &[
-            "(a)",
-            "fn(a, b, c) do end",
-            "a.b().c()(d)",
-            "a()()()",
-            "!-true",
-            "--------1",
-            "1*-3",
-            "1*2*3*4",
-            "a.b--c*a.d",
-            "1<<-3*a()<<3",
-            "\"\"+1<<3==8+3==4",
-            "3&5==1",
-            "3^5&1",
-            "3^5|1",
-            "1+2==3+4&&5+6==(7^8)",
-        ];
-
-        for src in src {
-            let mut scanner = Scanner::new(src);
-            println!(
-                "{} -> {}",
-                src,
-                crate::compiler::ast::print_expression(&parse_expression(&mut scanner).unwrap())
-            );
-        }
-        panic!();
-    }
-}
-
 fn parse_expression<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
     parse_logic_or(scanner)
 }
@@ -623,4 +540,87 @@ fn parse_arguments<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Expr<'a>>, Picco
         }
     }
     Ok(args)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn assign() {
+        let src = "a += 3";
+        let ast = parse(&mut Scanner::new(src)).unwrap();
+        assert_eq!(
+            ast,
+            &[Stmt::Assignment {
+                name: Token::new(TokenKind::Identifier, "a", 1),
+                op: Token::new(TokenKind::PlusAssign, "+=", 1),
+                value: Expr::Literal {
+                    literal: Token::new(TokenKind::Integer(3), "3", 1),
+                }
+            }]
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn path() {
+        // TODO think about modules more
+        let src = "a:b:c:d";
+        let ast = parse(&mut Scanner::new(src)).unwrap();
+        assert_eq!(
+            ast,
+            &[Stmt::Expr {
+                token: Token::new(TokenKind::Identifier, "a", 1),
+                expr: Expr::Path {
+                    names: vec![
+                        Token::new(TokenKind::Identifier, "a", 1),
+                        Token::new(TokenKind::Identifier, "b", 1),
+                        Token::new(TokenKind::Identifier, "c", 1),
+                        Token::new(TokenKind::Identifier, "d", 1),
+                    ],
+                }
+            }]
+        );
+
+        let src = "a:3";
+        assert!(parse(&mut Scanner::new(src)).is_err());
+
+        let src = "a:";
+        assert!(parse(&mut Scanner::new(src)).is_err());
+
+        let src = ":a";
+        assert!(parse(&mut Scanner::new(src)).is_err());
+    }
+
+    #[test]
+    fn pexp2() {
+        let src = &[
+            "(a)",
+            "fn(a, b, c) do end",
+            "a.b().c()(d)",
+            "a()()()",
+            "!-true",
+            "--------1",
+            "1*-3",
+            "1*2*3*4",
+            "a.b--c*a.d",
+            "1<<-3*a()<<3",
+            "\"\"+1<<3==8+3==4",
+            "3&5==1",
+            "3^5&1",
+            "3^5|1",
+            "1+2==3+4&&5+6==(7^8)",
+        ];
+
+        for src in src {
+            let mut scanner = Scanner::new(src);
+            println!(
+                "{} -> {}",
+                src,
+                crate::compiler::ast::print_expression(&parse_expression(&mut scanner).unwrap())
+            );
+        }
+        panic!();
+    }
 }
