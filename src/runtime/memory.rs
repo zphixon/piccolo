@@ -255,14 +255,20 @@ impl<T: 'static + Object + ?Sized> Root<T> {
 
     // TODO: this might allow accidental copying of stuff we didn't want to copy...
     fn as_gc(&self) -> Gc<T> {
+        self.as_allocation().root();
         Gc { ptr: self.ptr }
     }
 
+    // TODO: remove? allows some weird stuff combined with as_gc, necessitating a call to root
     /// Upgrade to a unique root.
     ///
     /// Panics if there is more than one root around.
     pub fn upgrade(self) -> UniqueRoot<T> {
-        assert!(self.as_allocation().header.roots.load(Ordering::Relaxed) == 1);
+        assert_eq!(
+            1,
+            self.as_allocation().header.roots.load(Ordering::Relaxed),
+            "cannot upgrade if there is more than one root"
+        );
         UniqueRoot { ptr: self.ptr }
     }
 }
@@ -364,10 +370,12 @@ mod test {
     #[test]
     fn clean_up_roots() {
         let mut heap = Heap::default();
+
         {
             let root = heap.manage(String::from("h"));
             assert_eq!(*root, "h");
         }
+
         assert_eq!(1, heap.objects());
         assert_eq!(std::mem::size_of::<String>(), heap.collect());
         assert_eq!(0, heap.objects());
@@ -379,7 +387,7 @@ mod test {
 
         {
             let root = heap.manage(String::new());
-            let mut root = root.upgrade();
+            let mut _root = root.upgrade();
         }
 
         assert_eq!(1, heap.objects());
@@ -388,30 +396,20 @@ mod test {
     }
 
     #[test]
-    fn aliasing_what() {
-        // probably shouldn't allow this to happen haha
+    #[should_panic]
+    fn no_aliasing() {
+        use std::ptr;
+
         let mut heap = Heap::default();
         let root = heap.manage(String::new());
+
         let gc = root.as_gc();
+        let mut unique = root.upgrade(); // panic
 
-        {
-            let mut unique = root.upgrade();
+        let borrow: &str = gc.as_ref();
+        let mut_borrow: &mut str = unique.as_mut();
 
-            println!("{}", gc);
-            println!("{}", unique);
-
-            unique.push_str("dingus");
-
-            println!("{}", gc);
-            println!("{}", unique);
-
-            drop(unique);
-        }
-        heap.collect();
-
-        println!("{}", gc);
-
-        // hmmmm
-        assert_eq!(*gc, "dingus");
+        // !!!
+        assert!(ptr::eq(borrow.as_ptr(), mut_borrow.as_ptr()));
     }
 }
