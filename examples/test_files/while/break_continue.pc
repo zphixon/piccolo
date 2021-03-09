@@ -4,7 +4,7 @@ while true do
         break
     end
     if x % 2 == 0 do
-        x = x + 2
+        x += 2
         continue
     end
     assert false

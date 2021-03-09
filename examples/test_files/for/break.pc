@@ -1,7 +1,7 @@
 
 x =: 0
 
-for i =: 0, i < 100, i = i + 1 do
+for i =: 0, i < 100, i += 1 do
   x = i
   if i == 32 do
     break
@@ -10,7 +10,7 @@ end
 
 assert x == 32
 
-for i =: 0, i < 100, i = i + 1 do
+for i =: 0, i < 100, i += 1 do
   x = i
   if i == 97432 do
     break
@@ -22,8 +22,8 @@ end
 
 assert x == 47
 
-for i =: 0, i < 100, i = i + 1 do
-  for j =: 0, j < 100, j = j + 1 do
+for i =: 0, i < 100, i += 1 do
+  for j =: 0, j < 100, j += 1 do
     if i % 5 == 0 && j % 3 == 0 do
       break
     end

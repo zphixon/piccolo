@@ -1,7 +1,7 @@
 do
   x =: 1
-  for i =: 1, i <= 10, i = i + 1 do
-    x = x * i
+  for i =: 1, i <= 10, i += 1 do
+    x *= i
   end
   assert x == 3628800
 end

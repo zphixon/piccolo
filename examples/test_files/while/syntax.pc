@@ -1,12 +1,12 @@
 c =: 0
 while c < 3 do
-  c = c + 1
+  c += 1
 end
 assert c == 3
 
 a =: 0
 while a < 3 do
-  a = a + 1
+  a += 1
 end
 assert a == 3
 

@@ -1,13 +1,13 @@
 x =: 1
 
-for i=:1, i<=100, i=i+1 do
+for i=:1, i<=100, i+=1 do
   if i==98 do
     break
   end
   if x%17 == 0 do
     continue
   end
-  x = x + i * 3
+  x += i * 3
 end
 
 assert x == 85
