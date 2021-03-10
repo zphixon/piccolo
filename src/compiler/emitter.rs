@@ -1,13 +1,11 @@
 //! Bytecode compiler.
 
 use crate::{
-    compiler::ast::{Ast, Expr, Stmt},
-    Chunk, ChunkIndex, ChunkOffset, Constant, ConstantIndex, ErrorKind, Line, LocalSlotIndex,
-    Opcode, PiccoloError, Token, TokenKind, UpvalueIndex,
+    Ast, Chunk, ChunkIndex, ChunkOffset, Constant, ConstantIndex, ErrorKind, Expr, Line,
+    LocalScopeDepth, LocalSlotIndex, Opcode, PiccoloError, Stmt, Token, TokenKind,
 };
 
 use super::Local;
-use crate::runtime::LocalScopeDepth;
 
 use fnv::FnvHashMap;
 

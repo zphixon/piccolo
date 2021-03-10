@@ -1,8 +1,7 @@
 //! Contains types for working with Piccolo values.
 
-use crate::{Function, Object, PiccoloError, Token, TokenKind};
+use crate::{Function, Gc, Heap, NativeFunction, Object, PiccoloError, Token, TokenKind};
 
-use crate::prelude::{Gc, Heap, NativeFunction};
 use core::fmt;
 
 #[derive(Copy, Clone, Debug)]

@@ -1,13 +1,10 @@
 //! Modules for the runtime representation and interpretation of Piccolo bytecode.
 
-use std::ops::Index;
-
 pub mod chunk;
 pub mod memory;
 pub mod object;
 pub mod op;
 pub mod value;
-//pub mod vm;
 pub mod vm;
 
 pub type ConstantIndex = u16;

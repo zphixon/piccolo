@@ -2,11 +2,13 @@
 //!
 //! Shamelessly copied from https://github.com/Darksecond/lox
 
-use std::cell::Cell;
-use std::fmt;
-use std::ops::{Deref, DerefMut};
-use std::ptr::NonNull;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{
+    cell::Cell,
+    fmt,
+    ops::{Deref, DerefMut},
+    ptr::NonNull,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 /// Trait to trace objects for marking and sweeping.
 pub trait Object: std::fmt::Debug {

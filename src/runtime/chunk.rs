@@ -1,10 +1,6 @@
 //! Types for working with compiled Piccolo bytecode.
 
-use crate::Constant;
-
-use super::op::Opcode;
-use super::{ChunkOffset, ConstantIndex, Line};
-use crate::prelude::ChunkIndex;
+use crate::{ChunkIndex, ChunkOffset, Constant, ConstantIndex, Line, Opcode};
 
 #[derive(Debug)]
 pub struct Module {

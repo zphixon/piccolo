@@ -1,12 +1,8 @@
 use crate::{
-    Chunk, ChunkOffset, Constant, ErrorKind, Function, Gc, Heap, Line, LocalSlotIndex,
-    NativeFunction, Object, PiccoloError, UniqueRoot,
+    Chunk, ChunkOffset, Constant, ErrorKind, Heap, Line, LocalSlotIndex, Module, NativeFunction,
+    Object, Opcode, PiccoloError, UniqueRoot, Value,
 };
 
-use super::op::Opcode;
-
-use crate::runtime::chunk::Module;
-use crate::runtime::value::Value;
 use fnv::FnvHashMap;
 
 pub struct Frame<'a> {
@@ -480,7 +476,7 @@ impl<'a> Machine<'a> {
                 // using the chunk index from the function value, change current frame to be in the chunk specified
                 // basically push a call frame whose chunk is the chunk_index of the function
                 // match function kind
-                if let Value::Function(f) = self.peek() {
+                if let Value::Function(_) = self.peek() {
                     let f = self.pop().as_function(); // TODO???
                     self.frames.push(Frame {
                         name: f.name().to_string(),
@@ -488,7 +484,7 @@ impl<'a> Machine<'a> {
                         base: (self.stack.len() as u16 - arity - 1) as usize,
                         chunk: self.module.chunk(f.chunk()),
                     })
-                } else if let Value::NativeFunction(f) = self.peek() {
+                } else if let Value::NativeFunction(_) = self.peek() {
                     let f = self.pop().as_native_function();
                     let mut args = vec![];
                     for _ in 0..arity {

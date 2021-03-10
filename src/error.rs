@@ -1,8 +1,7 @@
 //! Types for dealing with errors in scanning, parsing, compiling, or executing Piccolo.
 
-use crate::runtime::{op::Opcode, Line};
+use crate::{Line, Opcode};
 
-use crate::runtime::vm::Frame;
 use core::fmt;
 
 // TODO: impl Error for PiccoloError

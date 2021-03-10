@@ -1,9 +1,6 @@
 //! Contains `Parser`, which converts a source of tokens into a Piccolo AST.
 
-use crate::{ErrorKind, PiccoloError, Scanner, Token, TokenKind};
-
-use super::ast::Expr;
-use super::ast::Stmt;
+use crate::{ErrorKind, Expr, PiccoloError, Scanner, Stmt, Token, TokenKind};
 
 /// Parse a stream of tokens into an AST. This method collects errors on statement
 /// boundaries, continuing until the end of the file.
@@ -517,8 +514,6 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
         consume(scanner, TokenKind::Do)?;
         let body = parse_block(scanner)?;
         let end = consume(scanner, TokenKind::End)?;
-
-        let method = false;
 
         Ok(Expr::Fn {
             fn_,

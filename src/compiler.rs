@@ -5,11 +5,8 @@ pub mod emitter;
 pub mod parser;
 pub mod scanner;
 
-use crate::{
-    Chunk, ChunkIndex, Constant, ErrorKind, Line, LocalScopeDepth, LocalSlotIndex, PiccoloError,
-};
+use crate::{ErrorKind, Line, LocalScopeDepth, LocalSlotIndex, Module, PiccoloError};
 
-use crate::prelude::Module;
 use core::fmt;
 
 #[derive(PartialEq, Eq, Hash, Default)]

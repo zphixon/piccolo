@@ -1,7 +1,6 @@
 //! Contains `Scanner`, an on-demand producer of tokens.
 
-use crate::runtime::Line;
-use crate::{ErrorKind, PiccoloError, Token, TokenKind};
+use crate::{ErrorKind, Line, PiccoloError, Token, TokenKind};
 
 use std::collections::VecDeque;
 
