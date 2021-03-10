@@ -25,11 +25,11 @@ impl Module {
         trace!("make constant {:?}", value);
 
         self.constants.push(value);
-        let idx = self.constants.len() - 1;
-        if idx > u16::MAX as ChunkOffset {
+        let index = self.constants.len() - 1;
+        if index > u16::MAX as ChunkOffset {
             panic!("too many constants (>65k, fix your program)");
         } else {
-            idx as u16
+            index as u16
         }
     }
 
@@ -85,7 +85,7 @@ impl Chunk {
     }
 
     pub(crate) fn start_jump(&mut self, op: Opcode, line: Line) -> ChunkOffset {
-        trace!("write jump to idx {:x}", self.data.len());
+        trace!("write jump to index {:x}", self.data.len());
         self.write_u8(op, line);
         self.write_u8(Opcode::Assert, line);
         self.write_u8(Opcode::False, line);
@@ -98,7 +98,7 @@ impl Chunk {
             panic!("cannot jump further than u16::MAX instructions");
         } else {
             let (low, high) = crate::decode_bytes(jump as u16);
-            trace!("patch jump at idx {:x}={:04x}", jump, offset);
+            trace!("patch jump at index {:x}={:04x}", jump, offset);
             self.data[offset] = low;
             self.data[offset + 1] = high;
         }
@@ -120,15 +120,18 @@ impl Chunk {
     }
 
     // get a line number from a byte offset using run-length encoding
-    pub(crate) fn get_line_from_index(&self, idx: ChunkOffset) -> Line {
+    pub(crate) fn get_line_from_index(&self, index: ChunkOffset) -> Line {
         let mut total_ops = 0;
         for (offset_line, num_ops) in self.lines.iter().enumerate() {
             total_ops += *num_ops;
-            if total_ops > idx {
+            if total_ops > index {
                 return offset_line + 1;
             }
         }
-        panic!("no line for idx {} {:?} {:?}", idx, self.lines, self.data);
+        panic!(
+            "no line for index {} {:?} {:?}",
+            index, self.lines, self.data
+        );
     }
 
     // add one opcode to a line
@@ -145,8 +148,8 @@ pub fn disassemble(module: &Module, name: &str) -> String {
 
     let mut s = format!(" -- {} --\n", name);
     s.push_str(" ++ constants\n");
-    for (idx, constant) in module.constants.iter().enumerate() {
-        s.push_str(&format!("{:04x} {:?}\n", idx, constant));
+    for (index, constant) in module.constants.iter().enumerate() {
+        s.push_str(&format!("{:04x} {:?}\n", index, constant));
     }
     s.push_str(" ++ code\n");
 
@@ -187,24 +190,24 @@ pub fn disassemble_instruction(module: &Module, chunk: &Chunk, offset: ChunkOffs
 
     let arg = match op {
         Opcode::Constant => {
-            let idx = chunk.read_short(offset + 1);
-            format!("@{:04x} ({:?})", idx, module.constants[idx as usize])
+            let index = chunk.read_short(offset + 1);
+            format!("@{:04x} ({:?})", index, module.constants[index as usize])
         }
         Opcode::GetLocal | Opcode::SetLocal => {
-            let idx = chunk.read_short(offset + 1);
-            format!("${}", idx)
+            let index = chunk.read_short(offset + 1);
+            format!("${}", index)
         }
         Opcode::GetGlobal | Opcode::SetGlobal | Opcode::DeclareGlobal => {
-            let idx = chunk.read_short(offset + 1);
-            format!("g{:04x} ({:?})", idx, module.constants[idx as usize])
+            let index = chunk.read_short(offset + 1);
+            format!("g{:04x} ({:?})", index, module.constants[index as usize])
         }
         Opcode::JumpForward | Opcode::JumpFalse | Opcode::JumpTrue => {
-            let idx = chunk.read_short(offset + 1);
-            format!("+{:04x}", idx)
+            let index = chunk.read_short(offset + 1);
+            format!("+{:04x}", index)
         }
         Opcode::JumpBack => {
-            let idx = chunk.read_short(offset + 1);
-            format!("-{:04x}", idx)
+            let index = chunk.read_short(offset + 1);
+            format!("-{:04x}", index)
         }
         _ => String::new(),
     };

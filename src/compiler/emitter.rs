@@ -86,8 +86,8 @@ fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> 
         //     => compile_get(emitter, object, name),
         // Expr::Set { object, name, value }
         //     => compile_set(emitter, object, name, value),
-        // Expr::Index { right_bracket, object, idx }
-        //     => compile_index(emitter, right_bracket, object, idx),
+        // Expr::Index { right_bracket, object, index }
+        //     => compile_index(emitter, right_bracket, object, index),
         // Expr::Fn { name, args, arity, body, method }
         //     => compile_fn(emitter, name, args, *arity, body, *method),
         _ => todo!("{:?}", expr),
@@ -136,11 +136,11 @@ fn compile_assignment(
 
     if let Some(opcode) = op.assign_by_mutate_op() {
         // if this is an assignment-by-mutation operator, first get the value of the variable
-        if let Some(idx) = emitter.current_context().get_local_slot(name) {
-            emitter.add_instruction_arg(Opcode::GetLocal, idx, op.line);
+        if let Some(index) = emitter.current_context().get_local_slot(name) {
+            emitter.add_instruction_arg(Opcode::GetLocal, index, op.line);
         } else {
-            let idx = emitter.get_global_ident(name)?;
-            emitter.add_instruction_arg(Opcode::GetGlobal, idx, op.line);
+            let index = emitter.get_global_ident(name)?;
+            emitter.add_instruction_arg(Opcode::GetGlobal, index, op.line);
         }
 
         // calculate the value to mutate with
@@ -155,15 +155,15 @@ fn compile_assignment(
 
     // then assign
     if emitter.current_context().is_local() {
-        if let Some(idx) = emitter.current_context().get_local_slot(name) {
-            emitter.add_instruction_arg(Opcode::SetLocal, idx, op.line);
+        if let Some(index) = emitter.current_context().get_local_slot(name) {
+            emitter.add_instruction_arg(Opcode::SetLocal, index, op.line);
         } else {
-            let idx = emitter.get_global_ident(name)?;
-            emitter.add_instruction_arg(Opcode::SetGlobal, idx, op.line);
+            let index = emitter.get_global_ident(name)?;
+            emitter.add_instruction_arg(Opcode::SetGlobal, index, op.line);
         }
     } else {
-        let idx = emitter.get_global_ident(name)?;
-        emitter.add_instruction_arg(Opcode::SetGlobal, idx, op.line);
+        let index = emitter.get_global_ident(name)?;
+        emitter.add_instruction_arg(Opcode::SetGlobal, index, op.line);
     }
 
     Ok(())
@@ -559,8 +559,8 @@ impl EmitterContext {
         }
     }
 
-    fn get_local(&self, idx: LocalSlotIndex) -> &Local {
-        &self.locals[idx as usize]
+    fn get_local(&self, index: LocalSlotIndex) -> &Local {
+        &self.locals[index as usize]
     }
 
     fn add_local(&mut self, name: &Token) {
@@ -677,9 +677,9 @@ impl Emitter {
     }
 
     fn add_constant(&mut self, value: Constant, line: Line) {
-        let idx = self.make_constant(value);
+        let index = self.make_constant(value);
         self.current_chunk_mut()
-            .write_arg_u16(Opcode::Constant, idx, line);
+            .write_arg_u16(Opcode::Constant, index, line);
     }
 
     fn make_constant(&mut self, c: Constant) -> ConstantIndex {
@@ -692,9 +692,10 @@ impl Emitter {
         if self.global_identifiers.contains_key(name.lexeme) {
             self.global_identifiers[name.lexeme]
         } else {
-            let idx = self.make_constant(Constant::String(name.lexeme.to_owned()));
-            self.global_identifiers.insert(name.lexeme.to_owned(), idx);
-            idx
+            let index = self.make_constant(Constant::String(name.lexeme.to_owned()));
+            self.global_identifiers
+                .insert(name.lexeme.to_owned(), index);
+            index
         }
     }
 
@@ -718,9 +719,9 @@ impl Emitter {
         // are we in global scope?
         if self.current_context().is_local() {
             // check if we have a local with this name
-            if let Some(idx) = self.current_context().get_local_depth(name) {
+            if let Some(index) = self.current_context().get_local_depth(name) {
                 // if we do,
-                if idx != self.current_context().scope_depth() {
+                if index != self.current_context().scope_depth() {
                     // create a new local if we're in a different scope
                     self.current_context_mut().add_local(name);
                 } else {
@@ -738,8 +739,8 @@ impl Emitter {
             }
         } else {
             // yes, make a global
-            let idx = self.make_global_ident(name);
-            self.add_instruction_arg(Opcode::DeclareGlobal, idx, name.line);
+            let index = self.make_global_ident(name);
+            self.add_instruction_arg(Opcode::DeclareGlobal, index, name.line);
         }
 
         Ok(())

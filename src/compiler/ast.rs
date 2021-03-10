@@ -69,7 +69,7 @@ pub enum Expr<'a> {
     Index {
         right_bracket: Token<'a>,
         object: Box<Expr<'a>>,
-        idx: Box<Expr<'a>>,
+        index: Box<Expr<'a>>,
     },
     Fn {
         name: Token<'a>, // TODO: remove name
@@ -261,8 +261,8 @@ fn print_expr(indent: usize, expr: &Expr) -> String {
             => print_get(indent, object, name),
         Expr::Set { object, name, value }
             => print_set(indent, object, name, value),
-        Expr::Index { object, idx, .. }
-            => print_index(indent, object, idx),
+        Expr::Index { object, index, .. }
+            => print_index(indent, object, index),
         Expr::Fn { name, args, body, .. }
             => print_fn(indent, name, args, body),
     }
@@ -411,7 +411,7 @@ fn print_set(indent: usize, object: &Expr, name: &Token, value: &Expr) -> String
     parenthesize(indent, &s, &[object])
 }
 
-fn print_index(indent: usize, object: &Expr, idx: &Expr) -> String {
-    let s = format!("index {}", print_expr(indent, idx));
+fn print_index(indent: usize, object: &Expr, index: &Expr) -> String {
+    let s = format!("index {}", print_expr(indent, index));
     parenthesize(indent, &s, &[object])
 }

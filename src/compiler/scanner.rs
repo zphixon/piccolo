@@ -61,16 +61,16 @@ impl<'a> Scanner<'a> {
     }
 
     /// Looks ahead in the token stream, generating tokens if they do not exist.
-    pub fn peek_token<'b>(&'b mut self, idx: usize) -> Result<&'b Token<'a>, PiccoloError> {
+    pub fn peek_token<'b>(&'b mut self, index: usize) -> Result<&'b Token<'a>, PiccoloError> {
         if self.tokens.is_empty() {
             self.next()?;
         }
 
-        while self.tokens.len() <= idx {
+        while self.tokens.len() <= index {
             self.next()?;
         }
 
-        Ok(&self.tokens[idx])
+        Ok(&self.tokens[index])
     }
 
     fn slurp_whitespace(&mut self) {

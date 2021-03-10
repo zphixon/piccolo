@@ -271,8 +271,8 @@ impl<'a> Machine<'a> {
     }
 
     fn read_constant(&mut self) -> Constant {
-        let constant_idx = self.read_short();
-        let c = self.module.get_constant(constant_idx).clone();
+        let constant_index = self.read_short();
+        let c = self.module.get_constant(constant_index).clone();
         c
     }
 
