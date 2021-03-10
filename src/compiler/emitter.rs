@@ -345,6 +345,8 @@ fn compile_fn(
     emitter.begin_context();
     emitter.begin_scope();
 
+    // will always be local
+    emitter.make_variable(name)?;
     for arg in args {
         emitter.make_variable(arg)?;
     }

@@ -95,6 +95,14 @@ impl Value2 {
         matches!(self, Value2::Function(_))
     }
 
+    pub fn as_function(&self) -> Gc<Function> {
+        assert!(self.is_function());
+        match self {
+            Value2::Function(f) => *f,
+            _ => panic!(),
+        }
+    }
+
     pub fn is_native_function(&self) -> bool {
         matches!(self, Value2::NativeFunction(_))
     }
@@ -244,6 +252,7 @@ impl Into<f64> for Value2 {
 // }}}
 
 pub struct Frame<'a> {
+    name: String,
     ip: ChunkOffset,
     base: ChunkOffset,
     chunk: &'a Chunk,
@@ -341,6 +350,7 @@ impl<'a> Machine<'a> {
         //self.push(Value2::Function(f.as_gc()));
 
         self.frames.push(Frame {
+            name: String::new(),
             base: 0,
             ip: 0,
             chunk: &self.module.chunk(0),
@@ -713,7 +723,9 @@ impl<'a> Machine<'a> {
                 // basically push a call frame whose chunk is the chunk_index of the function
                 // match function kind
                 if let Value2::Function(f) = self.peek() {
+                    let f = self.pop().as_function(); // TODO???
                     self.frames.push(Frame {
+                        name: f.name().to_string(),
                         ip: 0,
                         base: (self.stack.len() as u16 - arity - 1) as usize,
                         chunk: self.module.chunk(f.chunk()),
