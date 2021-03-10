@@ -394,6 +394,20 @@ mod test {
     }
 
     #[test]
+    fn use_after_free() {
+        let gc;
+
+        {
+            let mut heap = Heap::default();
+            gc = heap.manage(String::from("hmmm")).as_gc();
+            println!("{:#?}", heap);
+        }
+
+        println!("{}", gc);
+        panic!();
+    }
+
+    #[test]
     #[should_panic]
     fn no_aliasing() {
         use std::ptr;
