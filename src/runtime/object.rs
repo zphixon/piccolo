@@ -2,13 +2,12 @@
 
 use crate::{ChunkIndex, Object, Value};
 
-use crate::runtime::vm::Value2;
 use core::fmt;
 
 pub struct NativeFunction {
     pub(crate) arity: usize,
     pub(crate) name: String,
-    pub(crate) function: fn(&[Value2]) -> Value2,
+    pub(crate) function: fn(&[Value]) -> Value,
 }
 
 impl Object for NativeFunction {

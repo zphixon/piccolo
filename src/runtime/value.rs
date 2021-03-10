@@ -2,25 +2,26 @@
 
 use crate::{Function, Object, PiccoloError, Token, TokenKind};
 
+use crate::prelude::{Gc, Heap, NativeFunction};
 use core::fmt;
 
-/// Wrapper type for runtime Piccolo values.
-///
-/// `Value::Object` is a pointer into a [`Heap`], and `Value::String` is a
-/// pointer into an [`Interner`]. The end-user will never directly interact with this type,
-/// instead values passed into and out of Piccolo will be [`Constant`]s.
-///
-/// [`Heap`]: ../memory/struct.Heap.html
-/// [`Interner`]: ../memory/struct.Interner.html
-/// [`Constant`]: ./enum.Constant.html
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug)]
 pub enum Value {
     Bool(bool),
     Integer(i64),
     Double(f64),
-    String(String),
+    String(Gc<String>),
+    Function(Gc<Function>),
+    NativeFunction(Gc<NativeFunction>),
+    Object(Gc<dyn Object>),
     Nil,
 }
+
+//impl std::fmt::Debug for Value2 {
+//    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+//        write!(f, "value2")
+//    }
+//}
 
 impl Value {
     /// A value is only false-y if it is of type bool and false, or of type nil.
@@ -33,23 +34,33 @@ impl Value {
         }
     }
 
-    pub fn to_constant(&self) -> Constant {
-        match self {
-            Value::Bool(v) => Constant::Bool(*v),
-            Value::Integer(v) => Constant::Integer(*v),
-            Value::Double(v) => Constant::Double(*v),
-            Value::String(v) => Constant::String(v.clone()),
-            Value::Nil => Constant::Nil,
+    pub fn from_constant(c: Constant, h: &mut Heap) -> Value {
+        match c {
+            Constant::Bool(v) => Value::Bool(v),
+            Constant::Integer(v) => Value::Integer(v),
+            Constant::Double(v) => Value::Double(v),
+            Constant::String(v) => Value::String({
+                let root = h.manage(v);
+                root.as_gc()
+            }),
+            Constant::Function(v) => Value::Function({
+                let root = h.manage(v);
+                root.as_gc()
+            }),
+            Constant::Nil => Value::Nil,
         }
     }
 
-    pub fn type_name(&self) -> &'static str {
+    pub fn into_constant(self) -> Constant {
         match self {
-            Value::Bool(_) => "bool",
-            Value::Integer(_) => "integer",
-            Value::Double(_) => "double",
-            Value::String(_) => "string",
-            Value::Nil => "nil",
+            Value::Bool(v) => Constant::Bool(v),
+            Value::Integer(v) => Constant::Integer(v),
+            Value::Double(v) => Constant::Double(v),
+            Value::String(v) => Constant::String(String::clone(&*v)),
+            Value::Function(_) => Constant::Nil,
+            Value::NativeFunction(_) => Constant::Nil,
+            Value::Object(_) => Constant::Nil,
+            Value::Nil => Constant::Nil,
         }
     }
 
@@ -76,6 +87,30 @@ impl Value {
         matches!(self, Value::Double(_))
     }
 
+    pub fn is_function(&self) -> bool {
+        matches!(self, Value::Function(_))
+    }
+
+    pub fn as_function(&self) -> Gc<Function> {
+        assert!(self.is_function());
+        match self {
+            Value::Function(f) => *f,
+            _ => panic!(),
+        }
+    }
+
+    pub fn is_native_function(&self) -> bool {
+        matches!(self, Value::NativeFunction(_))
+    }
+
+    pub fn as_native_function(&self) -> Gc<NativeFunction> {
+        assert!(self.is_native_function());
+        match self {
+            Value::NativeFunction(f) => *f,
+            _ => panic!(),
+        }
+    }
+
     pub fn is_nil(&self) -> bool {
         matches!(self, Value::Nil)
     }
@@ -97,13 +132,14 @@ impl Value {
                 _ => None?,
             },
             Value::String(l) => match other {
-                Value::String(r) => l == r,
+                Value::String(r) => **l == **r,
                 _ => None?,
             },
             Value::Nil => match other {
                 Value::Nil => true,
                 _ => None?,
             },
+            _ => None?,
         })
     }
 
@@ -143,11 +179,27 @@ impl Value {
 impl Object for Value {
     fn trace(&self) {
         match self {
-            Value::Bool(_) => {}
-            Value::Integer(_) => {}
-            Value::Double(_) => {}
+            Value::Bool(v) => v.trace(),
+            Value::Integer(v) => v.trace(),
+            Value::Double(v) => v.trace(),
             Value::String(v) => v.trace(),
+            Value::Function(v) => v.trace(),
+            Value::NativeFunction(v) => v.trace(),
+            Value::Object(v) => v.trace(),
             Value::Nil => {}
+        }
+    }
+
+    fn type_name(&self) -> &'static str {
+        match self {
+            Value::Bool(v) => v.type_name(),
+            Value::Integer(v) => v.type_name(),
+            Value::Double(v) => v.type_name(),
+            Value::String(v) => v.type_name(),
+            Value::Function(v) => v.type_name(),
+            Value::NativeFunction(v) => v.type_name(),
+            Value::Object(v) => v.type_name(),
+            Value::Nil => "nil",
         }
     }
 }
@@ -159,6 +211,9 @@ impl std::fmt::Display for Value {
             Value::Integer(v) => write!(f, "{}", v),
             Value::Double(v) => write!(f, "{}", v),
             Value::String(v) => write!(f, "{}", v),
+            Value::Function(v) => write!(f, "{}", v),
+            Value::NativeFunction(v) => write!(f, "{}", v),
+            Value::Object(v) => write!(f, "{}", v.format()),
             Value::Nil => write!(f, "nil"),
         }
     }
@@ -236,17 +291,6 @@ impl Constant {
 
     pub fn is_string(&self) -> bool {
         matches!(self, Constant::String(_))
-    }
-
-    pub fn to_value(&self) -> Value {
-        match self {
-            Constant::Bool(v) => Value::Bool(*v),
-            Constant::Integer(v) => Value::Integer(*v),
-            Constant::Double(v) => Value::Double(*v),
-            Constant::String(v) => Value::String(v.clone()),
-            Constant::Function(_) => todo!(),
-            Constant::Nil => Value::Nil,
-        }
     }
 }
 

@@ -2,6 +2,7 @@
 
 use crate::runtime::{op::Opcode, Line};
 
+use crate::runtime::vm::Frame;
 use core::fmt;
 
 // TODO: impl Error for PiccoloError
@@ -12,6 +13,7 @@ pub struct PiccoloError {
     line: Option<Line>,
     file: Option<String>,
     msg: Option<String>,
+    //stack: Option<Vec<Frame>>,
 }
 
 impl PiccoloError {
@@ -21,6 +23,7 @@ impl PiccoloError {
             line: None,
             file: None,
             msg: None,
+            //stack: None,
         }
     }
 

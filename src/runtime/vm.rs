@@ -6,250 +6,8 @@ use crate::{
 use super::op::Opcode;
 
 use crate::runtime::chunk::Module;
+use crate::runtime::value::Value;
 use fnv::FnvHashMap;
-
-// value2 {{{
-#[derive(Copy, Clone, Debug)]
-pub enum Value2 {
-    Bool(bool),
-    Integer(i64),
-    Double(f64),
-    String(Gc<String>),
-    Function(Gc<Function>),
-    NativeFunction(Gc<NativeFunction>),
-    Object(Gc<dyn Object>),
-    Nil,
-}
-
-//impl std::fmt::Debug for Value2 {
-//    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-//        write!(f, "value2")
-//    }
-//}
-
-impl Value2 {
-    /// A value is only false-y if it is of type bool and false, or of type nil.
-    /// All other values are truth-y.
-    pub fn is_truthy(&self) -> bool {
-        match self {
-            Value2::Bool(b) => *b,
-            Value2::Nil => false,
-            _ => true,
-        }
-    }
-
-    pub fn from_constant(c: Constant, h: &mut Heap) -> Value2 {
-        match c {
-            Constant::Bool(v) => Value2::Bool(v),
-            Constant::Integer(v) => Value2::Integer(v),
-            Constant::Double(v) => Value2::Double(v),
-            Constant::String(v) => Value2::String({
-                let root = h.manage(v);
-                root.as_gc()
-            }),
-            Constant::Function(v) => Value2::Function({
-                let root = h.manage(v);
-                root.as_gc()
-            }),
-            Constant::Nil => Value2::Nil,
-        }
-    }
-
-    pub fn into_constant(self) -> Constant {
-        match self {
-            Value2::Bool(v) => Constant::Bool(v),
-            Value2::Integer(v) => Constant::Integer(v),
-            Value2::Double(v) => Constant::Double(v),
-            Value2::String(v) => Constant::String(String::clone(&*v)),
-            Value2::Function(_) => Constant::Nil,
-            Value2::NativeFunction(_) => Constant::Nil,
-            Value2::Object(_) => Constant::Nil,
-            Value2::Nil => Constant::Nil,
-        }
-    }
-
-    pub fn into<T>(self) -> T
-    where
-        Value2: Into<T>,
-    {
-        std::convert::Into::into(self)
-    }
-
-    pub fn is_string(&self) -> bool {
-        matches!(self, Value2::String(_))
-    }
-
-    pub fn is_bool(&self) -> bool {
-        matches!(self, Value2::Bool(_))
-    }
-
-    pub fn is_integer(&self) -> bool {
-        matches!(self, Value2::Integer(_))
-    }
-
-    pub fn is_double(&self) -> bool {
-        matches!(self, Value2::Double(_))
-    }
-
-    pub fn is_function(&self) -> bool {
-        matches!(self, Value2::Function(_))
-    }
-
-    pub fn as_function(&self) -> Gc<Function> {
-        assert!(self.is_function());
-        match self {
-            Value2::Function(f) => *f,
-            _ => panic!(),
-        }
-    }
-
-    pub fn is_native_function(&self) -> bool {
-        matches!(self, Value2::NativeFunction(_))
-    }
-
-    pub fn as_native_function(&self) -> Gc<NativeFunction> {
-        assert!(self.is_native_function());
-        match self {
-            Value2::NativeFunction(f) => *f,
-            _ => panic!(),
-        }
-    }
-
-    pub fn is_nil(&self) -> bool {
-        matches!(self, Value2::Nil)
-    }
-
-    pub fn eq(&self, other: &Value2) -> Option<bool> {
-        Some(match self {
-            Value2::Bool(l) => match other {
-                Value2::Bool(r) => l == r,
-                _ => None?,
-            },
-            Value2::Integer(l) => match other {
-                Value2::Integer(r) => l == r,
-                Value2::Double(r) => *l as f64 == *r,
-                _ => None?,
-            },
-            Value2::Double(l) => match other {
-                Value2::Integer(r) => *l == *r as f64,
-                Value2::Double(r) => l == r,
-                _ => None?,
-            },
-            Value2::String(l) => match other {
-                Value2::String(r) => **l == **r,
-                _ => None?,
-            },
-            Value2::Nil => match other {
-                Value2::Nil => true,
-                _ => None?,
-            },
-            _ => None?,
-        })
-    }
-
-    pub fn gt(&self, other: &Value2) -> Option<bool> {
-        Some(match self {
-            Value2::Integer(l) => match other {
-                Value2::Integer(r) => l > r,
-                Value2::Double(r) => *l as f64 > *r,
-                _ => None?,
-            },
-            Value2::Double(l) => match other {
-                Value2::Integer(r) => *l > *r as f64,
-                Value2::Double(r) => l > r,
-                _ => None?,
-            },
-            _ => None?,
-        })
-    }
-
-    pub fn lt(&self, other: &Value2) -> Option<bool> {
-        Some(match self {
-            Value2::Integer(l) => match other {
-                Value2::Integer(r) => l < r,
-                Value2::Double(r) => (*l as f64) < (*r),
-                _ => None?,
-            },
-            Value2::Double(l) => match other {
-                Value2::Integer(r) => *l < *r as f64,
-                Value2::Double(r) => l < r,
-                _ => None?,
-            },
-            _ => None?,
-        })
-    }
-}
-
-impl Object for Value2 {
-    fn trace(&self) {
-        match self {
-            Value2::Bool(v) => v.trace(),
-            Value2::Integer(v) => v.trace(),
-            Value2::Double(v) => v.trace(),
-            Value2::String(v) => v.trace(),
-            Value2::Function(v) => v.trace(),
-            Value2::NativeFunction(v) => v.trace(),
-            Value2::Object(v) => v.trace(),
-            Value2::Nil => {}
-        }
-    }
-
-    fn type_name(&self) -> &'static str {
-        match self {
-            Value2::Bool(v) => v.type_name(),
-            Value2::Integer(v) => v.type_name(),
-            Value2::Double(v) => v.type_name(),
-            Value2::String(v) => v.type_name(),
-            Value2::Function(v) => v.type_name(),
-            Value2::NativeFunction(v) => v.type_name(),
-            Value2::Object(v) => v.type_name(),
-            Value2::Nil => "nil",
-        }
-    }
-}
-
-impl std::fmt::Display for Value2 {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Value2::Bool(v) => write!(f, "{}", v),
-            Value2::Integer(v) => write!(f, "{}", v),
-            Value2::Double(v) => write!(f, "{}", v),
-            Value2::String(v) => write!(f, "{}", v),
-            Value2::Function(v) => write!(f, "{}", v),
-            Value2::NativeFunction(v) => write!(f, "{}", v),
-            Value2::Object(v) => write!(f, "{}", v.format()),
-            Value2::Nil => write!(f, "nil"),
-        }
-    }
-}
-
-impl Into<bool> for Value2 {
-    fn into(self) -> bool {
-        match self {
-            Value2::Bool(v) => v,
-            _ => panic!("could not cast to bool"),
-        }
-    }
-}
-
-impl Into<i64> for Value2 {
-    fn into(self) -> i64 {
-        match self {
-            Value2::Integer(v) => v,
-            _ => panic!("could not cast to i64"),
-        }
-    }
-}
-
-impl Into<f64> for Value2 {
-    fn into(self) -> f64 {
-        match self {
-            Value2::Double(v) => v,
-            _ => panic!("could not cast to f64"),
-        }
-    }
-}
-// }}}
 
 pub struct Frame<'a> {
     name: String,
@@ -270,14 +28,14 @@ impl Frame<'_> {
 pub struct Machine<'a> {
     module: &'a Module,
     frames: Vec<Frame<'a>>,
-    stack: UniqueRoot<Vec<Value2>>,
-    globals: UniqueRoot<FnvHashMap<String, Value2>>,
+    stack: UniqueRoot<Vec<Value>>,
+    globals: UniqueRoot<FnvHashMap<String, Value>>,
 }
 
 #[derive(Copy, Clone)]
 enum VmState {
     Continue,
-    Stop(Value2),
+    Stop(Value),
 }
 
 impl<'a> Machine<'a> {
@@ -287,7 +45,7 @@ impl<'a> Machine<'a> {
         // TODO make this nicer
         globals.insert(
             String::from("print"),
-            Value2::NativeFunction({
+            Value::NativeFunction({
                 heap.manage(NativeFunction {
                     arity: 0,
                     name: "print".to_string(),
@@ -300,7 +58,7 @@ impl<'a> Machine<'a> {
                             }
                         }
                         println!("{}", s);
-                        Value2::Nil
+                        Value::Nil
                     },
                 })
                 .as_gc()
@@ -315,15 +73,15 @@ impl<'a> Machine<'a> {
         }
     }
 
-    fn push(&mut self, value: Value2) {
+    fn push(&mut self, value: Value) {
         self.stack.push(value);
     }
 
-    fn pop(&mut self) -> Value2 {
+    fn pop(&mut self) -> Value {
         self.stack.pop().unwrap()
     }
 
-    fn peek(&self) -> &Value2 {
+    fn peek(&self) -> &Value {
         &self.stack[self.stack.len() - 1]
     }
 
@@ -341,13 +99,13 @@ impl<'a> Machine<'a> {
 
     fn push_string(&mut self, heap: &mut Heap, string: String) {
         let root = heap.manage(string);
-        self.push(Value2::String(root.as_gc()));
+        self.push(Value::String(root.as_gc()));
     }
 
-    pub fn interpret(&mut self, heap: &mut Heap) -> Result<Value2, PiccoloError> {
+    pub fn interpret(&mut self, heap: &mut Heap) -> Result<Value, PiccoloError> {
         // :)
         //let f = heap.manage(Function::new(0, String::new(), 0));
-        //self.push(Value2::Function(f.as_gc()));
+        //self.push(Value::Function(f.as_gc()));
 
         self.frames.push(Frame {
             name: String::new(),
@@ -370,7 +128,7 @@ impl<'a> Machine<'a> {
     fn interpret_next_instruction(&mut self, heap: &mut Heap) -> Result<VmState, PiccoloError> {
         // TODO: move to Opcode::Return
         if self.current_ip() + 1 > self.current_chunk().len() {
-            return Ok(VmState::Stop(Value2::Nil));
+            return Ok(VmState::Stop(Value::Nil));
         }
 
         // debug {{{
@@ -408,7 +166,7 @@ impl<'a> Machine<'a> {
                 if lhs.is_integer() && rhs.is_integer() {
                     let rhs = rhs.into::<i64>();
                     let lhs = lhs.into::<i64>();
-                    self.push(Value2::Integer(lhs $op rhs));
+                    self.push(Value::Integer(lhs $op rhs));
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer".into(),
@@ -439,10 +197,10 @@ impl<'a> Machine<'a> {
                     let lhs = lhs.into::<f64>();
                     if rhs.is_double() {
                         let rhs = rhs.into::<f64>();
-                        self.push(Value2::Double(lhs $op rhs));
+                        self.push(Value::Double(lhs $op rhs));
                     } else if rhs.is_integer() {
                         let rhs = rhs.into::<i64>();
-                        self.push(Value2::Double(lhs $op rhs as f64));
+                        self.push(Value::Double(lhs $op rhs as f64));
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
@@ -454,10 +212,10 @@ impl<'a> Machine<'a> {
                     let lhs = lhs.into::<i64>();
                     if rhs.is_integer() {
                         let rhs = rhs.into::<i64>();
-                        self.push(Value2::Integer(lhs $op rhs));
+                        self.push(Value::Integer(lhs $op rhs));
                     } else if rhs.is_double() {
                         let rhs = rhs.into::<f64>();
-                        self.push(Value2::Double(lhs as f64 $op rhs));
+                        self.push(Value::Double(lhs as f64 $op rhs));
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
@@ -501,20 +259,20 @@ impl<'a> Machine<'a> {
             }
             Opcode::Constant => {
                 let c = self.read_constant();
-                self.push(Value2::from_constant(c, heap));
+                self.push(Value::from_constant(c, heap));
             }
-            Opcode::Nil => self.push(Value2::Nil),
-            Opcode::True => self.push(Value2::Bool(true)),
-            Opcode::False => self.push(Value2::Bool(false)),
+            Opcode::Nil => self.push(Value::Nil),
+            Opcode::True => self.push(Value::Bool(true)),
+            Opcode::False => self.push(Value::Bool(false)),
 
             Opcode::Negate => {
                 let v = self.pop();
                 if v.is_double() {
                     let v = v.into::<f64>();
-                    self.push(Value2::Double(-v));
+                    self.push(Value::Double(-v));
                 } else if v.is_integer() {
                     let v = v.into::<i64>();
-                    self.push(Value2::Integer(-v));
+                    self.push(Value::Integer(-v));
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
@@ -526,9 +284,9 @@ impl<'a> Machine<'a> {
             Opcode::Not => {
                 let v = self.pop();
                 if v.is_truthy() {
-                    self.push(Value2::Bool(false));
+                    self.push(Value::Bool(false));
                 } else {
-                    self.push(Value2::Bool(true));
+                    self.push(Value::Bool(true));
                 }
             }
             Opcode::Add => {
@@ -551,7 +309,7 @@ impl<'a> Machine<'a> {
             Opcode::Equal => {
                 let a = self.pop();
                 let b = self.pop();
-                self.push(Value2::Bool(a.eq(&b).map_or_else(
+                self.push(Value::Bool(a.eq(&b).map_or_else(
                     || {
                         Err(PiccoloError::new(ErrorKind::CannotCompare {
                             exp: a.type_name().to_owned(),
@@ -564,7 +322,7 @@ impl<'a> Machine<'a> {
             Opcode::Greater => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value2::Bool(lhs.gt(&rhs).map_or_else(
+                self.push(Value::Bool(lhs.gt(&rhs).map_or_else(
                     || {
                         Err(PiccoloError::new(ErrorKind::CannotCompare {
                             exp: lhs.type_name().to_owned(),
@@ -577,7 +335,7 @@ impl<'a> Machine<'a> {
             Opcode::Less => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value2::Bool(lhs.lt(&rhs).map_or_else(
+                self.push(Value::Bool(lhs.lt(&rhs).map_or_else(
                     || {
                         Err(PiccoloError::new(ErrorKind::CannotCompare {
                             exp: lhs.type_name().to_owned(),
@@ -590,7 +348,7 @@ impl<'a> Machine<'a> {
             Opcode::GreaterEqual => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value2::Bool(!lhs.lt(&rhs).map_or_else(
+                self.push(Value::Bool(!lhs.lt(&rhs).map_or_else(
                     || {
                         Err(PiccoloError::new(ErrorKind::CannotCompare {
                             exp: lhs.type_name().to_owned(),
@@ -603,7 +361,7 @@ impl<'a> Machine<'a> {
             Opcode::LessEqual => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value2::Bool(!lhs.gt(&rhs).map_or_else(
+                self.push(Value::Bool(!lhs.gt(&rhs).map_or_else(
                     || {
                         Err(PiccoloError::new(ErrorKind::CannotCompare {
                             exp: lhs.type_name().to_owned(),
@@ -722,7 +480,7 @@ impl<'a> Machine<'a> {
                 // using the chunk index from the function value, change current frame to be in the chunk specified
                 // basically push a call frame whose chunk is the chunk_index of the function
                 // match function kind
-                if let Value2::Function(f) = self.peek() {
+                if let Value::Function(f) = self.peek() {
                     let f = self.pop().as_function(); // TODO???
                     self.frames.push(Frame {
                         name: f.name().to_string(),
@@ -730,7 +488,7 @@ impl<'a> Machine<'a> {
                         base: (self.stack.len() as u16 - arity - 1) as usize,
                         chunk: self.module.chunk(f.chunk()),
                     })
-                } else if let Value2::NativeFunction(f) = self.peek() {
+                } else if let Value::NativeFunction(f) = self.peek() {
                     let f = self.pop().as_native_function();
                     let mut args = vec![];
                     for _ in 0..arity {
