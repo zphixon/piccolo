@@ -309,21 +309,22 @@ impl<'a> Machine<'a> {
 
         // debug {{{
         debug!(
-            " ┌─{}{:04x} {:?}",
+            " ┌─{} {}.{:04x} {:?}",
             if self.current_ip() + 1 == self.current_chunk().len() {
-                "─vm─exit─ "
+                "─vm─exit─"
             } else {
-                " "
+                ""
             },
+            self.module.index_of(self.current_chunk()),
             self.current_ip(),
             self.stack,
         );
         debug!(
             " └─{} {}",
             if self.current_ip() + 1 == self.current_chunk().len() {
-                "───────── "
+                "─────────"
             } else {
-                " "
+                ""
             },
             crate::runtime::chunk::disassemble_instruction(
                 self.module,

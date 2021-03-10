@@ -531,10 +531,10 @@ fn compile_call(
     arity: usize,
     args: &[Expr],
 ) -> Result<(), PiccoloError> {
-    compile_expr(emitter, callee)?;
     for arg in args {
         compile_expr(emitter, arg)?;
     }
+    compile_expr(emitter, callee)?;
     emitter.add_instruction_arg(Opcode::Call, arity as u16, paren.line);
     Ok(())
 }

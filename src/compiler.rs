@@ -9,6 +9,7 @@ use crate::{
     Chunk, ChunkIndex, Constant, ErrorKind, Line, LocalScopeDepth, LocalSlotIndex, PiccoloError,
 };
 
+use crate::prelude::Module;
 use core::fmt;
 
 #[derive(PartialEq, Eq, Hash, Default)]

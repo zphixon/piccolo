@@ -151,16 +151,15 @@ pub fn disassemble(module: &Module, name: &str) -> String {
     for (index, constant) in module.constants.iter().enumerate() {
         s.push_str(&format!("{:04x} {:?}\n", index, constant));
     }
-    s.push_str(" ++ code\n");
 
-    let mut offset = 0;
-    for chunk in &module.chunks {
+    for (i, chunk) in module.chunks.iter().enumerate() {
+        s.push_str(&format!(" ++ chunk {}\n", i));
+        let mut offset = 0;
         while offset < chunk.data.len() {
             s.push_str(&disassemble_instruction(module, chunk, offset));
             s.push('\n');
             offset += super::op::op_len(chunk.data[offset].into());
         }
-        s.push_str(" ++\n");
     }
 
     s

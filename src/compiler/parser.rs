@@ -555,7 +555,7 @@ fn parse_parameters<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Token<'a>>, Pic
 fn parse_arguments<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Expr<'a>>, PiccoloError> {
     trace!("arguments");
     let mut args = vec![];
-    if scanner.peek_token(0)?.kind == TokenKind::Identifier {
+    if scanner.peek_token(0)?.kind != TokenKind::RightParen {
         args.push(parse_expression(scanner)?);
         while scanner.peek_token(0)?.kind == TokenKind::Comma {
             consume(scanner, TokenKind::Comma)?;
