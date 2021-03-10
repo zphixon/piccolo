@@ -216,7 +216,7 @@ fn parse_fn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
 
     consume(scanner, TokenKind::Do)?;
     let body = parse_block(scanner)?;
-    consume(scanner, TokenKind::End)?;
+    let end = consume(scanner, TokenKind::End)?;
 
     Ok(Stmt::Fn {
         name,
@@ -224,6 +224,7 @@ fn parse_fn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
         arity,
         body,
         method: false,
+        end,
     })
 }
 
@@ -506,9 +507,7 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
 
         Ok(Expr::Variable { variable })
     } else if t.kind == TokenKind::Fn {
-        // TODO: remove name field from Expr::Fn
         let fn_ = consume(scanner, TokenKind::Fn)?;
-        let name = Token::new(fn_.kind, "<anon>", fn_.line);
 
         consume(scanner, TokenKind::LeftParen)?;
         let params = parse_parameters(scanner)?;
@@ -517,16 +516,16 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
 
         consume(scanner, TokenKind::Do)?;
         let body = parse_block(scanner)?;
-        consume(scanner, TokenKind::End)?;
+        let end = consume(scanner, TokenKind::End)?;
 
         let method = false;
 
         Ok(Expr::Fn {
-            name,
+            fn_,
             args: params, // TODO
             arity,
             body,
-            method,
+            end,
         })
     } else if t.kind == TokenKind::Me {
         todo!()

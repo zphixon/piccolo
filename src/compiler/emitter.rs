@@ -47,8 +47,8 @@ fn compile_stmt(emitter: &mut Emitter, stmt: &Stmt) -> Result<(), PiccoloError> 
             => compile_while(emitter, while_, cond, body, end),
         Stmt::For { for_, init, cond, inc, body, end }
             => compile_for(emitter, for_, init.as_ref(), cond, inc.as_ref(), body, end),
-        Stmt::Fn { name, args, arity, body, method }
-            => compile_fn(emitter, name, args, *arity, body, *method),
+        Stmt::Fn { name, args, arity, body, method, end }
+            => compile_fn(emitter, name, args, *arity, body, *method, end),
         Stmt::Break { break_ }
             => compile_break(emitter, break_),
         Stmt::Continue { continue_ }
@@ -88,8 +88,8 @@ fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> 
         //     => compile_set(emitter, object, name, value),
         // Expr::Index { right_bracket, object, index }
         //     => compile_index(emitter, right_bracket, object, index),
-        // Expr::Fn { name, args, arity, body, method }
-        //     => compile_fn(emitter, name, args, *arity, body, *method),
+        Expr::Fn { fn_, args, arity, body, end }
+            => compile_lambda(emitter, fn_, args, *arity, body, end),
         _ => todo!("{:?}", expr),
     }
 }
@@ -311,6 +311,7 @@ fn compile_fn(
     arity: usize,
     body: &[Stmt],
     _method: bool,
+    end: &Token,
 ) -> Result<(), PiccoloError> {
     // declare variable w emitter & identifier
     //      if the compiler is scoped (current context locals scope depth > 0), and has a local in scope with that name, error
@@ -332,11 +333,13 @@ fn compile_fn(
         return Err(PiccoloError::new(ErrorKind::SyntaxError)
             .line(name.line)
             .msg_string(format!(
-                "Function with name '{}' already exists",
+                "Function/variable with name '{}' already exists",
                 name.lexeme
             )));
     } else if emitter.current_context().is_local() {
         emitter.make_variable(name)?;
+    } else if !emitter.current_context().is_local() {
+        emitter.make_global_ident(name);
     }
 
     emitter.begin_context();
@@ -346,9 +349,9 @@ fn compile_fn(
         emitter.make_variable(arg)?;
     }
 
-    compile_block(emitter, name, body)?;
-    emitter.add_instruction(Opcode::Nil, name.line);
-    emitter.add_instruction(Opcode::Return, name.line);
+    compile_block(emitter, end, body)?;
+    emitter.add_instruction(Opcode::Nil, end.line);
+    emitter.add_instruction(Opcode::Return, end.line);
 
     let chunk_index = emitter.end_context();
 
@@ -358,6 +361,7 @@ fn compile_fn(
     emitter.add_instruction_arg(Opcode::Constant, constant, name.line);
 
     if !emitter.current_context().is_local() {
+        // make_variable doesn't check if a global exists before declaring it
         emitter.make_variable(name)?;
     }
 
@@ -539,6 +543,35 @@ fn compile_call(
     Ok(())
 }
 
+fn compile_lambda(
+    emitter: &mut Emitter,
+    fn_: &Token,
+    args: &[Token],
+    arity: usize,
+    body: &[Stmt],
+    end: &Token,
+) -> Result<(), PiccoloError> {
+    emitter.begin_context();
+    emitter.begin_scope();
+
+    for arg in args {
+        emitter.make_variable(arg)?;
+    }
+
+    compile_block(emitter, end, body)?;
+    emitter.add_instruction(Opcode::Nil, end.line);
+    emitter.add_instruction(Opcode::Return, end.line);
+
+    let chunk_index = emitter.end_context();
+
+    let function = Function::new(arity, fn_.lexeme.to_owned(), chunk_index);
+
+    let constant = emitter.make_constant(Constant::Function(function));
+    emitter.add_instruction_arg(Opcode::Constant, constant, fn_.line);
+
+    Ok(())
+}
+
 // represents more of a scope
 // TODO refactor to an enum?
 #[derive(Default)]
@@ -642,6 +675,8 @@ impl Emitter {
             continue_offsets: vec![],
             break_offsets: vec![],
         };
+        // make_variable doesn't check if a global exists before declaring it, allowing us to hack
+        // this in. later we should have something like a PiccoloState which manages everything.
         let _ = r.make_global_ident(&Token::new(TokenKind::Identifier, "print", 0));
         r
     }

@@ -72,11 +72,11 @@ pub enum Expr<'a> {
         index: Box<Expr<'a>>,
     },
     Fn {
-        name: Token<'a>, // TODO: remove name
+        fn_: Token<'a>,
         args: Vec<Token<'a>>,
         arity: usize,
         body: Vec<Stmt<'a>>,
-        method: bool,
+        end: Token<'a>,
     },
 }
 
@@ -132,6 +132,7 @@ pub enum Stmt<'a> {
         arity: usize,
         body: Vec<Stmt<'a>>,
         method: bool,
+        end: Token<'a>,
     },
     Break {
         break_: Token<'a>,
@@ -263,8 +264,8 @@ fn print_expr(indent: usize, expr: &Expr) -> String {
             => print_set(indent, object, name, value),
         Expr::Index { object, index, .. }
             => print_index(indent, object, index),
-        Expr::Fn { name, args, body, .. }
-            => print_fn(indent, name, args, body),
+        Expr::Fn { args, body, .. }
+            => print_fn(indent, &Token::new(TokenKind::Identifier, "<anon>", 0), args, body),
     }
 }
 
