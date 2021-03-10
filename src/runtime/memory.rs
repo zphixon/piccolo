@@ -9,7 +9,7 @@ use std::ptr::NonNull;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Trait to trace objects for marking and sweeping.
-pub trait Object {
+pub trait Object: std::fmt::Debug {
     fn trace(&self);
 
     fn type_name(&self) -> &'static str {
@@ -18,12 +18,6 @@ pub trait Object {
 
     fn format(&self) -> String {
         String::from("object")
-    }
-}
-
-impl fmt::Debug for dyn Object {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<trace>")
     }
 }
 
@@ -97,6 +91,10 @@ impl<T: 'static + Object + ?Sized> Object for Allocation<T> {
         if !self.header.marked.replace(true) {
             self.data.trace();
         }
+    }
+
+    fn type_name(&self) -> &'static str {
+        T::type_name(&self.data)
     }
 }
 
@@ -220,13 +218,17 @@ impl<T: fmt::Debug + 'static + Object + ?Sized> fmt::Debug for Gc<T> {
 impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for Gc<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner: &T = &*self;
-        inner.fmt(f)
+        std::fmt::Display::fmt(inner, f)
     }
 }
 
 impl<T: 'static + Object + ?Sized> Object for Gc<T> {
     fn trace(&self) {
         self.as_allocation().trace()
+    }
+
+    fn type_name(&self) -> &'static str {
+        T::type_name(self)
     }
 }
 // }}}
@@ -283,13 +285,17 @@ impl<T: fmt::Debug + 'static + Object + ?Sized> fmt::Debug for Root<T> {
 impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for Root<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner: &T = &*self;
-        inner.fmt(f)
+        std::fmt::Display::fmt(inner, f)
     }
 }
 
 impl<T: 'static + Object + ?Sized> Object for Root<T> {
     fn trace(&self) {
         self.as_allocation().trace()
+    }
+
+    fn type_name(&self) -> &'static str {
+        T::type_name(self)
     }
 }
 
@@ -335,7 +341,7 @@ impl<T: fmt::Debug + 'static + Object + ?Sized> fmt::Debug for UniqueRoot<T> {
 impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for UniqueRoot<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner: &T = &*self;
-        inner.fmt(f)
+        std::fmt::Display::fmt(inner, f)
     }
 }
 
@@ -345,7 +351,7 @@ impl<T: 'static + Object + ?Sized> Object for UniqueRoot<T> {
     }
 
     fn type_name(&self) -> &'static str {
-        "jiof3jio8w3jio"
+        T::type_name(self)
     }
 }
 

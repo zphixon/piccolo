@@ -108,7 +108,7 @@ impl<T: Object> Object for &Vec<T> {
     }
 }
 
-impl<K: Eq + std::hash::Hash, T: Object> Object for fnv::FnvHashMap<K, T> {
+impl<K: std::fmt::Debug + Eq + std::hash::Hash, T: Object> Object for fnv::FnvHashMap<K, T> {
     fn trace(&self) {
         for value in self.values() {
             value.trace();
