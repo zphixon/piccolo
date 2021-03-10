@@ -4,13 +4,60 @@ use crate::Constant;
 
 use super::op::Opcode;
 use super::{ChunkOffset, ConstantIndex, Line};
+use crate::prelude::ChunkIndex;
+
+#[derive(Debug)]
+pub struct Module {
+    chunks: Vec<Chunk>,
+    constants: Vec<Constant>,
+}
+
+impl Module {
+    pub(crate) fn new() -> Self {
+        Self {
+            chunks: vec![Chunk::default()],
+            constants: vec![],
+        }
+    }
+
+    // allows for duplicate constants, non-duplicates are checked in the compiler
+    pub(crate) fn make_constant(&mut self, value: Constant) -> ConstantIndex {
+        trace!("make constant {:?}", value);
+
+        self.constants.push(value);
+        let idx = self.constants.len() - 1;
+        if idx > u16::MAX as ChunkOffset {
+            panic!("too many constants (>65k, fix your program)");
+        } else {
+            idx as u16
+        }
+    }
+
+    pub(crate) fn get_constant(&self, index: ConstantIndex) -> &Constant {
+        self.constants
+            .get(index as usize)
+            .unwrap_or_else(|| panic!("{} out of constant bounds", index))
+    }
+
+    pub(crate) fn chunk(&self, i: ChunkIndex) -> &Chunk {
+        &self.chunks[i]
+    }
+
+    pub(crate) fn chunk_mut(&mut self, i: ChunkIndex) -> &mut Chunk {
+        &mut self.chunks[i]
+    }
+
+    pub(crate) fn add_chunk(&mut self) -> ChunkIndex {
+        self.chunks.push(Chunk::default());
+        self.chunks.len() - 1
+    }
+}
 
 /// Stores a piece of compiled Piccolo bytecode.
 #[derive(Default, Debug)]
 pub struct Chunk {
     pub(crate) data: Vec<u8>,
     pub(crate) lines: Vec<Line>,
-    pub(crate) constants: Vec<Constant>,
 }
 
 impl Chunk {
@@ -64,25 +111,6 @@ impl Chunk {
         self.write_arg_u16(Opcode::JumpBack, offset as u16, line);
     }
 
-    // allows for duplicate constants, non-duplicates are checked in the compiler
-    pub(crate) fn make_constant(&mut self, value: Constant) -> u16 {
-        trace!("make constant {:?}", value);
-
-        self.constants.push(value);
-        let idx = self.constants.len() - 1;
-        if idx > u16::MAX as ChunkOffset {
-            panic!("too many constants (>65k, fix your program)");
-        } else {
-            idx as u16
-        }
-    }
-
-    pub(crate) fn get_constant(&self, index: ConstantIndex) -> &Constant {
-        self.constants
-            .get(index as usize)
-            .unwrap_or_else(|| panic!("{} out of constant bounds", index))
-    }
-
     pub(crate) fn read_short(&self, offset: ChunkOffset) -> u16 {
         trace!("read short {:x}", offset);
 
@@ -110,83 +138,85 @@ impl Chunk {
         }
         self.lines[line - 1] += 1;
     }
-
-    pub fn disassemble(&self, name: &str) -> String {
-        trace!("disassemble");
-
-        let mut s = format!(" -- {} --\n", name);
-        s.push_str(" ++ constants\n");
-        for (idx, constant) in self.constants.iter().enumerate() {
-            s.push_str(&format!("{:04x} {:?}\n", idx, constant));
-        }
-        s.push_str(" ++ code\n");
-
-        let mut offset = 0;
-        while offset < self.data.len() {
-            s.push_str(&self.disassemble_instruction(offset));
-            s.push('\n');
-            offset += super::op::op_len(self.data[offset].into());
-        }
-
-        s
-    }
-
-    pub fn disassemble_instruction(&self, offset: ChunkOffset) -> String {
-        let op = self.data[offset].into();
-        let len = super::op::op_len(op);
-        let bytes = format!(
-            "{first:02x}{others}",
-            first = op as u8,
-            others = if len > 1 {
-                let mut s = String::new();
-                for i in 1..len {
-                    s.push_str(&format!(" {:02x}", self.data[offset + i]));
-                }
-                s
-            } else {
-                String::from("")
-            }
-        );
-
-        let line = self.get_line_from_index(offset);
-        let line_str = format!("{:04x} {:>4}", offset, line);
-
-        let op_str = format!("{:15}", format!("{:?}", op));
-
-        let arg = match op {
-            Opcode::Constant => {
-                let idx = self.read_short(offset + 1);
-                format!("@{:04x} ({:?})", idx, self.constants[idx as usize])
-            }
-            Opcode::GetLocal | Opcode::SetLocal => {
-                let idx = self.read_short(offset + 1);
-                format!("${}", idx)
-            }
-            Opcode::GetGlobal | Opcode::SetGlobal | Opcode::DeclareGlobal => {
-                let idx = self.read_short(offset + 1);
-                format!("g{:04x} ({:?})", idx, self.constants[idx as usize])
-            }
-            Opcode::JumpForward | Opcode::JumpFalse | Opcode::JumpTrue => {
-                let idx = self.read_short(offset + 1);
-                format!("+{:04x}", idx)
-            }
-            Opcode::JumpBack => {
-                let idx = self.read_short(offset + 1);
-                format!("-{:04x}", idx)
-            }
-            _ => String::new(),
-        };
-
-        format!(
-            "{bytes:9} {line_str} | {op_str} {arg}",
-            bytes = bytes,
-            line_str = line_str,
-            op_str = op_str,
-            arg = arg
-        )
-    }
 }
 
+pub fn disassemble(module: &Module, name: &str) -> String {
+    trace!("disassemble");
+
+    let mut s = format!(" -- {} --\n", name);
+    s.push_str(" ++ constants\n");
+    for (idx, constant) in module.constants.iter().enumerate() {
+        s.push_str(&format!("{:04x} {:?}\n", idx, constant));
+    }
+    s.push_str(" ++ code\n");
+
+    let mut offset = 0;
+    for (i, chunk) in module.chunks.iter().enumerate() {
+        while offset < chunk.data.len() {
+            s.push_str(&disassemble_instruction(module, chunk, offset));
+            s.push('\n');
+            offset += super::op::op_len(chunk.data[offset].into());
+        }
+        s.push_str(" ++\n");
+    }
+
+    s
+}
+
+pub fn disassemble_instruction(module: &Module, chunk: &Chunk, offset: ChunkOffset) -> String {
+    let op = chunk.data[offset].into();
+    let len = super::op::op_len(op);
+    let bytes = format!(
+        "{first:02x}{others}",
+        first = op as u8,
+        others = if len > 1 {
+            let mut s = String::new();
+            for i in 1..len {
+                s.push_str(&format!(" {:02x}", chunk.data[offset + i]));
+            }
+            s
+        } else {
+            String::from("")
+        }
+    );
+
+    let line = chunk.get_line_from_index(offset);
+    let line_str = format!("{:04x} {:>4}", offset, line);
+
+    let op_str = format!("{:15}", format!("{:?}", op));
+
+    let arg = match op {
+        Opcode::Constant => {
+            let idx = chunk.read_short(offset + 1);
+            format!("@{:04x} ({:?})", idx, module.constants[idx as usize])
+        }
+        Opcode::GetLocal | Opcode::SetLocal => {
+            let idx = chunk.read_short(offset + 1);
+            format!("${}", idx)
+        }
+        Opcode::GetGlobal | Opcode::SetGlobal | Opcode::DeclareGlobal => {
+            let idx = chunk.read_short(offset + 1);
+            format!("g{:04x} ({:?})", idx, module.constants[idx as usize])
+        }
+        Opcode::JumpForward | Opcode::JumpFalse | Opcode::JumpTrue => {
+            let idx = chunk.read_short(offset + 1);
+            format!("+{:04x}", idx)
+        }
+        Opcode::JumpBack => {
+            let idx = chunk.read_short(offset + 1);
+            format!("-{:04x}", idx)
+        }
+        _ => String::new(),
+    };
+
+    format!(
+        "{bytes:9} {line_str} | {op_str} {arg}",
+        bytes = bytes,
+        line_str = line_str,
+        op_str = op_str,
+        arg = arg
+    )
+}
 #[cfg(test)]
 mod test {
     use crate::runtime::op::Opcode;

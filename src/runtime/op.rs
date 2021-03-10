@@ -119,7 +119,7 @@ opcodes!(Opcode =>
     ShiftLeft       = 0x1e,
     ShiftRight      = 0x1f,
 
-    //Call            = 0x20,
+    Call            = 0x20,
 
     Assert          = 0xff,
 );
@@ -136,6 +136,7 @@ pub(crate) fn op_len(op: Opcode) -> usize {
         | Opcode::JumpFalse
         | Opcode::JumpTrue
         | Opcode::JumpBack
+        | Opcode::Call
         | Opcode::Assert => 3,
         _ => 1,
     }

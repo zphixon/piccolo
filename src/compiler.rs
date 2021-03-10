@@ -5,46 +5,36 @@ pub mod emitter;
 pub mod parser;
 pub mod scanner;
 
-use crate::runtime::{Line, LocalScopeDepth};
-use crate::{Chunk, Constant, ErrorKind, PiccoloError};
+use crate::{
+    Chunk, ChunkIndex, Constant, ErrorKind, Line, LocalScopeDepth, LocalSlotIndex, PiccoloError,
+};
 
+use crate::runtime::chunk::Module;
 use core::fmt;
 
-#[derive(Default)]
-pub struct Module {
-    chunks: Vec<Chunk>,
-    constants: Vec<Constant>,
-}
-
-impl Module {
-    pub fn new(chunks: Vec<Chunk>, constants: Vec<Constant>) -> Self {
-        Self { chunks, constants }
-    }
-
-    pub(crate) fn chunk(&self, idx: crate::runtime::ChunkIndex) -> &Chunk {
-        &self.chunks[idx]
-    }
-}
-
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq, Hash, Default)]
 pub(crate) struct Local {
     pub(crate) name: String,
     pub(crate) depth: LocalScopeDepth,
+    slot: LocalSlotIndex,
+    is_upvalue: bool,
 }
 
 impl Local {
     pub(crate) fn new(name: String, depth: LocalScopeDepth) -> Self {
-        Self { name, depth }
+        Self {
+            name,
+            depth,
+            ..Self::default()
+        }
     }
 }
 
 #[cfg(feature = "pc-debug")]
-pub fn compile_chunk(src: &str) -> Result<crate::Chunk, Vec<PiccoloError>> {
+pub fn compile_chunk(src: &str) -> Result<Module, Vec<PiccoloError>> {
     let mut scanner = super::Scanner::new(src);
     let ast = parser::parse(&mut scanner)?;
-    let mut emitter = emitter::Emitter::new();
-    emitter::compile_ast(&mut emitter, &ast)?;
-    Ok(emitter.into_chunk())
+    emitter::compile(&ast)
 }
 
 #[cfg(feature = "pc-debug")]

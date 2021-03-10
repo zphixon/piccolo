@@ -30,7 +30,7 @@ impl fmt::Display for NativeFunction {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, PartialEq)]
 pub struct Function {
     arity: usize,
     name: String,

@@ -15,8 +15,7 @@ pub mod runtime;
 /// Commonly used items that you might want access to.
 pub mod prelude {
     pub use super::compiler::{
-        ast::print_expression, emitter::Emitter, parser::parse, scanner::Scanner, Module, Token,
-        TokenKind,
+        ast::print_expression, emitter::Emitter, parser::parse, scanner::Scanner, Token, TokenKind,
     };
     pub use super::error::{ErrorKind, PiccoloError};
     pub use super::runtime::{
@@ -26,8 +25,8 @@ pub mod prelude {
         op::Opcode,
         value::Constant,
         value::Value,
-        vm::Machine,
-        ChunkIndex, ChunkOffset, ConstantIndex, Line, LocalSlotIndex,
+        ChunkIndex, ChunkOffset, ConstantIndex, Line, LocalScopeDepth, LocalSlotIndex,
+        UpvalueIndex,
     };
 }
 
@@ -39,47 +38,14 @@ pub use compiler::{compile_chunk, scan_all};
 #[cfg(feature = "fuzzer")]
 pub use compiler::print_tokens;
 
-/// Interprets a Piccolo source and returns its result.
-///
-/// # Examples
-///
-/// ```rust
-/// # fn main() -> Result<(), Vec<piccolo::prelude::PiccoloError>> {
-/// let result = piccolo::interpret("1 + 2")?;
-/// assert_eq!(3, result.into::<i64>());
-/// # Ok(())
-/// # }
-/// ```
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
-    let mut scanner = Scanner::new(src);
-    debug!("parse");
-    let ast = parse(&mut scanner)?;
-    debug!("ast\n{}", compiler::ast::print_ast(&ast));
-    debug!("compile");
-
-    let mut emitter = compiler::emitter::Emitter::new();
-    compiler::emitter::compile_ast(&mut emitter, &ast)?;
-    let chunk = emitter.current_chunk();
-
-    debug!("chunk\n{}", chunk.disassemble(""));
-    debug!("interpret");
-
-    Ok(Machine::new().interpret(&chunk)?)
-}
-
-pub fn interpret2(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     debug!("parse");
     let ast = parse(&mut Scanner::new(src))?;
     debug!("ast\n{}", compiler::ast::print_ast(&ast));
 
     debug!("compile");
-    let mut emitter = Emitter::new();
-    compiler::emitter::compile_ast(&mut emitter, &ast)?;
-    let chunk = emitter.into_chunk();
-    debug!("{}", chunk.disassemble(""));
-
-    let constants = chunk.constants.clone();
-    let mut module = Module::new(vec![chunk], constants);
+    let module = crate::compiler::emitter::compile(&ast)?;
+    debug!("{}", crate::runtime::chunk::disassemble(&module, ""));
 
     let mut heap = Heap::default();
 
@@ -92,7 +58,7 @@ pub fn interpret2(src: &str) -> Result<Constant, Vec<PiccoloError>> {
 /// Reads a file and interprets its contents.
 pub fn do_file(file: &std::path::Path) -> Result<Constant, Vec<PiccoloError>> {
     let contents = std::fs::read_to_string(file).map_err(|e| vec![PiccoloError::from(e)])?;
-    interpret2(&contents).map_err(|v| {
+    interpret(&contents).map_err(|v| {
         v.into_iter()
             .map(|e| e.file(file.to_str().unwrap().to_owned()))
             .collect()
@@ -114,7 +80,6 @@ pub mod fuzzer {
     extern crate rand;
 
     use crate::compiler::TokenKind;
-    use crate::Machine;
 
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
@@ -157,8 +122,10 @@ pub mod fuzzer {
         if let Ok(chunk) = crate::compile_chunk(&src) {
             println!("----- run {} compiles -----", n);
             crate::print_tokens(&crate::compiler::scan_all(&src).unwrap());
-            chunk.disassemble("");
-            Machine::new().interpret(&chunk).ok().map(|_| {
+            crate::runtime::chunk::disassemble(&chunk, "");
+            let mut heap = crate::runtime::memory::Heap::default();
+            let mut vm = crate::runtime::vm2::Vm2::new(&mut heap, &chunk);
+            vm.interpret(&mut heap).ok().map(|_| {
                 println!("----- run {} executes -----", n);
             })
         } else {
@@ -227,7 +194,7 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod integration {
-    use super::{parse, Emitter, Machine, Scanner, Token, TokenKind};
+    use super::{parse, Emitter, Scanner, Token, TokenKind};
     use crate::compiler::ast::{self, Expr, Stmt};
     use crate::Constant;
 
@@ -255,15 +222,14 @@ mod integration {
         let mut scanner = Scanner::new(src);
         let ast = parse(&mut scanner).unwrap();
         println!("{}", ast::print_ast(&ast));
-        let mut ne = Emitter::new();
-        crate::compiler::emitter::compile_ast(&mut ne, &ast).unwrap();
-        let chunk = ne.into_chunk();
+        let module = crate::compiler::emitter::compile(&ast).unwrap();
         #[cfg(feature = "pc-debug")]
         {
-            chunk.disassemble("idklol");
+            println!("{}", crate::runtime::chunk::disassemble(&module, "idklol"));
         }
-        let mut vm = Machine::new();
-        println!("{}", vm.interpret(&chunk).unwrap());
+        let mut heap = crate::runtime::memory::Heap::default();
+        let mut vm = crate::runtime::vm2::Vm2::new(&mut heap, &module);
+        println!("{:?}", vm.interpret(&mut heap).unwrap());
     }
 
     #[test]
@@ -298,16 +264,17 @@ mod integration {
             println!("want: {}", ast::print_expression(&equiv));
             assert_eq!(expr, &equiv);
 
-            let mut ne = Emitter::new();
-            crate::compiler::emitter::compile_ast(&mut ne, &ast).unwrap();
-            let chunk = ne.into_chunk();
+            let module = crate::compiler::emitter::compile(&ast).unwrap();
 
             #[cfg(feature = "pc-debug")]
             {
-                println!("{}", chunk.disassemble("idklol"));
+                println!("{}", crate::runtime::chunk::disassemble(&module, "idklol"));
             }
-            let mut vm = Machine::new();
-            assert_eq!(vm.interpret(&chunk).unwrap(), Constant::Integer(11));
+
+            let mut heap = crate::runtime::memory::Heap::default();
+            let mut vm = crate::runtime::vm2::Vm2::new(&mut heap, &module);
+            // TODO
+            //assert_eq!(vm.interpret(&mut heap).unwrap(), Constant::Integer(11));
         } else {
             panic!("ast not initialized")
         }

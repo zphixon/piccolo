@@ -1,10 +1,11 @@
 use crate::{
-    Chunk, ChunkOffset, Constant, ErrorKind, Function, Gc, Heap, Line, LocalSlotIndex, Module,
+    Chunk, ChunkOffset, Constant, ErrorKind, Function, Gc, Heap, Line, LocalSlotIndex,
     NativeFunction, Object, PiccoloError, Root, UniqueRoot,
 };
 
 use super::op::Opcode;
 
+use crate::runtime::chunk::Module;
 use fnv::FnvHashMap;
 
 // value2 {{{
@@ -45,6 +46,10 @@ impl Value2 {
                 let root = h.manage(v);
                 root.as_gc()
             }),
+            Constant::Function(v) => Value2::Function({
+                let root = h.manage(v);
+                root.as_gc()
+            }),
             Constant::Nil => Value2::Nil,
         }
     }
@@ -70,6 +75,10 @@ impl Value2 {
 
     pub fn is_double(&self) -> bool {
         matches!(self, Value2::Double(_))
+    }
+
+    pub fn is_function(&self) -> bool {
+        matches!(self, Value2::Function(_))
     }
 
     pub fn is_nil(&self) -> bool {
@@ -209,6 +218,7 @@ pub struct Frame<'a> {
     ip: ChunkOffset,
     base: ChunkOffset,
     chunk: &'a Chunk,
+    //closure: Root<Closure>,
 }
 
 impl Frame<'_> {
@@ -262,7 +272,7 @@ impl<'a> Vm2<'a> {
 
     fn read_constant(&mut self) -> Constant {
         let constant_idx = self.read_short();
-        let c = self.current_chunk().get_constant(constant_idx).clone();
+        let c = self.module.get_constant(constant_idx).clone();
         c
     }
 
@@ -315,8 +325,11 @@ impl<'a> Vm2<'a> {
             } else {
                 " "
             },
-            self.current_chunk()
-                .disassemble_instruction(self.current_ip())
+            crate::runtime::chunk::disassemble_instruction(
+                self.module,
+                self.current_chunk(),
+                self.current_ip()
+            )
         );
         // }}}
 
@@ -632,6 +645,20 @@ impl<'a> Vm2<'a> {
                 bit_op!(Opcode::ShiftRight, >>);
             }
 
+            Opcode::Call => {
+                let arity = self.read_short();
+                // using the chunk index from the function value, change current frame to be in the chunk specified
+                // basically push a call frame whose chunk is the chunk_index of the function
+                // match function kind
+                if let Value2::Function(f) = self.peek() {
+                    self.frames.push(Frame {
+                        ip: 0,
+                        base: (self.stack.len() as u16 - arity - 1) as usize,
+                        chunk: self.module.chunk(f.chunk()),
+                    })
+                }
+            }
+
             Opcode::Assert => {
                 let v = self.pop();
                 let assertion = self.read_constant();
@@ -678,14 +705,9 @@ mod test {
         let ast = crate::compiler::parser::parse(&mut crate::compiler::scanner::Scanner::new(src))
             .expect("parse");
         let mut emitter = crate::compiler::emitter::Emitter::new();
-        crate::compiler::emitter::compile_ast(&mut emitter, &ast).expect("emit");
-        let chunk = emitter.into_chunk();
+        let module = crate::compiler::emitter::compile(&ast).expect("emit");
 
-        println!("{}", chunk.disassemble(""));
-
-        let mut module = Module::default();
-        module.constants = chunk.constants.clone();
-        module.chunks.push(chunk);
+        println!("{}", crate::runtime::chunk::disassemble(&module, ""));
 
         let mut heap = crate::runtime::memory::Heap::default();
 

@@ -3,7 +3,7 @@
 use crate::{
     compiler::ast::{Ast, Expr, Stmt},
     Chunk, ChunkIndex, ChunkOffset, Constant, ConstantIndex, ErrorKind, Line, LocalSlotIndex,
-    Module, Opcode, PiccoloError, Token, TokenKind,
+    Opcode, PiccoloError, Token, TokenKind, UpvalueIndex,
 };
 
 use super::Local;
@@ -11,39 +11,20 @@ use crate::runtime::LocalScopeDepth;
 
 use fnv::FnvHashMap;
 
-pub fn compile2(ast: &Ast) -> Result<Module, Vec<PiccoloError>> {
-    panic!()
-}
+// top level compile into chunk index 0
+// encounter a function, start compiling into a new chunk index
+// after we end the function collect upvalues
 
-#[derive(Copy, Clone, PartialEq)]
-enum ContextType {
-    Function,
-    Initializer,
-    Method,
-    Top,
-}
-
-pub struct Emitter4 {
-    module: Module,
-    contexts: Vec<Emitter4Context>,
-    errors: Vec<PiccoloError>,
-}
-
-struct Emitter4Context {
-    context_type: ContextType,
-    chunk_index: ChunkIndex,
-}
-
-/// Compile an abstract syntax tree into bytecode.
-pub fn compile_ast(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloError>> {
+pub fn compile(ast: &Ast) -> Result<Module, Vec<PiccoloError>> {
+    let mut emitter = Emitter::new();
     let errors: Vec<_> = ast
         .iter()
-        .map(|stmt| compile_stmt(emitter, stmt))
+        .map(|stmt| compile_stmt(&mut emitter, stmt))
         .filter_map(Result::err)
         .collect();
 
     if errors.is_empty() {
-        Ok(())
+        Ok(emitter.into_module())
     } else {
         Err(errors)
     }
@@ -66,8 +47,8 @@ fn compile_stmt(emitter: &mut Emitter, stmt: &Stmt) -> Result<(), PiccoloError> 
             => compile_while(emitter, while_, cond, body, end),
         Stmt::For { for_, init, cond, inc, body, end }
             => compile_for(emitter, for_, init.as_ref(), cond, inc.as_ref(), body, end),
-        // Stmt::Fn { name, args, arity, body, method }
-        //     => compile_func(emitter, name, args, *arity, body, *method),
+        Stmt::Fn { name, args, arity, body, method }
+            => compile_fn(emitter, name, args, *arity, body, *method),
         Stmt::Break { break_ }
             => compile_break(emitter, break_),
         Stmt::Continue { continue_ }
@@ -97,8 +78,8 @@ fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> 
             => compile_binary(emitter, lhs, op, rhs),
         Expr::Logical { lhs, op, rhs }
             => compile_logical(emitter, lhs, op, rhs),
-        // Expr::Call { callee, paren, arity, args }
-        //     => compile_call(emitter, callee, paren, *arity, args),
+        Expr::Call { callee, paren, arity, args }
+            => compile_call(emitter, callee, paren, *arity, args),
         // Expr::New { name, args }
         //     => compile_new(emitter, name, args),
         // Expr::Get { object, name }
@@ -108,7 +89,7 @@ fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> 
         // Expr::Index { right_bracket, object, idx }
         //     => compile_index(emitter, right_bracket, object, idx),
         // Expr::Fn { name, args, arity, body, method }
-        //     => compile_func(emitter, name, args, *arity, body, *method),
+        //     => compile_fn(emitter, name, args, *arity, body, *method),
         _ => todo!("{:?}", expr),
     }
 }
@@ -155,7 +136,7 @@ fn compile_assignment(
 
     if let Some(opcode) = op.assign_by_mutate_op() {
         // if this is an assignment-by-mutation operator, first get the value of the variable
-        if let Some(idx) = emitter.get_local_slot(name) {
+        if let Some(idx) = emitter.current_context().get_local_slot(name) {
             emitter.add_instruction_arg(Opcode::GetLocal, idx, op.line);
         } else {
             let idx = emitter.get_global_ident(name)?;
@@ -173,8 +154,8 @@ fn compile_assignment(
     }
 
     // then assign
-    if emitter.is_local() {
-        if let Some(idx) = emitter.get_local_slot(name) {
+    if emitter.current_context().is_local() {
+        if let Some(idx) = emitter.current_context().get_local_slot(name) {
             emitter.add_instruction_arg(Opcode::SetLocal, idx, op.line);
         } else {
             let idx = emitter.get_global_ident(name)?;
@@ -323,6 +304,66 @@ fn compile_for(
     Ok(())
 }
 
+fn compile_fn(
+    emitter: &mut Emitter,
+    name: &Token,
+    args: &[Token],
+    arity: usize,
+    body: &[Stmt],
+    _method: bool,
+) -> Result<(), PiccoloError> {
+    // declare variable w emitter & identifier
+    //      if the compiler is scoped (current context locals scope depth > 0), and has a local in scope with that name, error
+    //      otherwise add local
+    //          get current context locals, insert identifier
+    // if compiler is scoped
+    //      mark local as initialized
+    //          current context locals top local set initialized true
+    // compile closure w information from above
+    // inside new compiler context scoped
+    //      declare & define each argument, local, so just initialize
+    //      compile block with current new context
+    //      add a return instruction I suppose
+    // make a new Function using the info and chunk index from the scoped context
+    // make a new Closure with upvalues from the scoped context
+    // add a constant function/closure
+    // add a constant instruction
+    if let Some(_) = emitter.current_context().get_local_slot(name) {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .line(name.line)
+            .msg_string(format!(
+                "Function with name '{}' already exists",
+                name.lexeme
+            )));
+    } else if emitter.current_context().is_local() {
+        emitter.make_variable(name)?;
+    }
+
+    emitter.begin_context();
+    emitter.begin_scope();
+
+    for arg in args {
+        emitter.make_variable(arg)?;
+    }
+
+    compile_block(emitter, name, body)?;
+    emitter.add_instruction(Opcode::Nil, name.line);
+    emitter.add_instruction(Opcode::Return, name.line);
+
+    let chunk_index = emitter.end_context();
+
+    let function = Function::new(arity, name.lexeme.to_owned(), chunk_index);
+
+    let constant = emitter.make_constant(Constant::Function(function));
+    emitter.add_instruction_arg(Opcode::Constant, constant, name.line);
+
+    if !emitter.current_context().is_local() {
+        emitter.make_variable(name)?;
+    }
+
+    Ok(())
+}
+
 fn compile_break(emitter: &mut Emitter, break_: &Token) -> Result<(), PiccoloError> {
     trace!("{} break", break_.line);
 
@@ -363,9 +404,7 @@ fn compile_assert(emitter: &mut Emitter, assert: &Token, value: &Expr) -> Result
     compile_expr(emitter, value)?;
     //emitter.add_instruction(Opcode::Assert, assert.line);
 
-    let c = emitter
-        .current_chunk_mut()
-        .make_constant(Constant::String(super::ast::print_expression(value)));
+    let c = emitter.make_constant(Constant::String(super::ast::print_expression(value)));
     emitter.add_instruction_arg(Opcode::Assert, c, assert.line);
 
     Ok(())
@@ -397,7 +436,7 @@ fn compile_paren(
 fn compile_variable(emitter: &mut Emitter, variable: &Token) -> Result<(), PiccoloError> {
     trace!("{} variable {}", variable.line, variable.lexeme);
 
-    if let Some(local) = emitter.get_local_slot(variable) {
+    if let Some(local) = emitter.current_context().get_local_slot(variable) {
         emitter.add_instruction_arg(Opcode::GetLocal, local, variable.line);
     } else {
         let global = emitter.get_global_ident(&variable)?;
@@ -485,53 +524,144 @@ fn compile_logical(
     Ok(())
 }
 
+fn compile_call(
+    emitter: &mut Emitter,
+    callee: &Expr,
+    paren: &Token,
+    arity: usize,
+    args: &[Expr],
+) -> Result<(), PiccoloError> {
+    compile_expr(emitter, callee)?;
+    for arg in args {
+        compile_expr(emitter, arg)?;
+    }
+    emitter.add_instruction_arg(Opcode::Call, arity as u16, paren.line);
+    Ok(())
+}
+
+// represents more of a scope
+// TODO refactor to an enum?
+#[derive(Default)]
+struct EmitterContext {
+    //context_type: ContextType,
+    chunk_index: ChunkIndex,
+    locals: Vec<Local>,
+    depth: LocalScopeDepth,
+    //upvalues: Vec<Upvalue>,
+}
+
+impl EmitterContext {
+    fn new(chunk_index: ChunkIndex) -> Self {
+        Self {
+            chunk_index,
+            locals: Vec::new(),
+            depth: 0,
+        }
+    }
+
+    fn get_local(&self, idx: LocalSlotIndex) -> &Local {
+        &self.locals[idx as usize]
+    }
+
+    fn add_local(&mut self, name: &Token) {
+        self.locals
+            .push(Local::new(name.lexeme.to_owned(), self.scope_depth()));
+    }
+
+    fn is_local(&self) -> bool {
+        self.depth > 0
+    }
+
+    fn scope_depth(&self) -> LocalScopeDepth {
+        self.depth
+    }
+
+    fn begin_scope(&mut self) {
+        self.depth += 1;
+    }
+
+    fn end_scope(&mut self) -> Vec<Local> {
+        self.depth -= 1;
+        let index = self
+            .locals
+            .iter()
+            .enumerate()
+            .find_map(|(i, l)| if l.depth > self.depth { Some(i) } else { None })
+            .unwrap_or(self.locals.len());
+        self.locals.split_off(index)
+    }
+
+    fn get_local_slot(&self, name: &Token) -> Option<LocalSlotIndex> {
+        // IF SCOPE IS FUNCTION AND SCOPE DEPTH DOESN'T MATCH THIS IS A CAPTURE
+        // mark as captured
+        trace!("{} get local slot {}", name.line, name.lexeme);
+        for (i, local) in self.locals.iter().enumerate().rev() {
+            if local.name == name.lexeme {
+                return Some(i as u16);
+            }
+        }
+
+        None
+    }
+
+    fn get_local_depth(&self, name: &Token) -> Option<LocalScopeDepth> {
+        trace!("{} get local depth {}", name.line, name.lexeme);
+        for local in self.locals.iter().rev() {
+            if local.name == name.lexeme {
+                return Some(local.depth);
+            }
+        }
+
+        None
+    }
+}
+
+use crate::prelude::Function;
+use crate::runtime::chunk::Module;
+
 /// Bytecode compiler object
 ///
 /// Construct an Emitter, and pass a `&mut` reference to `compile_ast` along with
 /// the abstract syntax tree. Extract the `Chunk` with `current_chunk{_mut}()` or
 /// `into_chunk()`.
 pub struct Emitter {
-    chunk: Chunk,
-    locals: Vec<Local>,
+    module: Module,
+    children: Vec<EmitterContext>,
+    //errors: Vec<PiccoloError>,
     global_identifiers: FnvHashMap<String, ConstantIndex>,
-    scope_depth: LocalScopeDepth,
     continue_offsets: Vec<Vec<ChunkOffset>>,
     break_offsets: Vec<Vec<ChunkOffset>>,
 }
 
-impl Default for Emitter {
-    fn default() -> Emitter {
-        Emitter::new()
-    }
-}
-
 impl Emitter {
-    /// Make a new emitter, equivalent to `Default::default()`
     pub fn new() -> Self {
         Self {
-            chunk: Chunk::default(),
-            locals: Vec::new(),
+            module: Module::new(),
+            children: vec![EmitterContext::default()],
             global_identifiers: FnvHashMap::default(),
-            scope_depth: 0,
-            continue_offsets: Vec::with_capacity(0),
-            break_offsets: Vec::with_capacity(0),
+            continue_offsets: vec![],
+            break_offsets: vec![],
         }
     }
 
-    fn is_local(&self) -> bool {
-        self.scope_depth > 0
+    fn current_context(&self) -> &EmitterContext {
+        self.children.last().unwrap()
     }
 
-    pub fn into_chunk(self) -> Chunk {
-        self.chunk
+    fn current_context_mut(&mut self) -> &mut EmitterContext {
+        self.children.last_mut().unwrap()
     }
 
     pub fn current_chunk(&self) -> &Chunk {
-        &self.chunk
+        self.module.chunk(self.current_context().chunk_index)
     }
 
     pub fn current_chunk_mut(&mut self) -> &mut Chunk {
-        &mut self.chunk
+        self.module.chunk_mut(self.current_context().chunk_index)
+    }
+
+    pub fn into_module(self) -> Module {
+        self.module
     }
 
     fn add_instruction(&mut self, op: Opcode, line: Line) {
@@ -547,9 +677,13 @@ impl Emitter {
     }
 
     fn add_constant(&mut self, value: Constant, line: Line) {
-        let idx = self.current_chunk_mut().make_constant(value);
+        let idx = self.make_constant(value);
         self.current_chunk_mut()
             .write_arg_u16(Opcode::Constant, idx, line);
+    }
+
+    fn make_constant(&mut self, c: Constant) -> ConstantIndex {
+        self.module.make_constant(c)
     }
 
     fn make_global_ident(&mut self, name: &Token) -> ConstantIndex {
@@ -558,9 +692,7 @@ impl Emitter {
         if self.global_identifiers.contains_key(name.lexeme) {
             self.global_identifiers[name.lexeme]
         } else {
-            let idx = self
-                .current_chunk_mut()
-                .make_constant(Constant::String(name.lexeme.to_owned()));
+            let idx = self.make_constant(Constant::String(name.lexeme.to_owned()));
             self.global_identifiers.insert(name.lexeme.to_owned(), idx);
             idx
         }
@@ -580,55 +712,29 @@ impl Emitter {
             })
     }
 
-    fn get_local_slot(&self, name: &Token) -> Option<LocalSlotIndex> {
-        trace!("{} get local slot {}", name.line, name.lexeme);
-
-        for (i, local) in self.locals.iter().enumerate().rev() {
-            if local.name == name.lexeme {
-                return Some(i as u16);
-            }
-        }
-
-        None
-    }
-
-    fn get_local_depth(&self, name: &Token) -> Option<LocalScopeDepth> {
-        trace!("{} get local depth {}", name.line, name.lexeme);
-
-        for local in self.locals.iter().rev() {
-            if local.name == name.lexeme {
-                return Some(local.depth);
-            }
-        }
-
-        None
-    }
-
     fn make_variable(&mut self, name: &Token) -> Result<(), PiccoloError> {
         trace!("{} make variable {}", name.line, name.lexeme);
 
         // are we in global scope?
-        if self.scope_depth > 0 {
+        if self.current_context().is_local() {
             // check if we have a local with this name
-            if let Some(idx) = self.get_local_depth(name) {
+            if let Some(idx) = self.current_context().get_local_depth(name) {
                 // if we do,
-                if idx != self.scope_depth {
+                if idx != self.current_context().scope_depth() {
                     // create a new local if we're in a different scope
-                    self.locals
-                        .push(Local::new(name.lexeme.to_owned(), self.scope_depth));
+                    self.current_context_mut().add_local(name);
                 } else {
                     // error if we're in the same scope
                     return Err(PiccoloError::new(ErrorKind::SyntaxError)
                         .line(name.line)
                         .msg_string(format!(
                             "variable with name '{}' already exists",
-                            self.locals[idx as usize - 1].name
+                            name.lexeme,
                         )));
                 }
             } else {
                 // if we don't, create a new local with this name
-                self.locals
-                    .push(Local::new(name.lexeme.to_owned(), self.scope_depth));
+                self.current_context_mut().add_local(name);
             }
         } else {
             // yes, make a global
@@ -639,16 +745,23 @@ impl Emitter {
         Ok(())
     }
 
+    fn begin_context(&mut self) {
+        let index = self.module.add_chunk();
+        self.children.push(EmitterContext::new(index));
+    }
+
+    fn end_context(&mut self) -> ChunkIndex {
+        let context = self.children.pop().unwrap();
+        context.chunk_index
+    }
+
     fn begin_scope(&mut self) {
-        self.scope_depth += 1;
+        self.current_context_mut().begin_scope();
     }
 
     fn end_scope(&mut self, line: Line) {
-        self.scope_depth -= 1;
-        while !self.locals.is_empty() && self.locals[self.locals.len() - 1].depth > self.scope_depth
-        {
+        for _ in self.current_context_mut().end_scope() {
             self.add_instruction(Opcode::Pop, line);
-            self.locals.pop().unwrap();
         }
     }
 
@@ -718,11 +831,11 @@ mod test {
         .unwrap();
 
         let mut e = Emitter::new();
-        compile_ast(&mut e, &ast).unwrap();
-        println!("{}", e.current_chunk().disassemble("jioew"));
-
-        crate::runtime::vm::Machine::new()
-            .interpret(e.current_chunk())
+        let module = compile(&ast).unwrap();
+        println!("{}", crate::runtime::chunk::disassemble(&module, "jioew"));
+        let mut heap = crate::runtime::memory::Heap::default();
+        crate::runtime::vm2::Vm2::new(&mut heap, &module)
+            .interpret(&mut heap)
             .unwrap();
     }
 }

@@ -2,6 +2,7 @@
 
 use crate::{Gc, Object, PiccoloError, Token, TokenKind};
 
+use crate::prelude::Function;
 use core::fmt;
 
 /// Wrapper type for runtime Piccolo values.
@@ -196,12 +197,13 @@ impl Into<f64> for Value {
 /// Similar to [`Value`]. `Constant` is also used to return from Piccolo execution.
 ///
 /// [`Value`]: ../value/enum.Value.html
-#[derive(Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Constant {
     String(String),
     Bool(bool),
     Integer(i64),
     Double(f64),
+    Function(Function),
     Nil,
 }
 
@@ -243,6 +245,7 @@ impl Constant {
             Constant::Integer(v) => Value::Integer(*v),
             Constant::Double(v) => Value::Double(*v),
             Constant::String(v) => Value::String(v.clone()),
+            Constant::Function(_) => todo!(),
             Constant::Nil => Value::Nil,
         }
     }
@@ -255,6 +258,7 @@ impl fmt::Display for Constant {
             Constant::Bool(v) => write!(f, "{}", v),
             Constant::Integer(v) => write!(f, "{}", v),
             Constant::Double(v) => write!(f, "{}", v),
+            Constant::Function(_) => todo!(),
             Constant::Nil => write!(f, "nil"),
         }
     }
