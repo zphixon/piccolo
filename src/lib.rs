@@ -15,11 +15,13 @@ pub mod runtime;
 /// Commonly used items that you might want access to.
 pub mod prelude {
     pub use super::compiler::{
-        ast::print_expression, emitter::Emitter, parser::parse, scanner::Scanner, Token, TokenKind,
+        ast::print_ast, ast::print_expression, ast::Ast, ast::Expr, ast::Stmt, emitter::compile,
+        emitter::Emitter, parser::parse, scanner::Scanner, Token, TokenKind,
     };
     pub use super::error::{ErrorKind, PiccoloError};
     pub use super::runtime::{
         chunk::Chunk,
+        chunk::Module,
         memory::{Gc, Heap, Object, Root, UniqueRoot},
         object::{Function, NativeFunction},
         op::Opcode,

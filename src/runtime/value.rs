@@ -1,8 +1,7 @@
 //! Contains types for working with Piccolo values.
 
-use crate::{Gc, Object, PiccoloError, Token, TokenKind};
+use crate::{Function, Object, PiccoloError, Token, TokenKind};
 
-use crate::prelude::Function;
 use core::fmt;
 
 /// Wrapper type for runtime Piccolo values.

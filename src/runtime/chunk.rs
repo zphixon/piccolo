@@ -154,7 +154,7 @@ pub fn disassemble(module: &Module, name: &str) -> String {
     s.push_str(" ++ code\n");
 
     let mut offset = 0;
-    for (i, chunk) in module.chunks.iter().enumerate() {
+    for chunk in &module.chunks {
         while offset < chunk.data.len() {
             s.push_str(&disassemble_instruction(module, chunk, offset));
             s.push('\n');

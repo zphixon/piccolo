@@ -1,6 +1,6 @@
 use crate::{
     Chunk, ChunkOffset, Constant, ErrorKind, Function, Gc, Heap, Line, LocalSlotIndex,
-    NativeFunction, Object, PiccoloError, Root, UniqueRoot,
+    NativeFunction, Object, PiccoloError, UniqueRoot,
 };
 
 use super::op::Opcode;

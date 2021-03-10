@@ -1,6 +1,6 @@
 //! Objects defined in Rust that may exist at runtime.
 
-use crate::{Chunk, ChunkIndex, Object, Value};
+use crate::{ChunkIndex, Object, Value};
 
 use core::fmt;
 
