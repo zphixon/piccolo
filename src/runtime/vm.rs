@@ -229,7 +229,7 @@ impl Frame<'_> {
     }
 }
 
-pub struct Vm2<'a> {
+pub struct Machine<'a> {
     module: &'a Module,
     frames: Vec<Frame<'a>>,
     stack: UniqueRoot<Vec<Value2>>,
@@ -242,9 +242,9 @@ enum VmState {
     Stop,
 }
 
-impl<'a> Vm2<'a> {
+impl<'a> Machine<'a> {
     pub fn new(heap: &mut Heap, module: &'a Module) -> Self {
-        Vm2 {
+        Machine {
             module,
             frames: Vec::new(),
             stack: heap.manage_unique(Vec::new()),
@@ -711,7 +711,7 @@ mod test {
 
         let mut heap = crate::runtime::memory::Heap::default();
 
-        let mut vm = Vm2::new(&mut heap, &module);
+        let mut vm = Machine::new(&mut heap, &module);
         vm.interpret(&mut heap).unwrap();
     }
 }

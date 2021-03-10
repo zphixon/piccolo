@@ -834,7 +834,7 @@ mod test {
         let module = compile(&ast).unwrap();
         println!("{}", crate::runtime::chunk::disassemble(&module, "jioew"));
         let mut heap = crate::runtime::memory::Heap::default();
-        crate::runtime::vm2::Vm2::new(&mut heap, &module)
+        crate::runtime::vm::Machine::new(&mut heap, &module)
             .interpret(&mut heap)
             .unwrap();
     }

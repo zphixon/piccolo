@@ -6,7 +6,7 @@ pub mod object;
 pub mod op;
 pub mod value;
 //pub mod vm;
-pub mod vm2;
+pub mod vm;
 
 pub type ConstantIndex = u16;
 pub type LocalSlotIndex = u16;

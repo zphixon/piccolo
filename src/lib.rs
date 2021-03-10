@@ -50,7 +50,7 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     let mut heap = Heap::default();
 
     debug!("interpret");
-    let mut vm = runtime::vm2::Vm2::new(&mut heap, &module);
+    let mut vm = runtime::vm::Machine::new(&mut heap, &module);
     vm.interpret(&mut heap)?;
     Ok(Constant::Nil)
 }
@@ -124,7 +124,7 @@ pub mod fuzzer {
             crate::print_tokens(&crate::compiler::scan_all(&src).unwrap());
             crate::runtime::chunk::disassemble(&chunk, "");
             let mut heap = crate::runtime::memory::Heap::default();
-            let mut vm = crate::runtime::vm2::Vm2::new(&mut heap, &chunk);
+            let mut vm = crate::runtime::vm::Machine::new(&mut heap, &chunk);
             vm.interpret(&mut heap).ok().map(|_| {
                 println!("----- run {} executes -----", n);
             })
@@ -228,7 +228,7 @@ mod integration {
             println!("{}", crate::runtime::chunk::disassemble(&module, "idklol"));
         }
         let mut heap = crate::runtime::memory::Heap::default();
-        let mut vm = crate::runtime::vm2::Vm2::new(&mut heap, &module);
+        let mut vm = crate::runtime::vm::Machine::new(&mut heap, &module);
         println!("{:?}", vm.interpret(&mut heap).unwrap());
     }
 
@@ -272,7 +272,7 @@ mod integration {
             }
 
             let mut heap = crate::runtime::memory::Heap::default();
-            let mut vm = crate::runtime::vm2::Vm2::new(&mut heap, &module);
+            let mut vm = crate::runtime::vm::Machine::new(&mut heap, &module);
             // TODO
             //assert_eq!(vm.interpret(&mut heap).unwrap(), Constant::Integer(11));
         } else {
