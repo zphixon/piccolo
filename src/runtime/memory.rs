@@ -15,6 +15,10 @@ pub trait Object {
     fn type_name(&self) -> &'static str {
         "object"
     }
+
+    fn format(&self) -> String {
+        String::from("object")
+    }
 }
 
 impl fmt::Debug for dyn Object {

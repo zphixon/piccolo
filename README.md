@@ -55,17 +55,20 @@ fn main() {
 ### Design decisions that have been made
 * Explicit constructors using slightly modified syntax
     * `foo =: Foo(x=3, y=4)`
-    * Don't use the `new` keyword
+    * Don't use the `new` keyword?
 * String indexing
-    * `.len()` method that returns byte length
+    * `.byte_len()` method that returns byte length
     * `.egc_len()` method that returns extended grapheme cluster length
 * Explicit variable declaration
     * This avoids some nasty problems solved in Lua and Python by the disgusting
       `local`, `global`, and `nonlocal` keywords that I'd rather not have to deal with
 * Weak numeric types
     * Integer arithmetic existing alongside float propagation
+* Coroutines
+    * `yield` keyword
 
 ### Design decisions still to be made
+* Multithreading
 * How inter-operation will exist
     * `Object` trait needs to be fleshed out some more, they will likely
       need access to the `Machine` instance

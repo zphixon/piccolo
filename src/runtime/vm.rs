@@ -9,7 +9,7 @@ use crate::runtime::chunk::Module;
 use fnv::FnvHashMap;
 
 // value2 {{{
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum Value2 {
     Bool(bool),
     Integer(i64),
@@ -17,6 +17,7 @@ pub enum Value2 {
     String(Gc<String>),
     Function(Gc<Function>),
     NativeFunction(Gc<NativeFunction>),
+    Object(Gc<dyn Object>),
     Nil,
 }
 
@@ -54,6 +55,19 @@ impl Value2 {
         }
     }
 
+    pub fn into_constant(self) -> Constant {
+        match self {
+            Value2::Bool(v) => Constant::Bool(v),
+            Value2::Integer(v) => Constant::Integer(v),
+            Value2::Double(v) => Constant::Double(v),
+            Value2::String(v) => Constant::String(String::clone(&*v)),
+            Value2::Function(_) => Constant::Nil,
+            Value2::NativeFunction(_) => Constant::Nil,
+            Value2::Object(_) => Constant::Nil,
+            Value2::Nil => Constant::Nil,
+        }
+    }
+
     pub fn into<T>(self) -> T
     where
         Value2: Into<T>,
@@ -79,6 +93,18 @@ impl Value2 {
 
     pub fn is_function(&self) -> bool {
         matches!(self, Value2::Function(_))
+    }
+
+    pub fn is_native_function(&self) -> bool {
+        matches!(self, Value2::NativeFunction(_))
+    }
+
+    pub fn as_native_function(&self) -> Gc<NativeFunction> {
+        assert!(self.is_native_function());
+        match self {
+            Value2::NativeFunction(f) => *f,
+            _ => panic!(),
+        }
     }
 
     pub fn is_nil(&self) -> bool {
@@ -155,6 +181,7 @@ impl Object for Value2 {
             Value2::String(v) => v.trace(),
             Value2::Function(v) => v.trace(),
             Value2::NativeFunction(v) => v.trace(),
+            Value2::Object(v) => v.trace(),
             Value2::Nil => {}
         }
     }
@@ -167,6 +194,7 @@ impl Object for Value2 {
             Value2::String(v) => v.type_name(),
             Value2::Function(v) => v.type_name(),
             Value2::NativeFunction(v) => v.type_name(),
+            Value2::Object(v) => v.type_name(),
             Value2::Nil => "nil",
         }
     }
@@ -181,6 +209,7 @@ impl std::fmt::Display for Value2 {
             Value2::String(v) => write!(f, "{}", v),
             Value2::Function(v) => write!(f, "{}", v),
             Value2::NativeFunction(v) => write!(f, "{}", v),
+            Value2::Object(v) => write!(f, "{}", v.format()),
             Value2::Nil => write!(f, "nil"),
         }
     }
@@ -236,19 +265,44 @@ pub struct Machine<'a> {
     globals: UniqueRoot<FnvHashMap<String, Value2>>,
 }
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(Copy, Clone)]
 enum VmState {
     Continue,
-    Stop,
+    Stop(Value2),
 }
 
 impl<'a> Machine<'a> {
     pub fn new(heap: &mut Heap, module: &'a Module) -> Self {
+        let mut globals = heap.manage_unique(FnvHashMap::default());
+
+        // TODO make this nicer
+        globals.insert(
+            String::from("print"),
+            Value2::NativeFunction({
+                heap.manage(NativeFunction {
+                    arity: 0,
+                    name: "print".to_string(),
+                    function: |values| {
+                        let mut s = String::new();
+                        for (i, value) in values.iter().enumerate() {
+                            s.push_str(&format!("{}", value));
+                            if i != values.len() {
+                                s.push('\t');
+                            }
+                        }
+                        println!("{}", s);
+                        Value2::Nil
+                    },
+                })
+                .as_gc()
+            }),
+        );
+
         Machine {
             module,
             frames: Vec::new(),
             stack: heap.manage_unique(Vec::new()),
-            globals: heap.manage_unique(FnvHashMap::default()),
+            globals,
         }
     }
 
@@ -281,7 +335,7 @@ impl<'a> Machine<'a> {
         self.push(Value2::String(root.as_gc()));
     }
 
-    pub fn interpret(&mut self, heap: &mut Heap) -> Result<(), PiccoloError> {
+    pub fn interpret(&mut self, heap: &mut Heap) -> Result<Value2, PiccoloError> {
         // :)
         //let f = heap.manage(Function::new(0, String::new(), 0));
         //self.push(Value2::Function(f.as_gc()));
@@ -292,19 +346,21 @@ impl<'a> Machine<'a> {
             chunk: &self.module.chunk(0),
         });
 
-        while self
-            .interpret_next_instruction(heap)
-            .map_err(|e| e.line(self.current_line()))?
-            == VmState::Continue
-        {}
-
-        Ok(())
+        loop {
+            match self
+                .interpret_next_instruction(heap)
+                .map_err(|e| e.line(self.current_line()))?
+            {
+                VmState::Continue => {}
+                VmState::Stop(value) => return Ok(value),
+            }
+        }
     }
 
     fn interpret_next_instruction(&mut self, heap: &mut Heap) -> Result<VmState, PiccoloError> {
         // TODO: move to Opcode::Return
         if self.current_ip() + 1 > self.current_chunk().len() {
-            return Ok(VmState::Stop);
+            return Ok(VmState::Stop(Value2::Nil));
         }
 
         // debug {{{
@@ -418,15 +474,20 @@ impl<'a> Machine<'a> {
             Opcode::Pop => {
                 if self.current_ip() == self.current_chunk().len() {
                     trace!("last instruction pop");
-                    // TODO
-                    //let value = self.pop();
-                    return Ok(VmState::Stop);
+                    let value = self.pop();
+                    return Ok(VmState::Stop(value));
                 }
                 self.pop();
             }
             Opcode::Return => {
-                let v = self.pop();
-                println!("{}", v);
+                let result = self.pop();
+                let frame = self.frames.pop().unwrap();
+                // close upvalues
+                self.stack.truncate(frame.base);
+                if self.frames.len() == 0 {
+                    return Ok(VmState::Stop(result));
+                }
+                self.push(result);
             }
             Opcode::Constant => {
                 let c = self.read_constant();
@@ -544,7 +605,7 @@ impl<'a> Machine<'a> {
             } // }}}
 
             Opcode::GetLocal => {
-                let slot = self.read_short() as LocalSlotIndex;
+                let slot = self.read_short() as usize + self.current_frame().base;
                 self.push(self.stack[slot as usize].clone());
             }
             Opcode::SetLocal => {
@@ -657,6 +718,13 @@ impl<'a> Machine<'a> {
                         base: (self.stack.len() as u16 - arity - 1) as usize,
                         chunk: self.module.chunk(f.chunk()),
                     })
+                } else if let Value2::NativeFunction(f) = self.peek() {
+                    let f = self.pop().as_native_function();
+                    let mut args = vec![];
+                    for _ in 0..arity {
+                        args.insert(0, self.pop());
+                    }
+                    self.push((f.function)(&args));
                 }
             }
 

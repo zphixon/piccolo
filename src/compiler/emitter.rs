@@ -635,13 +635,15 @@ pub struct Emitter {
 
 impl Emitter {
     pub fn new() -> Self {
-        Self {
+        let mut r = Self {
             module: Module::new(),
             children: vec![EmitterContext::default()],
             global_identifiers: FnvHashMap::default(),
             continue_offsets: vec![],
             break_offsets: vec![],
-        }
+        };
+        let _ = r.make_global_ident(&Token::new(TokenKind::Identifier, "print", 0));
+        r
     }
 
     fn current_context(&self) -> &EmitterContext {

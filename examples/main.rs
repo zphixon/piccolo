@@ -66,8 +66,11 @@ fn main() {
         //}
         } else if matches.is_present("string") {
             let src = matches.value_of("string").unwrap();
-            if let Err(errors) = piccolo::interpret(&src) {
-                print_errors(errors);
+            match piccolo::interpret(&src) {
+                Ok(v) => {
+                    println!("{:?}", v);
+                }
+                Err(errors) => print_errors(errors),
             }
         } else {
             let src = PathBuf::from(matches.value_of("src").unwrap());
@@ -107,9 +110,7 @@ fn repl() {
 
                 match piccolo::interpret(&line) {
                     Ok(v) => {
-                        if v != Constant::Nil {
-                            println!("{:?}", v);
-                        }
+                        println!("{:?}", v);
                     }
                     Err(errors) => print_errors(errors),
                 }

@@ -51,10 +51,14 @@ impl Module {
         self.chunks.push(Chunk::default());
         self.chunks.len() - 1
     }
+
+    pub(crate) fn index_of(&self, chunk: &Chunk) -> ChunkIndex {
+        self.chunks.iter().position(|c| c == chunk).unwrap()
+    }
 }
 
 /// Stores a piece of compiled Piccolo bytecode.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq)]
 pub struct Chunk {
     pub(crate) data: Vec<u8>,
     pub(crate) lines: Vec<Line>,
