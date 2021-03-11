@@ -335,7 +335,11 @@ fn compile_fn(
         emitter.make_variable(arg)?;
     }
 
-    compile_block(emitter, end, body)?;
+    // don't use compile_block because we've already started a new scope
+    for stmt in body {
+        compile_stmt(emitter, stmt)?;
+    }
+
     emitter.add_instruction(Opcode::Nil, end.line);
     emitter.add_instruction(Opcode::Return, end.line);
 
@@ -550,7 +554,11 @@ fn compile_lambda(
         emitter.make_variable(arg)?;
     }
 
-    compile_block(emitter, end, body)?;
+    for stmt in body {
+        // don't use compile_block because we've already started a new scope
+        compile_stmt(emitter, stmt)?;
+    }
+
     emitter.add_instruction(Opcode::Nil, end.line);
     emitter.add_instruction(Opcode::Return, end.line);
 
@@ -751,6 +759,7 @@ impl Emitter {
             if let Some(index) = self.current_context().get_local_depth(name) {
                 // if we do,
                 if index != self.current_context().scope_depth() {
+                    trace!("{} new local in sub-scope {}", name.line, name.lexeme);
                     // create a new local if we're in a different scope
                     self.current_context_mut().add_local(name);
                 } else {
@@ -763,10 +772,12 @@ impl Emitter {
                         )));
                 }
             } else {
+                trace!("{} new local {}", name.line, name.lexeme);
                 // if we don't, create a new local with this name
                 self.current_context_mut().add_local(name);
             }
         } else {
+            trace!("{} new global {}", name.line, name.lexeme);
             // yes, make a global
             let index = self.make_global_ident(name);
             self.add_instruction_arg(Opcode::DeclareGlobal, index, name.line);
