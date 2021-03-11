@@ -213,7 +213,7 @@ impl<T: 'static + Object + ?Sized> Deref for Gc<T> {
 impl<T: fmt::Debug + 'static + Object + ?Sized> fmt::Debug for Gc<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner: &T = &*self;
-        write!(f, "Gc({:?})", inner)
+        write!(f, "{:?}", inner)
     }
 }
 

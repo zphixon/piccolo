@@ -376,11 +376,13 @@ impl<'a> Machine<'a> {
 
             Opcode::GetLocal => {
                 let slot = self.read_short() as usize + self.current_frame().base;
-                self.push(self.stack[slot as usize].clone());
+                debug!("get local slot {}", slot);
+                self.push(self.stack[slot].clone());
             }
             Opcode::SetLocal => {
-                let slot = self.read_short() as LocalSlotIndex;
-                self.stack[slot as usize] = self.pop();
+                let slot = self.read_short() as usize + self.current_frame().base;
+                debug!("set local slot {}", slot);
+                self.stack[slot] = self.pop();
             }
             Opcode::GetGlobal => {
                 let constant = self.read_constant();
@@ -488,6 +490,11 @@ impl<'a> Machine<'a> {
                         }));
                     }
 
+                    debug!(
+                        "go to chunk {} base {}",
+                        f.chunk(),
+                        self.stack.len() as u16 - 1 - arity
+                    );
                     self.frames.push(Frame {
                         name: f.name().to_string(),
                         ip: 0,
