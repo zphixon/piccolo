@@ -14,7 +14,7 @@ declare -> ident '=:' expression
 
 break -> 'break'
 continue -> 'continue'
-retn -> 'retn' expression
+retn -> 'retn' [expression]
 assert -> 'assert' expression
 
 block -> 'do' {statement} 'end'

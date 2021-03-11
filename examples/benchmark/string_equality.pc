@@ -14,7 +14,7 @@ i =: 0
 while i < 100000 do
   i = i + 1
   if i % 1000 == 0 do
-    retn "loop1 " + i
+    print("loop1 " + i)
   end
 
   a1 a1 a1 a2 a1 a3 a1 a4 a1 a5 a1 a6 a1 a7 a1 a8
@@ -107,7 +107,7 @@ while i < 100000 do
   a7 a1 a7 a2 a7 a3 a7 a4 a7 a5 a7 a6 a7 a7 a7 a8
   a8 a1 a8 a2 a8 a3 a8 a4 a8 a5 a8 a6 a8 a7 a8 a8
 end
-retn "part 1 done"
+print("part 1 done")
 
 #var loopTime = clock() - loopStart;
 
@@ -117,7 +117,7 @@ i = 0
 while i < 100000 do
   i = i + 1
   if i % 1000 == 0 do
-    retn "loop2 " + i
+    print("loop2 " + i)
   end
 
   #/ 1 == 1; 1 == 2; 1 == nil; 1 == "str"; 1 == true;
