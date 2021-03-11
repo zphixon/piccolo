@@ -509,6 +509,12 @@ impl<'a> Machine<'a> {
                     }
                     let f = self.pop().as_native_function();
                     self.push((f.function)(&args));
+                } else {
+                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        exp: "fn".to_owned(),
+                        got: self.peek_back(arity as usize).type_name().to_owned(),
+                        op,
+                    }));
                 }
             }
 
