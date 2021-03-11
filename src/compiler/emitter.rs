@@ -542,6 +542,10 @@ fn compile_lambda(
     emitter.begin_context();
     emitter.begin_scope();
 
+    // ??? since recursion is a hack we need a fake local so that the slots are all correct
+    emitter
+        .current_context_mut()
+        .add_local(&Token::new(TokenKind::Fn, "", fn_.line));
     for arg in args {
         emitter.make_variable(arg)?;
     }

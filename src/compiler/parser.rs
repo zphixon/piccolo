@@ -97,7 +97,12 @@ fn parse_retn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     trace!("retn");
 
     let retn = scanner.next_token()?;
-    let value = Some(parse_expression(scanner)?);
+
+    let value = if scanner.peek_token(0)?.kind == TokenKind::End {
+        None
+    } else {
+        Some(parse_expression(scanner)?)
+    };
 
     Ok(Stmt::Retn { retn, value })
 }
