@@ -1,0 +1,10 @@
+a =: "outer"
+do
+  fn foo() do
+    print(a)
+  end
+
+  foo()
+  a =: "inner"
+  foo() # should be outer
+end
