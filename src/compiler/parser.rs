@@ -197,18 +197,9 @@ fn parse_fn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     scanner.next_token()?;
     let name = consume(scanner, TokenKind::Identifier)?;
 
-    let mut arity = 0;
-    let mut args = Vec::new();
     consume(scanner, TokenKind::LeftParen)?;
-    while scanner.peek_token(0)?.kind != TokenKind::RightParen {
-        args.push(consume(scanner, TokenKind::Identifier)?);
-        arity += 1;
-        if scanner.peek_token(0)?.kind != TokenKind::RightParen
-            && scanner.peek_token(1)?.kind == TokenKind::Identifier
-        {
-            consume(scanner, TokenKind::Comma)?;
-        }
-    }
+    let args = parse_parameters(scanner)?;
+    let arity = args.len();
     consume(scanner, TokenKind::RightParen)?;
 
     consume(scanner, TokenKind::Do)?;
