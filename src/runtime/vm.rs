@@ -1,6 +1,6 @@
 use crate::{
-    Chunk, ChunkOffset, Constant, ErrorKind, Heap, Line, LocalSlotIndex, Module, NativeFunction,
-    Object, Opcode, PiccoloError, UniqueRoot, Value,
+    Chunk, ChunkOffset, Constant, ErrorKind, Function, Heap, Line, LocalSlotIndex, Module,
+    NativeFunction, Object, Opcode, PiccoloError, Root, UniqueRoot, Value,
 };
 
 use fnv::FnvHashMap;
@@ -10,6 +10,7 @@ pub struct Frame<'a> {
     ip: ChunkOffset,
     base: ChunkOffset,
     chunk: &'a Chunk,
+    function: Root<Function>,
     //closure: Root<Closure>,
 }
 
@@ -100,7 +101,7 @@ impl<'a> Machine<'a> {
 
     pub fn interpret(&mut self, heap: &mut Heap) -> Result<Value, PiccoloError> {
         // :)
-        //let f = heap.manage(Function::new(0, String::new(), 0));
+        let f = heap.manage(Function::new(0, String::new(), 0));
         //self.push(Value::Function(f.as_gc()));
 
         self.frames.push(Frame {
@@ -108,6 +109,7 @@ impl<'a> Machine<'a> {
             base: 0,
             ip: 0,
             chunk: &self.module.chunk(0),
+            function: f,
         });
 
         loop {
@@ -476,14 +478,15 @@ impl<'a> Machine<'a> {
                 // using the chunk index from the function value, change current frame to be in the chunk specified
                 // basically push a call frame whose chunk is the chunk_index of the function
                 // match function kind
-                if let Value::Function(_) = self.peek() {
-                    let f = self.pop().as_function(); // TODO???
+                if let Value::Function(f) = self.peek() {
+                    //let f = self.pop().as_function(); // TODO???
                     self.frames.push(Frame {
                         name: f.name().to_string(),
                         ip: 0,
                         base: (self.stack.len() as u16 - arity - 1) as usize,
                         chunk: self.module.chunk(f.chunk()),
-                    })
+                        function: heap.root(*f),
+                    });
                 } else if let Value::NativeFunction(_) = self.peek() {
                     let f = self.pop().as_native_function();
                     let mut args = vec![];

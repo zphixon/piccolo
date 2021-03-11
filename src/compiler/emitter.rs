@@ -311,6 +311,7 @@ fn compile_fn(
     _method: bool,
     end: &Token,
 ) -> Result<(), PiccoloError> {
+    trace!("{} fn {}", name.line, name.lexeme);
     // declare variable w emitter & identifier
     //      if the compiler is scoped (current context locals scope depth > 0), and has a local in scope with that name, error
     //      otherwise add local
@@ -344,7 +345,7 @@ fn compile_fn(
     emitter.begin_scope();
 
     // will always be local
-    emitter.make_variable(name)?;
+    //emitter.make_variable(name)?;
     for arg in args {
         emitter.make_variable(arg)?;
     }
@@ -535,6 +536,7 @@ fn compile_call(
     arity: usize,
     args: &[Expr],
 ) -> Result<(), PiccoloError> {
+    trace!("{} call", paren.line);
     for arg in args {
         compile_expr(emitter, arg)?;
     }
@@ -551,6 +553,7 @@ fn compile_lambda(
     body: &[Stmt],
     end: &Token,
 ) -> Result<(), PiccoloError> {
+    trace!("{} lambda", fn_.line);
     emitter.begin_context();
     emitter.begin_scope();
 
@@ -785,11 +788,13 @@ impl Emitter {
 
     fn begin_context(&mut self) {
         let index = self.module.add_chunk();
+        trace!("begin context {}", index);
         self.children.push(EmitterContext::new(index));
     }
 
     fn end_context(&mut self) -> ChunkIndex {
         let context = self.children.pop().unwrap();
+        trace!("end context {}", self.children.len());
         context.chunk_index
     }
 
