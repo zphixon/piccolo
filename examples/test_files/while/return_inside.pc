@@ -1,0 +1,8 @@
+fn f() do
+  while true do
+    i =: "i"
+    retn i
+  end
+end
+
+assert f() == "i"

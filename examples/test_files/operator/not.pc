@@ -1,0 +1,9 @@
+assert !false
+assert !!true
+
+assert !nil
+
+assert !!""
+
+fn foo() do end
+print !foo
