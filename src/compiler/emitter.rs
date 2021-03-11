@@ -385,6 +385,8 @@ fn compile_retn(
 
     if let Some(expr) = expr {
         compile_expr(emitter, expr)?;
+    } else {
+        emitter.add_instruction(Opcode::Nil, retn.line);
     }
 
     emitter.add_instruction(Opcode::Return, retn.line);
