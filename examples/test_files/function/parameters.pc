@@ -1,0 +1,26 @@
+fn f0() do retn 0 end
+assert 0 == f0()
+
+fn f1(a) do retn a end
+assert 1 == f1(1)
+
+fn f2(a, b) do retn a + b end
+assert 3 == f2(1, 2)
+
+fn f3(a, b, c) do retn a + b + c end
+assert 6 == f3(1, 2, 3)
+
+fn f4(a, b, c, d) do retn a + b + c + d end
+assert 10 == f4(1, 2, 3, 4)
+
+fn f5(a, b, c, d, e) do retn a + b + c + d + e end
+assert 15 == f5(1, 2, 3, 4, 5)
+
+fn f6(a, b, c, d, e, f) do retn a + b + c + d + e + f end
+assert 21 == f6(1, 2, 3, 4, 5, 6)
+
+fn f7(a, b, c, d, e, f, g) do retn a + b + c + d + e + f + g end
+assert 28 == f7(1, 2, 3, 4, 5, 6, 7)
+
+fn f8(a, b, c, d, e, f, g, h) do retn a + b + c + d + e + f + g + h end
+assert 36 == f8(1, 2, 3, 4, 5, 6, 7, 8)

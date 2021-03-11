@@ -1,0 +1,8 @@
+do
+  fn fib(n) do
+    if n < 2 do retn n end
+    retn fib(n - 1) + fib(n - 2)
+  end
+
+  assert fib(8) == 21
+end
