@@ -82,6 +82,10 @@ impl<'a> Machine<'a> {
         &self.stack[self.stack.len() - 1]
     }
 
+    fn peek_back(&self, len: usize) -> &Value {
+        &self.stack[self.stack.len() - 1 - len]
+    }
+
     fn read_short(&mut self) -> u16 {
         let s = self.current_chunk().read_short(self.current_ip());
         self.current_frame_mut().ip += 2;
@@ -475,11 +479,15 @@ impl<'a> Machine<'a> {
 
             Opcode::Call => {
                 let arity = self.read_short();
-                // using the chunk index from the function value, change current frame to be in the chunk specified
-                // basically push a call frame whose chunk is the chunk_index of the function
-                // match function kind
-                if let Value::Function(f) = self.peek() {
-                    //let f = self.pop().as_function(); // TODO???
+                if let Value::Function(f) = self.peek_back(arity as usize) {
+                    if *f.arity() != arity as usize {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectArity {
+                            name: f.name().to_owned(),
+                            exp: *f.arity(),
+                            got: arity as usize,
+                        }));
+                    }
+
                     self.frames.push(Frame {
                         name: f.name().to_string(),
                         ip: 0,
@@ -487,12 +495,12 @@ impl<'a> Machine<'a> {
                         chunk: self.module.chunk(f.chunk()),
                         function: heap.root(*f),
                     });
-                } else if let Value::NativeFunction(_) = self.peek() {
-                    let f = self.pop().as_native_function();
+                } else if let Value::NativeFunction(_) = self.peek_back(arity as usize) {
                     let mut args = vec![];
                     for _ in 0..arity {
                         args.insert(0, self.pop());
                     }
+                    let f = self.pop().as_native_function();
                     self.push((f.function)(&args));
                 }
             }

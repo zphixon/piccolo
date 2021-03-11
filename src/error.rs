@@ -132,6 +132,11 @@ pub enum ErrorKind {
         assertion: String,
     },
     SyntaxError,
+    IncorrectArity {
+        name: String,
+        exp: usize,
+        got: usize,
+    },
 }
 
 #[rustfmt::skip]
@@ -170,6 +175,8 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Assertion failed: {}", assertion),
             ErrorKind::SyntaxError
                 => write!(f, "Syntax error"),
+            ErrorKind::IncorrectArity { name, exp, got }
+                => write!(f, "Incorrect arity: function {} expected {} arguments, got {}", name, exp, got),
         }
     }
 }

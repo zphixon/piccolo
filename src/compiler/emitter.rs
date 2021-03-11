@@ -312,40 +312,25 @@ fn compile_fn(
     end: &Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} fn {}", name.line, name.lexeme);
-    // declare variable w emitter & identifier
-    //      if the compiler is scoped (current context locals scope depth > 0), and has a local in scope with that name, error
-    //      otherwise add local
-    //          get current context locals, insert identifier
-    // if compiler is scoped
-    //      mark local as initialized
-    //          current context locals top local set initialized true
-    // compile closure w information from above
-    // inside new compiler context scoped
-    //      declare & define each argument, local, so just initialize
-    //      compile block with current new context
-    //      add a return instruction I suppose
-    // make a new Function using the info and chunk index from the scoped context
-    // make a new Closure with upvalues from the scoped context
-    // add a constant function/closure
-    // add a constant instruction
-    if let Some(_) = emitter.current_context().get_local_slot(name) {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .line(name.line)
-            .msg_string(format!(
-                "Function/variable with name '{}' already exists",
-                name.lexeme
-            )));
-    } else if emitter.current_context().is_local() {
-        emitter.make_variable(name)?;
-    } else if !emitter.current_context().is_local() {
-        emitter.make_global_ident(name);
-    }
+
+    //if let Some(_) = emitter.current_context().get_local_slot(name) {
+    //    return Err(PiccoloError::new(ErrorKind::SyntaxError)
+    //        .line(name.line)
+    //        .msg_string(format!(
+    //            "Function/variable with name '{}' already exists",
+    //            name.lexeme
+    //        )));
+    //} else if emitter.current_context().is_local() {
+    //    emitter.make_variable(name)?;
+    //} else if !emitter.current_context().is_local() {
+    //    emitter.make_global_ident(name);
+    //}
 
     emitter.begin_context();
     emitter.begin_scope();
 
     // will always be local
-    //emitter.make_variable(name)?;
+    emitter.make_variable(name)?;
     for arg in args {
         emitter.make_variable(arg)?;
     }
@@ -361,10 +346,10 @@ fn compile_fn(
     let constant = emitter.make_constant(Constant::Function(function));
     emitter.add_instruction_arg(Opcode::Constant, constant, name.line);
 
-    if !emitter.current_context().is_local() {
-        // make_variable doesn't check if a global exists before declaring it
-        emitter.make_variable(name)?;
-    }
+    //if !emitter.current_context().is_local() {
+    // make_variable doesn't check if a global exists before declaring it
+    emitter.make_variable(name)?;
+    //}
 
     Ok(())
 }
@@ -537,10 +522,10 @@ fn compile_call(
     args: &[Expr],
 ) -> Result<(), PiccoloError> {
     trace!("{} call", paren.line);
+    compile_expr(emitter, callee)?;
     for arg in args {
         compile_expr(emitter, arg)?;
     }
-    compile_expr(emitter, callee)?;
     emitter.add_instruction_arg(Opcode::Call, arity as u16, paren.line);
     Ok(())
 }
@@ -567,7 +552,7 @@ fn compile_lambda(
 
     let chunk_index = emitter.end_context();
 
-    let function = Function::new(arity, fn_.lexeme.to_owned(), chunk_index);
+    let function = Function::new(arity, String::from("<anon>"), chunk_index);
 
     let constant = emitter.make_constant(Constant::Function(function));
     emitter.add_instruction_arg(Opcode::Constant, constant, fn_.line);

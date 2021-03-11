@@ -39,7 +39,7 @@ pub struct Function {
 
 impl fmt::Debug for Function {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<fn {}>", self.name)
+        write!(f, "Fn({:?}, {})", self.name, self.chunk)
     }
 }
 
