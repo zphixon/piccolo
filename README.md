@@ -8,49 +8,16 @@ This branch is a bytecode interpreter rewrite of the previous AST-walking versio
 
 ## Notes
 
-The design of Piccolo has some interesting lifetime challenges. For example, the
-program below has a complex interweaving of lifetimes that isn't statically verifiable
-by the Rust borrow checker. There must exist some value type that can represent a
-pointer to either the chunk's constant table or the virtual machine's heap.
-
-```rust
-fn main() {
-    // lifetime 'src
-
-    piccolo::interpret(r#"
-        # lifetime 'prog
-
-        fn closes() do
-            # let x: &'src str = "hello "; // a.k.a 'static
-            # let y: &'src str = "world!"; // a.k.a 'static
-            x =: "hello "
-            y =: "world!"
-
-            # let z: &'prog str = heap.insert(format!("{}{}", x, y));
-            z =: x + y
-
-            # "print", "z" -> &'src str (reference to String in chunk)
-            # "hello world!" -> &'prog str (reference to String in heap)
-            # `z` on the stack should be a reference to its contents
-            print(z)
-
-            # let a: &'src str = "whee";
-            # `a` is a reference to a value that exists in the chunk
-            a =: "whee"
-
-            # `closure` is a reference to a function object stored in the heap
-            # closing over `a` should copy the value into the heap and add it
-            # to the `upvalues` list of `closure`
-            fn closure() do
-                a = a + "!"
-                retn a
-            end
-
-            retn closure
-        end
-    "#);
-}
-```
+* `Gc` is an internal-use-only type that unfortunately we have to expose to library users.
+  It is possible to introduce use-after-free errors with `Gc` if the `Heap` is dropped, since its
+  lifetime is not bound in any way to `Heap.`
+    * We could possibly solve this with a `PhantomData` to bind `Gc`/`Root`/`UniqueRoot` to the
+      lifetime of `Heap`? I would need to do more reading/thinking/testing to make sure this would work.
+      But, a `PhantomData` would spread a lifetime all around the codebase, reducing ergonomics.
+* We need a way to allow users to put objects in and take objects out of the interpreter
+  in a way that doesn't trigger this use-after-free.
+    * Add a lifetime parameter for `Constant`? Again it would spread a lifetime parameter around
+      the codebase, but possibly less so than adding one to `Gc`.
 
 ### Design decisions that have been made
 * Explicit constructors using slightly modified syntax
