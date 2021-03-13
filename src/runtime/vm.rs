@@ -22,17 +22,32 @@ impl Frame<'_> {
     }
 }
 
+type PiccoloFunction = fn(&[Value]) -> Value;
+
 pub struct Machine<'a> {
     module: &'a Module,
     frames: Vec<Frame<'a>>,
     stack: UniqueRoot<Vec<Value>>,
     globals: UniqueRoot<FnvHashMap<String, Value>>,
+    native_functions: FnvHashMap<String, PiccoloFunction>,
 }
 
 #[derive(Copy, Clone)]
 enum VmState {
     Continue,
     Stop(Value),
+}
+
+fn print(values: &[Value]) -> Value {
+    let mut s = String::new();
+    for (i, value) in values.iter().enumerate() {
+        s.push_str(&format!("{}", value));
+        if i != values.len() {
+            s.push('\t');
+        }
+    }
+    println!("{}", s);
+    Value::Nil
 }
 
 impl<'a> Machine<'a> {
@@ -46,27 +61,20 @@ impl<'a> Machine<'a> {
                 heap.manage(NativeFunction {
                     arity: 0,
                     name: "print".to_string(),
-                    function: |values| {
-                        let mut s = String::new();
-                        for (i, value) in values.iter().enumerate() {
-                            s.push_str(&format!("{}", value));
-                            if i != values.len() {
-                                s.push('\t');
-                            }
-                        }
-                        println!("{}", s);
-                        Value::Nil
-                    },
                 })
                 .as_gc()
             }),
         );
+
+        let mut native_functions = FnvHashMap::default();
+        native_functions.insert(String::from("print"), print as PiccoloFunction);
 
         Machine {
             module,
             frames: Vec::new(),
             stack: heap.manage_unique(Vec::new()),
             globals,
+            native_functions,
         }
     }
 
@@ -508,7 +516,7 @@ impl<'a> Machine<'a> {
                         args.insert(0, self.pop());
                     }
                     let f = self.pop().as_native_function();
-                    self.push((f.function)(&args));
+                    self.push(self.native_functions[&f.name](&args));
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "fn".to_owned(),

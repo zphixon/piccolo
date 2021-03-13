@@ -68,7 +68,6 @@ impl Object for Function {
 pub struct NativeFunction {
     pub(crate) arity: usize,
     pub(crate) name: String,
-    pub(crate) function: fn(&[Value]) -> Value,
 }
 
 impl Object for NativeFunction {
