@@ -242,24 +242,8 @@ impl<T: 'static + Object + ?Sized> Root<T> {
         unsafe { &self.ptr.as_ref() }
     }
 
-    // TODO: this might allow accidental copying of stuff we didn't want to copy...
     pub(crate) fn as_gc(&self) -> Gc<T> {
-        self.as_allocation().root();
         Gc { ptr: self.ptr }
-    }
-
-    // TODO: remove? allows some weird stuff combined with as_gc, necessitating a call to root
-    /// Upgrade to a unique root.
-    ///
-    /// Panics if there is more than one root around.
-    pub fn upgrade(self) -> UniqueRoot<T> {
-        assert_eq!(
-            1,
-            self.as_allocation().header.roots.load(Ordering::Relaxed),
-            "cannot upgrade if there is more than one root"
-        );
-        self.as_allocation().root();
-        UniqueRoot { ptr: self.ptr }
     }
 }
 
@@ -367,6 +351,7 @@ impl<T: 'static + Object + ?Sized> Drop for UniqueRoot<T> {
 #[cfg(test)]
 mod test {
     use super::*;
+
     #[test]
     fn clean_up_roots() {
         let mut heap = Heap::default();
@@ -386,8 +371,7 @@ mod test {
         let mut heap = Heap::default();
 
         {
-            let root = heap.manage(String::new());
-            let mut _root = root.upgrade();
+            let root = heap.manage_unique(String::new());
         }
 
         assert_eq!(1, heap.objects());
@@ -406,24 +390,5 @@ mod test {
         }
 
         println!("{}", gc);
-        panic!();
-    }
-
-    #[test]
-    #[should_panic]
-    fn no_aliasing() {
-        use std::ptr;
-
-        let mut heap = Heap::default();
-        let root = heap.manage(String::new());
-
-        let gc = root.as_gc();
-        let mut unique = root.upgrade(); // panic
-
-        let borrow: &str = gc.as_ref();
-        let mut_borrow: &mut str = unique.as_mut();
-
-        // !!!
-        assert!(ptr::eq(borrow.as_ptr(), mut_borrow.as_ptr()));
     }
 }
