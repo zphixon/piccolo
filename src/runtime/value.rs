@@ -16,12 +16,6 @@ pub enum Value {
     Nil,
 }
 
-//impl std::fmt::Debug for Value2 {
-//    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-//        write!(f, "value2")
-//    }
-//}
-
 impl Value {
     /// A value is only false-y if it is of type bool and false, or of type nil.
     /// All other values are truth-y.
@@ -46,6 +40,10 @@ impl Value {
                 let root = h.manage(v);
                 root.as_gc()
             }),
+            Constant::NativeFunction(v) => Value::NativeFunction({
+                let root = h.manage(v);
+                root.as_gc()
+            }),
             Constant::Nil => Value::Nil,
         }
     }
@@ -56,9 +54,9 @@ impl Value {
             Value::Integer(v) => Constant::Integer(v),
             Value::Double(v) => Constant::Double(v),
             Value::String(v) => Constant::String(String::clone(&*v)),
-            Value::Function(_) => Constant::Nil,
-            Value::NativeFunction(_) => Constant::Nil,
-            Value::Object(_) => Constant::Nil,
+            Value::Function(v) => Constant::Function(v.deep_copy()),
+            Value::NativeFunction(v) => Constant::NativeFunction(v.deep_copy()),
+            Value::Object(_) => todo!(),
             Value::Nil => Constant::Nil,
         }
     }
@@ -257,6 +255,8 @@ pub enum Constant {
     Integer(i64),
     Double(f64),
     Function(Function),
+    NativeFunction(NativeFunction),
+    //Object(Box<dyn Object>), // TODO
     Nil,
 }
 
@@ -300,7 +300,8 @@ impl fmt::Display for Constant {
             Constant::Bool(v) => write!(f, "{}", v),
             Constant::Integer(v) => write!(f, "{}", v),
             Constant::Double(v) => write!(f, "{}", v),
-            Constant::Function(_) => todo!(),
+            Constant::Function(v) => write!(f, "{}", v),
+            Constant::NativeFunction(v) => write!(f, "{}", v),
             Constant::Nil => write!(f, "nil"),
         }
     }

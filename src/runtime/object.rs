@@ -4,6 +4,7 @@ use crate::{ChunkIndex, Object, Value};
 
 use core::fmt;
 
+#[derive(Clone)]
 pub struct NativeFunction {
     pub(crate) arity: usize,
     pub(crate) name: String,

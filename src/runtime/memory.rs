@@ -195,6 +195,12 @@ impl<T: 'static + Object + ?Sized> Gc<T> {
     }
 }
 
+impl<T: 'static + Object + Sized + Clone> Gc<T> {
+    pub fn deep_copy(&self) -> T {
+        self.as_allocation().data.clone()
+    }
+}
+
 impl<T: 'static + Object + ?Sized> Clone for Gc<T> {
     fn clone(&self) -> Gc<T> {
         *self
@@ -390,5 +396,19 @@ mod test {
         }
 
         println!("{}", gc);
+    }
+
+    #[test]
+    fn deep_copy() {
+        use std::cell::RefCell;
+
+        let mut heap = Heap::default();
+        let root = heap.manage(RefCell::new(String::from("din")));
+        let copy = root.as_gc().deep_copy();
+
+        root.borrow_mut().push_str("gus");
+
+        assert_eq!(root.borrow().as_str(), "dingus");
+        assert_eq!(copy.borrow().as_str(), "din");
     }
 }

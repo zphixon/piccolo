@@ -110,7 +110,7 @@ fn repl() {
 
                 match piccolo::interpret(&line) {
                     Ok(v) => {
-                        println!("{:?}", v);
+                        println!("{}", v);
                     }
                     Err(errors) => print_errors(errors),
                 }

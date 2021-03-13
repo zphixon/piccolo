@@ -53,8 +53,7 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
 
     debug!("interpret");
     let mut vm = runtime::vm::Machine::new(&mut heap, &module);
-    vm.interpret(&mut heap)?;
-    Ok(Constant::Nil)
+    Ok(vm.interpret(&mut heap)?.into_constant())
 }
 
 /// Reads a file and interprets its contents.
