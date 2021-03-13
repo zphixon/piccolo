@@ -22,8 +22,8 @@ pub mod prelude {
     pub use super::runtime::{
         chunk::Chunk,
         chunk::Module,
-        memory::{Gc, Heap, Object, Root, UniqueRoot},
-        object::{Function, NativeFunction},
+        memory::{Gc, Heap, Root, UniqueRoot},
+        object::{Function, NativeFunction, Object},
         op::Opcode,
         value::Constant,
         value::Value,

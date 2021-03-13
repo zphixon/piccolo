@@ -132,6 +132,14 @@ impl Value {
                 Value::String(r) => **l == **r,
                 _ => None?,
             },
+            Value::Function(l) => match other {
+                Value::Function(r) => **l == **r,
+                _ => None?,
+            },
+            Value::NativeFunction(l) => match other {
+                Value::NativeFunction(r) => **l == **r,
+                _ => None?,
+            },
             Value::Nil => match other {
                 Value::Nil => true,
                 _ => None?,

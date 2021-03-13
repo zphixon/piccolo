@@ -1,33 +1,19 @@
 //! Objects defined in Rust that may exist at runtime.
 
-use crate::{ChunkIndex, Object, Value};
+use crate::{ChunkIndex, Value};
 
 use core::fmt;
 
-#[derive(Clone)]
-pub struct NativeFunction {
-    pub(crate) arity: usize,
-    pub(crate) name: String,
-    pub(crate) function: fn(&[Value]) -> Value,
-}
-
-impl Object for NativeFunction {
-    fn trace(&self) {}
+/// Trait to trace objects for marking and sweeping.
+pub trait Object: std::fmt::Debug {
+    fn trace(&self);
 
     fn type_name(&self) -> &'static str {
-        "native_fn"
+        "object"
     }
-}
 
-impl fmt::Debug for NativeFunction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<native fn {}>", self.name)
-    }
-}
-
-impl fmt::Display for NativeFunction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+    fn format(&self) -> String {
+        String::from("object")
     }
 }
 
@@ -75,6 +61,41 @@ impl Object for Function {
 
     fn type_name(&self) -> &'static str {
         "fn"
+    }
+}
+
+#[derive(Clone)]
+pub struct NativeFunction {
+    pub(crate) arity: usize,
+    pub(crate) name: String,
+    pub(crate) function: fn(&[Value]) -> Value,
+}
+
+impl Object for NativeFunction {
+    fn trace(&self) {}
+
+    fn type_name(&self) -> &'static str {
+        "native_fn"
+    }
+
+    // TODO: eq/lt/gt
+}
+
+impl fmt::Debug for NativeFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<native fn {}>", self.name)
+    }
+}
+
+impl fmt::Display for NativeFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl PartialEq for NativeFunction {
+    fn eq(&self, other: &Self) -> bool {
+        self.arity == other.arity && self.name == other.name
     }
 }
 

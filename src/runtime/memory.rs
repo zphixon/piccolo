@@ -2,6 +2,8 @@
 //!
 //! Shamelessly copied from https://github.com/Darksecond/lox
 
+use crate::Object;
+
 use std::{
     cell::Cell,
     fmt,
@@ -9,19 +11,6 @@ use std::{
     ptr::NonNull,
     sync::atomic::{AtomicUsize, Ordering},
 };
-
-/// Trait to trace objects for marking and sweeping.
-pub trait Object: std::fmt::Debug {
-    fn trace(&self);
-
-    fn type_name(&self) -> &'static str {
-        "object"
-    }
-
-    fn format(&self) -> String {
-        String::from("object")
-    }
-}
 
 /// Allocation metadata for a GC object.
 #[derive(Debug, Default)]
