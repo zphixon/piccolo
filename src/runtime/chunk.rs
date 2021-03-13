@@ -2,7 +2,9 @@
 
 use crate::{Constant, Opcode};
 
-#[derive(Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Module {
     chunks: Vec<Chunk>,
     constants: Vec<Constant>,
@@ -54,7 +56,7 @@ impl Module {
 }
 
 /// Stores a piece of compiled Piccolo bytecode.
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Chunk {
     pub(crate) data: Vec<u8>,
     pub(crate) lines: Vec<usize>,

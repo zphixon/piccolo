@@ -4,6 +4,8 @@ use crate::Value;
 
 use core::fmt;
 
+use serde::{Deserialize, Serialize};
+
 /// Trait to trace objects for marking and sweeping.
 pub trait Object: std::fmt::Debug {
     fn trace(&self);
@@ -17,7 +19,7 @@ pub trait Object: std::fmt::Debug {
     }
 }
 
-#[derive(Default, Clone, PartialEq)]
+#[derive(Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Function {
     arity: usize,
     name: String,
@@ -64,7 +66,7 @@ impl Object for Function {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct NativeFunction {
     pub(crate) arity: usize,
     pub(crate) name: String,

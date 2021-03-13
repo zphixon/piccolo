@@ -6,7 +6,7 @@ use core::fmt;
 
 // TODO: impl Error for PiccoloError
 /// The main error-reporting struct.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PiccoloError {
     kind: ErrorKind,
     line: Option<usize>,
@@ -87,7 +87,7 @@ impl fmt::Display for PiccoloError {
 
 // TODO: split into scan, parse, compile, runtime errors
 /// Types of errors possible in Piccolo.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum ErrorKind {
     StackUnderflow {
         op: Opcode,
@@ -137,6 +137,9 @@ pub enum ErrorKind {
         exp: usize,
         got: usize,
     },
+    DeserializeError {
+        err: Box<bincode::ErrorKind>,
+    },
 }
 
 #[rustfmt::skip]
@@ -177,6 +180,8 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Syntax error"),
             ErrorKind::IncorrectArity { name, exp, got }
                 => write!(f, "Incorrect arity: function {} expected {} arguments, got {}", name, exp, got),
+            ErrorKind::DeserializeError { err }
+                => write!(f, "Cannot read binary file: {}", err),
         }
     }
 }
@@ -207,5 +212,11 @@ impl From<std::io::Error> for PiccoloError {
 impl From<PiccoloError> for Vec<PiccoloError> {
     fn from(e: PiccoloError) -> Vec<PiccoloError> {
         vec![e]
+    }
+}
+
+impl From<Box<bincode::ErrorKind>> for PiccoloError {
+    fn from(err: Box<bincode::ErrorKind>) -> PiccoloError {
+        PiccoloError::new(ErrorKind::DeserializeError { err })
     }
 }

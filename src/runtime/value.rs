@@ -4,6 +4,8 @@ use crate::{Function, Gc, Heap, NativeFunction, Object, PiccoloError, Token, Tok
 
 use core::fmt;
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Copy, Clone, Debug)]
 pub enum Value {
     Bool(bool),
@@ -256,7 +258,7 @@ impl Into<f64> for Value {
 /// Similar to [`Value`]. `Constant` is also used to return from Piccolo execution.
 ///
 /// [`Value`]: ../value/enum.Value.html
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Constant {
     String(String),
     Bool(bool),

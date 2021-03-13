@@ -11,6 +11,8 @@ This branch is a bytecode interpreter rewrite of the previous AST-walking versio
 * Function pointers can't be serialized. How would that even work?
     * In `Emitter`, map each function name to a number or index and create actual function pointer values
       at runtime.
+* `Object` trait objects can't be serialized either, meaning we probably need a third value type to be able
+  to return user data from the vm. `Constant` would then exist specifically for the binary format.
 * `Gc` is an internal-use-only type that unfortunately we have to expose to library users.
   It is possible to introduce use-after-free errors with `Gc` if the `Heap` is dropped, since its
   lifetime is not bound in any way to `Heap.`

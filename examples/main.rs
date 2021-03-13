@@ -52,18 +52,16 @@ fn main() {
         repl();
     } else {
         if matches.is_present("compile") {
-            todo!();
-        //let src = PathBuf::from(matches.value_of("src").unwrap());
-        //let out = PathBuf::from(matches.value_of("compile").unwrap());
-        //if let Err(errors) = piccolo::compile(&src, &out) {
-        //    print_errors(errors);
-        //}
+            let src = PathBuf::from(matches.value_of("src").unwrap());
+            let out = PathBuf::from(matches.value_of("compile").unwrap());
+            if let Err(errors) = piccolo::compile(&src, &out) {
+                print_errors(errors);
+            }
         } else if matches.is_present("bin") {
-            todo!();
-        //let src = PathBuf::from(matches.value_of("bin").unwrap());
-        //if let Err(errors) = piccolo::run_bin(&src) {
-        //    print_errors(errors);
-        //}
+            let src = PathBuf::from(matches.value_of("bin").unwrap());
+            if let Err(errors) = piccolo::run_bin(&src) {
+                print_errors(errors);
+            }
         } else if matches.is_present("string") {
             let src = matches.value_of("string").unwrap();
             match piccolo::interpret(&src) {

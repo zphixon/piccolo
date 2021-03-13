@@ -38,6 +38,8 @@ pub use compiler::{compile_chunk, scan_all};
 #[cfg(feature = "fuzzer")]
 pub use compiler::print_tokens;
 
+use std::path::Path;
+
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     debug!("parse");
     let ast = parse(&mut Scanner::new(src))?;
@@ -55,13 +57,36 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
 }
 
 /// Reads a file and interprets its contents.
-pub fn do_file(file: &std::path::Path) -> Result<Constant, Vec<PiccoloError>> {
+pub fn do_file(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
     let contents = std::fs::read_to_string(file).map_err(|e| vec![PiccoloError::from(e)])?;
     interpret(&contents).map_err(|v| {
         v.into_iter()
             .map(|e| e.file(file.to_str().unwrap().to_owned()))
             .collect()
     })
+}
+
+pub fn run_bin(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
+    let bytes = std::fs::read(file).map_err(|e| vec![PiccoloError::from(e)])?;
+    let module = bincode::deserialize(&bytes).map_err(|e| vec![PiccoloError::from(e)])?;
+
+    let mut heap = Heap::default();
+    let mut vm = runtime::vm::Machine::new(&mut heap, &module);
+    Ok(vm.interpret(&mut heap)?.into_constant())
+}
+
+pub fn compile(src: &Path, dst: &Path) -> Result<(), Vec<PiccoloError>> {
+    let src = std::fs::read_to_string(src).map_err(|e| vec![PiccoloError::from(e)])?;
+    let ast = parse(&mut Scanner::new(&src))?;
+    let module = crate::compiler::emitter::compile(&ast)?;
+
+    std::fs::write(
+        dst,
+        bincode::serialize(&module).map_err(|e| vec![PiccoloError::from(e)])?,
+    )
+    .map_err(|e| vec![PiccoloError::from(e)])?;
+
+    Ok(())
 }
 
 pub(crate) fn encode_bytes(low: u8, high: u8) -> u16 {
