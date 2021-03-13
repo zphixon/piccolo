@@ -1,14 +1,14 @@
 use crate::{
-    Chunk, ChunkOffset, Constant, ErrorKind, Function, Heap, Line, LocalSlotIndex, Module,
-    NativeFunction, Object, Opcode, PiccoloError, Root, UniqueRoot, Value,
+    Chunk, Constant, ErrorKind, Function, Heap, Module, NativeFunction, Object, Opcode,
+    PiccoloError, Root, UniqueRoot, Value,
 };
 
 use fnv::FnvHashMap;
 
 pub struct Frame<'a> {
     name: String,
-    ip: ChunkOffset,
-    base: ChunkOffset,
+    ip: usize,
+    base: usize,
     chunk: &'a Chunk,
     function: Root<Function>,
     //closure: Root<Closure>,
@@ -417,7 +417,7 @@ impl<'a> Machine<'a> {
             }
 
             Opcode::JumpForward => {
-                let offset = self.read_short() as ChunkOffset;
+                let offset = self.read_short() as usize;
 
                 debug!(
                     "jump ip {:x} -> {:x}",
@@ -427,7 +427,7 @@ impl<'a> Machine<'a> {
                 self.current_frame_mut().ip += offset;
             }
             Opcode::JumpFalse => {
-                let offset = self.read_short() as ChunkOffset;
+                let offset = self.read_short() as usize;
 
                 if !self.peek().is_truthy() {
                     debug!(
@@ -440,7 +440,7 @@ impl<'a> Machine<'a> {
                 }
             }
             Opcode::JumpTrue => {
-                let offset = self.read_short() as ChunkOffset;
+                let offset = self.read_short() as usize;
 
                 if self.peek().is_truthy() {
                     debug!(
@@ -453,7 +453,7 @@ impl<'a> Machine<'a> {
                 }
             }
             Opcode::JumpBack => {
-                let offset = self.read_short() as ChunkOffset;
+                let offset = self.read_short() as usize;
 
                 debug!(
                     "loop ip {:x} -> {:x}",
@@ -531,12 +531,12 @@ impl<'a> Machine<'a> {
         Ok(VmState::Continue)
     }
 
-    fn current_line(&self) -> Line {
+    fn current_line(&self) -> usize {
         self.current_chunk()
             .get_line_from_index(self.current_ip() - 1)
     }
 
-    fn current_ip(&self) -> ChunkOffset {
+    fn current_ip(&self) -> usize {
         self.current_frame().ip
     }
 

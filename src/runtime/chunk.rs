@@ -1,6 +1,6 @@
 //! Types for working with compiled Piccolo bytecode.
 
-use crate::{ChunkIndex, ChunkOffset, Constant, ConstantIndex, Line, Opcode};
+use crate::{Constant, Opcode};
 
 #[derive(Debug)]
 pub struct Module {
@@ -17,38 +17,38 @@ impl Module {
     }
 
     // allows for duplicate constants, non-duplicates are checked in the compiler
-    pub(crate) fn make_constant(&mut self, value: Constant) -> ConstantIndex {
+    pub(crate) fn make_constant(&mut self, value: Constant) -> u16 {
         trace!("make constant {:?}", value);
 
         self.constants.push(value);
         let index = self.constants.len() - 1;
-        if index > u16::MAX as ChunkOffset {
+        if index > u16::MAX as usize {
             panic!("too many constants (>65k, fix your program)");
         } else {
             index as u16
         }
     }
 
-    pub(crate) fn get_constant(&self, index: ConstantIndex) -> &Constant {
+    pub(crate) fn get_constant(&self, index: u16) -> &Constant {
         self.constants
             .get(index as usize)
             .unwrap_or_else(|| panic!("{} out of constant bounds", index))
     }
 
-    pub(crate) fn chunk(&self, i: ChunkIndex) -> &Chunk {
+    pub(crate) fn chunk(&self, i: usize) -> &Chunk {
         &self.chunks[i]
     }
 
-    pub(crate) fn chunk_mut(&mut self, i: ChunkIndex) -> &mut Chunk {
+    pub(crate) fn chunk_mut(&mut self, i: usize) -> &mut Chunk {
         &mut self.chunks[i]
     }
 
-    pub(crate) fn add_chunk(&mut self) -> ChunkIndex {
+    pub(crate) fn add_chunk(&mut self) -> usize {
         self.chunks.push(Chunk::default());
         self.chunks.len() - 1
     }
 
-    pub(crate) fn index_of(&self, chunk: &Chunk) -> ChunkIndex {
+    pub(crate) fn index_of(&self, chunk: &Chunk) -> usize {
         self.chunks.iter().position(|c| c == chunk).unwrap()
     }
 }
@@ -57,7 +57,7 @@ impl Module {
 #[derive(Default, Debug, PartialEq)]
 pub struct Chunk {
     pub(crate) data: Vec<u8>,
-    pub(crate) lines: Vec<Line>,
+    pub(crate) lines: Vec<usize>,
 }
 
 impl Chunk {
@@ -65,7 +65,7 @@ impl Chunk {
         self.data.len()
     }
 
-    pub(crate) fn write_u8<T: Into<u8>>(&mut self, byte: T, line: Line) {
+    pub(crate) fn write_u8<T: Into<u8>>(&mut self, byte: T, line: usize) {
         let byte = byte.into();
         trace!("write u8 {:04x}={:02x}", self.data.len(), byte);
 
@@ -73,18 +73,18 @@ impl Chunk {
         self.add_to_line(line);
     }
 
-    pub(crate) fn write_u16<T: Into<u16>>(&mut self, bytes: T, line: Line) {
+    pub(crate) fn write_u16<T: Into<u16>>(&mut self, bytes: T, line: usize) {
         let (low, high) = crate::decode_bytes(bytes.into());
         self.write_u8(low, line);
         self.write_u8(high, line);
     }
 
-    pub(crate) fn write_arg_u16<T: Into<u8>>(&mut self, op: T, arg: u16, line: Line) {
+    pub(crate) fn write_arg_u16<T: Into<u8>>(&mut self, op: T, arg: u16, line: usize) {
         self.write_u8(op, line);
         self.write_u16(arg, line);
     }
 
-    pub(crate) fn start_jump(&mut self, op: Opcode, line: Line) -> ChunkOffset {
+    pub(crate) fn start_jump(&mut self, op: Opcode, line: usize) -> usize {
         trace!("write jump to index {:x}", self.data.len());
         self.write_u8(op, line);
         self.write_u8(Opcode::Assert, line);
@@ -92,9 +92,9 @@ impl Chunk {
         self.data.len() - 2
     }
 
-    pub(crate) fn patch_jump(&mut self, offset: ChunkOffset) {
+    pub(crate) fn patch_jump(&mut self, offset: usize) {
         let jump = self.data.len() - offset - 2;
-        if jump > u16::MAX as ChunkOffset {
+        if jump > u16::MAX as usize {
             panic!("cannot jump further than u16::MAX instructions");
         } else {
             let (low, high) = crate::decode_bytes(jump as u16);
@@ -104,14 +104,14 @@ impl Chunk {
         }
     }
 
-    pub(crate) fn write_jump_back(&mut self, offset: ChunkOffset, line: Line) {
+    pub(crate) fn write_jump_back(&mut self, offset: usize, line: usize) {
         // we haven't written the JumpBack instruction yet, so we need to add it
         // in order to calculate the actual offset when we write the jump instruction
         let offset = self.data.len() - offset + 3;
         self.write_arg_u16(Opcode::JumpBack, offset as u16, line);
     }
 
-    pub(crate) fn read_short(&self, offset: ChunkOffset) -> u16 {
+    pub(crate) fn read_short(&self, offset: usize) -> u16 {
         trace!("read short {:x}", offset);
 
         let low = self.data[offset];
@@ -120,7 +120,7 @@ impl Chunk {
     }
 
     // get a line number from a byte offset using run-length encoding
-    pub(crate) fn get_line_from_index(&self, index: ChunkOffset) -> Line {
+    pub(crate) fn get_line_from_index(&self, index: usize) -> usize {
         let mut total_ops = 0;
         for (offset_line, num_ops) in self.lines.iter().enumerate() {
             total_ops += *num_ops;
@@ -135,7 +135,7 @@ impl Chunk {
     }
 
     // add one opcode to a line
-    fn add_to_line(&mut self, line: Line) {
+    fn add_to_line(&mut self, line: usize) {
         while line > self.lines.len() {
             self.lines.push(0);
         }
@@ -165,7 +165,7 @@ pub fn disassemble(module: &Module, name: &str) -> String {
     s
 }
 
-pub fn disassemble_instruction(module: &Module, chunk: &Chunk, offset: ChunkOffset) -> String {
+pub fn disassemble_instruction(module: &Module, chunk: &Chunk, offset: usize) -> String {
     let op = chunk.data[offset].into();
     let len = super::op::op_len(op);
     let bytes = format!(

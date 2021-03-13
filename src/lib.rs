@@ -27,8 +27,6 @@ pub mod prelude {
         op::Opcode,
         value::Constant,
         value::Value,
-        ChunkIndex, ChunkOffset, ConstantIndex, Line, LocalScopeDepth, LocalSlotIndex,
-        UpvalueIndex,
     };
 }
 

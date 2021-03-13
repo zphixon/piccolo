@@ -5,20 +5,20 @@ pub mod emitter;
 pub mod parser;
 pub mod scanner;
 
-use crate::{ErrorKind, Line, LocalScopeDepth, LocalSlotIndex, Module, PiccoloError};
+use crate::{ErrorKind, Module, PiccoloError};
 
 use core::fmt;
 
 #[derive(PartialEq, Eq, Hash, Default)]
 pub(crate) struct Local {
     pub(crate) name: String,
-    pub(crate) depth: LocalScopeDepth,
-    slot: LocalSlotIndex,
+    pub(crate) depth: u16,
+    slot: u16,
     is_upvalue: bool,
 }
 
 impl Local {
-    pub(crate) fn new(name: String, depth: LocalScopeDepth) -> Self {
+    pub(crate) fn new(name: String, depth: u16) -> Self {
         Self {
             name,
             depth,
@@ -205,11 +205,11 @@ pub enum TokenKind {
 pub struct Token<'a> {
     pub(crate) kind: TokenKind,
     pub(crate) lexeme: &'a str,
-    pub(crate) line: Line,
+    pub(crate) line: usize,
 }
 
 impl<'a> Token<'a> {
-    pub fn new(kind: TokenKind, lexeme: &'a str, line: Line) -> Self {
+    pub fn new(kind: TokenKind, lexeme: &'a str, line: usize) -> Self {
         Token { kind, lexeme, line }
     }
 

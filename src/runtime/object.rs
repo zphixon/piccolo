@@ -1,6 +1,6 @@
 //! Objects defined in Rust that may exist at runtime.
 
-use crate::{ChunkIndex, Value};
+use crate::Value;
 
 use core::fmt;
 
@@ -21,7 +21,7 @@ pub trait Object: std::fmt::Debug {
 pub struct Function {
     arity: usize,
     name: String,
-    chunk: ChunkIndex,
+    chunk: usize,
 }
 
 impl fmt::Debug for Function {
@@ -37,7 +37,7 @@ impl fmt::Display for Function {
 }
 
 impl Function {
-    pub fn new(arity: usize, name: String, chunk: ChunkIndex) -> Self {
+    pub fn new(arity: usize, name: String, chunk: usize) -> Self {
         Self { arity, name, chunk }
     }
 
@@ -49,7 +49,7 @@ impl Function {
         &self.name
     }
 
-    pub fn chunk(&self) -> ChunkIndex {
+    pub fn chunk(&self) -> usize {
         self.chunk
     }
 }
