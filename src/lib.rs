@@ -15,8 +15,7 @@ pub mod runtime;
 /// Commonly used items that you might want access to.
 pub mod prelude {
     pub use super::compiler::{
-        ast::print_ast, ast::print_expression, ast::Ast, ast::Expr, ast::Stmt, emitter::compile,
-        emitter::Emitter, parser::parse, scanner::Scanner, Token, TokenKind,
+        ast::Ast, ast::Expr, ast::Stmt, emitter::Emitter, scanner::Scanner, Token, TokenKind,
     };
     pub use super::error::{ErrorKind, PiccoloError};
     pub use super::runtime::{
@@ -31,24 +30,27 @@ pub mod prelude {
     };
 }
 
+pub mod debug {
+    pub use crate::compiler::{
+        ast::print_ast, ast::print_expression, compile_chunk, emitter::compile, parser::parse,
+        print_tokens, scan_all,
+    };
+    pub use crate::runtime::{chunk::disassemble, chunk::disassemble_instruction};
+}
+
 use prelude::*;
-
-#[cfg(feature = "pc-debug")]
-pub use compiler::{compile_chunk, scan_all};
-
-#[cfg(feature = "fuzzer")]
-pub use compiler::print_tokens;
 
 use std::path::Path;
 
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
+    use debug::*;
     debug!("parse");
     let ast = parse(&mut Scanner::new(src))?;
-    debug!("ast\n{}", compiler::ast::print_ast(&ast));
+    debug!("ast\n{}", print_ast(&ast));
 
     debug!("compile");
-    let module = crate::compiler::emitter::compile(&ast)?;
-    debug!("{}", crate::runtime::chunk::disassemble(&module, ""));
+    let module = compile(&ast)?;
+    debug!("{}", disassemble(&module, ""));
 
     let mut heap = Heap::default();
 
@@ -77,9 +79,11 @@ pub fn run_bin(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
 }
 
 pub fn compile(src: &Path, dst: &Path) -> Result<(), Vec<PiccoloError>> {
+    use debug::*;
+
     let src = std::fs::read_to_string(src).map_err(|e| vec![PiccoloError::from(e)])?;
     let ast = parse(&mut Scanner::new(&src))?;
-    let module = crate::compiler::emitter::compile(&ast)?;
+    let module = compile(&ast)?;
 
     std::fs::write(
         dst,
@@ -104,7 +108,8 @@ pub(crate) fn decode_bytes(bytes: u16) -> (u8, u8) {
 pub mod fuzzer {
     extern crate rand;
 
-    use super::*;
+    use crate::debug::*;
+    use crate::prelude::*;
 
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
@@ -144,10 +149,10 @@ pub mod fuzzer {
             src.push_str(&format!("{} ", tk).to_lowercase());
         }
 
-        if let Ok(chunk) = crate::compile_chunk(&src) {
+        if let Ok(chunk) = compile_chunk(&src) {
             println!("----- run {} compiles -----", n);
-            crate::print_tokens(&crate::compiler::scan_all(&src).unwrap());
-            crate::runtime::chunk::disassemble(&chunk, "");
+            print_tokens(&scan_all(&src).unwrap());
+            disassemble(&chunk, "");
             let mut heap = Heap::default();
             let mut vm = Machine::new(&mut heap, &chunk);
             vm.interpret(&mut heap).ok().map(|_| {
@@ -219,12 +224,13 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod integration {
-    use super::*;
+    use crate::debug::*;
+    use crate::prelude::*;
 
     #[test]
     #[ignore]
     fn very_long() {
-        let path = Path::new("examples/long.pc");
+        let path = std::path::Path::new("examples/long.pc");
         crate::do_file(path).unwrap();
     }
 
@@ -244,11 +250,11 @@ mod integration {
         let src = "a=:1+2";
         let mut scanner = Scanner::new(src);
         let ast = parse(&mut scanner).unwrap();
-        println!("{}", compiler::ast::print_ast(&ast));
-        let module = crate::compiler::emitter::compile(&ast).unwrap();
+        println!("{}", print_ast(&ast));
+        let module = compile(&ast).unwrap();
         #[cfg(feature = "pc-debug")]
         {
-            println!("{}", crate::runtime::chunk::disassemble(&module, "idklol"));
+            println!("{}", disassemble(&module, "idklol"));
         }
         let mut heap = Heap::default();
         let mut vm = Machine::new(&mut heap, &module);
@@ -283,15 +289,15 @@ mod integration {
                 }),
             };
 
-            println!("got:  {}", compiler::ast::print_expression(expr));
-            println!("want: {}", compiler::ast::print_expression(&equiv));
+            println!("got:  {}", print_expression(expr));
+            println!("want: {}", print_expression(&equiv));
             assert_eq!(expr, &equiv);
 
-            let module = crate::compiler::emitter::compile(&ast).unwrap();
+            let module = compile(&ast).unwrap();
 
             #[cfg(feature = "pc-debug")]
             {
-                println!("{}", crate::runtime::chunk::disassemble(&module, "idklol"));
+                println!("{}", disassemble(&module, "idklol"));
             }
 
             let mut heap = Heap::default();

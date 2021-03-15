@@ -558,6 +558,7 @@ fn parse_arguments<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Expr<'a>>, Picco
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::debug::*;
 
     #[test]
     fn assign() {
@@ -631,7 +632,7 @@ mod test {
             println!(
                 "{} -> {}",
                 src,
-                crate::compiler::ast::print_expression(&parse_expression(&mut scanner).unwrap())
+                print_expression(&parse_expression(&mut scanner).unwrap())
             );
         }
     }

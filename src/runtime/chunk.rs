@@ -223,9 +223,8 @@ pub fn disassemble_instruction(module: &Module, chunk: &Chunk, offset: usize) ->
 }
 #[cfg(test)]
 mod test {
-    use crate::runtime::op::Opcode;
-
-    use super::Chunk;
+    use crate::debug::*;
+    use crate::prelude::*;
 
     #[test]
     fn get_line_from_index() {

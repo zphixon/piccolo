@@ -648,8 +648,7 @@ impl EmitterContext {
     }
 }
 
-use crate::prelude::Function;
-use crate::runtime::chunk::Module;
+use crate::prelude::{Function, Module};
 
 /// Bytecode compiler object
 ///
@@ -863,10 +862,12 @@ impl Emitter {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::debug::*;
+    use crate::prelude::*;
 
     #[test]
     fn emitter() {
-        let ast = crate::parse(&mut crate::Scanner::new(
+        let ast = parse(&mut crate::Scanner::new(
             "x =: 32\n\
              retn x",
         ))
@@ -874,9 +875,9 @@ mod test {
 
         let mut e = Emitter::new();
         let module = compile(&ast).unwrap();
-        println!("{}", crate::runtime::chunk::disassemble(&module, "jioew"));
-        let mut heap = crate::runtime::memory::Heap::default();
-        crate::runtime::vm::Machine::new(&mut heap, &module)
+        println!("{}", disassemble(&module, "jioew"));
+        let mut heap = Heap::default();
+        Machine::new(&mut heap, &module)
             .interpret(&mut heap)
             .unwrap();
     }

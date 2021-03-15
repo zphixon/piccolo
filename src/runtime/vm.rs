@@ -567,19 +567,21 @@ impl<'a> Machine<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::debug::*;
+    use crate::prelude::*;
+
     #[test]
     fn how_could_this_happen_to_me() {
         //env_logger::init();
 
         let src = r#"""+(11*3)+"heehee""#;
-        let ast = crate::compiler::parser::parse(&mut crate::compiler::scanner::Scanner::new(src))
-            .expect("parse");
-        let mut emitter = crate::compiler::emitter::Emitter::new();
-        let module = crate::compiler::emitter::compile(&ast).expect("emit");
+        let ast = parse(&mut Scanner::new(src)).expect("parse");
+        let mut emitter = Emitter::new();
+        let module = compile(&ast).expect("emit");
 
-        println!("{}", crate::runtime::chunk::disassemble(&module, ""));
+        println!("{}", disassemble(&module, ""));
 
-        let mut heap = crate::runtime::memory::Heap::default();
+        let mut heap = Heap::default();
 
         let mut vm = Machine::new(&mut heap, &module);
         vm.interpret(&mut heap).unwrap();

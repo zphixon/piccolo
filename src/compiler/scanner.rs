@@ -41,7 +41,6 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    #[cfg(feature = "pc-debug")]
     pub(super) fn scan_all(mut self) -> Result<Vec<Token<'a>>, PiccoloError> {
         while self.next()?.kind != TokenKind::Eof {}
         Ok(self.tokens.drain(0..).collect())

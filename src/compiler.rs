@@ -9,7 +9,7 @@ use crate::{ErrorKind, Module, PiccoloError};
 
 use core::fmt;
 
-#[derive(PartialEq, Eq, Hash, Default)]
+#[derive(PartialEq, Eq, Hash, Default, Debug)]
 pub(crate) struct Local {
     pub(crate) name: String,
     pub(crate) depth: u16,
@@ -21,20 +21,19 @@ impl Local {
     pub(crate) fn new(name: String, depth: u16) -> Self {
         Self {
             name,
+            #[cfg(feature = "pc-debug")]
             depth,
             ..Self::default()
         }
     }
 }
 
-#[cfg(feature = "pc-debug")]
 pub fn compile_chunk(src: &str) -> Result<Module, Vec<PiccoloError>> {
     let mut scanner = super::Scanner::new(src);
     let ast = parser::parse(&mut scanner)?;
     emitter::compile(&ast)
 }
 
-#[cfg(feature = "pc-debug")]
 pub fn scan_all(source: &str) -> Result<Vec<Token>, PiccoloError> {
     scanner::Scanner::new(source).scan_all()
 }
@@ -243,8 +242,8 @@ impl<'a> Token<'a> {
         )
     }
 
-    pub fn assign_by_mutate_op(&self) -> Option<crate::runtime::op::Opcode> {
-        use crate::runtime::op::Opcode;
+    pub fn assign_by_mutate_op(&self) -> Option<crate::Opcode> {
+        use crate::Opcode;
         Some(match self.kind {
             TokenKind::PlusAssign => Opcode::Add,
             TokenKind::MinusAssign => Opcode::Subtract,
@@ -273,7 +272,6 @@ impl<'a> fmt::Display for Token<'a> {
     }
 }
 
-#[cfg(feature = "fuzzer")]
 pub fn print_tokens(tokens: &[Token]) {
     let mut previous_line = 0;
     for token in tokens.iter() {
