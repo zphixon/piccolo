@@ -22,11 +22,60 @@ impl Frame<'_> {
     }
 }
 
+pub struct FrameStack<'a> {
+    frames: Vec<Frame<'a>>,
+}
+
+impl<'a> FrameStack<'a> {
+    fn len(&self) -> usize {
+        self.frames.len()
+    }
+
+    fn push(&mut self, frame: Frame<'a>) {
+        self.frames.push(frame);
+    }
+
+    fn pop(&mut self) -> Frame<'a> {
+        self.frames.pop().unwrap()
+    }
+
+    fn current_line(&self) -> usize {
+        self.current_chunk()
+            .get_line_from_index(self.current_ip() - 1)
+    }
+
+    fn current_ip(&self) -> usize {
+        self.current_frame().ip
+    }
+
+    fn current_frame(&self) -> &Frame {
+        self.frames.last().unwrap()
+    }
+
+    fn current_frame_mut<'b>(&'b mut self) -> &mut Frame<'a> {
+        self.frames.last_mut().unwrap()
+    }
+
+    fn current_chunk(&self) -> &Chunk {
+        self.current_frame().chunk
+    }
+
+    fn read_short(&mut self) -> u16 {
+        let s = self.current_chunk().read_short(self.current_ip());
+        self.current_frame_mut().ip += 2;
+        s
+    }
+
+    fn read_constant(&mut self, module: &Module) -> Constant {
+        let constant_index = self.read_short();
+        let c = module.get_constant(constant_index).clone();
+        c
+    }
+}
+
 type PiccoloFunction = fn(&[Value]) -> Value;
 
-pub struct Machine<'a> {
-    module: &'a Module,
-    frames: Vec<Frame<'a>>,
+pub struct Machine {
     stack: UniqueRoot<Vec<Value>>,
     globals: UniqueRoot<FnvHashMap<String, Value>>,
     native_functions: FnvHashMap<String, PiccoloFunction>,
@@ -35,7 +84,7 @@ pub struct Machine<'a> {
 #[derive(Copy, Clone)]
 enum VmState {
     Continue,
-    Stop(Value),
+    Stop(Value, usize),
 }
 
 fn print(values: &[Value]) -> Value {
@@ -50,8 +99,8 @@ fn print(values: &[Value]) -> Value {
     Value::Nil
 }
 
-impl<'a> Machine<'a> {
-    pub fn new(heap: &mut Heap, module: &'a Module) -> Self {
+impl Machine {
+    pub fn new(heap: &mut Heap) -> Self {
         let mut globals = heap.manage_unique(FnvHashMap::default());
 
         // TODO make this nicer
@@ -70,8 +119,6 @@ impl<'a> Machine<'a> {
         native_functions.insert(String::from("print"), print as PiccoloFunction);
 
         Machine {
-            module,
-            frames: Vec::new(),
             stack: heap.manage_unique(Vec::new()),
             globals,
             native_functions,
@@ -94,76 +141,80 @@ impl<'a> Machine<'a> {
         &self.stack[self.stack.len() - 1 - len]
     }
 
-    fn read_short(&mut self) -> u16 {
-        let s = self.current_chunk().read_short(self.current_ip());
-        self.current_frame_mut().ip += 2;
-        s
-    }
-
-    fn read_constant(&mut self) -> Constant {
-        let constant_index = self.read_short();
-        let c = self.module.get_constant(constant_index).clone();
-        c
-    }
-
     fn push_string(&mut self, heap: &mut Heap, string: String) {
         let root = heap.manage(string);
         self.push(Value::String(root.as_gc()));
     }
 
-    pub fn interpret(&mut self, heap: &mut Heap) -> Result<Value, PiccoloError> {
+    pub fn interpret(&mut self, heap: &mut Heap, module: &Module) -> Result<Value, PiccoloError> {
+        self.interpret_from(heap, module, 0).map(|(value, _)| value)
+    }
+
+    pub fn interpret_from(
+        &mut self,
+        heap: &mut Heap,
+        module: &Module,
+        ip: usize,
+    ) -> Result<(Value, usize), PiccoloError> {
         // :)
         let f = heap.manage(Function::new(0, String::new(), 0));
         //self.push(Value::Function(f.as_gc()));
 
-        self.frames.push(Frame {
-            name: String::new(),
-            base: 0,
-            ip: 0,
-            chunk: &self.module.chunk(0),
-            function: f,
-        });
+        let mut frames = FrameStack {
+            frames: vec![Frame {
+                name: String::new(),
+                base: 0,
+                ip,
+                chunk: &module.chunk(0),
+                function: f,
+            }],
+        };
 
         loop {
             match self
-                .interpret_next_instruction(heap)
-                .map_err(|e| e.line(self.current_line()))?
+                .interpret_next_instruction(heap, module, &mut frames)
+                .map_err(|e| e.line(frames.current_line()))?
             {
                 VmState::Continue => {}
-                VmState::Stop(value) => return Ok(value),
+                VmState::Stop(value, ip) => return Ok((value, ip)),
             }
         }
     }
 
-    fn interpret_next_instruction(&mut self, heap: &mut Heap) -> Result<VmState, PiccoloError> {
+    fn interpret_next_instruction<'a>(
+        &mut self,
+        heap: &mut Heap,
+        module: &'a Module,
+        frames: &mut FrameStack<'a>,
+    ) -> Result<VmState, PiccoloError> {
         // TODO: move to Opcode::Return
-        if self.current_ip() + 1 > self.current_chunk().len() {
-            return Ok(VmState::Stop(Value::Nil));
+        if frames.current_ip() + 1 > frames.current_chunk().len() {
+            return Ok(VmState::Stop(Value::Nil, frames.current_ip()));
         }
 
         // debug {{{
         debug!(
             " ┌─{} {}.{:04x} {:?}",
-            if self.current_ip() + 1 == self.current_chunk().len() {
+            if frames.current_ip() + 1 == frames.current_chunk().len() {
                 "─vm─exit─"
             } else {
                 ""
             },
-            self.module.index_of(self.current_chunk()),
-            self.current_ip(),
+            module.index_of(frames.current_chunk()),
+            frames.current_ip(),
             self.stack,
         );
         debug!(
             " └─{} {}",
-            if self.current_ip() + 1 == self.current_chunk().len() {
+            if frames.current_ip() + 1 == frames.current_chunk().len() {
                 "─────────"
             } else {
                 ""
             },
             crate::runtime::chunk::disassemble_instruction(
-                self.module,
-                self.current_chunk(),
-                self.current_ip()
+                module,
+                frames.current_chunk(),
+                frames.current_ip()
             )
         );
         // }}}
@@ -247,28 +298,28 @@ impl<'a> Machine<'a> {
         }
         // }}}
 
-        let op = self.current_frame_mut().step();
+        let op = frames.current_frame_mut().step();
         match op {
             Opcode::Pop => {
-                if self.current_ip() == self.current_chunk().len() {
+                if frames.current_ip() == frames.current_chunk().len() {
                     trace!("last instruction pop");
                     let value = self.pop();
-                    return Ok(VmState::Stop(value));
+                    return Ok(VmState::Stop(value, frames.current_ip()));
                 }
                 self.pop();
             }
             Opcode::Return => {
                 let result = self.pop();
-                let frame = self.frames.pop().unwrap();
+                let frame = frames.pop();
                 // close upvalues
                 self.stack.truncate(frame.base);
-                if self.frames.len() == 0 {
-                    return Ok(VmState::Stop(result));
+                if frames.len() == 0 {
+                    return Ok(VmState::Stop(result, frame.ip));
                 }
                 self.push(result);
             }
             Opcode::Constant => {
-                let c = self.read_constant();
+                let c = frames.read_constant(module);
                 self.push(Value::from_constant(c, heap));
             }
             Opcode::Nil => self.push(Value::Nil),
@@ -383,17 +434,17 @@ impl<'a> Machine<'a> {
             } // }}}
 
             Opcode::GetLocal => {
-                let slot = self.read_short() as usize + self.current_frame().base;
+                let slot = frames.read_short() as usize + frames.current_frame().base;
                 debug!("get local slot {}", slot);
                 self.push(self.stack[slot].clone());
             }
             Opcode::SetLocal => {
-                let slot = self.read_short() as usize + self.current_frame().base;
+                let slot = frames.read_short() as usize + frames.current_frame().base;
                 debug!("set local slot {}", slot);
                 self.stack[slot] = self.pop();
             }
             Opcode::GetGlobal => {
-                let constant = self.read_constant();
+                let constant = frames.read_constant(module);
                 let name = constant.ref_string();
 
                 if self.globals.contains_key(name) {
@@ -406,7 +457,7 @@ impl<'a> Machine<'a> {
                 }
             }
             Opcode::SetGlobal => {
-                let constant = self.read_constant();
+                let constant = frames.read_constant(module);
                 let name = constant.ref_string();
 
                 let value = self.pop();
@@ -417,7 +468,7 @@ impl<'a> Machine<'a> {
                 }
             }
             Opcode::DeclareGlobal => {
-                let constant = self.read_constant();
+                let constant = frames.read_constant(module);
                 let name = constant.ref_string();
 
                 let value = self.pop();
@@ -425,50 +476,50 @@ impl<'a> Machine<'a> {
             }
 
             Opcode::JumpForward => {
-                let offset = self.read_short() as usize;
+                let offset = frames.read_short() as usize;
 
                 debug!(
                     "jump ip {:x} -> {:x}",
-                    self.current_ip(),
-                    self.current_ip() + offset
+                    frames.current_ip(),
+                    frames.current_ip() + offset
                 );
-                self.current_frame_mut().ip += offset;
+                frames.current_frame_mut().ip += offset;
             }
             Opcode::JumpFalse => {
-                let offset = self.read_short() as usize;
+                let offset = frames.read_short() as usize;
 
                 if !self.peek().is_truthy() {
                     debug!(
                         "jump false ip {:x} -> {:x}",
-                        self.current_ip(),
-                        self.current_frame_mut().ip + offset
+                        frames.current_ip(),
+                        frames.current_frame_mut().ip + offset
                     );
 
-                    self.current_frame_mut().ip += offset;
+                    frames.current_frame_mut().ip += offset;
                 }
             }
             Opcode::JumpTrue => {
-                let offset = self.read_short() as usize;
+                let offset = frames.read_short() as usize;
 
                 if self.peek().is_truthy() {
                     debug!(
                         "jump true ip {:x} -> {:x}",
-                        self.current_ip(),
-                        self.current_frame_mut().ip + offset
+                        frames.current_ip(),
+                        frames.current_frame_mut().ip + offset
                     );
 
-                    self.current_frame_mut().ip += offset;
+                    frames.current_frame_mut().ip += offset;
                 }
             }
             Opcode::JumpBack => {
-                let offset = self.read_short() as usize;
+                let offset = frames.read_short() as usize;
 
                 debug!(
                     "loop ip {:x} -> {:x}",
-                    self.current_ip(),
-                    self.current_ip() - offset
+                    frames.current_ip(),
+                    frames.current_ip() - offset
                 );
-                self.current_frame_mut().ip -= offset;
+                frames.current_frame_mut().ip -= offset;
             }
 
             Opcode::BitAnd => {
@@ -488,7 +539,7 @@ impl<'a> Machine<'a> {
             }
 
             Opcode::Call => {
-                let arity = self.read_short();
+                let arity = frames.read_short();
                 if let Value::Function(_) = self.peek_back(arity as usize) {
                     let f = self.peek_back(arity as usize).as_function();
 
@@ -506,11 +557,11 @@ impl<'a> Machine<'a> {
                         self.stack.len() as u16 - 1 - arity
                     );
 
-                    self.frames.push(Frame {
+                    frames.push(Frame {
                         name: f.name().to_string(),
                         ip: 0,
                         base: (self.stack.len() as u16 - arity - 1) as usize,
-                        chunk: self.module.chunk(f.chunk()),
+                        chunk: module.chunk(f.chunk()),
                         function: heap.root(f),
                     });
                 } else if let Value::NativeFunction(_) = self.peek_back(arity as usize) {
@@ -531,7 +582,7 @@ impl<'a> Machine<'a> {
 
             Opcode::Assert => {
                 let v = self.pop();
-                let assertion = self.read_constant();
+                let assertion = frames.read_constant(module);
                 if !v.is_truthy() {
                     let assertion = assertion.ref_string().to_owned();
                     return Err(PiccoloError::new(ErrorKind::AssertFailed { assertion }));
@@ -541,32 +592,10 @@ impl<'a> Machine<'a> {
 
         Ok(VmState::Continue)
     }
-
-    fn current_line(&self) -> usize {
-        self.current_chunk()
-            .get_line_from_index(self.current_ip() - 1)
-    }
-
-    fn current_ip(&self) -> usize {
-        self.current_frame().ip
-    }
-
-    fn current_frame(&self) -> &Frame {
-        self.frames.last().unwrap()
-    }
-
-    fn current_frame_mut(&mut self) -> &mut Frame<'a> {
-        self.frames.last_mut().unwrap()
-    }
-
-    fn current_chunk(&self) -> &Chunk {
-        self.current_frame().chunk
-    }
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::debug::*;
     use crate::prelude::*;
 
@@ -583,7 +612,7 @@ mod test {
 
         let mut heap = Heap::default();
 
-        let mut vm = Machine::new(&mut heap, &module);
-        vm.interpret(&mut heap).unwrap();
+        let mut vm = Machine::new(&mut heap);
+        vm.interpret(&mut heap, &module).unwrap();
     }
 }

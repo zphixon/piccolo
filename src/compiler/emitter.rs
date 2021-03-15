@@ -12,14 +12,19 @@ use fnv::FnvHashMap;
 
 pub fn compile(ast: &Ast) -> Result<Module, Vec<PiccoloError>> {
     let mut emitter = Emitter::new();
+    compile_with(&mut emitter, ast)?;
+    Ok(emitter.into_module())
+}
+
+pub fn compile_with(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloError>> {
     let errors: Vec<_> = ast
         .iter()
-        .map(|stmt| compile_stmt(&mut emitter, stmt))
+        .map(|stmt| compile_stmt(emitter, stmt))
         .filter_map(Result::err)
         .collect();
 
     if errors.is_empty() {
-        Ok(emitter.into_module())
+        Ok(())
     } else {
         Err(errors)
     }
@@ -573,7 +578,7 @@ fn compile_lambda(
 
 // represents more of a scope
 // TODO refactor to an enum?
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct EmitterContext {
     //context_type: ContextType,
     chunk_index: usize,
@@ -655,6 +660,7 @@ use crate::prelude::{Function, Module};
 /// Construct an Emitter, and pass a `&mut` reference to `compile_ast` along with
 /// the abstract syntax tree. Extract the `Chunk` with `current_chunk{_mut}()` or
 /// `into_chunk()`.
+#[derive(Debug)]
 pub struct Emitter {
     module: Module,
     children: Vec<EmitterContext>,
@@ -688,11 +694,20 @@ impl Emitter {
     }
 
     pub fn current_chunk(&self) -> &Chunk {
-        self.module.chunk(self.current_context().chunk_index)
+        self.module().chunk(self.current_context().chunk_index)
     }
 
     pub fn current_chunk_mut(&mut self) -> &mut Chunk {
-        self.module.chunk_mut(self.current_context().chunk_index)
+        let index = self.current_context().chunk_index;
+        self.module_mut().chunk_mut(index)
+    }
+
+    pub fn module(&self) -> &Module {
+        &self.module
+    }
+
+    pub(crate) fn module_mut(&mut self) -> &mut Module {
+        &mut self.module
     }
 
     pub fn into_module(self) -> Module {
@@ -718,7 +733,7 @@ impl Emitter {
     }
 
     fn make_constant(&mut self, c: Constant) -> u16 {
-        self.module.make_constant(c)
+        self.module_mut().make_constant(c)
     }
 
     fn make_global_ident(&mut self, name: &Token) -> u16 {
@@ -785,7 +800,7 @@ impl Emitter {
     }
 
     fn begin_context(&mut self) {
-        let index = self.module.add_chunk();
+        let index = self.module_mut().add_chunk();
         trace!("begin context {}", index);
         self.children.push(EmitterContext::new(index));
     }
@@ -877,8 +892,31 @@ mod test {
         let module = compile(&ast).unwrap();
         println!("{}", disassemble(&module, "jioew"));
         let mut heap = Heap::default();
-        Machine::new(&mut heap, &module)
-            .interpret(&mut heap)
+        Machine::new(&mut heap)
+            .interpret(&mut heap, &module)
             .unwrap();
+    }
+
+    #[test]
+    fn reentrant() {
+        let ast1 = parse(&mut Scanner::new("x=:3")).unwrap();
+        let ast2 = parse(&mut Scanner::new("assert x == 3")).unwrap();
+        let ast3 = parse(&mut Scanner::new(
+            "fn z(a) do\n  print(\"a is\", a)\n  end\n",
+        ))
+        .unwrap();
+        let ast4 = parse(&mut Scanner::new("z(x)")).unwrap();
+
+        let mut emitter = Emitter::new();
+        compile_with(&mut emitter, &ast1).unwrap();
+        println!("{}", disassemble(emitter.module(), ""));
+        compile_with(&mut emitter, &ast2).unwrap();
+        println!("{}", disassemble(emitter.module(), ""));
+        compile_with(&mut emitter, &ast3).unwrap();
+        println!("{}", disassemble(emitter.module(), ""));
+        compile_with(&mut emitter, &ast4).unwrap();
+        println!("{}", disassemble(emitter.module(), ""));
+
+        println!("{:?}", emitter);
     }
 }

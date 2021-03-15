@@ -32,8 +32,8 @@ pub mod prelude {
 
 pub mod debug {
     pub use crate::compiler::{
-        ast::print_ast, ast::print_expression, compile_chunk, emitter::compile, parser::parse,
-        print_tokens, scan_all,
+        ast::print_ast, ast::print_expression, compile_chunk, emitter::compile,
+        emitter::compile_with, parser::parse, print_tokens, scan_all,
     };
     pub use crate::runtime::{chunk::disassemble, chunk::disassemble_instruction};
 }
@@ -55,8 +55,8 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     let mut heap = Heap::default();
 
     debug!("interpret");
-    let mut vm = Machine::new(&mut heap, &module);
-    Ok(vm.interpret(&mut heap)?.into_constant())
+    let mut vm = Machine::new(&mut heap);
+    Ok(vm.interpret(&mut heap, &module)?.into_constant())
 }
 
 /// Reads a file and interprets its contents.
@@ -74,8 +74,8 @@ pub fn run_bin(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
     let module = bincode::deserialize(&bytes).map_err(|e| vec![PiccoloError::from(e)])?;
 
     let mut heap = Heap::default();
-    let mut vm = Machine::new(&mut heap, &module);
-    Ok(vm.interpret(&mut heap)?.into_constant())
+    let mut vm = Machine::new(&mut heap);
+    Ok(vm.interpret(&mut heap, &module)?.into_constant())
 }
 
 pub fn compile(src: &Path, dst: &Path) -> Result<(), Vec<PiccoloError>> {
@@ -154,8 +154,8 @@ pub mod fuzzer {
             print_tokens(&scan_all(&src).unwrap());
             disassemble(&chunk, "");
             let mut heap = Heap::default();
-            let mut vm = Machine::new(&mut heap, &chunk);
-            vm.interpret(&mut heap).ok().map(|_| {
+            let mut vm = Machine::new(&mut heap);
+            vm.interpret(&mut heap, &chunk).ok().map(|_| {
                 println!("----- run {} executes -----", n);
             })
         } else {
@@ -257,8 +257,8 @@ mod integration {
             println!("{}", disassemble(&module, "idklol"));
         }
         let mut heap = Heap::default();
-        let mut vm = Machine::new(&mut heap, &module);
-        println!("{:?}", vm.interpret(&mut heap).unwrap());
+        let mut vm = Machine::new(&mut heap);
+        println!("{:?}", vm.interpret(&mut heap, &module).unwrap());
     }
 
     #[test]
@@ -301,9 +301,12 @@ mod integration {
             }
 
             let mut heap = Heap::default();
-            let mut vm = Machine::new(&mut heap, &module);
+            let mut vm = Machine::new(&mut heap);
             // TODO
-            //assert_eq!(vm.interpret(&mut heap).unwrap(), Constant::Integer(11));
+            assert_eq!(
+                vm.interpret(&mut heap, &module).unwrap().into_constant(),
+                Constant::Integer(11)
+            );
         } else {
             panic!("ast not initialized")
         }
