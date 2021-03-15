@@ -27,6 +27,7 @@ pub mod prelude {
         op::Opcode,
         value::Constant,
         value::Value,
+        vm::Machine,
     };
 }
 
@@ -52,7 +53,7 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     let mut heap = Heap::default();
 
     debug!("interpret");
-    let mut vm = runtime::vm::Machine::new(&mut heap, &module);
+    let mut vm = Machine::new(&mut heap, &module);
     Ok(vm.interpret(&mut heap)?.into_constant())
 }
 
@@ -71,7 +72,7 @@ pub fn run_bin(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
     let module = bincode::deserialize(&bytes).map_err(|e| vec![PiccoloError::from(e)])?;
 
     let mut heap = Heap::default();
-    let mut vm = runtime::vm::Machine::new(&mut heap, &module);
+    let mut vm = Machine::new(&mut heap, &module);
     Ok(vm.interpret(&mut heap)?.into_constant())
 }
 
@@ -103,7 +104,7 @@ pub(crate) fn decode_bytes(bytes: u16) -> (u8, u8) {
 pub mod fuzzer {
     extern crate rand;
 
-    use crate::compiler::TokenKind;
+    use super::*;
 
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
@@ -147,8 +148,8 @@ pub mod fuzzer {
             println!("----- run {} compiles -----", n);
             crate::print_tokens(&crate::compiler::scan_all(&src).unwrap());
             crate::runtime::chunk::disassemble(&chunk, "");
-            let mut heap = crate::runtime::memory::Heap::default();
-            let mut vm = crate::runtime::vm::Machine::new(&mut heap, &chunk);
+            let mut heap = Heap::default();
+            let mut vm = Machine::new(&mut heap, &chunk);
             vm.interpret(&mut heap).ok().map(|_| {
                 println!("----- run {} executes -----", n);
             })
@@ -218,14 +219,12 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod integration {
-    use super::{parse, Emitter, Scanner, Token, TokenKind};
-    use crate::compiler::ast::{self, Expr, Stmt};
-    use crate::Constant;
+    use super::*;
 
     #[test]
     #[ignore]
     fn very_long() {
-        let path = std::path::Path::new("examples/long.pc");
+        let path = Path::new("examples/long.pc");
         crate::do_file(path).unwrap();
     }
 
@@ -245,14 +244,14 @@ mod integration {
         let src = "a=:1+2";
         let mut scanner = Scanner::new(src);
         let ast = parse(&mut scanner).unwrap();
-        println!("{}", ast::print_ast(&ast));
+        println!("{}", compiler::ast::print_ast(&ast));
         let module = crate::compiler::emitter::compile(&ast).unwrap();
         #[cfg(feature = "pc-debug")]
         {
             println!("{}", crate::runtime::chunk::disassemble(&module, "idklol"));
         }
-        let mut heap = crate::runtime::memory::Heap::default();
-        let mut vm = crate::runtime::vm::Machine::new(&mut heap, &module);
+        let mut heap = Heap::default();
+        let mut vm = Machine::new(&mut heap, &module);
         println!("{:?}", vm.interpret(&mut heap).unwrap());
     }
 
@@ -284,8 +283,8 @@ mod integration {
                 }),
             };
 
-            println!("got:  {}", ast::print_expression(expr));
-            println!("want: {}", ast::print_expression(&equiv));
+            println!("got:  {}", compiler::ast::print_expression(expr));
+            println!("want: {}", compiler::ast::print_expression(&equiv));
             assert_eq!(expr, &equiv);
 
             let module = crate::compiler::emitter::compile(&ast).unwrap();
@@ -295,8 +294,8 @@ mod integration {
                 println!("{}", crate::runtime::chunk::disassemble(&module, "idklol"));
             }
 
-            let mut heap = crate::runtime::memory::Heap::default();
-            let mut vm = crate::runtime::vm::Machine::new(&mut heap, &module);
+            let mut heap = Heap::default();
+            let mut vm = Machine::new(&mut heap, &module);
             // TODO
             //assert_eq!(vm.interpret(&mut heap).unwrap(), Constant::Integer(11));
         } else {
