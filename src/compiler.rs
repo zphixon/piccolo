@@ -21,7 +21,6 @@ impl Local {
     pub(crate) fn new(name: String, depth: u16) -> Self {
         Self {
             name,
-            #[cfg(feature = "pc-debug")]
             depth,
             ..Self::default()
         }
