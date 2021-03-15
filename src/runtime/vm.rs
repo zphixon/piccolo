@@ -489,11 +489,13 @@ impl<'a> Machine<'a> {
 
             Opcode::Call => {
                 let arity = self.read_short();
-                if let Value::Function(f) = self.peek_back(arity as usize) {
-                    if *f.arity() != arity as usize {
+                if let Value::Function(_) = self.peek_back(arity as usize) {
+                    let f = self.peek_back(arity as usize).as_function();
+
+                    if f.arity() != arity as usize {
                         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
                             name: f.name().to_owned(),
-                            exp: *f.arity(),
+                            exp: f.arity(),
                             got: arity as usize,
                         }));
                     }
@@ -503,12 +505,13 @@ impl<'a> Machine<'a> {
                         f.chunk(),
                         self.stack.len() as u16 - 1 - arity
                     );
+
                     self.frames.push(Frame {
                         name: f.name().to_string(),
                         ip: 0,
                         base: (self.stack.len() as u16 - arity - 1) as usize,
                         chunk: self.module.chunk(f.chunk()),
-                        function: heap.root(*f),
+                        function: heap.root(f),
                     });
                 } else if let Value::NativeFunction(_) = self.peek_back(arity as usize) {
                     let mut args = vec![];

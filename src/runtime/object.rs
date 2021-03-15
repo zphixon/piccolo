@@ -43,8 +43,8 @@ impl Function {
         Self { arity, name, chunk }
     }
 
-    pub fn arity(&self) -> &usize {
-        &self.arity
+    pub fn arity(&self) -> usize {
+        self.arity
     }
 
     pub fn name(&self) -> &str {
