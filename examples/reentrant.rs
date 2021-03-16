@@ -23,47 +23,29 @@ fn main() {
     let mut heap = Heap::default();
     let mut vm = Machine::new(&mut heap);
     println!("run 1");
-    let (_, mut ip) = vm.interpret_from(&mut heap, emitter.module(), 0).unwrap();
+    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
 
     compile_with(&mut emitter, &ast2).unwrap();
     println!("run 2");
-    ip = vm
-        .interpret_from(&mut heap, emitter.module(), ip)
-        .unwrap()
-        .1;
+    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
 
     compile_with(&mut emitter, &ast3).unwrap();
     println!("run 3");
-    ip = vm
-        .interpret_from(&mut heap, emitter.module(), ip)
-        .unwrap()
-        .1;
+    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
 
     compile_with(&mut emitter, &ast4).unwrap();
     println!("run 4");
-    ip = vm
-        .interpret_from(&mut heap, emitter.module(), ip)
-        .unwrap()
-        .1;
+    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
 
     compile_with(&mut emitter, &ast5).unwrap();
     println!("run 5");
-    ip = vm
-        .interpret_from(&mut heap, emitter.module(), ip)
-        .unwrap()
-        .1;
+    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
 
     compile_with(&mut emitter, &ast6).unwrap();
     println!("run 6");
-    ip = vm
-        .interpret_from(&mut heap, emitter.module(), ip)
-        .unwrap()
-        .1;
+    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
 
     compile_with(&mut emitter, &ast7).unwrap();
     println!("run 7");
-    ip = vm
-        .interpret_from(&mut heap, emitter.module(), ip)
-        .unwrap()
-        .1;
+    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
 }
