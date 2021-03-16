@@ -114,7 +114,11 @@ fn repl() {
 
                 let mut scanner = Scanner::new(&line);
                 let _: Result<(), ()> = parse(&mut scanner)
-                    .map(|ast| compile_with(&mut emitter, &ast))
+                    .and_then(|ast| {
+                        #[cfg(feature = "pc-debug")]
+                        println!("{}", print_ast(&ast));
+                        compile_with(&mut emitter, &ast)
+                    })
                     .and_then(|_| {
                         #[cfg(feature = "pc-debug")]
                         println!("{}", disassemble(emitter.module(), ""));
