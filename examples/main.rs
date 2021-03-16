@@ -100,18 +100,31 @@ fn repl() {
         .or_else(|_| std::fs::File::create(".piccolo_history").map(|_| ()))
         .unwrap();
 
+    let mut heap = Heap::default();
+    let mut machine = Machine::new(&mut heap);
+    let mut emitter = Emitter::new();
+    let mut ip = 0;
+
     loop {
         match rl.readline("-- ") {
             Ok(line) => {
                 rl.add_history_entry(&line);
                 rl.save_history(".piccolo_history").unwrap();
 
-                match piccolo::interpret(&line) {
-                    Ok(v) => {
-                        println!("{}", v);
-                    }
-                    Err(errors) => print_errors(errors),
-                }
+                let mut scanner = Scanner::new(&line);
+                let _ = piccolo::debug::parse(&mut scanner)
+                    .and_then(|ast| {
+                        let result = piccolo::debug::compile_with(&mut emitter, &ast);
+                        #[cfg(feature = "pc-debug")]
+                        println!("{}", piccolo::debug::disassemble(emitter.module(), ""));
+                        result
+                    })
+                    .and_then(|_| {
+                        let result = machine.interpret_from(&mut heap, emitter.module(), ip);
+                        ip = result.1;
+                        result.0.map_err(|e| vec![e])
+                    })
+                    .map_err(|e| print_errors(e));
             }
 
             Err(ReadlineError::Interrupted) => {}
