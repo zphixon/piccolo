@@ -200,7 +200,7 @@ impl Machine {
                 }
             } else if result.is_err() {
                 self.ip = frames.current_ip();
-                result?;
+                result.map_err(|err| err.line(frames.current_line()))?;
             }
         }
     }
