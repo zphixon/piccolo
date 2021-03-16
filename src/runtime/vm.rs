@@ -74,7 +74,7 @@ impl<'a> FrameStack<'a> {
 
     fn unwind(&self) -> Vec<crate::error::Callsite> {
         let mut calls = Vec::new();
-        for frame in &self.frames {
+        for frame in self.frames.iter().take(self.frames.len() - 1) {
             calls.push(crate::error::Callsite {
                 name: frame.name.clone(),
                 line: frame.chunk.get_line_from_index(frame.ip),
