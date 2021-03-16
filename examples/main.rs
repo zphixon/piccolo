@@ -105,7 +105,6 @@ fn repl() {
     let mut heap = Heap::default();
     let mut machine = Machine::new(&mut heap);
     let mut emitter = Emitter::new();
-    let mut ip = 0;
 
     loop {
         match rl.readline("-- ") {
@@ -116,19 +115,15 @@ fn repl() {
                 let mut scanner = Scanner::new(&line);
                 let _: Result<(), ()> = parse(&mut scanner)
                     .map(|ast| compile_with(&mut emitter, &ast))
-                    .map(|_| {
-                        let _: Result<(), ()> = machine
-                            .interpret_from(&mut heap, emitter.module(), ip)
-                            .map(|(value, new_ip)| {
-                                println!("{:?}", value);
-                                ip = new_ip;
-                            })
-                            .map_err(|(errors, new_ip)| {
-                                print_errors(vec![errors]);
-                                ip = new_ip;
-                            });
+                    .and_then(|_| {
+                        #[cfg(feature = "pc-debug")]
+                        println!("{}", disassemble(emitter.module(), ""));
+                        machine
+                            .interpret_continue(&mut heap, emitter.module())
+                            .map_err(|e| vec![e])
                     })
-                    .map_err(|errors| print_errors(errors));
+                    .map_err(|errors| print_errors(errors))
+                    .map(|value| println!("{:?}", value));
             }
 
             Err(ReadlineError::Interrupted) => {}

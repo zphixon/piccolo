@@ -79,6 +79,7 @@ pub struct Machine {
     stack: UniqueRoot<Vec<Value>>,
     globals: UniqueRoot<FnvHashMap<String, Value>>,
     native_functions: FnvHashMap<String, PiccoloFunction>,
+    ip: usize,
 }
 
 #[derive(Copy, Clone)]
@@ -123,6 +124,7 @@ impl Machine {
             stack: heap.manage_unique(Vec::new()),
             globals,
             native_functions,
+            ip: 0,
         }
     }
 
@@ -149,16 +151,22 @@ impl Machine {
 
     pub fn interpret(&mut self, heap: &mut Heap, module: &Module) -> Result<Value, PiccoloError> {
         self.interpret_from(heap, module, 0)
-            .map(|(value, _)| value)
-            .map_err(|(error, _)| error)
     }
 
-    pub fn interpret_from(
+    pub fn interpret_continue(
+        &mut self,
+        heap: &mut Heap,
+        module: &Module,
+    ) -> Result<Value, PiccoloError> {
+        self.interpret_from(heap, module, self.ip)
+    }
+
+    fn interpret_from(
         &mut self,
         heap: &mut Heap,
         module: &Module,
         ip: usize,
-    ) -> Result<(Value, usize), (PiccoloError, usize)> {
+    ) -> Result<Value, PiccoloError> {
         // :)
         let f = heap.manage(Function::new(0, String::new(), 0));
         //self.push(Value::Function(f.as_gc()));
@@ -173,14 +181,26 @@ impl Machine {
             }],
         };
 
+        // loop until stop, return from top, or error
+        // TODO refactor to make this not look like hot garbage
         loop {
-            match self
-                .interpret_next_instruction(heap, module, &mut frames)
-                .map_err(|e| (e.line(frames.current_line()), frames.current_ip()))?
-            {
-                VmState::Continue => {}
-                VmState::Stop(value) => return Ok((value, frames.current_ip())),
-                VmState::ReturnFromTop(value, ip) => return Ok((value, ip)),
+            let result = self.interpret_next_instruction(heap, module, &mut frames);
+            if result.is_ok() {
+                let state = result.unwrap();
+                match state {
+                    VmState::Continue => {}
+                    VmState::Stop(value) => {
+                        self.ip = frames.current_ip();
+                        return Ok(value);
+                    }
+                    VmState::ReturnFromTop(value, ip) => {
+                        self.ip = ip;
+                        return Ok(value);
+                    }
+                }
+            } else if result.is_err() {
+                self.ip = frames.current_ip();
+                result?;
             }
         }
     }
