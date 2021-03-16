@@ -366,7 +366,7 @@ mod test {
         let mut heap = Heap::default();
 
         {
-            let root = heap.manage_unique(String::new());
+            let _root = heap.manage_unique(String::new());
         }
 
         assert_eq!(1, heap.objects());

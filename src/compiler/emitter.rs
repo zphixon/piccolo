@@ -596,6 +596,7 @@ impl EmitterContext {
         }
     }
 
+    #[allow(dead_code)]
     fn get_local(&self, index: u16) -> &Local {
         &self.locals[index as usize]
     }
@@ -888,7 +889,6 @@ mod test {
         ))
         .unwrap();
 
-        let mut e = Emitter::new();
         let module = compile(&ast).unwrap();
         println!("{}", disassemble(&module, "jioew"));
         let mut heap = Heap::default();

@@ -3,7 +3,6 @@
 //! Piccolo is a small, light, high-pitched scripting language (eventually) intended
 //! for embedding in Rust projects.
 
-pub extern crate downcast_rs;
 pub extern crate fnv;
 #[macro_use]
 pub extern crate log;
@@ -143,7 +142,7 @@ pub mod fuzzer {
     fn run(n: usize, min_len: usize, max_len: usize) -> Option<()> {
         let mut src = String::new();
         let mut r = rand::thread_rng();
-        let lines = r.gen_range(min_len, max_len);
+        let lines = r.gen_range(min_len..max_len);
         for _ in 1..lines {
             let tk: TokenKind = r.gen();
             src.push_str(&format!("{} ", tk).to_lowercase());
@@ -165,7 +164,7 @@ pub mod fuzzer {
 
     impl Distribution<TokenKind> for Standard {
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> TokenKind {
-            match rng.gen_range(0, 50) {
+            match rng.gen_range(0..50) {
                 // 0 => TokenKind::Do,
                 // 1 => TokenKind::End,
                 // 2 => TokenKind::Fn,

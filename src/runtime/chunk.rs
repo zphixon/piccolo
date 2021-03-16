@@ -223,7 +223,6 @@ pub fn disassemble_instruction(module: &Module, chunk: &Chunk, offset: usize) ->
 }
 #[cfg(test)]
 mod test {
-    use crate::debug::*;
     use crate::prelude::*;
 
     #[test]
