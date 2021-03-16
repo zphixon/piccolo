@@ -95,6 +95,8 @@ fn file(path: &Path) {
 }
 
 fn repl() {
+    use piccolo::debug::*;
+
     let mut rl = Editor::<()>::new();
     rl.load_history(".piccolo_history")
         .or_else(|_| std::fs::File::create(".piccolo_history").map(|_| ()))
@@ -112,19 +114,21 @@ fn repl() {
                 rl.save_history(".piccolo_history").unwrap();
 
                 let mut scanner = Scanner::new(&line);
-                let _ = piccolo::debug::parse(&mut scanner)
-                    .and_then(|ast| {
-                        let result = piccolo::debug::compile_with(&mut emitter, &ast);
-                        #[cfg(feature = "pc-debug")]
-                        println!("{}", piccolo::debug::disassemble(emitter.module(), ""));
-                        result
+                let _: Result<(), ()> = parse(&mut scanner)
+                    .map(|ast| compile_with(&mut emitter, &ast))
+                    .map(|_| {
+                        let _: Result<(), ()> = machine
+                            .interpret_from(&mut heap, emitter.module(), ip)
+                            .map(|(value, new_ip)| {
+                                println!("{:?}", value);
+                                ip = new_ip;
+                            })
+                            .map_err(|(errors, new_ip)| {
+                                print_errors(vec![errors]);
+                                ip = new_ip;
+                            });
                     })
-                    .and_then(|_| {
-                        let result = machine.interpret_from(&mut heap, emitter.module(), ip);
-                        ip = result.1;
-                        result.0.map_err(|e| vec![e])
-                    })
-                    .map_err(|e| print_errors(e));
+                    .map_err(|errors| print_errors(errors));
             }
 
             Err(ReadlineError::Interrupted) => {}

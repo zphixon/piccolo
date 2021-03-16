@@ -84,7 +84,8 @@ pub struct Machine {
 #[derive(Copy, Clone)]
 enum VmState {
     Continue,
-    Stop(Value, usize),
+    ReturnFromTop(Value, usize),
+    Stop(Value),
 }
 
 fn print(values: &[Value]) -> Value {
@@ -147,7 +148,9 @@ impl Machine {
     }
 
     pub fn interpret(&mut self, heap: &mut Heap, module: &Module) -> Result<Value, PiccoloError> {
-        self.interpret_from(heap, module, 0).map(|(value, _)| value)
+        self.interpret_from(heap, module, 0)
+            .map(|(value, _)| value)
+            .map_err(|(error, _)| error)
     }
 
     pub fn interpret_from(
@@ -155,7 +158,7 @@ impl Machine {
         heap: &mut Heap,
         module: &Module,
         ip: usize,
-    ) -> Result<(Value, usize), PiccoloError> {
+    ) -> Result<(Value, usize), (PiccoloError, usize)> {
         // :)
         let f = heap.manage(Function::new(0, String::new(), 0));
         //self.push(Value::Function(f.as_gc()));
@@ -173,10 +176,11 @@ impl Machine {
         loop {
             match self
                 .interpret_next_instruction(heap, module, &mut frames)
-                .map_err(|e| e.line(frames.current_line()))?
+                .map_err(|e| (e.line(frames.current_line()), frames.current_ip()))?
             {
                 VmState::Continue => {}
-                VmState::Stop(value, ip) => return Ok((value, ip)),
+                VmState::Stop(value) => return Ok((value, frames.current_ip())),
+                VmState::ReturnFromTop(value, ip) => return Ok((value, ip)),
             }
         }
     }
@@ -189,7 +193,7 @@ impl Machine {
     ) -> Result<VmState, PiccoloError> {
         // TODO: move to Opcode::Return
         if frames.current_ip() + 1 > frames.current_chunk().len() {
-            return Ok(VmState::Stop(Value::Nil, frames.current_ip()));
+            return Ok(VmState::Stop(Value::Nil));
         }
 
         // debug {{{
@@ -304,7 +308,7 @@ impl Machine {
                 if frames.current_ip() == frames.current_chunk().len() {
                     trace!("last instruction pop");
                     let value = self.pop();
-                    return Ok(VmState::Stop(value, frames.current_ip()));
+                    return Ok(VmState::ReturnFromTop(value, frames.current_ip()));
                 }
                 self.pop();
             }
@@ -314,7 +318,7 @@ impl Machine {
                 // close upvalues
                 self.stack.truncate(frame.base);
                 if frames.len() == 0 {
-                    return Ok(VmState::Stop(result, frame.ip));
+                    return Ok(VmState::ReturnFromTop(result, frame.ip));
                 }
                 self.push(result);
             }
