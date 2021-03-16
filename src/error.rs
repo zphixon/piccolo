@@ -4,6 +4,12 @@ use crate::Opcode;
 
 use core::fmt;
 
+#[derive(Debug)]
+pub struct Callsite {
+    pub name: String,
+    pub line: usize,
+}
+
 // TODO: impl Error for PiccoloError
 /// The main error-reporting struct.
 #[derive(Debug)]
@@ -12,7 +18,7 @@ pub struct PiccoloError {
     line: Option<usize>,
     file: Option<String>,
     msg: Option<String>,
-    //stack: Option<Vec<Frame>>,
+    stack: Option<Vec<Callsite>>,
 }
 
 impl PiccoloError {
@@ -22,7 +28,7 @@ impl PiccoloError {
             line: None,
             file: None,
             msg: None,
-            //stack: None,
+            stack: None,
         }
     }
 
@@ -53,13 +59,20 @@ impl PiccoloError {
             ..self
         }
     }
+
+    pub fn stack_trace(self, stack: Vec<Callsite>) -> Self {
+        PiccoloError {
+            stack: Some(stack),
+            ..self
+        }
+    }
 }
 
 impl fmt::Display for PiccoloError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{line}{file}{separator}{kind}{msg}",
+            "{line}{file}{separator}{kind}{msg}{nl}{stack_trace}",
             line = if self.line.is_some() {
                 format!("at line {} ", self.line.unwrap())
             } else {
@@ -78,6 +91,16 @@ impl fmt::Display for PiccoloError {
             kind = self.kind,
             msg = if self.msg.is_some() {
                 format!(" ({})", self.msg.as_ref().unwrap())
+            } else {
+                "".into()
+            },
+            nl = if self.stack.is_some() { "\n" } else { "" },
+            stack_trace = if self.stack.is_some() {
+                let mut s = String::new();
+                for site in self.stack.as_ref().unwrap() {
+                    s.push_str(&format!("  {} called from line {}\n", site.name, site.line))
+                }
+                s
             } else {
                 "".into()
             }

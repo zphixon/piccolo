@@ -1,0 +1,15 @@
+a =: nil
+
+fn b(n) do
+    if n == 10 do
+        assert false
+    end
+    a(n + 1)
+end
+
+a = fn(n) do
+    print(n)
+    b(n)
+end
+
+a(1)

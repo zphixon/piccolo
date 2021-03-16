@@ -71,6 +71,17 @@ impl<'a> FrameStack<'a> {
         let c = module.get_constant(constant_index).clone();
         c
     }
+
+    fn unwind(&self) -> Vec<crate::error::Callsite> {
+        let mut calls = Vec::new();
+        for frame in &self.frames {
+            calls.push(crate::error::Callsite {
+                name: frame.name.clone(),
+                line: frame.chunk.get_line_from_index(frame.ip),
+            })
+        }
+        calls
+    }
 }
 
 type PiccoloFunction = fn(&[Value]) -> Value;
@@ -168,12 +179,12 @@ impl Machine {
         ip: usize,
     ) -> Result<Value, PiccoloError> {
         // :)
-        let f = heap.manage(Function::new(0, String::new(), 0));
+        let f = heap.manage(Function::new(0, String::from("top level"), 0));
         //self.push(Value::Function(f.as_gc()));
 
         let mut frames = FrameStack {
             frames: vec![Frame {
-                name: String::new(),
+                name: String::from("top level"),
                 base: 0,
                 ip,
                 chunk: &module.chunk(0),
@@ -200,7 +211,8 @@ impl Machine {
                 }
             } else if result.is_err() {
                 self.ip = frames.current_ip();
-                result.map_err(|err| err.line(frames.current_line()))?;
+                result
+                    .map_err(|err| err.line(frames.current_line()).stack_trace(frames.unwind()))?;
             }
         }
     }
