@@ -34,29 +34,29 @@ pub fn compile_with(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloE
 fn compile_stmt(emitter: &mut Emitter, stmt: &Stmt) -> Result<(), PiccoloError> {
     match stmt {
         Stmt::Expr { token, expr }
-            => compile_expr_stmt(emitter, token, expr),
+            => compile_expr_stmt(emitter, *token, expr),
         Stmt::Block { end, body }
-            => compile_block(emitter, end, body),
+            => compile_block(emitter, *end, body),
         Stmt::Declaration { name, value, .. }
-            => compile_declaration(emitter, name, value),
+            => compile_declaration(emitter, *name, value),
         Stmt::Assignment { name, op, value }
-            => compile_assignment(emitter, name, op, value),
+            => compile_assignment(emitter, *name, *op, value),
         Stmt::If { if_, cond, then_block, else_, else_block, end }
-            => compile_if(emitter, if_, cond, then_block, else_.as_ref(), else_block.as_ref(), end),
+            => compile_if(emitter, *if_, cond, then_block, else_.as_ref(), else_block.as_ref(), *end),
         Stmt::While { while_, cond, body, end }
-            => compile_while(emitter, while_, cond, body, end),
+            => compile_while(emitter, *while_, cond, body, *end),
         Stmt::For { for_, init, cond, inc, body, end }
-            => compile_for(emitter, for_, init.as_ref(), cond, inc.as_ref(), body, end),
+            => compile_for(emitter, *for_, init.as_ref(), cond, inc.as_ref(), body, *end),
         Stmt::Fn { name, args, arity, body, method, end }
-            => compile_fn(emitter, name, args, *arity, body, *method, end),
+            => compile_fn(emitter, *name, args, *arity, body, *method, *end),
         Stmt::Break { break_ }
-            => compile_break(emitter, break_),
+            => compile_break(emitter, *break_),
         Stmt::Continue { continue_ }
-            => compile_continue(emitter, continue_),
+            => compile_continue(emitter, *continue_),
         Stmt::Retn { retn, value }
-            => compile_retn(emitter, retn, value.as_ref()),
+            => compile_retn(emitter, *retn, value.as_ref()),
         Stmt::Assert { assert, value }
-            => compile_assert(emitter, assert, value),
+            => compile_assert(emitter, *assert, value),
         // Stmt::Data { name, methods, fields }
         //     => compile_data(emitter, name, methods, fields),
         _ => todo!("{:?}", stmt),
@@ -67,19 +67,19 @@ fn compile_stmt(emitter: &mut Emitter, stmt: &Stmt) -> Result<(), PiccoloError> 
 fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> {
     match expr {
         Expr::Literal { literal }
-            => compile_literal(emitter, literal),
+            => compile_literal(emitter, *literal),
         Expr::Paren { right_paren, expr }
-            => compile_paren(emitter, right_paren, expr),
+            => compile_paren(emitter, *right_paren, expr),
         Expr::Variable { variable }
-            => compile_variable(emitter, variable),
+            => compile_variable(emitter, *variable),
         Expr::Unary { op, rhs }
-            => compile_unary(emitter, op, rhs),
+            => compile_unary(emitter, *op, rhs),
         Expr::Binary { lhs, op, rhs }
-            => compile_binary(emitter, lhs, op, rhs),
+            => compile_binary(emitter, lhs, *op, rhs),
         Expr::Logical { lhs, op, rhs }
-            => compile_logical(emitter, lhs, op, rhs),
+            => compile_logical(emitter, lhs, *op, rhs),
         Expr::Call { callee, paren, arity, args }
-            => compile_call(emitter, callee, paren, *arity, args),
+            => compile_call(emitter, callee, *paren, *arity, args),
         // Expr::New { name, args }
         //     => compile_new(emitter, name, args),
         // Expr::Get { object, name }
@@ -89,23 +89,19 @@ fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> 
         // Expr::Index { right_bracket, object, index }
         //     => compile_index(emitter, right_bracket, object, index),
         Expr::Fn { fn_, args, arity, body, end }
-            => compile_lambda(emitter, fn_, args, *arity, body, end),
+            => compile_lambda(emitter, *fn_, args, *arity, body, *end),
         _ => todo!("{:?}", expr),
     }
 }
 
-fn compile_expr_stmt(
-    emitter: &mut Emitter,
-    token: &Token,
-    expr: &Expr,
-) -> Result<(), PiccoloError> {
+fn compile_expr_stmt(emitter: &mut Emitter, token: Token, expr: &Expr) -> Result<(), PiccoloError> {
     trace!("{} expr stmt", token.line);
     compile_expr(emitter, expr)?;
     emitter.add_instruction(Opcode::Pop, token.line);
     Ok(())
 }
 
-fn compile_block(emitter: &mut Emitter, end: &Token, body: &[Stmt]) -> Result<(), PiccoloError> {
+fn compile_block(emitter: &mut Emitter, end: Token, body: &[Stmt]) -> Result<(), PiccoloError> {
     trace!("{} block", end.line);
     emitter.begin_scope();
     for stmt in body {
@@ -117,7 +113,7 @@ fn compile_block(emitter: &mut Emitter, end: &Token, body: &[Stmt]) -> Result<()
 
 fn compile_declaration(
     emitter: &mut Emitter,
-    name: &Token,
+    name: Token,
     value: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} decl {}", name.line, name.lexeme);
@@ -128,8 +124,8 @@ fn compile_declaration(
 
 fn compile_assignment(
     emitter: &mut Emitter,
-    name: &Token,
-    op: &Token,
+    name: Token,
+    op: Token,
     value: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} assign {}", name.line, name.lexeme);
@@ -171,12 +167,12 @@ fn compile_assignment(
 
 fn compile_if(
     emitter: &mut Emitter,
-    if_: &Token,
+    if_: Token,
     cond: &Expr,
     then_block: &[Stmt],
     else_: Option<&Token>,
     else_block: Option<&Vec<Stmt>>,
-    end: &Token,
+    end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} if", if_.line);
 
@@ -198,7 +194,7 @@ fn compile_if(
         // pop the condition
         emitter.add_instruction(Opcode::Pop, else_.line);
         // compile the else block
-        compile_block(emitter, else_, else_block)?;
+        compile_block(emitter, *else_, else_block)?;
 
         emitter.patch_jump(end_jump);
     } else {
@@ -222,10 +218,10 @@ fn compile_if(
 
 fn compile_while(
     emitter: &mut Emitter,
-    while_: &Token,
+    while_: Token,
     cond: &Expr,
     body: &[Stmt],
-    end: &Token,
+    end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} while", while_.line);
 
@@ -258,12 +254,12 @@ fn compile_while(
 
 fn compile_for(
     emitter: &mut Emitter,
-    for_: &Token,
+    for_: Token,
     init: &Stmt,
     cond: &Expr,
     inc: &Stmt,
     body: &[Stmt],
-    end: &Token,
+    end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} for", for_.line);
 
@@ -306,12 +302,12 @@ fn compile_for(
 
 fn compile_fn(
     emitter: &mut Emitter,
-    name: &Token,
+    name: Token,
     args: &[Token],
     arity: usize,
     body: &[Stmt],
     _method: bool,
-    end: &Token,
+    end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} fn {}", name.line, name.lexeme);
 
@@ -334,7 +330,7 @@ fn compile_fn(
     // will always be local
     emitter.make_variable(name)?;
     for arg in args {
-        emitter.make_variable(arg)?;
+        emitter.make_variable(*arg)?;
     }
 
     // don't use compile_block because we've already started a new scope
@@ -360,7 +356,7 @@ fn compile_fn(
     Ok(())
 }
 
-fn compile_break(emitter: &mut Emitter, break_: &Token) -> Result<(), PiccoloError> {
+fn compile_break(emitter: &mut Emitter, break_: Token) -> Result<(), PiccoloError> {
     trace!("{} break", break_.line);
 
     let offset = emitter.start_jump(Opcode::JumpForward, break_.line);
@@ -369,7 +365,7 @@ fn compile_break(emitter: &mut Emitter, break_: &Token) -> Result<(), PiccoloErr
     Ok(())
 }
 
-fn compile_continue(emitter: &mut Emitter, continue_: &Token) -> Result<(), PiccoloError> {
+fn compile_continue(emitter: &mut Emitter, continue_: Token) -> Result<(), PiccoloError> {
     trace!("{} continue", continue_.line);
 
     let offset = emitter.start_jump(Opcode::JumpForward, continue_.line);
@@ -380,7 +376,7 @@ fn compile_continue(emitter: &mut Emitter, continue_: &Token) -> Result<(), Picc
 
 fn compile_retn(
     emitter: &mut Emitter,
-    retn: &Token,
+    retn: Token,
     expr: Option<&Expr>,
 ) -> Result<(), PiccoloError> {
     trace!("{} retn", retn.line);
@@ -396,7 +392,7 @@ fn compile_retn(
     Ok(())
 }
 
-fn compile_assert(emitter: &mut Emitter, assert: &Token, value: &Expr) -> Result<(), PiccoloError> {
+fn compile_assert(emitter: &mut Emitter, assert: Token, value: &Expr) -> Result<(), PiccoloError> {
     trace!("{} assert", assert.line);
 
     compile_expr(emitter, value)?;
@@ -408,17 +404,17 @@ fn compile_assert(emitter: &mut Emitter, assert: &Token, value: &Expr) -> Result
     Ok(())
 }
 
-fn compile_literal(emitter: &mut Emitter, literal: &Token) -> Result<(), PiccoloError> {
+fn compile_literal(emitter: &mut Emitter, literal: Token) -> Result<(), PiccoloError> {
     trace!("{} literal", literal.line);
 
     // TODO: use constant ops instead of Constant ops
-    emitter.add_constant(Constant::try_from(*literal)?, literal.line);
+    emitter.add_constant(Constant::try_from(literal)?, literal.line);
     Ok(())
 }
 
 fn compile_paren(
     emitter: &mut Emitter,
-    right_paren: &Token,
+    right_paren: Token,
     expr: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} paren", right_paren.line);
@@ -431,19 +427,19 @@ fn compile_paren(
     })
 }
 
-fn compile_variable(emitter: &mut Emitter, variable: &Token) -> Result<(), PiccoloError> {
+fn compile_variable(emitter: &mut Emitter, variable: Token) -> Result<(), PiccoloError> {
     trace!("{} variable {}", variable.line, variable.lexeme);
 
     if let Some(local) = emitter.current_context().get_local_slot(variable) {
         emitter.add_instruction_arg(Opcode::GetLocal, local, variable.line);
     } else {
-        let global = emitter.get_global_ident(&variable)?;
+        let global = emitter.get_global_ident(variable)?;
         emitter.add_instruction_arg(Opcode::GetGlobal, global, variable.line);
     }
     Ok(())
 }
 
-fn compile_unary(emitter: &mut Emitter, op: &Token, rhs: &Expr) -> Result<(), PiccoloError> {
+fn compile_unary(emitter: &mut Emitter, op: Token, rhs: &Expr) -> Result<(), PiccoloError> {
     trace!("{} unary {}", op.line, op.lexeme);
 
     compile_expr(emitter, rhs)?;
@@ -460,7 +456,7 @@ fn compile_unary(emitter: &mut Emitter, op: &Token, rhs: &Expr) -> Result<(), Pi
 fn compile_binary(
     emitter: &mut Emitter,
     lhs: &Expr,
-    op: &Token,
+    op: Token,
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} binary {}", op.line, op.lexeme);
@@ -499,7 +495,7 @@ fn compile_binary(
 fn compile_logical(
     emitter: &mut Emitter,
     lhs: &Expr,
-    op: &Token,
+    op: Token,
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} logical {}", op.line, op.lexeme);
@@ -525,7 +521,7 @@ fn compile_logical(
 fn compile_call(
     emitter: &mut Emitter,
     callee: &Expr,
-    paren: &Token,
+    paren: Token,
     arity: usize,
     args: &[Expr],
 ) -> Result<(), PiccoloError> {
@@ -540,11 +536,11 @@ fn compile_call(
 
 fn compile_lambda(
     emitter: &mut Emitter,
-    fn_: &Token,
+    fn_: Token,
     args: &[Token],
     arity: usize,
     body: &[Stmt],
-    end: &Token,
+    end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} lambda", fn_.line);
     emitter.begin_context();
@@ -553,9 +549,9 @@ fn compile_lambda(
     // ??? since recursion is a hack we need a fake local so that the slots are all correct
     emitter
         .current_context_mut()
-        .add_local(&Token::new(TokenKind::Fn, "", fn_.line));
+        .add_local(Token::new(TokenKind::Fn, "", fn_.line));
     for arg in args {
-        emitter.make_variable(arg)?;
+        emitter.make_variable(*arg)?;
     }
 
     for stmt in body {
@@ -601,7 +597,7 @@ impl EmitterContext {
         &self.locals[index as usize]
     }
 
-    fn add_local(&mut self, name: &Token) {
+    fn add_local(&mut self, name: Token) {
         self.locals
             .push(Local::new(name.lexeme.to_owned(), self.scope_depth()));
     }
@@ -629,7 +625,7 @@ impl EmitterContext {
         self.locals.split_off(index)
     }
 
-    fn get_local_slot(&self, name: &Token) -> Option<u16> {
+    fn get_local_slot(&self, name: Token) -> Option<u16> {
         // IF SCOPE IS FUNCTION AND SCOPE DEPTH DOESN'T MATCH THIS IS A CAPTURE
         // mark as captured
         trace!("{} get local slot {}", name.line, name.lexeme);
@@ -642,7 +638,7 @@ impl EmitterContext {
         None
     }
 
-    fn get_local_depth(&self, name: &Token) -> Option<u16> {
+    fn get_local_depth(&self, name: Token) -> Option<u16> {
         trace!("{} get local depth {}", name.line, name.lexeme);
         for local in self.locals.iter().rev() {
             if local.name == name.lexeme {
@@ -682,7 +678,7 @@ impl Emitter {
         };
         // make_variable doesn't check if a global exists before declaring it, allowing us to hack
         // this in. later we should have something like a PiccoloState which manages everything.
-        let _ = r.make_global_ident(&Token::new(TokenKind::Identifier, "print", 0));
+        let _ = r.make_global_ident(Token::new(TokenKind::Identifier, "print", 0));
         r
     }
 
@@ -737,7 +733,7 @@ impl Emitter {
         self.module_mut().make_constant(c)
     }
 
-    fn make_global_ident(&mut self, name: &Token) -> u16 {
+    fn make_global_ident(&mut self, name: Token) -> u16 {
         trace!("{} make global {}", name.line, name.lexeme);
 
         if self.global_identifiers.contains_key(name.lexeme) {
@@ -750,7 +746,7 @@ impl Emitter {
         }
     }
 
-    fn get_global_ident(&self, name: &Token) -> Result<u16, PiccoloError> {
+    fn get_global_ident(&self, name: Token) -> Result<u16, PiccoloError> {
         trace!("{} get global {}", name.line, name.lexeme);
 
         self.global_identifiers
@@ -764,7 +760,7 @@ impl Emitter {
             })
     }
 
-    fn make_variable(&mut self, name: &Token) -> Result<(), PiccoloError> {
+    fn make_variable(&mut self, name: Token) -> Result<(), PiccoloError> {
         trace!("{} make variable {}", name.line, name.lexeme);
 
         // are we in global scope?
@@ -848,7 +844,7 @@ impl Emitter {
         }
     }
 
-    fn add_break(&mut self, offset: usize, break_: &Token) -> Result<(), PiccoloError> {
+    fn add_break(&mut self, offset: usize, break_: Token) -> Result<(), PiccoloError> {
         self.break_offsets
             .last_mut()
             .ok_or_else(|| {
@@ -861,7 +857,7 @@ impl Emitter {
         Ok(())
     }
 
-    fn add_continue(&mut self, offset: usize, continue_: &Token) -> Result<(), PiccoloError> {
+    fn add_continue(&mut self, offset: usize, continue_: Token) -> Result<(), PiccoloError> {
         self.continue_offsets
             .last_mut()
             .ok_or_else(|| {

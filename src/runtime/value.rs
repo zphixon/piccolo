@@ -280,7 +280,7 @@ impl Constant {
 
     pub(crate) fn try_from(token: Token) -> Result<Constant, PiccoloError> {
         Ok(match token.kind {
-            TokenKind::String => Constant::String(crate::compiler::escape_string(&token)?),
+            TokenKind::String => Constant::String(crate::compiler::escape_string(token)?),
             TokenKind::Integer(v) => Constant::Integer(v),
             TokenKind::True => Constant::Bool(true),
             TokenKind::False => Constant::Bool(false),

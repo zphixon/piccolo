@@ -37,7 +37,7 @@ pub fn scan_all(source: &str) -> Result<Vec<Token>, PiccoloError> {
     scanner::Scanner::new(source).scan_all()
 }
 
-pub(crate) fn escape_string(t: &Token) -> Result<String, PiccoloError> {
+pub(crate) fn escape_string(t: Token) -> Result<String, PiccoloError> {
     match t.kind {
         TokenKind::String => {
             let s = t.lexeme;
