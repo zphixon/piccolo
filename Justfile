@@ -2,13 +2,10 @@
 
 set shell := ["powershell"]
 
-file := ""
-fuzz := ""
-
-r:
+r file:
     cargo run --features "pc-debug" --example main -- {{file}}
 
-rr:
+rr file:
     cargo run --example main --release -- {{file}}
 
 c:
@@ -36,7 +33,7 @@ tt:
 do:
     cargo doc --no-deps --open
 
-f:
+f fuzz:
     cargo run --example fuzzer --features "fuzzer" -- {{fuzz}}
 
 vl:
