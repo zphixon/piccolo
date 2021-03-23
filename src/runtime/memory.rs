@@ -376,15 +376,28 @@ mod test {
 
     #[test]
     fn use_after_free() {
+        use crate::Object;
+
+        #[derive(Debug)]
+        struct S(u64);
+        impl Drop for S {
+            fn drop(&mut self) {
+                self.0 = 0xbeeeb000;
+            }
+        }
+        impl Object for S {
+            fn trace(&self) {}
+        }
+
         let gc;
 
         {
             let mut heap = Heap::default();
-            gc = heap.manage(String::from("hmmm")).as_gc();
+            gc = heap.manage(S(0)).as_gc();
             println!("{:#?}", heap);
         }
 
-        println!("{}", gc);
+        assert_ne!(gc.0, 0xbeeeb000);
     }
 
     #[test]
