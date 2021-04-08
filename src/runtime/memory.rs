@@ -7,9 +7,9 @@ use crate::Object;
 use std::{
     cell::Cell,
     fmt,
+    marker::PhantomData,
     ops::{Deref, DerefMut},
     sync::atomic::{AtomicUsize, Ordering},
-    marker::PhantomData,
 };
 
 /// Allocation metadata for a GC object.
@@ -92,11 +92,14 @@ impl<T: Object + ?Sized> Object for Allocation<'_, T> {
 
 impl<'data> Heap<'data> {
     // allocate some data on the heap. return type points to allocation owned by Heap.objects
-    unsafe fn allocate<'this, T: 'data + Object>(&'this mut self, data: T) -> *mut Allocation<'data, T> {
+    unsafe fn allocate<'this, T: 'data + Object>(
+        &'this mut self,
+        data: T,
+    ) -> *mut Allocation<'data, T> {
         let mut alloc = Box::new(Allocation {
             header: Header::default(),
             data,
-            _phantom: Default::default()
+            _phantom: Default::default(),
         });
 
         // TODO: maybe box unnecessary?
@@ -127,7 +130,10 @@ impl<'data> Heap<'data> {
     /// Manage an uncopyable object on the heap.
     ///
     /// As in manage, data will be GCable.
-    pub fn manage_unique<'this, T: 'data + Object>(&'this mut self, data: T) -> UniqueRoot<'data, T> {
+    pub fn manage_unique<'this, T: 'data + Object>(
+        &'this mut self,
+        data: T,
+    ) -> UniqueRoot<'data, T> {
         let root = UniqueRoot {
             ptr: unsafe { self.allocate(data) },
         };
@@ -208,7 +214,7 @@ impl<T: Object + ?Sized> Deref for Gc<'_, T> {
     }
 }
 
-impl<T: fmt::Debug + Object + ?Sized> fmt::Debug for Gc<'_,T> {
+impl<T: fmt::Debug + Object + ?Sized> fmt::Debug for Gc<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner: &T = &*self;
         write!(f, "{:?}", inner)

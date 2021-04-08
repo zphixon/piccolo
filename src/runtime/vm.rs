@@ -84,7 +84,7 @@ impl<'chunk, 'value> FrameStack<'chunk, 'value> {
     }
 }
 
-type PiccoloFunction = for <'value> fn(&[Value<'value>]) -> Value<'value>;
+type PiccoloFunction = for<'value> fn(&[Value<'value>]) -> Value<'value>;
 //type PiccoloFunction<'a> = fn(&[Value<'a>]) -> Value<'a>;
 
 pub struct Machine<'value> {
@@ -161,7 +161,11 @@ impl<'value> Machine<'value> {
         self.push(Value::String(root.as_gc()));
     }
 
-    pub fn interpret(&mut self, heap: &mut Heap<'value>, module: &Module) -> Result<Value<'value>, PiccoloError> {
+    pub fn interpret(
+        &mut self,
+        heap: &mut Heap<'value>,
+        module: &Module,
+    ) -> Result<Value<'value>, PiccoloError> {
         self.interpret_from(heap, module, 0)
     }
 
