@@ -7,18 +7,18 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug)]
-pub enum Value {
+pub enum Value<'data> {
     Bool(bool),
     Integer(i64),
     Double(f64),
-    String(Gc<String>),
-    Function(Gc<Function>),
-    NativeFunction(Gc<NativeFunction>),
-    Object(Gc<dyn Object>),
+    String(Gc<'data, String>),
+    Function(Gc<'data, Function>),
+    NativeFunction(Gc<'data, NativeFunction>),
+    Object(Gc<'data, dyn Object>),
     Nil,
 }
 
-impl Value {
+impl<'data> Value<'data> {
     /// A value is only false-y if it is of type bool and false, or of type nil.
     /// All other values are truth-y.
     pub fn is_truthy(&self) -> bool {
@@ -29,7 +29,7 @@ impl Value {
         }
     }
 
-    pub fn from_constant(c: Constant, h: &mut Heap) -> Value {
+    pub fn from_constant(c: Constant, h: &mut Heap<'data>) -> Value<'data> {
         match c {
             Constant::Bool(v) => Value::Bool(v),
             Constant::Integer(v) => Value::Integer(v),
@@ -65,7 +65,7 @@ impl Value {
 
     pub fn into<T>(self) -> T
     where
-        Value: Into<T>,
+        Value<'data>: Into<T>,
     {
         std::convert::Into::into(self)
     }
@@ -90,7 +90,7 @@ impl Value {
         matches!(self, Value::Function(_))
     }
 
-    pub fn as_function(&self) -> Gc<Function> {
+    pub fn as_function(&self) -> Gc<'data, Function> {
         assert!(self.is_function());
         match self {
             Value::Function(f) => *f,
@@ -102,7 +102,7 @@ impl Value {
         matches!(self, Value::NativeFunction(_))
     }
 
-    pub fn as_native_function(&self) -> Gc<NativeFunction> {
+    pub fn as_native_function(&self) -> Gc<'data, NativeFunction> {
         assert!(self.is_native_function());
         match self {
             Value::NativeFunction(f) => *f,
@@ -183,7 +183,7 @@ impl Value {
     }
 }
 
-impl Object for Value {
+impl Object for Value<'_> {
     fn trace(&self) {
         match self {
             Value::Bool(v) => v.trace(),
@@ -211,7 +211,7 @@ impl Object for Value {
     }
 }
 
-impl std::fmt::Display for Value {
+impl std::fmt::Display for Value<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Value::Bool(v) => write!(f, "{}", v),
@@ -226,7 +226,7 @@ impl std::fmt::Display for Value {
     }
 }
 
-impl Into<bool> for Value {
+impl Into<bool> for Value<'_> {
     fn into(self) -> bool {
         match self {
             Value::Bool(v) => v,
@@ -235,7 +235,7 @@ impl Into<bool> for Value {
     }
 }
 
-impl Into<i64> for Value {
+impl Into<i64> for Value<'_> {
     fn into(self) -> i64 {
         match self {
             Value::Integer(v) => v,
@@ -244,7 +244,7 @@ impl Into<i64> for Value {
     }
 }
 
-impl Into<f64> for Value {
+impl Into<f64> for Value<'_> {
     fn into(self) -> f64 {
         match self {
             Value::Double(v) => v,

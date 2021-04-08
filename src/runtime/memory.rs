@@ -8,8 +8,8 @@ use std::{
     cell::Cell,
     fmt,
     ops::{Deref, DerefMut},
-    ptr::NonNull,
     sync::atomic::{AtomicUsize, Ordering},
+    marker::PhantomData,
 };
 
 /// Allocation metadata for a GC object.
@@ -24,42 +24,43 @@ struct Header {
 /// Contains some metadata about the allocation, for example how many roots there are, and whether
 /// or not the object is marked.
 #[derive(Debug)]
-struct Allocation<T: 'static + Object + ?Sized> {
+struct Allocation<'data, T: Object + ?Sized> {
     header: Header,
+    _phantom: PhantomData<&'data ()>,
     data: T,
 }
 
 /// Heap type.
 ///
 /// A Vec<Box<Allocation<dyn Object>>> contains all heap objects. Objects allocated by the GC will
-/// be owend by this struct.
+/// be owned by this struct.
 #[derive(Debug, Default)]
-pub struct Heap {
-    objects: Vec<Box<Allocation<dyn Object>>>,
+pub struct Heap<'data> {
+    objects: Vec<Box<Allocation<'data, dyn Object + 'data>>>,
 }
 
 /// GC smart pointer. Copyable.
 ///
 /// Contains non-null pointer to an allocation stored on the heap.
-pub struct Gc<T: 'static + Object + ?Sized> {
-    ptr: NonNull<Allocation<T>>,
+pub struct Gc<'data, T: Object + ?Sized> {
+    ptr: *mut Allocation<'data, T>,
 }
 
 /// Represents a rooted value. Cloneable.
 ///
 /// Contains non-null pointer to an allocation stored on the heap.
-pub struct Root<T: 'static + Object + ?Sized> {
-    ptr: NonNull<Allocation<T>>,
+pub struct Root<'data, T: Object + ?Sized> {
+    ptr: *mut Allocation<'data, T>,
 }
 
 /// A value that is uniquely rooted. Uncloneable.
 ///
 /// Contains non-null pointer to an allocation stored on the heap. Semantically uncopyable.
-pub struct UniqueRoot<T: 'static + Object + ?Sized> {
-    ptr: NonNull<Allocation<T>>,
+pub struct UniqueRoot<'data, T: Object + ?Sized> {
+    ptr: *mut Allocation<'data, T>,
 }
 
-impl<T: 'static + Object + ?Sized> Allocation<T> {
+impl<T: Object + ?Sized> Allocation<'_, T> {
     // mark the gc object
     fn unmark(&self) {
         self.header.marked.set(false);
@@ -76,7 +77,7 @@ impl<T: 'static + Object + ?Sized> Allocation<T> {
 }
 
 // this is where the magic happens
-impl<T: 'static + Object + ?Sized> Object for Allocation<T> {
+impl<T: Object + ?Sized> Object for Allocation<'_, T> {
     fn trace(&self) {
         // mark the allocation as having been traced and then trace its data
         if !self.header.marked.replace(true) {
@@ -89,23 +90,25 @@ impl<T: 'static + Object + ?Sized> Object for Allocation<T> {
     }
 }
 
-impl Heap {
+impl<'data> Heap<'data> {
     // allocate some data on the heap. return type points to allocation owned by Heap.objects
-    fn allocate<T: 'static + Object>(&mut self, data: T) -> NonNull<Allocation<T>> {
+    unsafe fn allocate<'this, T: 'data + Object>(&'this mut self, data: T) -> *mut Allocation<'data, T> {
         let mut alloc = Box::new(Allocation {
             header: Header::default(),
             data,
+            _phantom: Default::default()
         });
 
         // TODO: maybe box unnecessary?
         // TODO: maybe NonNull::new?
-        let ptr = unsafe { NonNull::new_unchecked(&mut *alloc) };
+        //let ptr = unsafe { NonNull::new_unchecked(&mut *alloc) };
+        let ptr = &mut *alloc as *mut Allocation<T>;
         self.objects.push(alloc);
         ptr
     }
 
     /// Root a GCd object.
-    pub fn root<T: 'static + Object + ?Sized>(&mut self, obj: Gc<T>) -> Root<T> {
+    pub fn root<'this, T: Object + ?Sized>(&'this mut self, obj: Gc<'data, T>) -> Root<'data, T> {
         obj.as_allocation().root();
         Root { ptr: obj.ptr }
     }
@@ -113,9 +116,9 @@ impl Heap {
     /// Manage an object on the heap.
     ///
     /// Data will be GCable.
-    pub fn manage<T: 'static + Object>(&mut self, data: T) -> Root<T> {
+    pub fn manage<'this, T: 'data + Object>(&'this mut self, data: T) -> Root<'data, T> {
         let root = Root {
-            ptr: self.allocate(data),
+            ptr: unsafe { self.allocate(data) },
         };
         root.as_allocation().root();
         root
@@ -124,9 +127,9 @@ impl Heap {
     /// Manage an uncopyable object on the heap.
     ///
     /// As in manage, data will be GCable.
-    pub fn manage_unique<T: 'static + Object>(&mut self, data: T) -> UniqueRoot<T> {
+    pub fn manage_unique<'this, T: 'data + Object>(&'this mut self, data: T) -> UniqueRoot<'data, T> {
         let root = UniqueRoot {
-            ptr: self.allocate(data),
+            ptr: unsafe { self.allocate(data) },
         };
         root.as_allocation().root();
         root
@@ -177,49 +180,49 @@ impl Heap {
 }
 
 // Gc<T> impl, Clone, Copy, Deref, Debug, Display, Object {{{
-impl<T: 'static + Object + ?Sized> Gc<T> {
+impl<'data, T: Object + ?Sized> Gc<'data, T> {
     // safety: the lifetime of the returned allocation is bound to self
-    fn as_allocation(&self) -> &Allocation<T> {
-        unsafe { &self.ptr.as_ref() }
+    fn as_allocation(&self) -> &Allocation<'data, T> {
+        unsafe { self.ptr.as_ref().unwrap() }
     }
 }
 
-impl<T: 'static + Object + Sized + Clone> Gc<T> {
+impl<T: Object + Sized + Clone> Gc<'_, T> {
     pub fn deep_copy(&self) -> T {
         self.as_allocation().data.clone()
     }
 }
 
-impl<T: 'static + Object + ?Sized> Clone for Gc<T> {
-    fn clone(&self) -> Gc<T> {
+impl<'data, T: Object + ?Sized> Clone for Gc<'data, T> {
+    fn clone<'this>(&'this self) -> Gc<'data, T> {
         *self
     }
 }
 
-impl<T: 'static + Object + ?Sized> Copy for Gc<T> {}
+impl<T: Object + ?Sized> Copy for Gc<'_, T> {}
 
-impl<T: 'static + Object + ?Sized> Deref for Gc<T> {
+impl<T: Object + ?Sized> Deref for Gc<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
         &self.as_allocation().data
     }
 }
 
-impl<T: fmt::Debug + 'static + Object + ?Sized> fmt::Debug for Gc<T> {
+impl<T: fmt::Debug + Object + ?Sized> fmt::Debug for Gc<'_,T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner: &T = &*self;
         write!(f, "{:?}", inner)
     }
 }
 
-impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for Gc<T> {
+impl<T: fmt::Display + Object + ?Sized> fmt::Display for Gc<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner: &T = &*self;
         std::fmt::Display::fmt(inner, f)
     }
 }
 
-impl<T: 'static + Object + ?Sized> Object for Gc<T> {
+impl<T: Object + ?Sized> Object for Gc<'_, T> {
     fn trace(&self) {
         self.as_allocation().trace()
     }
@@ -231,46 +234,46 @@ impl<T: 'static + Object + ?Sized> Object for Gc<T> {
 // }}}
 
 // Root<T> impl, Clone, Deref, Debug, Display, Object, Drop {{{
-impl<T: 'static + Object + ?Sized> Root<T> {
+impl<'data, T: Object + ?Sized> Root<'data, T> {
     // safety: the lifetime of the returned allocation is bound to self
-    fn as_allocation(&self) -> &Allocation<T> {
-        unsafe { &self.ptr.as_ref() }
+    fn as_allocation<'this>(&'this self) -> &'this Allocation<'data, T> {
+        unsafe { self.ptr.as_ref().unwrap() }
     }
 
-    pub(crate) fn as_gc(&self) -> Gc<T> {
+    pub(crate) fn as_gc<'this>(&'this self) -> Gc<'data, T> {
         Gc { ptr: self.ptr }
     }
 }
 
-impl<T: 'static + Object + ?Sized> Clone for Root<T> {
-    fn clone(&self) -> Root<T> {
+impl<'data, T: Object + ?Sized> Clone for Root<'data, T> {
+    fn clone<'this>(&'this self) -> Root<'data, T> {
         self.as_allocation().root();
         Root { ptr: self.ptr }
     }
 }
 
-impl<T: 'static + Object + ?Sized> Deref for Root<T> {
+impl<T: Object + ?Sized> Deref for Root<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
         &self.as_allocation().data
     }
 }
 
-impl<T: fmt::Debug + 'static + Object + ?Sized> fmt::Debug for Root<T> {
+impl<T: fmt::Debug + Object + ?Sized> fmt::Debug for Root<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner: &T = &*self;
         write!(f, "Root({:?})", inner)
     }
 }
 
-impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for Root<T> {
+impl<T: fmt::Display + Object + ?Sized> fmt::Display for Root<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner: &T = &*self;
         std::fmt::Display::fmt(inner, f)
     }
 }
 
-impl<T: 'static + Object + ?Sized> Object for Root<T> {
+impl<T: Object + ?Sized> Object for Root<'_, T> {
     fn trace(&self) {
         self.as_allocation().trace()
     }
@@ -280,7 +283,7 @@ impl<T: 'static + Object + ?Sized> Object for Root<T> {
     }
 }
 
-impl<T: 'static + Object + ?Sized> Drop for Root<T> {
+impl<T: Object + ?Sized> Drop for Root<'_, T> {
     fn drop(&mut self) {
         self.as_allocation().unroot();
     }
@@ -288,45 +291,45 @@ impl<T: 'static + Object + ?Sized> Drop for Root<T> {
 // }}}
 
 // UniqueRoot<T> impl, Deref, DerefMut, Debug, Display, Object, Drop {{{
-impl<T: 'static + Object + ?Sized> UniqueRoot<T> {
+impl<'data, T: Object + ?Sized> UniqueRoot<'data, T> {
     // safety: the lifetime of the returned allocation is bound to self
-    fn as_allocation(&self) -> &Allocation<T> {
-        unsafe { self.ptr.as_ref() }
+    fn as_allocation<'this>(&'this self) -> &'this Allocation<'data, T> {
+        unsafe { self.ptr.as_ref().unwrap() }
     }
 
-    fn as_allocation_mut(&mut self) -> &mut Allocation<T> {
-        unsafe { self.ptr.as_mut() }
+    fn as_allocation_mut<'this>(&'this mut self) -> &'this mut Allocation<'data, T> {
+        unsafe { self.ptr.as_mut().unwrap() }
     }
 }
 
-impl<T: 'static + Object + ?Sized> Deref for UniqueRoot<T> {
+impl<T: Object + ?Sized> Deref for UniqueRoot<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
         &self.as_allocation().data
     }
 }
 
-impl<T: 'static + Object + ?Sized> DerefMut for UniqueRoot<T> {
+impl<T: Object + ?Sized> DerefMut for UniqueRoot<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         &mut self.as_allocation_mut().data
     }
 }
 
-impl<T: fmt::Debug + 'static + Object + ?Sized> fmt::Debug for UniqueRoot<T> {
+impl<T: fmt::Debug + Object + ?Sized> fmt::Debug for UniqueRoot<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner: &T = &*self;
         write!(f, "UniqueRoot({:?})", inner)
     }
 }
 
-impl<T: fmt::Display + 'static + Object + ?Sized> fmt::Display for UniqueRoot<T> {
+impl<T: fmt::Display + Object + ?Sized> fmt::Display for UniqueRoot<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner: &T = &*self;
         std::fmt::Display::fmt(inner, f)
     }
 }
 
-impl<T: 'static + Object + ?Sized> Object for UniqueRoot<T> {
+impl<T: Object + ?Sized> Object for UniqueRoot<'_, T> {
     fn trace(&self) {
         self.as_allocation().trace()
     }
@@ -336,7 +339,7 @@ impl<T: 'static + Object + ?Sized> Object for UniqueRoot<T> {
     }
 }
 
-impl<T: 'static + Object + ?Sized> Drop for UniqueRoot<T> {
+impl<T: Object + ?Sized> Drop for UniqueRoot<'_, T> {
     fn drop(&mut self) {
         self.as_allocation().unroot();
     }

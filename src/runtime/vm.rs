@@ -5,16 +5,16 @@ use crate::{
 
 use fnv::FnvHashMap;
 
-pub struct Frame<'a> {
+pub struct Frame<'chunk, 'value> {
     name: String,
     ip: usize,
     base: usize,
-    chunk: &'a Chunk,
-    function: Root<Function>,
+    chunk: &'chunk Chunk,
+    function: Root<'value, Function>,
     //closure: Root<Closure>,
 }
 
-impl Frame<'_> {
+impl Frame<'_, '_> {
     fn step(&mut self) -> Opcode {
         let op = self.chunk.data[self.ip].into();
         self.ip += 1;
@@ -22,20 +22,20 @@ impl Frame<'_> {
     }
 }
 
-pub struct FrameStack<'a> {
-    frames: Vec<Frame<'a>>,
+pub struct FrameStack<'chunk, 'value> {
+    frames: Vec<Frame<'chunk, 'value>>,
 }
 
-impl<'a> FrameStack<'a> {
+impl<'chunk, 'value> FrameStack<'chunk, 'value> {
     fn len(&self) -> usize {
         self.frames.len()
     }
 
-    fn push(&mut self, frame: Frame<'a>) {
+    fn push(&mut self, frame: Frame<'chunk, 'value>) {
         self.frames.push(frame);
     }
 
-    fn pop(&mut self) -> Frame<'a> {
+    fn pop(&mut self) -> Frame<'chunk, 'value> {
         self.frames.pop().unwrap()
     }
 
@@ -48,11 +48,11 @@ impl<'a> FrameStack<'a> {
         self.current_frame().ip
     }
 
-    fn current_frame(&self) -> &Frame {
+    fn current_frame<'this>(&'this self) -> &'this Frame<'chunk, 'value> {
         self.frames.last().unwrap()
     }
 
-    fn current_frame_mut<'b>(&'b mut self) -> &mut Frame<'a> {
+    fn current_frame_mut<'this>(&'this mut self) -> &'this mut Frame<'chunk, 'value> {
         self.frames.last_mut().unwrap()
     }
 
@@ -84,23 +84,24 @@ impl<'a> FrameStack<'a> {
     }
 }
 
-type PiccoloFunction = fn(&[Value]) -> Value;
+type PiccoloFunction = for <'value> fn(&[Value<'value>]) -> Value<'value>;
+//type PiccoloFunction<'a> = fn(&[Value<'a>]) -> Value<'a>;
 
-pub struct Machine {
-    stack: UniqueRoot<Vec<Value>>,
-    globals: UniqueRoot<FnvHashMap<String, Value>>,
+pub struct Machine<'value> {
+    stack: UniqueRoot<'value, Vec<Value<'value>>>,
+    globals: UniqueRoot<'value, FnvHashMap<String, Value<'value>>>,
     native_functions: FnvHashMap<String, PiccoloFunction>,
     ip: usize,
 }
 
 #[derive(Copy, Clone)]
-enum VmState {
+enum VmState<'value> {
     Continue,
-    ReturnFromTop(Value, usize),
-    Stop(Value),
+    ReturnFromTop(Value<'value>, usize),
+    Stop(Value<'value>),
 }
 
-fn print(values: &[Value]) -> Value {
+fn print<'value>(values: &[Value<'value>]) -> Value<'value> {
     let mut s = String::new();
     for (i, value) in values.iter().enumerate() {
         s.push_str(&format!("{}", value));
@@ -112,8 +113,8 @@ fn print(values: &[Value]) -> Value {
     Value::Nil
 }
 
-impl Machine {
-    pub fn new(heap: &mut Heap) -> Self {
+impl<'value> Machine<'value> {
+    pub fn new(heap: &mut Heap<'value>) -> Self {
         let mut globals = heap.manage_unique(FnvHashMap::default());
 
         // TODO make this nicer
@@ -139,45 +140,45 @@ impl Machine {
         }
     }
 
-    fn push(&mut self, value: Value) {
+    fn push(&mut self, value: Value<'value>) {
         self.stack.push(value);
     }
 
-    fn pop(&mut self) -> Value {
+    fn pop(&mut self) -> Value<'value> {
         self.stack.pop().unwrap()
     }
 
-    fn peek(&self) -> &Value {
+    fn peek(&self) -> &Value<'value> {
         &self.stack[self.stack.len() - 1]
     }
 
-    fn peek_back(&self, len: usize) -> &Value {
+    fn peek_back(&self, len: usize) -> &Value<'value> {
         &self.stack[self.stack.len() - 1 - len]
     }
 
-    fn push_string(&mut self, heap: &mut Heap, string: String) {
+    fn push_string(&mut self, heap: &mut Heap<'value>, string: String) {
         let root = heap.manage(string);
         self.push(Value::String(root.as_gc()));
     }
 
-    pub fn interpret(&mut self, heap: &mut Heap, module: &Module) -> Result<Value, PiccoloError> {
+    pub fn interpret(&mut self, heap: &mut Heap<'value>, module: &Module) -> Result<Value<'value>, PiccoloError> {
         self.interpret_from(heap, module, 0)
     }
 
     pub fn interpret_continue(
         &mut self,
-        heap: &mut Heap,
+        heap: &mut Heap<'value>,
         module: &Module,
-    ) -> Result<Value, PiccoloError> {
+    ) -> Result<Value<'value>, PiccoloError> {
         self.interpret_from(heap, module, self.ip)
     }
 
-    fn interpret_from(
+    fn interpret_from<'chunk>(
         &mut self,
-        heap: &mut Heap,
-        module: &Module,
+        heap: &mut Heap<'value>,
+        module: &'chunk Module,
         ip: usize,
-    ) -> Result<Value, PiccoloError> {
+    ) -> Result<Value<'value>, PiccoloError> {
         // :)
         let f = heap.manage(Function::new(0, String::from("top level"), 0));
         //self.push(Value::Function(f.as_gc()));
@@ -217,12 +218,12 @@ impl Machine {
         }
     }
 
-    fn interpret_next_instruction<'a>(
+    fn interpret_next_instruction<'chunk>(
         &mut self,
-        heap: &mut Heap,
-        module: &'a Module,
-        frames: &mut FrameStack<'a>,
-    ) -> Result<VmState, PiccoloError> {
+        heap: &mut Heap<'value>,
+        module: &'chunk Module,
+        frames: &mut FrameStack<'chunk, 'value>,
+    ) -> Result<VmState<'value>, PiccoloError> {
         // TODO: move to Opcode::Return
         if frames.current_ip() + 1 > frames.current_chunk().len() {
             return Ok(VmState::Stop(Value::Nil));
