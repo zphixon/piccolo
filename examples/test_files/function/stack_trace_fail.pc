@@ -1,15 +1,22 @@
-a =: nil
 
-fn b(n) do
-    if n == 10 do
-        assert false
-    end
-    a(n + 1)
+fn e() do
+    assert false
 end
 
-a = fn(n) do
-    print(n)
-    b(n)
+fn d() do
+    e()
 end
 
-a(1)
+fn c() do
+    d()
+end
+
+fn b() do
+    c()
+end
+
+fn a() do
+    b()
+end
+
+a()
