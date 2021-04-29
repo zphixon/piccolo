@@ -251,6 +251,7 @@ fn consume<'a>(scanner: &mut Scanner<'a>, kind: TokenKind) -> Result<Token<'a>, 
         Ok(tok)
     } else {
         Err(PiccoloError::new(ErrorKind::UnexpectedToken {
+            was_eof: tok.kind == TokenKind::Eof,
             exp: format!("{:?}", kind),
             got: format!("{:?}", tok.kind),
         })
@@ -523,6 +524,7 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
     } else {
         let t = scanner.next_token()?;
         Err(PiccoloError::new(ErrorKind::ExpectedExpression {
+            was_eof: t.kind == TokenKind::Eof,
             got: format!("{}", t.lexeme),
         })
         .line(t.line))

@@ -66,6 +66,14 @@ impl PiccoloError {
             ..self
         }
     }
+
+    pub fn was_eof(&self) -> bool {
+        match self.kind {
+            ErrorKind::ExpectedExpression { was_eof, .. } => was_eof,
+            ErrorKind::UnexpectedToken { was_eof, .. } => was_eof,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for PiccoloError {
@@ -133,6 +141,7 @@ pub enum ErrorKind {
         literal: String,
     },
     UnexpectedToken {
+        was_eof: bool,
         exp: String,
         got: String,
     },
@@ -153,6 +162,7 @@ pub enum ErrorKind {
         name: String,
     },
     ExpectedExpression {
+        was_eof: bool,
         got: String,
     },
     CannotClone {
@@ -172,6 +182,8 @@ pub enum ErrorKind {
     },
 }
 
+pub struct ParseError {}
+
 #[rustfmt::skip]
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -190,7 +202,7 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Unknown format code '\\{}'", code),
             ErrorKind::InvalidNumberLiteral { literal }
                 => write!(f, "Invalid number literal '{}'", literal),
-            ErrorKind::UnexpectedToken { exp, got }
+            ErrorKind::UnexpectedToken { exp, got, .. }
                 => write!(f, "Unexpected token: expected {}, got {}", exp, got),
             ErrorKind::IncorrectType { exp, got, op }
                 => write!(f, "Incorrect type: expected {}, got {} for op {:?}", exp, got, op),
@@ -200,7 +212,7 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Undefined variable '{}'", name),
             ErrorKind::UnknownField { obj, name }
                 => write!(f, "Unknown field '{}' on {}", name, obj),
-            ErrorKind::ExpectedExpression { got }
+            ErrorKind::ExpectedExpression { got, .. }
                 => write!(f, "Expected expression, got {}", got),
             ErrorKind::CannotClone { ty }
                 => write!(f, "Cannot clone type {}", ty),

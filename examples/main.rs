@@ -106,28 +106,52 @@ fn repl() {
     let mut machine = Machine::new(&mut heap);
     let mut emitter = Emitter::new();
 
+    let mut input = String::new();
+    let mut prompt = "-- ";
+
     loop {
-        match rl.readline("-- ") {
+        match rl.readline(prompt) {
             Ok(line) => {
                 rl.add_history_entry(&line);
                 rl.save_history(".piccolo_history").unwrap();
 
-                let mut scanner = Scanner::new(&line);
-                let _: Result<(), ()> = parse(&mut scanner)
-                    .and_then(|ast| {
-                        #[cfg(feature = "pc-debug")]
-                        println!("{}", print_ast(&ast));
-                        compile_with(&mut emitter, &ast)
-                    })
-                    .and_then(|_| {
-                        #[cfg(feature = "pc-debug")]
-                        println!("{}", disassemble(emitter.module(), ""));
-                        machine
-                            .interpret_continue(&mut heap, emitter.module())
-                            .map_err(|e| vec![e])
-                    })
-                    .map_err(|errors| print_errors(errors))
-                    .map(|value| println!("{:?}", value));
+                input.push_str(&line);
+                input.push('\n');
+
+                let mut scanner = Scanner::new(&input);
+                let parse = parse(&mut scanner);
+                match parse {
+                    Ok(ast) => {
+                        if cfg!(feature = "pc-debug") {
+                            println!("{}", print_ast(&ast));
+                        }
+
+                        let _: Result<(), ()> = compile_with(&mut emitter, &ast)
+                            .and_then(|_| {
+                                #[cfg(feature = "pc-debug")]
+                                println!("{}", disassemble(emitter.module(), ""));
+                                machine
+                                    .interpret_continue(&mut heap, emitter.module())
+                                    .map_err(|e| vec![e])
+                            })
+                            .map_err(|e| print_errors(e))
+                            .map(|value| println!("{:?}", value));
+
+                        prompt = "-- ";
+                        input = String::new();
+                    }
+
+                    Err(errors) => {
+                        if errors.iter().any(|error| !error.was_eof()) {
+                            prompt = "-- ";
+                            input = String::new();
+                            print_errors(errors);
+                        } else {
+                            prompt = "---- ";
+                            // continue
+                        }
+                    }
+                }
             }
 
             Err(ReadlineError::Interrupted) => {}
