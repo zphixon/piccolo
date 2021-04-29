@@ -1,0 +1,14 @@
+# we need some kind of symbol table that has scope information...
+fn makeClosure() do
+    local =: "hi"
+    fn closure() do
+        local += "!"
+        retn local
+    end
+    retn closure
+end
+
+c =: makeClosure()
+assert c() == "hi!"
+assert c() == "hi!!"
+assert c() == "hi!!!"
