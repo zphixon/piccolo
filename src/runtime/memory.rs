@@ -1,6 +1,6 @@
 //! Contains items for the manipulation of memory at runtime.
 //!
-//! Shamelessly copied from https://github.com/Darksecond/lox
+//! Shamelessly copied from <https://github.com/Darksecond/lox>
 
 use crate::Object;
 
