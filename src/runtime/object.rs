@@ -1,92 +1,32 @@
 //! Objects defined in Rust that may exist at runtime.
 
-use crate::runtime::{value::Value, HeapPtr};
-
-use downcast_rs::Downcast;
-
 use core::fmt;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum ObjectKind {
-    Function,
-    Other,
-}
+use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct ObjectPtr {
-    pub idx: HeapPtr,
-    pub kind: ObjectKind,
-}
+/// Trait to trace objects for marking and sweeping.
+pub trait Object: std::fmt::Debug {
+    fn trace(&self);
 
-/// Trait for Piccolo objects that will be stored in a [`Heap`].
-///
-/// [`Heap`]: ../memory/struct.Heap.html
-pub trait Object: Downcast + fmt::Debug + fmt::Display {
-    /// Return the name of the type of the object. Used for runtime type comparison inside
-    /// Piccolo via the `type()` builtin function.
     fn type_name(&self) -> &'static str {
         "object"
     }
 
-    fn kind(&self) -> ObjectKind {
-        ObjectKind::Other
-    }
-
-    /// Compare self to another object. Returns `None` if incomparable.
-    fn gt(&self, _other: &dyn Object) -> Option<bool> {
-        None
-    }
-
-    /// Compare self to another object. Returns `None` if incomparable.
-    fn lt(&self, _other: &dyn Object) -> Option<bool> {
-        None
-    }
-
-    /// Compare self to another object. Returns `None` if incomparable.
-    fn eq(&self, _other: &dyn Object) -> Option<bool> {
-        None
-    }
-
-    /// Get the named property from the object. Returns `None` if it doesn't exist.
-    fn get(&self, _property: &str) -> Option<Value> {
-        None
-    }
-
-    /// Sets the named property on the object. Returns `None` if it doesn't exist.
-    fn set(&mut self, _property: &str, _value: Value) -> Option<()> {
-        None
-    }
-
-    /// Attempts to clone the object. Returns `None` if it is not possible.
-    fn try_clone(&self) -> Option<Box<dyn Object>> {
-        None
+    fn format(&self) -> String {
+        String::from("object")
     }
 }
 
-downcast_rs::impl_downcast!(Object);
-
-#[derive(Debug, Default)]
-pub(crate) struct Function {
+#[derive(Default, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Function {
     arity: usize,
     name: String,
-    chunk: super::chunk::Chunk,
+    chunk: usize,
 }
 
-impl Object for Function {
-    fn type_name(&self) -> &'static str {
-        "function"
-    }
-
-    fn kind(&self) -> ObjectKind {
-        ObjectKind::Function
-    }
-
-    fn eq(&self, other: &dyn Object) -> Option<bool> {
-        if let Some(other) = other.downcast_ref::<Function>() {
-            Some(other.name == self.name)
-        } else {
-            None
-        }
+impl fmt::Debug for Function {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}, {}", self.name, self.chunk)
     }
 }
 
@@ -97,23 +37,137 @@ impl fmt::Display for Function {
 }
 
 impl Function {
-    pub(crate) fn arity(&self) -> &usize {
-        &self.arity
+    pub fn new(arity: usize, name: String, chunk: usize) -> Self {
+        Self { arity, name, chunk }
     }
 
-    pub(crate) fn name(&self) -> &str {
+    pub fn arity(&self) -> usize {
+        self.arity
+    }
+
+    pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub(crate) fn chunk(&self) -> &super::chunk::Chunk {
-        &self.chunk
-    }
-
-    pub(crate) fn chunk_mut(&mut self) -> &mut super::chunk::Chunk {
-        &mut self.chunk
-    }
-
-    pub(crate) fn into_chunk(self) -> super::chunk::Chunk {
+    pub fn chunk(&self) -> usize {
         self.chunk
+    }
+}
+
+impl Object for Function {
+    fn trace(&self) {
+        // TODO: constants?
+    }
+
+    fn type_name(&self) -> &'static str {
+        "fn"
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct NativeFunction {
+    pub(crate) arity: usize,
+    pub(crate) name: String,
+}
+
+impl Object for NativeFunction {
+    fn trace(&self) {}
+
+    fn type_name(&self) -> &'static str {
+        "native_fn"
+    }
+
+    // TODO: eq/lt/gt
+}
+
+impl fmt::Debug for NativeFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<native fn {}>", self.name)
+    }
+}
+
+impl fmt::Display for NativeFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl PartialEq for NativeFunction {
+    fn eq(&self, other: &Self) -> bool {
+        self.arity == other.arity && self.name == other.name
+    }
+}
+
+impl<T: Object> Object for std::cell::RefCell<T> {
+    fn trace(&self) {
+        self.borrow().trace();
+    }
+}
+
+impl<T: Object> Object for Vec<T> {
+    fn trace(&self) {
+        for item in self {
+            item.trace();
+        }
+    }
+
+    fn type_name(&self) -> &'static str {
+        "list"
+    }
+}
+
+impl<T: Object> Object for &Vec<T> {
+    fn trace(&self) {
+        for item in *self {
+            item.trace();
+        }
+    }
+
+    fn type_name(&self) -> &'static str {
+        "list"
+    }
+}
+
+impl<K: std::fmt::Debug + Eq + std::hash::Hash, T: Object> Object for fnv::FnvHashMap<K, T> {
+    fn trace(&self) {
+        for value in self.values() {
+            value.trace();
+        }
+    }
+
+    fn type_name(&self) -> &'static str {
+        "map"
+    }
+}
+
+impl Object for bool {
+    fn trace(&self) {}
+
+    fn type_name(&self) -> &'static str {
+        "bool"
+    }
+}
+
+impl Object for i64 {
+    fn trace(&self) {}
+
+    fn type_name(&self) -> &'static str {
+        "int"
+    }
+}
+
+impl Object for f64 {
+    fn trace(&self) {}
+
+    fn type_name(&self) -> &'static str {
+        "float"
+    }
+}
+
+impl Object for String {
+    fn trace(&self) {}
+
+    fn type_name(&self) -> &'static str {
+        "string"
     }
 }

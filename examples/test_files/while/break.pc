@@ -3,14 +3,14 @@ x =: 0
 i =: 0
 
 while i < 100 do
-  for j =: 0, j < 100, j = j + 1 do
+  for j =: 0, j < 100, j += 1 do
     if i % 5 == 0 && j % 3 == 0 do
       break
     end
     x = i * j
   end
 
-  i = i + 1
+  i += 1
 
   if i == 66 do
     break

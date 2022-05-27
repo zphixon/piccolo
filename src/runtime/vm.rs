@@ -1,494 +1,658 @@
-//! Contains `Machine`, the Piccolo bytecode interpreter.
+use crate::{
+    Chunk, Constant, ErrorKind, Function, Heap, Module, NativeFunction, Object, Opcode,
+    PiccoloError, Root, UniqueRoot, Value,
+};
 
-use crate::runtime::{memory::Heap, ChunkOffset};
-use crate::{Chunk, Constant, ErrorKind, PiccoloError, Value};
+use fnv::FnvHashMap;
 
-use super::op::Opcode;
-
-//use std::collections::HashMap;
-
-use fnv::FnvHashMap as HashMap;
-
-/// Interprets compiled Piccolo bytecode.
-///
-/// Contains a [`Chunk`] from which it executes instructions, a global variable hash
-/// table, a stack for temporary values and local variables, and a [`Heap`] for long-lived
-/// objects that require heap allocation, like strings, class instances, and others.
-///
-/// [`Chunk`]: ../chunk/struct.Chunk.html
-/// [`Heap`]: ../memory/struct.Heap.html
-pub struct Machine {
-    ip: ChunkOffset,
-    globals: HashMap<String, Value>,
-    stack: Vec<Value>,
-    heap: Heap,
+pub struct Frame<'chunk, 'value> {
+    name: String,
+    ip: usize,
+    base: usize,
+    chunk: &'chunk Chunk,
+    function: Root<'value, Function>,
+    //closure: Root<Closure>,
 }
 
-impl Default for Machine {
-    fn default() -> Machine {
-        Machine::new()
+impl Frame<'_, '_> {
+    fn step(&mut self) -> Opcode {
+        let op = self.chunk.data[self.ip].into();
+        self.ip += 1;
+        op
     }
 }
 
-impl Machine {
-    /// Creates a new machine from a chunk.
-    pub fn new() -> Self {
+pub struct FrameStack<'chunk, 'value> {
+    frames: Vec<Frame<'chunk, 'value>>,
+}
+
+impl<'chunk, 'value> FrameStack<'chunk, 'value> {
+    fn len(&self) -> usize {
+        self.frames.len()
+    }
+
+    fn push(&mut self, frame: Frame<'chunk, 'value>) {
+        self.frames.push(frame);
+    }
+
+    fn pop(&mut self) -> Frame<'chunk, 'value> {
+        self.frames.pop().unwrap()
+    }
+
+    fn current_line(&self) -> usize {
+        self.current_chunk()
+            .get_line_from_index(self.current_ip() - 1)
+    }
+
+    fn current_ip(&self) -> usize {
+        self.current_frame().ip
+    }
+
+    fn current_frame<'this>(&'this self) -> &'this Frame<'chunk, 'value> {
+        self.frames.last().unwrap()
+    }
+
+    fn current_frame_mut<'this>(&'this mut self) -> &'this mut Frame<'chunk, 'value> {
+        self.frames.last_mut().unwrap()
+    }
+
+    fn current_chunk(&self) -> &Chunk {
+        self.current_frame().chunk
+    }
+
+    fn read_short(&mut self) -> u16 {
+        let s = self.current_chunk().read_short(self.current_ip());
+        self.current_frame_mut().ip += 2;
+        s
+    }
+
+    fn read_constant(&mut self, module: &Module) -> Constant {
+        let constant_index = self.read_short();
+        let c = module.get_constant(constant_index).clone();
+        c
+    }
+
+    fn unwind(&self) -> Vec<crate::error::Callsite> {
+        let mut calls = Vec::new();
+        for frame in self.frames.iter().take(self.frames.len() - 1) {
+            calls.push(crate::error::Callsite {
+                name: frame.name.clone(),
+                line: frame.chunk.get_line_from_index(frame.ip),
+            })
+        }
+        calls
+    }
+}
+
+type PiccoloFunction = for<'value> fn(&[Value<'value>]) -> Value<'value>;
+//type PiccoloFunction<'a> = fn(&[Value<'a>]) -> Value<'a>;
+
+pub struct Machine<'value> {
+    stack: UniqueRoot<'value, Vec<Value<'value>>>,
+    globals: UniqueRoot<'value, FnvHashMap<String, Value<'value>>>,
+    native_functions: FnvHashMap<String, PiccoloFunction>,
+    ip: usize,
+}
+
+#[derive(Copy, Clone)]
+enum VmState<'value> {
+    Continue,
+    ReturnFromTop(Value<'value>, usize),
+    Stop(Value<'value>),
+}
+
+fn print<'value>(values: &[Value<'value>]) -> Value<'value> {
+    let mut s = String::new();
+    for (i, value) in values.iter().enumerate() {
+        s.push_str(&format!("{}", value));
+        if i != values.len() {
+            s.push('\t');
+        }
+    }
+    println!("{}", s);
+    Value::Nil
+}
+
+impl<'value> Machine<'value> {
+    pub fn new(heap: &mut Heap<'value>) -> Self {
+        let mut globals = heap.manage_unique(FnvHashMap::default());
+
+        // TODO make this nicer
+        globals.insert(
+            String::from("print"),
+            Value::NativeFunction({
+                heap.manage(NativeFunction {
+                    arity: 0,
+                    name: "print".to_string(),
+                })
+                .as_gc()
+            }),
+        );
+
+        let mut native_functions = FnvHashMap::default();
+        native_functions.insert(String::from("print"), print as PiccoloFunction);
+
         Machine {
+            stack: heap.manage_unique(Vec::new()),
+            globals,
+            native_functions,
             ip: 0,
-            globals: HashMap::default(),
-            stack: Vec::new(),
-            heap: Heap::new(1024),
         }
     }
 
-    /// Get the [`Heap`] of a VM.
-    ///
-    /// [`Heap`]: ../memory/struct.Heap.html
-    pub fn heap(&mut self) -> &mut Heap {
-        &mut self.heap
+    fn push(&mut self, value: Value<'value>) {
+        self.stack.push(value);
     }
 
-    // TODO: determine if self.ip - 1 is necessary
-    // this method is only ever called after self.ip is incremented
-    // theoretically a program should never start with Opcode::Pop
-    fn pop(&mut self, chunk: &Chunk) -> Result<Value, PiccoloError> {
-        self.stack.pop().ok_or_else(|| {
-            PiccoloError::new(ErrorKind::StackUnderflow {
-                op: chunk.data[self.ip - 1].into(),
-            })
-            .line(chunk.get_line_from_index(self.ip))
-            .msg("file a bug report!")
-        })
+    fn pop(&mut self) -> Value<'value> {
+        self.stack.pop().unwrap()
     }
 
-    fn peek_back(&self, dist: usize, chunk: &Chunk) -> Result<&Value, PiccoloError> {
-        self.stack.get(self.stack.len() - dist - 1).ok_or_else(|| {
-            PiccoloError::new(ErrorKind::StackUnderflow {
-                op: chunk.data[self.ip - 1].into(),
-            })
-            .line(chunk.get_line_from_index(self.ip))
-            .msg_string(format!("peek_back({})", dist))
-        })
+    fn peek(&self) -> &Value<'value> {
+        &self.stack[self.stack.len() - 1]
     }
 
-    // get a constant from the chunk
-    fn peek_constant<'a>(&mut self, chunk: &'a Chunk) -> &'a Constant {
-        trace!("peek_constant");
-        // Opcode::Constant takes a two-byte operand, meaning it's necessary
-        // to decode the high and low bytes. the machine is little-endian with
-        // constant addresses.
-        chunk
-            .constants
-            .get(self.read_short(chunk) as usize)
-            .unwrap()
+    fn peek_back(&self, len: usize) -> &Value<'value> {
+        &self.stack[self.stack.len() - 1 - len]
     }
 
-    fn read_short(&mut self, chunk: &Chunk) -> u16 {
-        let short = chunk.read_short(self.ip);
-        self.ip += 2;
-        short
+    fn push_string(&mut self, heap: &mut Heap<'value>, string: String) {
+        let root = heap.manage(string);
+        self.push(Value::String(root.as_gc()));
     }
 
-    /// Interprets the machine's bytecode, returning a Constant.
-    pub fn start_at(
+    pub fn interpret(
         &mut self,
-        chunk: &Chunk,
-        start: ChunkOffset,
-    ) -> Result<Constant, PiccoloError> {
-        self.ip = start;
-        self.interpret(chunk)
+        heap: &mut Heap<'value>,
+        module: &Module,
+    ) -> Result<Value<'value>, PiccoloError> {
+        self.interpret_from(heap, module, 0)
     }
 
-    // TODO: probably even move out the heap from the machine
-    #[allow(clippy::cognitive_complexity)]
-    pub fn interpret(&mut self, chunk: &Chunk) -> Result<Constant, PiccoloError> {
-        while self.ip < chunk.data.len() {
-            // debug/macros {{{
-            debug!(
-                " ┌─{}{}",
-                if self.ip + 1 == chunk.data.len() {
-                    "─vm─exit─ "
-                } else {
-                    " "
-                },
-                super::memory::dbg_list(&self.stack, &self.heap),
-            );
-            debug!(
-                " └─{} {}",
-                if self.ip + 1 == chunk.data.len() {
-                    "───────── "
-                } else {
-                    " "
-                },
-                chunk.disassemble_instruction(self.ip)
-            );
+    pub fn interpret_continue(
+        &mut self,
+        heap: &mut Heap<'value>,
+        module: &Module,
+    ) -> Result<Value<'value>, PiccoloError> {
+        self.interpret_from(heap, module, self.ip)
+    }
 
-            macro_rules! bit_op {
-                ($opcode:path, $op:tt) => {
-                    let rhs = self.pop(chunk)?;
-                    let lhs = self.pop(chunk)?;
-                    if lhs.is_integer() && rhs.is_integer() {
-                        let rhs = rhs.into::<i64>();
-                        let lhs = lhs.into::<i64>();
-                        self.stack.push(Value::Integer(lhs $op rhs));
-                    } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "integer".into(),
-                            got: format!(
-                                "{} {} {}",
-                                self.heap.type_name(&lhs),
-                                stringify!($op),
-                                self.heap.type_name(&rhs)
-                            ),
-                            op: $opcode,
-                        })
-                        .line(chunk.get_line_from_index(self.ip)));
+    fn interpret_from<'chunk>(
+        &mut self,
+        heap: &mut Heap<'value>,
+        module: &'chunk Module,
+        ip: usize,
+    ) -> Result<Value<'value>, PiccoloError> {
+        // :)
+        let f = heap.manage(Function::new(0, String::from("top level"), 0));
+        //self.push(Value::Function(f.as_gc()));
+
+        let mut frames = FrameStack {
+            frames: vec![Frame {
+                name: String::from("top level"),
+                base: 0,
+                ip,
+                chunk: &module.chunk(0),
+                function: f,
+            }],
+        };
+
+        // loop until stop, return from top, or error
+        // TODO refactor to make this not look like hot garbage
+        loop {
+            let result = self.interpret_next_instruction(heap, module, &mut frames);
+            if result.is_ok() {
+                let state = result.unwrap();
+                match state {
+                    VmState::Continue => {}
+                    VmState::Stop(value) => {
+                        self.ip = frames.current_ip();
+                        return Ok(value);
                     }
-                };
+                    VmState::ReturnFromTop(value, ip) => {
+                        self.ip = ip;
+                        return Ok(value);
+                    }
+                }
+            } else if result.is_err() {
+                self.ip = frames.current_ip();
+                result
+                    .map_err(|err| err.line(frames.current_line()).stack_trace(frames.unwind()))?;
             }
+        }
+    }
 
-            // boolean argument to enable/disable string concatenation
-            macro_rules! bin_op {
-                ($opcode:path, $op:tt, nostring) => {
-                    bin_op!($opcode, $op, false)
-                };
-                ($opcode:path, $op:tt, string) => {
-                    bin_op!($opcode, $op, true)
-                };
-                ($opcode:path, $op:tt, $allow_string:tt) => {
-                    let rhs = self.pop(chunk)?;
-                    let lhs = self.pop(chunk)?;
-                    if lhs.is_double() {
-                        let lhs = lhs.into::<f64>();
-                        if rhs.is_double() {
-                            let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs $op rhs));
-                        } else if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Double(lhs $op rhs as f64));
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: "integer or double".into(),
-                                got: format!("double {} {}", stringify!($op), self.heap.type_name(&rhs)),
-                                op: $opcode,
-                            })
-                            .line(chunk.get_line_from_index(self.ip)));
-                        }
-                    } else if lhs.is_integer() {
-                        let lhs = lhs.into::<i64>();
-                        if rhs.is_integer() {
-                            let rhs = rhs.into::<i64>();
-                            self.stack.push(Value::Integer(lhs $op rhs));
-                        } else if rhs.is_double() {
-                            let rhs = rhs.into::<f64>();
-                            self.stack.push(Value::Double(lhs as f64 $op rhs));
-                        } else {
-                            return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                exp: "integer or double".into(),
-                                got: format!("integer {} {}", stringify!($op), self.heap.type_name(&rhs)),
-                                op: $opcode,
-                            })
-                            .line(chunk.get_line_from_index(self.ip)));
-                        }
-                    } else if $allow_string && lhs.is_string() {
-                        let value = format!("{}{}", self.heap.fmt(&lhs), self.heap.fmt(&rhs));
-                        let ptr = self.heap.alloc_string(&value);
-                        self.stack.push(ptr);
-                    } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "integer or double".into(),
-                            got: format!("{} {} {}", self.heap.type_name(&lhs), stringify!($op), self.heap.type_name(&rhs)),
-                            op: $opcode,
-                        })
-                        .line(chunk.get_line_from_index(self.ip)));
-                    }
-                };
-            }
-            // }}}
-
-            let inst = chunk.data[self.ip];
-            self.ip += 1;
-
-            let op = inst.into();
-            match op {
-                Opcode::Pop => {
-                    if self.ip == chunk.data.len() {
-                        trace!("last instruction pop");
-                        let value = self.pop(chunk)?;
-                        return Ok(self.heap.value_into_constant(value));
-                    }
-                    self.pop(chunk)?;
-                }
-                Opcode::Return => {
-                    let v = self.pop(chunk)?;
-                    println!("{}", self.heap.fmt(&v));
-                }
-                Opcode::Constant => {
-                    let c = self.peek_constant(chunk);
-                    let v = self.heap.constant_into_value(c);
-                    self.stack.push(v);
-                }
-                Opcode::Nil => self.stack.push(Value::Nil),
-                Opcode::True => self.stack.push(Value::Bool(true)),
-                Opcode::False => self.stack.push(Value::Bool(false)),
-
-                Opcode::Negate => {
-                    let v = self.pop(chunk)?;
-                    if v.is_double() {
-                        let v = v.into::<f64>();
-                        self.stack.push(Value::Double(-v));
-                    } else if v.is_integer() {
-                        let v = v.into::<i64>();
-                        self.stack.push(Value::Integer(-v));
-                    } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "integer or double".into(),
-                            got: self.heap.type_name(&v).to_owned(),
-                            op: Opcode::Negate,
-                        })
-                        .line(chunk.get_line_from_index(self.ip)));
-                    }
-                }
-                Opcode::Not => {
-                    let v = self.pop(chunk)?;
-                    if v.is_truthy() {
-                        self.stack.push(Value::Bool(false));
-                    } else {
-                        self.stack.push(Value::Bool(true));
-                    }
-                }
-                Opcode::Add => {
-                    bin_op!(Opcode::Add, +, string);
-                }
-                Opcode::Subtract => {
-                    bin_op!(Opcode::Subtract, -, nostring);
-                }
-                Opcode::Multiply => {
-                    bin_op!(Opcode::Multiply, *, nostring);
-                }
-                Opcode::Divide => {
-                    bin_op!(Opcode::Divide, /, nostring);
-                }
-                Opcode::Modulo => {
-                    bin_op!(Opcode::Modulo, %, nostring);
-                }
-
-                // comparison {{{
-                Opcode::Equal => {
-                    let a = self.pop(chunk)?;
-                    let b = self.pop(chunk)?;
-                    self.stack
-                        .push(Value::Bool(self.heap.eq(&a, &b).map_or_else(
-                            || {
-                                Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: self.heap.type_name(&a).to_owned(),
-                                    got: self.heap.type_name(&b).to_owned(),
-                                    op,
-                                })
-                                .line(chunk.get_line_from_index(self.ip)))
-                            },
-                            Ok,
-                        )?));
-                }
-                Opcode::Greater => {
-                    let rhs = self.pop(chunk)?;
-                    let lhs = self.pop(chunk)?;
-                    if rhs.is_bool() || lhs.is_bool() {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "that isn't bool".into(),
-                            got: "bool".into(),
-                            op,
-                        })
-                        .line(chunk.get_line_from_index(self.ip)));
-                    }
-                    self.stack
-                        .push(Value::Bool(self.heap.gt(&lhs, &rhs).map_or_else(
-                            || {
-                                Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: self.heap.type_name(&lhs).to_owned(),
-                                    got: self.heap.type_name(&rhs).to_owned(),
-                                    op,
-                                })
-                                .line(chunk.get_line_from_index(self.ip)))
-                            },
-                            Ok,
-                        )?));
-                }
-                Opcode::Less => {
-                    let rhs = self.pop(chunk)?;
-                    let lhs = self.pop(chunk)?;
-                    if rhs.is_bool() || lhs.is_bool() {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "that isn't bool".into(),
-                            got: "bool".into(),
-                            op,
-                        })
-                        .line(chunk.get_line_from_index(self.ip)));
-                    }
-                    self.stack
-                        .push(Value::Bool(self.heap.lt(&lhs, &rhs).map_or_else(
-                            || {
-                                Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: self.heap.type_name(&lhs).to_owned(),
-                                    got: self.heap.type_name(&rhs).to_owned(),
-                                    op,
-                                })
-                                .line(chunk.get_line_from_index(self.ip)))
-                            },
-                            Ok,
-                        )?));
-                }
-                Opcode::GreaterEqual => {
-                    let rhs = self.pop(chunk)?;
-                    let lhs = self.pop(chunk)?;
-                    if rhs.is_bool() || lhs.is_bool() {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "that isn't bool".into(),
-                            got: "bool".into(),
-                            op,
-                        })
-                        .line(chunk.get_line_from_index(self.ip)));
-                    }
-                    self.stack
-                        .push(Value::Bool(!self.heap.lt(&lhs, &rhs).map_or_else(
-                            || {
-                                Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: self.heap.type_name(&lhs).to_owned(),
-                                    got: self.heap.type_name(&rhs).to_owned(),
-                                    op,
-                                })
-                                .line(chunk.get_line_from_index(self.ip)))
-                            },
-                            Ok,
-                        )?));
-                }
-                Opcode::LessEqual => {
-                    let rhs = self.pop(chunk)?;
-                    let lhs = self.pop(chunk)?;
-                    if rhs.is_bool() || lhs.is_bool() {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                            exp: "type that isn't bool".into(),
-                            got: "bool".into(),
-                            op,
-                        })
-                        .line(chunk.get_line_from_index(self.ip)));
-                    }
-                    self.stack
-                        .push(Value::Bool(!self.heap.gt(&lhs, &rhs).map_or_else(
-                            || {
-                                Err(PiccoloError::new(ErrorKind::IncorrectType {
-                                    exp: self.heap.type_name(&lhs).to_owned(),
-                                    got: self.heap.type_name(&rhs).to_owned(),
-                                    op,
-                                })
-                                .line(chunk.get_line_from_index(self.ip)))
-                            },
-                            Ok,
-                        )?));
-                } // }}}
-
-                Opcode::GetLocal => {
-                    let slot = self.read_short(chunk);
-                    self.stack.push(self.stack[slot as usize]);
-                }
-                Opcode::SetLocal => {
-                    let slot = self.read_short(chunk);
-                    self.stack[slot as usize] = self.pop(chunk)?;
-                }
-                Opcode::GetGlobal => {
-                    let name = self.peek_constant(chunk).ref_string();
-                    if let Some(var) = self.globals.get(name) {
-                        self.stack.push(*var);
-                    } else {
-                        return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
-                            name: name.to_owned(),
-                        })
-                        .line(chunk.get_line_from_index(self.ip)));
-                    }
-                }
-                Opcode::SetGlobal => {
-                    if let Constant::String(name) = self.peek_constant(chunk) {
-                        let name = name.clone();
-                        let value = self.pop(chunk)?;
-                        if self.globals.insert(name.clone(), value).is_none() {
-                            return Err(PiccoloError::new(ErrorKind::UndefinedVariable { name })
-                                .line(chunk.get_line_from_index(self.ip)));
-                        }
-                    }
-                }
-                Opcode::DeclareGlobal => {
-                    if let Constant::String(name) = self.peek_constant(chunk) {
-                        let name = name.clone();
-                        let value = self.pop(chunk)?;
-                        self.globals.insert(name, value);
-                    } else {
-                        panic!("defined global with non-string name");
-                    }
-                }
-
-                Opcode::JumpForward => {
-                    let offset = self.read_short(chunk);
-                    debug!("jump ip {:x} -> {:x}", self.ip, self.ip + offset as usize);
-                    self.ip += offset as usize;
-                }
-                Opcode::JumpFalse => {
-                    let offset = self.read_short(chunk);
-                    if !self.peek_back(0, chunk)?.is_truthy() {
-                        debug!(
-                            "jump false ip {:x} -> {:x}",
-                            self.ip,
-                            self.ip + offset as usize
-                        );
-                        self.ip += offset as usize;
-                    }
-                }
-                Opcode::JumpTrue => {
-                    let offset = self.read_short(chunk);
-                    if self.peek_back(0, chunk)?.is_truthy() {
-                        debug!(
-                            "jump true ip {:x} -> {:x}",
-                            self.ip,
-                            self.ip + offset as usize
-                        );
-                        self.ip += offset as usize;
-                    }
-                }
-                Opcode::JumpBack => {
-                    let offset = self.read_short(chunk);
-                    debug!("loop ip {:x} -> {:x}", self.ip, self.ip - offset as usize);
-                    self.ip -= offset as usize;
-                }
-
-                Opcode::BitAnd => {
-                    bit_op!(Opcode::BitAnd, &);
-                }
-                Opcode::BitOr => {
-                    bit_op!(Opcode::BitOr, |);
-                }
-                Opcode::BitXor => {
-                    bit_op!(Opcode::BitXor, ^);
-                }
-                Opcode::ShiftLeft => {
-                    bit_op!(Opcode::ShiftLeft, <<);
-                }
-                Opcode::ShiftRight => {
-                    bit_op!(Opcode::ShiftRight, >>);
-                }
-
-                Opcode::Assert => {
-                    let v = self.pop(chunk)?;
-                    if !v.is_truthy() {
-                        return Err(PiccoloError::new(ErrorKind::AssertFailed)
-                            .line(chunk.get_line_from_index(self.ip - 1)));
-                    }
-                }
-            }
-
-            trace!("next instruction");
+    fn interpret_next_instruction<'chunk>(
+        &mut self,
+        heap: &mut Heap<'value>,
+        module: &'chunk Module,
+        frames: &mut FrameStack<'chunk, 'value>,
+    ) -> Result<VmState<'value>, PiccoloError> {
+        // TODO: move to Opcode::Return
+        if frames.current_ip() + 1 > frames.current_chunk().len() {
+            return Ok(VmState::Stop(Value::Nil));
         }
 
-        Ok(self
-            .heap
-            .value_into_constant(self.stack.pop().unwrap_or(Value::Nil)))
+        // debug {{{
+        debug!(
+            " ┌─{} {}.{:04x} {:?}",
+            if frames.current_ip() + 1 == frames.current_chunk().len() {
+                "─vm─exit─"
+            } else {
+                ""
+            },
+            module.index_of(frames.current_chunk()),
+            frames.current_ip(),
+            self.stack,
+        );
+        debug!(
+            " └─{} {}",
+            if frames.current_ip() + 1 == frames.current_chunk().len() {
+                "─────────"
+            } else {
+                ""
+            },
+            crate::runtime::chunk::disassemble_instruction(
+                module,
+                frames.current_chunk(),
+                frames.current_ip()
+            )
+        );
+        // }}}
+
+        // bit/bin op {{{
+        macro_rules! bit_op {
+            ($opcode:path, $op:tt) => {
+                let rhs = self.pop();
+                let lhs = self.pop();
+                if lhs.is_integer() && rhs.is_integer() {
+                    let rhs = rhs.into::<i64>();
+                    let lhs = lhs.into::<i64>();
+                    self.push(Value::Integer(lhs $op rhs));
+                } else {
+                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        exp: "integer".into(),
+                        got: format!(
+                            "{} {} {}",
+                            lhs.type_name(),
+                            stringify!($op),
+                            rhs.type_name(),
+                        ),
+                        op: $opcode,
+                    }));
+                }
+            };
+        }
+
+        // boolean argument to enable/disable string concatenation
+        macro_rules! bin_op {
+            ($opcode:path, $op:tt, nostring) => {
+                bin_op!($opcode, $op, false)
+            };
+            ($opcode:path, $op:tt, string) => {
+                bin_op!($opcode, $op, true)
+            };
+            ($opcode:path, $op:tt, $allow_string:tt) => {
+                let rhs = self.pop();
+                let lhs = self.pop();
+                if lhs.is_double() {
+                    let lhs = lhs.into::<f64>();
+                    if rhs.is_double() {
+                        let rhs = rhs.into::<f64>();
+                        self.push(Value::Double(lhs $op rhs));
+                    } else if rhs.is_integer() {
+                        let rhs = rhs.into::<i64>();
+                        self.push(Value::Double(lhs $op rhs as f64));
+                    } else {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                            exp: "integer or double".into(),
+                            got: format!("double {} {}", stringify!($op), rhs.type_name()),
+                            op: $opcode,
+                        }));
+                    }
+                } else if lhs.is_integer() {
+                    let lhs = lhs.into::<i64>();
+                    if rhs.is_integer() {
+                        let rhs = rhs.into::<i64>();
+                        self.push(Value::Integer(lhs $op rhs));
+                    } else if rhs.is_double() {
+                        let rhs = rhs.into::<f64>();
+                        self.push(Value::Double(lhs as f64 $op rhs));
+                    } else {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                            exp: "integer or double".into(),
+                            got: format!("integer {} {}", stringify!($op), rhs.type_name()),
+                            op: $opcode,
+                        }));
+                    }
+                } else if $allow_string && lhs.is_string() {
+                    let value = format!("{}{}", &lhs, &rhs);
+                    self.push_string(heap, value);
+                } else {
+                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        exp: "integer or double".into(),
+                        got: format!("{} {} {}", lhs.type_name(), stringify!($op), rhs.type_name()),
+                        op: $opcode,
+                    }));
+                }
+            };
+        }
+        // }}}
+
+        let op = frames.current_frame_mut().step();
+        match op {
+            Opcode::Pop => {
+                if frames.current_ip() == frames.current_chunk().len() {
+                    trace!("last instruction pop");
+                    let value = self.pop();
+                    return Ok(VmState::ReturnFromTop(value, frames.current_ip()));
+                }
+                self.pop();
+            }
+            Opcode::Return => {
+                let result = self.pop();
+                let frame = frames.pop();
+                // close upvalues
+                self.stack.truncate(frame.base);
+                if frames.len() == 0 {
+                    return Ok(VmState::ReturnFromTop(result, frame.ip));
+                }
+                self.push(result);
+            }
+            Opcode::Constant => {
+                let c = frames.read_constant(module);
+                self.push(Value::from_constant(c, heap));
+            }
+            Opcode::Nil => self.push(Value::Nil),
+            Opcode::True => self.push(Value::Bool(true)),
+            Opcode::False => self.push(Value::Bool(false)),
+
+            Opcode::Negate => {
+                let v = self.pop();
+                if v.is_double() {
+                    let v = v.into::<f64>();
+                    self.push(Value::Double(-v));
+                } else if v.is_integer() {
+                    let v = v.into::<i64>();
+                    self.push(Value::Integer(-v));
+                } else {
+                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        exp: "integer or double".into(),
+                        got: v.type_name().to_owned(),
+                        op: Opcode::Negate,
+                    }));
+                }
+            }
+            Opcode::Not => {
+                let v = self.pop();
+                if v.is_truthy() {
+                    self.push(Value::Bool(false));
+                } else {
+                    self.push(Value::Bool(true));
+                }
+            }
+            Opcode::Add => {
+                bin_op!(Opcode::Add, +, string);
+            }
+            Opcode::Subtract => {
+                bin_op!(Opcode::Subtract, -, nostring);
+            }
+            Opcode::Multiply => {
+                bin_op!(Opcode::Multiply, *, nostring);
+            }
+            Opcode::Divide => {
+                bin_op!(Opcode::Divide, /, nostring);
+            }
+            Opcode::Modulo => {
+                bin_op!(Opcode::Modulo, %, nostring);
+            }
+
+            // comparison {{{
+            Opcode::Equal => {
+                let a = self.pop();
+                let b = self.pop();
+                self.push(Value::Bool(a.eq(&b).map_or_else(
+                    || {
+                        Err(PiccoloError::new(ErrorKind::CannotCompare {
+                            exp: a.type_name().to_owned(),
+                            got: b.type_name().to_owned(),
+                        }))
+                    },
+                    Ok,
+                )?));
+            }
+            Opcode::Greater => {
+                let rhs = self.pop();
+                let lhs = self.pop();
+                self.push(Value::Bool(lhs.gt(&rhs).map_or_else(
+                    || {
+                        Err(PiccoloError::new(ErrorKind::CannotCompare {
+                            exp: lhs.type_name().to_owned(),
+                            got: rhs.type_name().to_owned(),
+                        }))
+                    },
+                    Ok,
+                )?));
+            }
+            Opcode::Less => {
+                let rhs = self.pop();
+                let lhs = self.pop();
+                self.push(Value::Bool(lhs.lt(&rhs).map_or_else(
+                    || {
+                        Err(PiccoloError::new(ErrorKind::CannotCompare {
+                            exp: lhs.type_name().to_owned(),
+                            got: rhs.type_name().to_owned(),
+                        }))
+                    },
+                    Ok,
+                )?));
+            }
+            Opcode::GreaterEqual => {
+                let rhs = self.pop();
+                let lhs = self.pop();
+                self.push(Value::Bool(!lhs.lt(&rhs).map_or_else(
+                    || {
+                        Err(PiccoloError::new(ErrorKind::CannotCompare {
+                            exp: lhs.type_name().to_owned(),
+                            got: rhs.type_name().to_owned(),
+                        }))
+                    },
+                    Ok,
+                )?));
+            }
+            Opcode::LessEqual => {
+                let rhs = self.pop();
+                let lhs = self.pop();
+                self.push(Value::Bool(!lhs.gt(&rhs).map_or_else(
+                    || {
+                        Err(PiccoloError::new(ErrorKind::CannotCompare {
+                            exp: lhs.type_name().to_owned(),
+                            got: rhs.type_name().to_owned(),
+                        }))
+                    },
+                    Ok,
+                )?));
+            } // }}}
+
+            Opcode::GetLocal => {
+                let slot = frames.read_short() as usize + frames.current_frame().base;
+                debug!("get local slot {}", slot);
+                self.push(self.stack[slot].clone());
+            }
+            Opcode::SetLocal => {
+                let slot = frames.read_short() as usize + frames.current_frame().base;
+                debug!("set local slot {}", slot);
+                self.stack[slot] = self.pop();
+            }
+            Opcode::GetGlobal => {
+                let constant = frames.read_constant(module);
+                let name = constant.ref_string();
+
+                if self.globals.contains_key(name) {
+                    let var = self.globals[name].clone();
+                    self.push(var);
+                } else {
+                    return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                        name: name.to_owned(),
+                    }));
+                }
+            }
+            Opcode::SetGlobal => {
+                let constant = frames.read_constant(module);
+                let name = constant.ref_string();
+
+                let value = self.pop();
+                if self.globals.insert(name.to_string(), value).is_none() {
+                    return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                        name: name.to_string(),
+                    }));
+                }
+            }
+            Opcode::DeclareGlobal => {
+                let constant = frames.read_constant(module);
+                let name = constant.ref_string();
+
+                let value = self.pop();
+                self.globals.insert(name.to_string(), value);
+            }
+
+            Opcode::JumpForward => {
+                let offset = frames.read_short() as usize;
+
+                debug!(
+                    "jump ip {:x} -> {:x}",
+                    frames.current_ip(),
+                    frames.current_ip() + offset
+                );
+                frames.current_frame_mut().ip += offset;
+            }
+            Opcode::JumpFalse => {
+                let offset = frames.read_short() as usize;
+
+                if !self.peek().is_truthy() {
+                    debug!(
+                        "jump false ip {:x} -> {:x}",
+                        frames.current_ip(),
+                        frames.current_frame_mut().ip + offset
+                    );
+
+                    frames.current_frame_mut().ip += offset;
+                }
+            }
+            Opcode::JumpTrue => {
+                let offset = frames.read_short() as usize;
+
+                if self.peek().is_truthy() {
+                    debug!(
+                        "jump true ip {:x} -> {:x}",
+                        frames.current_ip(),
+                        frames.current_frame_mut().ip + offset
+                    );
+
+                    frames.current_frame_mut().ip += offset;
+                }
+            }
+            Opcode::JumpBack => {
+                let offset = frames.read_short() as usize;
+
+                debug!(
+                    "loop ip {:x} -> {:x}",
+                    frames.current_ip(),
+                    frames.current_ip() - offset
+                );
+                frames.current_frame_mut().ip -= offset;
+            }
+
+            Opcode::BitAnd => {
+                bit_op!(Opcode::BitAnd, &);
+            }
+            Opcode::BitOr => {
+                bit_op!(Opcode::BitOr, |);
+            }
+            Opcode::BitXor => {
+                bit_op!(Opcode::BitXor, ^);
+            }
+            Opcode::ShiftLeft => {
+                bit_op!(Opcode::ShiftLeft, <<);
+            }
+            Opcode::ShiftRight => {
+                bit_op!(Opcode::ShiftRight, >>);
+            }
+
+            Opcode::Call => {
+                let arity = frames.read_short();
+                if let Value::Function(_) = self.peek_back(arity as usize) {
+                    let f = self.peek_back(arity as usize).as_function();
+
+                    if f.arity() != arity as usize {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectArity {
+                            name: f.name().to_owned(),
+                            exp: f.arity(),
+                            got: arity as usize,
+                        }));
+                    }
+
+                    debug!(
+                        "go to chunk {} base {}",
+                        f.chunk(),
+                        self.stack.len() as u16 - 1 - arity
+                    );
+
+                    frames.push(Frame {
+                        name: f.name().to_string(),
+                        ip: 0,
+                        base: (self.stack.len() as u16 - arity - 1) as usize,
+                        chunk: module.chunk(f.chunk()),
+                        function: heap.root(f),
+                    });
+                } else if let Value::NativeFunction(_) = self.peek_back(arity as usize) {
+                    let mut args = vec![];
+                    for _ in 0..arity {
+                        args.insert(0, self.pop());
+                    }
+                    let f = self.pop().as_native_function();
+                    self.push(self.native_functions[&f.name](&args));
+                } else {
+                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        exp: "fn".to_owned(),
+                        got: self.peek_back(arity as usize).type_name().to_owned(),
+                        op,
+                    }));
+                }
+            }
+
+            Opcode::Assert => {
+                let v = self.pop();
+                let assertion = frames.read_constant(module);
+                if !v.is_truthy() {
+                    let assertion = assertion.ref_string().to_owned();
+                    return Err(PiccoloError::new(ErrorKind::AssertFailed { assertion }));
+                }
+            }
+        }
+
+        Ok(VmState::Continue)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::debug::*;
+    use crate::prelude::*;
+
+    #[test]
+    fn how_could_this_happen_to_me() {
+        //env_logger::init();
+
+        let src = r#"""+(11*3)+"heehee""#;
+        let ast = parse(&mut Scanner::new(src)).expect("parse");
+        let module = compile(&ast).expect("emit");
+
+        println!("{}", disassemble(&module, ""));
+
+        let mut heap = Heap::default();
+
+        let mut vm = Machine::new(&mut heap);
+        vm.interpret(&mut heap, &module).unwrap();
     }
 }

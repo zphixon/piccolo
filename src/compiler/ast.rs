@@ -69,14 +69,14 @@ pub enum Expr<'a> {
     Index {
         right_bracket: Token<'a>,
         object: Box<Expr<'a>>,
-        idx: Box<Expr<'a>>,
+        index: Box<Expr<'a>>,
     },
     Fn {
-        name: Token<'a>,
+        fn_: Token<'a>,
         args: Vec<Token<'a>>,
         arity: usize,
         body: Vec<Stmt<'a>>,
-        method: bool,
+        end: Token<'a>,
     },
 }
 
@@ -132,6 +132,7 @@ pub enum Stmt<'a> {
         arity: usize,
         body: Vec<Stmt<'a>>,
         method: bool,
+        end: Token<'a>,
     },
     Break {
         break_: Token<'a>,
@@ -212,9 +213,9 @@ fn print_stmt(indent: usize, stmt: &Stmt) -> String {
         Stmt::Block { body, .. }
             => print_block(indent, body),
         Stmt::Declaration { name, value, .. }
-            => print_declaration(indent, name, value),
+            => print_declaration(indent, *name, value),
         Stmt::Assignment { name, value, .. }
-            => print_assignment(indent, name, value),
+            => print_assignment(indent, *name, value),
         Stmt::If { cond, then_block, else_block, .. }
             => print_if(indent, cond, then_block, else_block.as_ref()),
         Stmt::While { cond, body, .. }
@@ -222,17 +223,17 @@ fn print_stmt(indent: usize, stmt: &Stmt) -> String {
         Stmt::For { init, cond, inc, body, .. }
             => print_for(indent, init.as_ref(), cond, inc.as_ref(), body),
         Stmt::Fn { name, args, body, .. }
-            => print_fn(indent, name, args, body),
+            => print_fn(indent, *name, args, body),
         Stmt::Break { .. }
             => print_break(),
         Stmt::Continue { .. }
             => print_continue(),
         Stmt::Retn { retn, value }
-            => print_retn(indent, retn, value.as_ref()),
+            => print_retn(indent, *retn, value.as_ref()),
         Stmt::Assert { value, .. }
             => print_assert(indent, value),
         Stmt::Data { name, methods, fields }
-            => print_data(indent, name, methods, fields),
+            => print_data(indent, *name, methods, fields),
     }
 }
 
@@ -240,31 +241,31 @@ fn print_stmt(indent: usize, stmt: &Stmt) -> String {
 fn print_expr(indent: usize, expr: &Expr) -> String {
     match expr {
         Expr::Literal { literal }
-            => print_literal(literal),
+            => print_literal(*literal),
         Expr::Paren { expr, .. }
             => print_paren(indent, expr),
         Expr::Path { names }
             => print_path(names),
         Expr::Variable { variable }
-            => print_variable(variable),
+            => print_variable(*variable),
         Expr::Unary { op, rhs }
-            => print_unary(indent, op, rhs),
+            => print_unary(indent, *op, rhs),
         Expr::Binary { lhs, op, rhs }
-            => print_binary(indent, lhs, op, rhs),
+            => print_binary(indent, lhs, *op, rhs),
         Expr::Logical { lhs, op, rhs }
-            => print_logical(indent, lhs, op, rhs),
+            => print_logical(indent, lhs, *op, rhs),
         Expr::Call { callee, args, .. }
             => print_call(indent, callee, args),
         Expr::New { name, args }
-            => print_new(indent, name, args),
+            => print_new(indent, *name, args),
         Expr::Get { object, name }
-            => print_get(indent, object, name),
+            => print_get(indent, object, *name),
         Expr::Set { object, name, value }
-            => print_set(indent, object, name, value),
-        Expr::Index { object, idx, .. }
-            => print_index(indent, object, idx),
-        Expr::Fn { name, args, body, .. }
-            => print_fn(indent, name, args, body),
+            => print_set(indent, object, *name, value),
+        Expr::Index { object, index, .. }
+            => print_index(indent, object, index),
+        Expr::Fn { args, body, .. }
+            => print_fn(indent, Token::new(TokenKind::Identifier, "<anon>", 0), args, body),
     }
 }
 
@@ -276,11 +277,11 @@ fn print_block(indent: usize, body: &[Stmt]) -> String {
     parenthesize_list(indent, "do", None, body)
 }
 
-fn print_declaration(indent: usize, name: &Token, value: &Expr) -> String {
+fn print_declaration(indent: usize, name: Token, value: &Expr) -> String {
     parenthesize(indent, &format!("=: {}", name.lexeme), &[value])
 }
 
-fn print_assignment(indent: usize, name: &Token, value: &Expr) -> String {
+fn print_assignment(indent: usize, name: Token, value: &Expr) -> String {
     parenthesize(indent, &format!("= {}", name.lexeme), &[value])
 }
 
@@ -311,7 +312,7 @@ fn print_for(indent: usize, init: &Stmt, cond: &Expr, inc: &Stmt, body: &[Stmt])
     parenthesize_list(indent, &s, None, body)
 }
 
-fn print_fn(indent: usize, name: &Token, args: &[Token], body: &[Stmt]) -> String {
+fn print_fn(indent: usize, name: Token, args: &[Token], body: &[Stmt]) -> String {
     let mut s = format!("fn {} (", name.lexeme);
     for (n, arg) in args.iter().enumerate() {
         if n + 1 != args.len() {
@@ -332,7 +333,7 @@ fn print_continue() -> String {
     String::from("(continue)")
 }
 
-fn print_retn(indent: usize, retn: &Token, expr: Option<&Expr>) -> String {
+fn print_retn(indent: usize, retn: Token, expr: Option<&Expr>) -> String {
     parenthesize(
         indent,
         "retn",
@@ -346,17 +347,12 @@ fn print_assert(indent: usize, value: &Expr) -> String {
     parenthesize(indent, "assert", &[value])
 }
 
-fn print_data(
-    indent: usize,
-    _name: &Token,
-    _methods: &[Stmt],
-    _fields: &[(Token, Expr)],
-) -> String {
+fn print_data(indent: usize, _name: Token, _methods: &[Stmt], _fields: &[(Token, Expr)]) -> String {
     // TODO
     parenthesize(indent, "data", &[])
 }
 
-fn print_literal(literal: &Token) -> String {
+fn print_literal(literal: Token) -> String {
     format!("{}", literal)
 }
 
@@ -375,19 +371,19 @@ fn print_path(names: &[Token]) -> String {
     s
 }
 
-fn print_variable(variable: &Token) -> String {
+fn print_variable(variable: Token) -> String {
     String::from(variable.lexeme)
 }
 
-fn print_unary(indent: usize, op: &Token, rhs: &Expr) -> String {
+fn print_unary(indent: usize, op: Token, rhs: &Expr) -> String {
     parenthesize(indent, op.lexeme, &[rhs])
 }
 
-fn print_binary(indent: usize, lhs: &Expr, op: &Token, rhs: &Expr) -> String {
+fn print_binary(indent: usize, lhs: &Expr, op: Token, rhs: &Expr) -> String {
     parenthesize(indent, op.lexeme, &[lhs, rhs])
 }
 
-fn print_logical(indent: usize, lhs: &Expr, op: &Token, rhs: &Expr) -> String {
+fn print_logical(indent: usize, lhs: &Expr, op: Token, rhs: &Expr) -> String {
     parenthesize(indent, op.lexeme, &[lhs, rhs])
 }
 
@@ -397,21 +393,21 @@ fn print_call(indent: usize, callee: &Expr, args: &[Expr]) -> String {
     parenthesize(indent, &s, &args)
 }
 
-fn print_new(indent: usize, name: &Token, args: &[(Token, Box<Expr>)]) -> String {
+fn print_new(indent: usize, name: Token, args: &[(Token, Box<Expr>)]) -> String {
     let args: Vec<&Expr> = args.iter().map(|tb| tb.1.as_ref()).collect();
     parenthesize(indent, &format!("new {}", name.lexeme), &args)
 }
 
-fn print_get(indent: usize, object: &Expr, name: &Token) -> String {
+fn print_get(indent: usize, object: &Expr, name: Token) -> String {
     parenthesize(indent, &format!("get {}", name.lexeme), &[object])
 }
 
-fn print_set(indent: usize, object: &Expr, name: &Token, value: &Expr) -> String {
+fn print_set(indent: usize, object: &Expr, name: Token, value: &Expr) -> String {
     let s = format!("set {} = {}", name.lexeme, print_expr(indent, value));
     parenthesize(indent, &s, &[object])
 }
 
-fn print_index(indent: usize, object: &Expr, idx: &Expr) -> String {
-    let s = format!("index {}", print_expr(indent, idx));
+fn print_index(indent: usize, object: &Expr, index: &Expr) -> String {
+    let s = format!("index {}", print_expr(indent, index));
     parenthesize(indent, &s, &[object])
 }

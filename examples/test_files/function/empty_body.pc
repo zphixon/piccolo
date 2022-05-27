@@ -1,0 +1,2 @@
+fn f() do end
+assert f() == nil

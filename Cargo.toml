@@ -1,6 +1,6 @@
 [package]
 name = "piccolo"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Zack <zphixon@gmail.com>"]
 edition = "2018"
 
@@ -9,18 +9,20 @@ edition = "2018"
 [features]
 default = []
 pc-debug = ["log/max_level_trace"]
-fuzzer = ["pc-debug"]
+fuzzer = ["pc-debug", "rand"]
 
 [dependencies]
-downcast-rs = "1.1.1"
+#downcast-rs = "1.2.0"
 fnv = "1.0.6"
-rand = "0.7.3"
-log = "0.4.8"
+rand = { version = "0.8.3", optional = true }
+log = "0.4.14"
+bincode = "1.3.1"
+serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
-clap = "2.33.0"
-env_logger = "0.7.1"
-rustyline = "6.0.0"
+clap = "2.33.3"
+env_logger = "0.8.3"
+rustyline = "8.0.0"
 
 [profile.release]
 debug = true

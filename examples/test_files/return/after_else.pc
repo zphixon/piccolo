@@ -1,0 +1,9 @@
+fn f() do
+  if false do
+      "no"
+  else
+      retn "ok"
+  end
+end
+
+assert f() == "ok"

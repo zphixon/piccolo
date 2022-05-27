@@ -1,0 +1,13 @@
+isOdd =: nil
+
+fn isEven(n) do
+  if n == 0 do retn true end
+  retn isOdd(n - 1)
+end
+
+isOdd = fn(n) do
+  retn isEven(n - 1)
+end
+
+assert isEven(4)
+assert isOdd(3)

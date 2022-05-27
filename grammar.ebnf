@@ -14,7 +14,7 @@ declare -> ident '=:' expression
 
 break -> 'break'
 continue -> 'continue'
-retn -> 'retn' expression
+retn -> 'retn' [expression]
 assert -> 'assert' expression
 
 block -> 'do' {statement} 'end'
@@ -44,6 +44,7 @@ primary -> '(' expression ')' | 'true' | 'false' | 'nil' | 'me' | number | strin
 arguments -> '(' [expression {',' expression}] ')'
 parameters -> '(' [ident {',' ident}] ')'
 
+anon_fn -> 'fn' parameters block
 assign_op -> '=' | '+=' | '-=' | '/=' | '*=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>='
 ident -> /NON_WHITESPACE+/
 number -> /INTEGER(.INTEGER)?/

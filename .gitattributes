@@ -1,0 +1,2 @@
+examples/test_files/line_endings.pc eol=crlf
+examples/test_files/string/multiline.pc eol=crlf

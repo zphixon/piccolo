@@ -2,7 +2,7 @@ do
   i =: "before"
 
   # New variable is in inner scope.
-  for i=:0, i < 1, i=i+1 do
+  for i=:0, i < 1, i+=1 do
     assert i == 0
 
     # Loop body is in second inner scope.
@@ -13,7 +13,7 @@ end
 
 do
   # New variable shadows outer variable.
-  for i=:0, i>0, i=i+1 do end
+  for i=:0, i>0, i+=1 do end
 
   # Goes out of scope after loop.
   i =: "after"

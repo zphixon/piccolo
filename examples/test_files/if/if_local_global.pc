@@ -4,7 +4,7 @@ if x == "a" do
   y =: x + "b"
   if y == "ab" do
     z =: y + "c"
-    retn x + y + z
+    print(x + y + z)
     assert x + y + z == "aababc"
     y = z + y + x
   else

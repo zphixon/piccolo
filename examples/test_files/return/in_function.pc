@@ -1,0 +1,6 @@
+fn f() do
+  retn "ok"
+  assert false
+end
+
+assert f() == "ok"

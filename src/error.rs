@@ -1,17 +1,24 @@
 //! Types for dealing with errors in scanning, parsing, compiling, or executing Piccolo.
 
-use crate::runtime::{op::Opcode, Line};
+use crate::Opcode;
 
 use core::fmt;
 
+#[derive(Debug)]
+pub struct Callsite {
+    pub name: String,
+    pub line: usize,
+}
+
 // TODO: impl Error for PiccoloError
 /// The main error-reporting struct.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PiccoloError {
     kind: ErrorKind,
-    line: Option<Line>,
+    line: Option<usize>,
     file: Option<String>,
     msg: Option<String>,
+    stack: Option<Vec<Callsite>>,
 }
 
 impl PiccoloError {
@@ -21,10 +28,11 @@ impl PiccoloError {
             line: None,
             file: None,
             msg: None,
+            stack: None,
         }
     }
 
-    pub fn line(self, line: Line) -> Self {
+    pub fn line(self, line: usize) -> Self {
         PiccoloError {
             line: Some(line),
             ..self
@@ -51,13 +59,28 @@ impl PiccoloError {
             ..self
         }
     }
+
+    pub fn stack_trace(self, stack: Vec<Callsite>) -> Self {
+        PiccoloError {
+            stack: Some(stack),
+            ..self
+        }
+    }
+
+    pub fn was_eof(&self) -> bool {
+        match self.kind {
+            ErrorKind::ExpectedExpression { was_eof, .. } => was_eof,
+            ErrorKind::UnexpectedToken { was_eof, .. } => was_eof,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for PiccoloError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{line}{file}{separator}{kind}{msg}",
+            "{line}{file}{separator}{kind}{msg}{nl}{stack_trace}",
             line = if self.line.is_some() {
                 format!("at line {} ", self.line.unwrap())
             } else {
@@ -78,6 +101,23 @@ impl fmt::Display for PiccoloError {
                 format!(" ({})", self.msg.as_ref().unwrap())
             } else {
                 "".into()
+            },
+            nl = if self.stack.is_some() && self.stack.as_ref().unwrap().len() > 0 {
+                "\n"
+            } else {
+                ""
+            },
+            stack_trace = if self.stack.is_some() && self.stack.as_ref().unwrap().len() > 0 {
+                let mut s = String::new();
+                for (i, site) in self.stack.as_ref().unwrap().iter().enumerate() {
+                    s.push_str(&format!("  {} called from line {}", site.name, site.line));
+                    if i + 1 != self.stack.as_ref().unwrap().len() {
+                        s.push('\n');
+                    }
+                }
+                s
+            } else {
+                "".into()
             }
         )
     }
@@ -85,7 +125,7 @@ impl fmt::Display for PiccoloError {
 
 // TODO: split into scan, parse, compile, runtime errors
 /// Types of errors possible in Piccolo.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum ErrorKind {
     StackUnderflow {
         op: Opcode,
@@ -101,6 +141,7 @@ pub enum ErrorKind {
         literal: String,
     },
     UnexpectedToken {
+        was_eof: bool,
         exp: String,
         got: String,
     },
@@ -108,6 +149,10 @@ pub enum ErrorKind {
         exp: String,
         got: String,
         op: Opcode,
+    },
+    CannotCompare {
+        got: String,
+        exp: String,
     },
     UndefinedVariable {
         name: String,
@@ -117,14 +162,27 @@ pub enum ErrorKind {
         name: String,
     },
     ExpectedExpression {
+        was_eof: bool,
         got: String,
     },
     CannotClone {
         ty: String,
     },
-    AssertFailed,
+    AssertFailed {
+        assertion: String,
+    },
     SyntaxError,
+    IncorrectArity {
+        name: String,
+        exp: usize,
+        got: usize,
+    },
+    DeserializeError {
+        err: Box<bincode::ErrorKind>,
+    },
 }
+
+pub struct ParseError {}
 
 #[rustfmt::skip]
 impl fmt::Display for ErrorKind {
@@ -143,23 +201,29 @@ impl fmt::Display for ErrorKind {
             ErrorKind::UnknownFormatCode { code }
                 => write!(f, "Unknown format code '\\{}'", code),
             ErrorKind::InvalidNumberLiteral { literal }
-                => write!(f, "Invalid number literal '{}'", literal) ,
-            ErrorKind::UnexpectedToken { exp, got }
-                => write!(f, "Unexpected token: expected {}, got {}", exp, got) ,
+                => write!(f, "Invalid number literal '{}'", literal),
+            ErrorKind::UnexpectedToken { exp, got, .. }
+                => write!(f, "Unexpected token: expected {}, got {}", exp, got),
             ErrorKind::IncorrectType { exp, got, op }
                 => write!(f, "Incorrect type: expected {}, got {} for op {:?}", exp, got, op),
+            ErrorKind::CannotCompare { exp, got }
+                => write!(f, "Cannot compare {} and {}", exp, got),
             ErrorKind::UndefinedVariable { name }
                 => write!(f, "Undefined variable '{}'", name),
             ErrorKind::UnknownField { obj, name }
-                => write!(f, "Unknown field '{}' on {}", name, obj) ,
-            ErrorKind::ExpectedExpression { got }
+                => write!(f, "Unknown field '{}' on {}", name, obj),
+            ErrorKind::ExpectedExpression { got, .. }
                 => write!(f, "Expected expression, got {}", got),
             ErrorKind::CannotClone { ty }
                 => write!(f, "Cannot clone type {}", ty),
-            ErrorKind::AssertFailed
-                => write!(f, "Assertion failed"),
+            ErrorKind::AssertFailed { assertion }
+                => write!(f, "Assertion failed: {}", assertion),
             ErrorKind::SyntaxError
                 => write!(f, "Syntax error"),
+            ErrorKind::IncorrectArity { name, exp, got }
+                => write!(f, "Incorrect arity: function {} expected {} arguments, got {}", name, exp, got),
+            ErrorKind::DeserializeError { err }
+                => write!(f, "Cannot read binary file: {}", err),
         }
     }
 }
@@ -190,5 +254,11 @@ impl From<std::io::Error> for PiccoloError {
 impl From<PiccoloError> for Vec<PiccoloError> {
     fn from(e: PiccoloError) -> Vec<PiccoloError> {
         vec![e]
+    }
+}
+
+impl From<Box<bincode::ErrorKind>> for PiccoloError {
+    fn from(err: Box<bincode::ErrorKind>) -> PiccoloError {
+        PiccoloError::new(ErrorKind::DeserializeError { err })
     }
 }

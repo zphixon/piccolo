@@ -1,8 +1,13 @@
-for x =: 99, x > 0, x = x - 1 do
+for x =: 99, x > 0, x -= 1 do
     s =: (x != 1 && "s") || (x == 1 && "")
     s2 =: (x-1 != 1 && "s") || (x-1 == 1 && "")
 
-    retn "" + x + " bottle" + s + " of beer on the wall, " + x + " bottle" + s + " of beer,"
-        + " take one down, pass it around, " + (x-1) + " bottle" + s2 + " of beer on the wall"
+    n =: (x-1 == 0 && "no more") || (x-1)
+
+    print("" + x + " bottle" + s + " of beer on the wall, " + x + " bottle" + s + " of beer,"
+        + " take one down, pass it around, " + n + " bottle" + s2 + " of beer on the wall")
 end
+
+print("No more bottles of beer on the wall, no more bottles of beer, go to the"
+    + " store and buy some more, 99 bottles of beer on the wall")
 

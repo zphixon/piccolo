@@ -1,0 +1,22 @@
+
+fn e() do
+    assert false
+end
+
+fn d() do
+    e()
+end
+
+fn c() do
+    d()
+end
+
+fn b() do
+    c()
+end
+
+fn a() do
+    b()
+end
+
+a()

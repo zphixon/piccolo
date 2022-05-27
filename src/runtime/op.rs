@@ -38,8 +38,15 @@
 //! | `Jump`            | forward offset            | `0x17` |
 //! | `JumpFalse`       | forward offset            | `0x18` |
 //! | `JumpTrue`        | forward offset            | `0x19` |
-//! | `Loop`            | backward offset           | `0x1A` |
+//! | `JumpBack`        | backward offset           | `0x1a` |
+//! | <b>More math</b>  |                           |        |
+//! | `BitAnd`          |                           | `0x1b` |
+//! | `BitOr`           |                           | `0x1c` |
+//! | `BitXor`          |                           | `0x1d` |
+//! | `ShiftLeft`       |                           | `0x1e` |
+//! | `ShiftRight`      |                           | `0x1f` |
 //! | <b>Misc</b>       |                           |        |
+//! | `Call`            |                           | `0x20` |
 //! | `Assert`          |                           | `0xff` |
 //!
 //! [`Machine`]: ../vm/struct.Machine.html
@@ -112,6 +119,8 @@ opcodes!(Opcode =>
     ShiftLeft       = 0x1e,
     ShiftRight      = 0x1f,
 
+    Call            = 0x20,
+
     Assert          = 0xff,
 );
 
@@ -126,7 +135,9 @@ pub(crate) fn op_len(op: Opcode) -> usize {
         | Opcode::JumpForward
         | Opcode::JumpFalse
         | Opcode::JumpTrue
-        | Opcode::JumpBack => 3,
+        | Opcode::JumpBack
+        | Opcode::Call
+        | Opcode::Assert => 3,
         _ => 1,
     }
 }

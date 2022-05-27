@@ -3,7 +3,6 @@
 //! Piccolo is a small, light, high-pitched scripting language (eventually) intended
 //! for embedding in Rust projects.
 
-pub extern crate downcast_rs;
 pub extern crate fnv;
 #[macro_use]
 pub extern crate log;
@@ -14,57 +13,84 @@ pub mod runtime;
 
 /// Commonly used items that you might want access to.
 pub mod prelude {
-    pub use super::compiler::{emitter::Emitter, parser::parse, scanner::Scanner};
-    pub use super::compiler::{Token, TokenKind};
+    pub use super::compiler::{
+        ast::Ast, ast::Expr, ast::Stmt, emitter::Emitter, scanner::Scanner, Token, TokenKind,
+    };
     pub use super::error::{ErrorKind, PiccoloError};
     pub use super::runtime::{
-        chunk::Chunk, object::Object, value::Constant, value::Value, vm::Machine,
+        chunk::Chunk,
+        chunk::Module,
+        memory::{Gc, Heap, Root, UniqueRoot},
+        object::{Function, NativeFunction, Object},
+        op::Opcode,
+        value::Constant,
+        value::Value,
+        vm::Machine,
     };
+}
+
+pub mod debug {
+    pub use crate::compiler::{
+        ast::print_ast, ast::print_expression, compile_chunk, emitter::compile,
+        emitter::compile_with, parser::parse, print_tokens, scan_all,
+    };
+    pub use crate::runtime::{chunk::disassemble, chunk::disassemble_instruction};
 }
 
 use prelude::*;
 
-#[cfg(feature = "pc-debug")]
-pub use compiler::{compile_chunk, scan_all};
+use std::path::Path;
 
-#[cfg(feature = "fuzzer")]
-pub use compiler::print_tokens;
-
-/// Interprets a Piccolo source and returns its result.
-///
-/// # Examples
-///
-/// ```rust
-/// # fn main() -> Result<(), Vec<piccolo::prelude::PiccoloError>> {
-/// let result = piccolo::interpret("1 + 2")?;
-/// assert_eq!(3, result.into::<i64>());
-/// # Ok(())
-/// # }
-/// ```
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
-    let mut scanner = Scanner::new(src);
+    use debug::*;
     debug!("parse");
-    let ast = parse(&mut scanner)?;
-    debug!("ast\n{}", compiler::ast::print_ast(&ast));
+    let ast = parse(&mut Scanner::new(src))?;
+    debug!("ast\n{}", print_ast(&ast));
+
     debug!("compile");
+    let module = compile(&ast)?;
+    debug!("{}", disassemble(&module, ""));
 
-    let mut emitter = compiler::emitter::Emitter::new();
-    compiler::emitter::compile_ast(&mut emitter, &ast)?;
-    let chunk = emitter.current_chunk();
+    let mut heap = Heap::default();
 
-    debug!("chunk\n{}", chunk.disassemble(""));
     debug!("interpret");
-    Ok(Machine::new().interpret(&chunk)?)
+    let mut vm = Machine::new(&mut heap);
+    Ok(vm.interpret(&mut heap, &module)?.into_constant())
 }
 
 /// Reads a file and interprets its contents.
-pub fn do_file(file: &std::path::Path) -> Result<Constant, Vec<PiccoloError>> {
+pub fn do_file(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
     let contents = std::fs::read_to_string(file).map_err(|e| vec![PiccoloError::from(e)])?;
     interpret(&contents).map_err(|v| {
         v.into_iter()
             .map(|e| e.file(file.to_str().unwrap().to_owned()))
             .collect()
     })
+}
+
+pub fn run_bin(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
+    let bytes = std::fs::read(file).map_err(|e| vec![PiccoloError::from(e)])?;
+    let module = bincode::deserialize(&bytes).map_err(|e| vec![PiccoloError::from(e)])?;
+
+    let mut heap = Heap::default();
+    let mut vm = Machine::new(&mut heap);
+    Ok(vm.interpret(&mut heap, &module)?.into_constant())
+}
+
+pub fn compile(src: &Path, dst: &Path) -> Result<(), Vec<PiccoloError>> {
+    use debug::*;
+
+    let src = std::fs::read_to_string(src).map_err(|e| vec![PiccoloError::from(e)])?;
+    let ast = parse(&mut Scanner::new(&src))?;
+    let module = compile(&ast)?;
+
+    std::fs::write(
+        dst,
+        bincode::serialize(&module).map_err(|e| vec![PiccoloError::from(e)])?,
+    )
+    .map_err(|e| vec![PiccoloError::from(e)])?;
+
+    Ok(())
 }
 
 pub(crate) fn encode_bytes(low: u8, high: u8) -> u16 {
@@ -81,8 +107,8 @@ pub(crate) fn decode_bytes(bytes: u16) -> (u8, u8) {
 pub mod fuzzer {
     extern crate rand;
 
-    use crate::compiler::TokenKind;
-    use crate::Machine;
+    use crate::debug::*;
+    use crate::prelude::*;
 
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
@@ -116,17 +142,19 @@ pub mod fuzzer {
     fn run(n: usize, min_len: usize, max_len: usize) -> Option<()> {
         let mut src = String::new();
         let mut r = rand::thread_rng();
-        let lines = r.gen_range(min_len, max_len);
+        let lines = r.gen_range(min_len..max_len);
         for _ in 1..lines {
             let tk: TokenKind = r.gen();
             src.push_str(&format!("{} ", tk).to_lowercase());
         }
 
-        if let Ok(chunk) = crate::compile_chunk(&src) {
+        if let Ok(chunk) = compile_chunk(&src) {
             println!("----- run {} compiles -----", n);
-            crate::print_tokens(&crate::compiler::scan_all(&src).unwrap());
-            chunk.disassemble("");
-            Machine::new().interpret(&chunk).ok().map(|_| {
+            print_tokens(&scan_all(&src).unwrap());
+            disassemble(&chunk, "");
+            let mut heap = Heap::default();
+            let mut vm = Machine::new(&mut heap);
+            vm.interpret(&mut heap, &chunk).ok().map(|_| {
                 println!("----- run {} executes -----", n);
             })
         } else {
@@ -136,14 +164,14 @@ pub mod fuzzer {
 
     impl Distribution<TokenKind> for Standard {
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> TokenKind {
-            match rng.gen_range(0, 50) {
-                // 0 => TokenKind::Do,
-                // 1 => TokenKind::End,
-                // 2 => TokenKind::Fn,
-                // 3 => TokenKind::If,
-                // 4 => TokenKind::Else,
-                // 5 => TokenKind::While,
-                // 6 => TokenKind::For,
+            match rng.gen_range(0..50) {
+                0 => TokenKind::Do,
+                1 => TokenKind::End,
+                2 => TokenKind::Fn,
+                3 => TokenKind::If,
+                4 => TokenKind::Else,
+                5 => TokenKind::While,
+                6 => TokenKind::For,
                 // 7 => TokenKind::In,
                 // 8 => TokenKind::Data,
                 9 => TokenKind::Let,
@@ -157,8 +185,8 @@ pub mod fuzzer {
                 // 17 => TokenKind::RightBracket,
                 18 => TokenKind::LeftParen,
                 19 => TokenKind::RightParen,
-                // 20 => TokenKind::Comma,
-                // 21 => TokenKind::Period,
+                20 => TokenKind::Comma,
+                21 => TokenKind::Period,
                 // 22 => TokenKind::ExclusiveRange,
                 // 23 => TokenKind::InclusiveRange,
                 24 => TokenKind::Assign,
@@ -168,19 +196,19 @@ pub mod fuzzer {
                 28 => TokenKind::Multiply,
                 29 => TokenKind::Divide,
                 30 => TokenKind::Modulo,
-                // 31 => TokenKind::LogicalAnd,
-                // 32 => TokenKind::LogicalOr,
-                // 33 => TokenKind::BitwiseAnd,
-                // 34 => TokenKind::BitwiseOr,
-                // 35 => TokenKind::BitwiseXor,
+                31 => TokenKind::LogicalAnd,
+                32 => TokenKind::LogicalOr,
+                33 => TokenKind::BitwiseAnd,
+                34 => TokenKind::BitwiseOr,
+                35 => TokenKind::BitwiseXor,
                 36 => TokenKind::Equal,
                 37 => TokenKind::NotEqual,
                 38 => TokenKind::Less,
                 39 => TokenKind::Greater,
                 40 => TokenKind::LessEqual,
                 41 => TokenKind::GreaterEqual,
-                // 42 => TokenKind::ShiftLeft,
-                // 43 => TokenKind::ShiftRight,
+                42 => TokenKind::ShiftLeft,
+                43 => TokenKind::ShiftRight,
                 44 => TokenKind::Identifier,
                 45 => TokenKind::String,
                 46 => TokenKind::True,
@@ -195,9 +223,8 @@ pub mod fuzzer {
 
 #[cfg(test)]
 mod integration {
-    use super::{parse, Emitter, Machine, Scanner, Token, TokenKind};
-    use crate::compiler::ast::{self, Expr, Stmt};
-    use crate::Constant;
+    use crate::debug::*;
+    use crate::prelude::*;
 
     #[test]
     #[ignore]
@@ -222,16 +249,15 @@ mod integration {
         let src = "a=:1+2";
         let mut scanner = Scanner::new(src);
         let ast = parse(&mut scanner).unwrap();
-        println!("{}", ast::print_ast(&ast));
-        let mut ne = Emitter::new();
-        crate::compiler::emitter::compile_ast(&mut ne, &ast).unwrap();
-        let chunk = ne.into_chunk();
+        println!("{}", print_ast(&ast));
+        let module = compile(&ast).unwrap();
         #[cfg(feature = "pc-debug")]
         {
-            chunk.disassemble("idklol");
+            println!("{}", disassemble(&module, "idklol"));
         }
-        let mut vm = Machine::new();
-        println!("{}", vm.interpret(&chunk).unwrap());
+        let mut heap = Heap::default();
+        let mut vm = Machine::new(&mut heap);
+        println!("{:?}", vm.interpret(&mut heap, &module).unwrap());
     }
 
     #[test]
@@ -240,43 +266,46 @@ mod integration {
         let mut scanner = Scanner::new(src);
         let ast = parse(&mut scanner).unwrap();
         if let Stmt::Expr { expr, .. } = &ast[0] {
-            assert_eq!(
-                expr,
-                &Expr::Binary {
-                    lhs: Box::new(Expr::Binary {
-                        lhs: Box::new(Expr::Literal {
-                            literal: Token::new(TokenKind::Integer(1), "1", 1)
-                        }),
-                        op: Token::new(TokenKind::Plus, "+", 1),
-                        rhs: Box::new(Expr::Binary {
-                            lhs: Box::new(Expr::Literal {
-                                literal: Token::new(TokenKind::Integer(2), "2", 1)
-                            }),
-                            op: Token::new(TokenKind::Multiply, "*", 1),
-                            rhs: Box::new(Expr::Literal {
-                                literal: Token::new(TokenKind::Integer(3), "3", 1)
-                            })
-                        })
+            let equiv = Expr::Binary {
+                lhs: Box::new(Expr::Binary {
+                    lhs: Box::new(Expr::Literal {
+                        literal: Token::new(TokenKind::Integer(1), "1", 1),
                     }),
                     op: Token::new(TokenKind::Plus, "+", 1),
-                    rhs: Box::new(Expr::Literal {
-                        literal: Token::new(TokenKind::Integer(4), "4", 1)
+                    rhs: Box::new(Expr::Binary {
+                        lhs: Box::new(Expr::Literal {
+                            literal: Token::new(TokenKind::Integer(2), "2", 1),
+                        }),
+                        op: Token::new(TokenKind::Multiply, "*", 1),
+                        rhs: Box::new(Expr::Literal {
+                            literal: Token::new(TokenKind::Integer(3), "3", 1),
+                        }),
                     }),
-                }
-            );
+                }),
+                op: Token::new(TokenKind::Plus, "+", 1),
+                rhs: Box::new(Expr::Literal {
+                    literal: Token::new(TokenKind::Integer(4), "4", 1),
+                }),
+            };
 
-            println!("{}", ast::print_expression(expr));
+            println!("got:  {}", print_expression(expr));
+            println!("want: {}", print_expression(&equiv));
+            assert_eq!(expr, &equiv);
 
-            let mut ne = Emitter::new();
-            crate::compiler::emitter::compile_ast(&mut ne, &ast).unwrap();
-            let chunk = ne.into_chunk();
+            let module = compile(&ast).unwrap();
 
             #[cfg(feature = "pc-debug")]
             {
-                println!("{}", chunk.disassemble("idklol"));
+                println!("{}", disassemble(&module, "idklol"));
             }
-            let mut vm = Machine::new();
-            assert_eq!(vm.interpret(&chunk).unwrap(), Constant::Integer(11));
+
+            let mut heap = Heap::default();
+            let mut vm = Machine::new(&mut heap);
+            // TODO
+            assert_eq!(
+                vm.interpret(&mut heap, &module).unwrap().into_constant(),
+                Constant::Integer(11)
+            );
         } else {
             panic!("ast not initialized")
         }

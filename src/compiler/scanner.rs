@@ -1,6 +1,5 @@
 //! Contains `Scanner`, an on-demand producer of tokens.
 
-use crate::runtime::Line;
 use crate::{ErrorKind, PiccoloError, Token, TokenKind};
 
 use std::collections::VecDeque;
@@ -27,7 +26,7 @@ pub struct Scanner<'a> {
     tokens: VecDeque<Token<'a>>,
     start: usize,
     current: usize,
-    line: Line,
+    line: usize,
 }
 
 impl<'a> Scanner<'a> {
@@ -42,7 +41,6 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    #[cfg(feature = "pc-debug")]
     pub(super) fn scan_all(mut self) -> Result<Vec<Token<'a>>, PiccoloError> {
         while self.next()?.kind != TokenKind::Eof {}
         Ok(self.tokens.drain(0..).collect())
@@ -61,16 +59,16 @@ impl<'a> Scanner<'a> {
     }
 
     /// Looks ahead in the token stream, generating tokens if they do not exist.
-    pub fn peek_token<'b>(&'b mut self, idx: usize) -> Result<&'b Token<'a>, PiccoloError> {
+    pub fn peek_token<'b>(&'b mut self, index: usize) -> Result<&'b Token<'a>, PiccoloError> {
         if self.tokens.is_empty() {
             self.next()?;
         }
 
-        while self.tokens.len() <= idx {
+        while self.tokens.len() <= index {
             self.next()?;
         }
 
-        Ok(&self.tokens[idx])
+        Ok(&self.tokens[index])
     }
 
     fn slurp_whitespace(&mut self) {

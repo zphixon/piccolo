@@ -2,7 +2,7 @@ x =: 362773489239479883
 
 while x > 1 do
     if x % 2 == 0 do
-        x = x / 2
+        x /= 2
     else
         x = 3 * x + 1
     end

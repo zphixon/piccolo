@@ -5,38 +5,39 @@ pub mod emitter;
 pub mod parser;
 pub mod scanner;
 
-use crate::runtime::{Line, LocalScopeDepth};
-use crate::{ErrorKind, PiccoloError};
+use crate::{ErrorKind, Module, PiccoloError};
 
 use core::fmt;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq, Hash, Default, Debug)]
 pub(crate) struct Local {
     pub(crate) name: String,
-    pub(crate) depth: LocalScopeDepth,
+    pub(crate) depth: u16,
+    slot: u16,
+    is_upvalue: bool,
 }
 
 impl Local {
-    pub(crate) fn new(name: String, depth: LocalScopeDepth) -> Self {
-        Self { name, depth }
+    pub(crate) fn new(name: String, depth: u16) -> Self {
+        Self {
+            name,
+            depth,
+            ..Self::default()
+        }
     }
 }
 
-#[cfg(feature = "pc-debug")]
-pub fn compile_chunk(src: &str) -> Result<crate::Chunk, Vec<PiccoloError>> {
+pub fn compile_chunk(src: &str) -> Result<Module, Vec<PiccoloError>> {
     let mut scanner = super::Scanner::new(src);
     let ast = parser::parse(&mut scanner)?;
-    let mut emitter = emitter::Emitter::new();
-    emitter::compile_ast(&mut emitter, &ast)?;
-    Ok(emitter.into_chunk())
+    emitter::compile(&ast)
 }
 
-#[cfg(feature = "pc-debug")]
 pub fn scan_all(source: &str) -> Result<Vec<Token>, PiccoloError> {
     scanner::Scanner::new(source).scan_all()
 }
 
-pub(crate) fn escape_string(t: &Token) -> Result<String, PiccoloError> {
+pub(crate) fn escape_string(t: Token) -> Result<String, PiccoloError> {
     match t.kind {
         TokenKind::String => {
             let s = t.lexeme;
@@ -202,11 +203,11 @@ pub enum TokenKind {
 pub struct Token<'a> {
     pub(crate) kind: TokenKind,
     pub(crate) lexeme: &'a str,
-    pub(crate) line: Line,
+    pub(crate) line: usize,
 }
 
 impl<'a> Token<'a> {
-    pub fn new(kind: TokenKind, lexeme: &'a str, line: Line) -> Self {
+    pub fn new(kind: TokenKind, lexeme: &'a str, line: usize) -> Self {
         Token { kind, lexeme, line }
     }
 
@@ -240,8 +241,8 @@ impl<'a> Token<'a> {
         )
     }
 
-    pub fn assign_by_mutate_op(&self) -> Option<crate::runtime::op::Opcode> {
-        use crate::runtime::op::Opcode;
+    pub fn assign_by_mutate_op(&self) -> Option<crate::Opcode> {
+        use crate::Opcode;
         Some(match self.kind {
             TokenKind::PlusAssign => Opcode::Add,
             TokenKind::MinusAssign => Opcode::Subtract,
@@ -270,7 +271,6 @@ impl<'a> fmt::Display for Token<'a> {
     }
 }
 
-#[cfg(feature = "fuzzer")]
 pub fn print_tokens(tokens: &[Token]) {
     let mut previous_line = 0;
     for token in tokens.iter() {

@@ -1,0 +1,9 @@
+fn retnArg(arg) do
+    retn arg
+end
+
+fn retnFnCallWithArg(f, arg) do
+    retn retnArg(f)(arg)
+end
+
+retnFnCallWithArg(print, "hello")

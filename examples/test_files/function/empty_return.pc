@@ -1,0 +1,12 @@
+x =: 0
+
+fn increment() do
+    if x == 100 do
+        retn
+    end
+    x += 1
+    increment()
+end
+
+increment()
+assert x == 100

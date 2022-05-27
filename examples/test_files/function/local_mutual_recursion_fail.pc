@@ -1,0 +1,12 @@
+do
+  fn isEven(n) do
+    if n == 0 do retn true end
+    retn isOdd(n - 1)
+  end
+
+  fn isOdd(n) do
+    retn isEven(n - 1)
+  end
+
+  isEven(4)
+end

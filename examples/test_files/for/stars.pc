@@ -1,10 +1,10 @@
 s =: ""
 
-for i =: 1, i <= 5, i = i + 1 do
-    for j =: 1, j <= i, j = j + 1 do
-        s = s + "*"
+for i =: 1, i <= 5, i += 1 do
+    for j =: 1, j <= i, j += 1 do
+        s += "*"
     end
-    s = s + "\n"
+    s += "\n"
 end
 
 assert s == "*\n**\n***\n****\n*****\n"

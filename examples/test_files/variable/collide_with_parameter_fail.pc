@@ -1,0 +1,3 @@
+fn foo(a) do
+   a =: "x"
+end

@@ -1,633 +1,425 @@
 //! Contains items for the manipulation of memory at runtime.
+//!
+//! Shamelessly copied from <https://github.com/Darksecond/lox>
 
-use crate::fnv::FnvHashMap;
-use crate::runtime::StringPtr;
-use crate::{Constant, ErrorKind, Object, PiccoloError, Value};
+use crate::Object;
 
-use super::object::ObjectPtr;
+use std::{
+    cell::Cell,
+    fmt,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
-use std::mem;
-
-/// Simple string interner.
-///
-/// Discussed on [matklad's blog post.] Further discussion on reddit [here.]
-/// Uses FNV hashing provided by [`FnvHashMap`].
-///
-/// [matklad's blog post.]: https://matklad.github.io/2020/03/22/fast-simple-rust-interner.html
-/// [here.]: https://www.reddit.com/r/rust/comments/fn1jxf/blog_post_fast_and_simple_rust_interner/
-/// [`FnvHashMap`]: https://doc.servo.org/fnv/
-pub struct Interner {
-    map: FnvHashMap<&'static str, StringPtr>,
-    strings: Vec<&'static str>,
-    current_buffer: String,
-    previous_buffers: Vec<String>,
+/// Allocation metadata for a GC object.
+#[derive(Debug, Default)]
+struct Header {
+    roots: AtomicUsize,
+    marked: Cell<bool>,
 }
 
-impl Interner {
-    pub fn with_capacity(cap: usize) -> Self {
-        let cap = cap.next_power_of_two();
-        Self {
-            map: FnvHashMap::default(),
-            strings: Vec::new(),
-            current_buffer: String::with_capacity(cap),
-            previous_buffers: Vec::new(),
+/// A GC allocation.
+///
+/// Contains some metadata about the allocation, for example how many roots there are, and whether
+/// or not the object is marked.
+#[derive(Debug)]
+struct Allocation<'data, T: Object + ?Sized> {
+    header: Header,
+    _phantom: PhantomData<&'data ()>,
+    data: T,
+}
+
+/// Heap type.
+///
+/// A Vec<Box<Allocation<dyn Object>>> contains all heap objects. Objects allocated by the GC will
+/// be owned by this struct.
+#[derive(Debug, Default)]
+pub struct Heap<'data> {
+    objects: Vec<Box<Allocation<'data, dyn Object + 'data>>>,
+}
+
+/// GC smart pointer. Copyable.
+///
+/// Contains non-null pointer to an allocation stored on the heap.
+pub struct Gc<'data, T: Object + ?Sized> {
+    ptr: *mut Allocation<'data, T>,
+}
+
+/// Represents a rooted value. Cloneable.
+///
+/// Contains non-null pointer to an allocation stored on the heap.
+pub struct Root<'data, T: Object + ?Sized> {
+    ptr: *mut Allocation<'data, T>,
+}
+
+/// A value that is uniquely rooted. Uncloneable.
+///
+/// Contains non-null pointer to an allocation stored on the heap. Semantically uncopyable.
+pub struct UniqueRoot<'data, T: Object + ?Sized> {
+    ptr: *mut Allocation<'data, T>,
+}
+
+impl<T: Object + ?Sized> Allocation<'_, T> {
+    // mark the gc object
+    fn unmark(&self) {
+        self.header.marked.set(false);
+    }
+
+    // increase the ref count for an object. not actually a ref count but it's similar.
+    fn root(&self) {
+        self.header.roots.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn unroot(&self) {
+        self.header.roots.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+// this is where the magic happens
+impl<T: Object + ?Sized> Object for Allocation<'_, T> {
+    fn trace(&self) {
+        // mark the allocation as having been traced and then trace its data
+        if !self.header.marked.replace(true) {
+            self.data.trace();
         }
     }
 
-    pub fn intern(&mut self, s: &str) -> StringPtr {
-        if let Some(&id) = self.map.get(s) {
-            trace!("str exists {:x}", id);
-            return id;
-        }
+    fn type_name(&self) -> &'static str {
+        T::type_name(&self.data)
+    }
+}
 
-        let s = unsafe { self.alloc(s) };
-        let id = self.map.len();
-        self.map.insert(s, id);
-        self.strings.push(s);
+impl<'data> Heap<'data> {
+    // allocate some data on the heap. return type points to allocation owned by Heap.objects
+    unsafe fn allocate<'this, T: 'data + Object>(
+        &'this mut self,
+        data: T,
+    ) -> *mut Allocation<'data, T> {
+        let mut alloc = Box::new(Allocation {
+            header: Header::default(),
+            data,
+            _phantom: Default::default(),
+        });
 
-        trace!("str does not exist {:x}", id);
-        debug_assert!(self.lookup(id) == s);
-        debug_assert!(self.intern(s) == id);
-
-        id
+        // TODO: maybe box unnecessary?
+        // TODO: maybe NonNull::new?
+        //let ptr = unsafe { NonNull::new_unchecked(&mut *alloc) };
+        let ptr = &mut *alloc as *mut Allocation<T>;
+        self.objects.push(alloc);
+        ptr
     }
 
-    pub fn lookup(&self, id: StringPtr) -> &str {
-        self.strings
-            .get(id)
-            .unwrap_or_else(|| panic!("str does not exist: {:x}", id))
+    /// Root a GCd object.
+    pub fn root<'this, T: Object + ?Sized>(&'this mut self, obj: Gc<'data, T>) -> Root<'data, T> {
+        obj.as_allocation().root();
+        Root { ptr: obj.ptr }
     }
 
-    // this is OK because:
-    //  1. we are the only user of this function
-    //  2. we don't drop or deallocate the old buffers when we reallocate the current one,
-    //     so any &str that are floating around will always point to valid data
-    //  3. the &str from Intern::lookup is bounded by the lifetime of self anyway, so we can't
-    //     hold on to a &str at all if we want to add new ones
-    unsafe fn alloc(&mut self, s: &str) -> &'static str {
-        let current_capacity = self.current_buffer.capacity();
-
-        // if adding a new string will cause reallocation of the buffer
-        if current_capacity < self.current_buffer.len() + s.len() {
-            // create the next buffer
-            let new_capacity = (current_capacity.max(s.len()) + 1).next_power_of_two();
-            let next_buffer = String::with_capacity(new_capacity);
-            trace!(
-                "reallocate interner: {} -> {}",
-                self.current_buffer.len(),
-                new_capacity
-            );
-
-            // swap them out
-            let previous_buffer = mem::replace(&mut self.current_buffer, next_buffer);
-
-            // retain ownership of the old buffer so &str references don't become invalid
-            self.previous_buffers.push(previous_buffer);
-        }
-
-        // add s to the current buffer
-        let interned = {
-            let start = self.current_buffer.len();
-            self.current_buffer.push_str(s);
-            &self.current_buffer[start..]
+    /// Manage an object on the heap.
+    ///
+    /// Data will be GCable.
+    pub fn manage<'this, T: 'data + Object>(&'this mut self, data: T) -> Root<'data, T> {
+        let root = Root {
+            ptr: unsafe { self.allocate(data) },
         };
-
-        &*(interned as *const str)
+        root.as_allocation().root();
+        root
     }
-}
 
-/// The main method of runtime variable reference semantics.
-///
-/// The only way of implementing the dynamic lifetimes of values that need to exist in
-/// a scripting language like Piccolo is to circumvent Rust's system of borrows and lifetimes
-/// entirely. This struct is how this is implemented in Piccolo.
-///
-/// A `Heap` is implemented using a `Vec<Option<Box<dyn `[`Object`]`>>>`, and at runtime, pointers
-/// to objects in the heap are simply `usize` indices into the heap's vector. Although there
-/// are two levels of indirection, the negative impact on performance comes with static memory
-/// safety guarantees.
-///
-/// [`Object`]: ../object/trait.Object.html
-pub struct Heap {
-    memory: Vec<Option<Box<dyn Object>>>,
-    interner: Interner,
-    alloc_after: usize,
-}
-
-impl Heap {
-    /// Create a new `Heap` with a capacity. See also [`Vec::with_capacity`].
+    /// Manage an uncopyable object on the heap.
     ///
-    /// [`Vec::with_capacity`]: https://doc.rust-lang.org/stable/std/vec/struct.Vec.html#method.with_capacity
-    pub fn new(capacity: usize) -> Heap {
-        let mut memory = Vec::with_capacity(capacity);
-        memory.resize_with(capacity, || None);
-        Heap {
-            memory,
-            interner: Interner::with_capacity(32),
-            alloc_after: 0,
-        }
+    /// As in manage, data will be GCable.
+    pub fn manage_unique<'this, T: 'data + Object>(
+        &'this mut self,
+        data: T,
+    ) -> UniqueRoot<'data, T> {
+        let root = UniqueRoot {
+            ptr: unsafe { self.allocate(data) },
+        };
+        root.as_allocation().root();
+        root
     }
 
-    // needs to see the vm stack
-    pub fn gc(&mut self) {
-        debug!("start GC");
-        // for item in memory
-        // if inaccessible by the VM, Option::take() it
-        self.alloc_after = 0;
+    /// Take out the trash.
+    ///
+    /// Return number of bytes cleared.
+    pub fn collect(&mut self) -> usize {
+        self.mark();
+        let bytes = self.bytes_unmarked();
+        self.sweep();
+        bytes
     }
 
-    pub fn alloc_string(&mut self, s: &str) -> Value {
-        Value::String(self.interner.intern(s))
+    // Mark rooted objects
+    fn mark(&mut self) {
+        for object in &self.objects {
+            object.unmark();
+        }
+
+        self.objects
+            .iter()
+            .filter(|obj| obj.header.roots.load(Ordering::Relaxed) > 0)
+            .for_each(|obj| obj.trace());
     }
 
-    /// Allocate space for a new value, and return its pointer.
-    pub fn alloc(&mut self, value: Box<dyn Object>) -> Value {
-        while self.memory[self.alloc_after].is_some() {
-            self.alloc_after += 1;
-        }
+    // Delete all unmarked objects. If there are any roots to an object,
+    fn sweep(&mut self) {
+        self.objects.retain(|obj| obj.header.marked.get());
+    }
 
-        if self.alloc_after + 1 == self.memory.len() {
-            self.memory
-                .resize_with(self.memory.len() + (self.memory.len() / 2 + 1), || None);
-        }
-
-        debug!("insert {:x} = {:?}", self.alloc_after, value);
-
-        let kind = value.kind();
-        self.memory[self.alloc_after] = Some(value);
-        Value::Object(ObjectPtr {
-            idx: self.alloc_after,
-            kind,
+    // number of unmarked bytes
+    fn bytes_unmarked(&self) -> usize {
+        self.objects.iter().fold(0, |bytes, obj| {
+            if !obj.header.marked.get() {
+                bytes + std::mem::size_of_val(&obj.data)
+            } else {
+                bytes
+            }
         })
     }
 
-    /// De-reference a pointer.
-    ///
-    /// # Panics:
-    ///
-    /// This method panics if the pointer points to memory outside the range of the heap,
-    /// or if the object pointed at is `None`.
-    #[inline]
-    pub fn deref(&self, ptr: Value) -> &dyn Object {
-        match ptr {
-            Value::Object(ptr) => {
-                trace!("deref {:x}", ptr.idx);
-                self.memory[ptr.idx].as_deref().expect("deref invalid ptr")
-            }
-            _ => panic!("deref with non-ptr {:?}", ptr),
-        }
-    }
-
-    /// De-reference a pointer, and get a mutable reference.
-    ///
-    /// # Panics:
-    ///
-    /// This method panics if the pointer points to memory outside the range of the heap,
-    /// or if the object pointed at is `None`.
-    #[inline]
-    pub fn deref_mut(&mut self, ptr: Value) -> &mut dyn Object {
-        match ptr {
-            Value::Object(ptr) => {
-                trace!("deref mut {:x}", ptr.idx);
-                self.memory[ptr.idx]
-                    .as_deref_mut()
-                    .expect("deref_mut invalid ptr")
-            }
-            _ => panic!("deref_mut with non-ptr {:?}", ptr),
-        }
-    }
-
-    /// Move a value out of the heap, de-allocating it.
-    ///
-    /// # Panics:
-    ///
-    /// This method panics if the pointer points to memory outside the range of the heap,
-    /// or if the object pointed at is `None`.
-    #[inline]
-    pub fn take(&mut self, ptr: Value) -> Box<dyn Object> {
-        match ptr {
-            Value::Object(ptr) => {
-                debug!("take {:x}", ptr.idx);
-                self.memory[ptr.idx].take().expect("free invalid ptr")
-            }
-            _ => panic!("take with non-ptr {:?}", ptr),
-        }
-    }
-
-    pub fn try_deep_copy(&mut self, value: &Value) -> Result<Value, PiccoloError> {
-        Ok(match value {
-            Value::Object(ptr) => {
-                trace!("try copy {:x}", ptr.idx);
-                let cloned = self.deref(*value).try_clone().ok_or_else(|| {
-                    PiccoloError::new(ErrorKind::CannotClone {
-                        ty: self.deref(*value).type_name().to_owned(),
-                    })
-                })?;
-                self.alloc(cloned)
-            }
-            Value::String(v) => Value::String(*v),
-            Value::Bool(v) => Value::Bool(*v),
-            Value::Integer(v) => Value::Integer(*v),
-            Value::Double(v) => Value::Double(*v),
-            Value::Nil => Value::Nil,
-        })
-    }
-
-    pub(crate) fn value_into_constant(&mut self, v: Value) -> Constant {
-        match v {
-            Value::String(ptr) => Constant::String(self.interner.lookup(ptr).to_owned()),
-            Value::Bool(v) => Constant::Bool(v),
-            Value::Integer(v) => Constant::Integer(v),
-            Value::Double(v) => Constant::Double(v),
-            Value::Nil => Constant::Nil,
-            _ => panic!("cannot make constant from object"),
-        }
-    }
-
-    pub(crate) fn constant_into_value(&mut self, constant: &Constant) -> Value {
-        trace!("into_value");
-        match constant {
-            Constant::String(v) => {
-                let ptr = self.interner.intern(v);
-                trace!("string ptr {:x}", ptr);
-                Value::String(ptr)
-            }
-            Constant::Integer(v) => Value::Integer(*v),
-            Constant::Bool(v) => Value::Bool(*v),
-            Constant::Double(v) => Value::Double(*v),
-            Constant::Nil => Value::Nil,
-        }
-    }
-
-    /// Returns the type name of a value.
-    pub fn type_name(&self, v: &Value) -> &'static str {
-        match v {
-            Value::Bool(_) => "bool",
-            Value::Integer(_) => "integer",
-            Value::Double(_) => "double",
-            Value::Object(_) => self.deref(*v).type_name(),
-            Value::String(_) => "string",
-            Value::Nil => "nil",
-        }
-    }
-
-    /// Formats the value.
-    pub fn fmt(&self, v: &Value) -> String {
-        match v {
-            Value::Bool(v) => format!("{}", v),
-            Value::Integer(v) => format!("{}", v),
-            Value::Double(v) => format!("{}", v),
-            Value::Object(_) => format!("{}", self.deref(*v)),
-            Value::String(v) => self.interner.lookup(*v).to_string(),
-            Value::Nil => "nil".into(),
-        }
-    }
-
-    /// Formats the value.
-    pub fn dbg(&self, v: &Value) -> String {
-        match v {
-            Value::Bool(v) => format!("bool({})", v),
-            Value::Integer(v) => format!("integer({})", v),
-            Value::Double(v) => format!("double({})", v),
-            Value::Object(_) => format!("*{}({:?})", self.deref(*v).type_name(), self.deref(*v)),
-            Value::String(v) => format!("string({:?})", self.interner.lookup(*v)),
-            Value::Nil => "Nil".into(),
-        }
-    }
-
-    /// Tests a value for equality. Returns `None` if incomparable.
-    pub fn eq(&self, lhs: &Value, rhs: &Value) -> Option<bool> {
-        match lhs {
-            Value::Bool(l) => match rhs {
-                Value::Bool(r) => Some(l == r),
-                _ => None,
-            },
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Some(l == r),
-                Value::Double(r) => Some(*l as f64 == *r),
-                _ => None,
-            },
-            Value::Double(l) => match rhs {
-                Value::Integer(r) => Some(*l == *r as f64),
-                Value::Double(r) => Some(l == r),
-                _ => None,
-            },
-            Value::Object(l) => match rhs {
-                Value::Object(r) => {
-                    if *l == *r {
-                        Some(true)
-                    } else {
-                        let lhs = self.deref(*lhs);
-                        let rhs = self.deref(*rhs);
-                        lhs.eq(rhs)
-                    }
-                }
-                _ => None,
-            },
-            Value::String(l) => match rhs {
-                Value::String(r) => Some(*l == *r),
-                _ => None,
-            },
-            Value::Nil => match rhs {
-                Value::Nil => Some(true),
-                _ => Some(false),
-            },
-        }
-    }
-
-    pub fn lt(&self, lhs: &Value, rhs: &Value) -> Option<bool> {
-        match lhs {
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Some(l < r),
-                Value::Double(r) => Some((*l as f64) < *r),
-                _ => None,
-            },
-            Value::Double(l) => match rhs {
-                Value::Integer(r) => Some(*l < *r as f64),
-                Value::Double(r) => Some(l < r),
-                _ => None,
-            },
-            Value::Object(_) => match rhs {
-                Value::Object(_) => {
-                    let lhs = self.deref(*lhs);
-                    let rhs = self.deref(*rhs);
-                    lhs.lt(rhs)
-                }
-                _ => None,
-            },
-            Value::String(l) => match rhs {
-                Value::String(r) => {
-                    let lhs = self.interner.lookup(*l);
-                    let rhs = self.interner.lookup(*r);
-                    Some(lhs < rhs)
-                }
-                _ => None,
-            },
-            _ => None,
-        }
-    }
-
-    pub fn gt(&self, lhs: &Value, rhs: &Value) -> Option<bool> {
-        match lhs {
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Some(l > r),
-                Value::Double(r) => Some(*l as f64 > *r),
-                _ => None,
-            },
-            Value::Double(l) => match rhs {
-                Value::Integer(r) => Some(*l > *r as f64),
-                Value::Double(r) => Some(l > r),
-                _ => None,
-            },
-            Value::Object(_) => match rhs {
-                Value::Object(_) => {
-                    let lhs = self.deref(*lhs);
-                    let rhs = self.deref(*rhs);
-                    lhs.gt(rhs)
-                }
-                _ => None,
-            },
-            Value::String(l) => match rhs {
-                Value::String(r) => {
-                    let lhs = self.interner.lookup(*l);
-                    let rhs = self.interner.lookup(*r);
-                    Some(lhs > rhs)
-                }
-                _ => None,
-            },
-            _ => None,
-        }
+    /// Number of objects in the heap.
+    pub fn objects(&self) -> usize {
+        self.objects.len()
     }
 }
 
-pub(crate) fn dbg_list(l: &[Value], heap: &Heap) -> String {
-    trace!("dbg_list");
-    if l.is_empty() {
-        "[]".into()
-    } else {
-        let mut s = String::from("[");
-        for item in l {
-            s.push_str(&format!("{}, ", heap.dbg(item)));
-        }
-        format!("{}]", &s[..s.len() - 2])
+// Gc<T> impl, Clone, Copy, Deref, Debug, Display, Object {{{
+impl<'data, T: Object + ?Sized> Gc<'data, T> {
+    // safety: the lifetime of the returned allocation is bound to self
+    fn as_allocation(&self) -> &Allocation<'data, T> {
+        unsafe { self.ptr.as_ref().unwrap() }
     }
 }
+
+impl<T: Object + Sized + Clone> Gc<'_, T> {
+    pub fn deep_copy(&self) -> T {
+        self.as_allocation().data.clone()
+    }
+}
+
+impl<'data, T: Object + ?Sized> Clone for Gc<'data, T> {
+    fn clone<'this>(&'this self) -> Gc<'data, T> {
+        *self
+    }
+}
+
+impl<T: Object + ?Sized> Copy for Gc<'_, T> {}
+
+impl<T: Object + ?Sized> Deref for Gc<'_, T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        &self.as_allocation().data
+    }
+}
+
+impl<T: fmt::Debug + Object + ?Sized> fmt::Debug for Gc<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let inner: &T = &*self;
+        write!(f, "{:?}", inner)
+    }
+}
+
+impl<T: fmt::Display + Object + ?Sized> fmt::Display for Gc<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let inner: &T = &*self;
+        std::fmt::Display::fmt(inner, f)
+    }
+}
+
+impl<T: Object + ?Sized> Object for Gc<'_, T> {
+    fn trace(&self) {
+        self.as_allocation().trace()
+    }
+
+    fn type_name(&self) -> &'static str {
+        T::type_name(self)
+    }
+}
+// }}}
+
+// Root<T> impl, Clone, Deref, Debug, Display, Object, Drop {{{
+impl<'data, T: Object + ?Sized> Root<'data, T> {
+    // safety: the lifetime of the returned allocation is bound to self
+    fn as_allocation<'this>(&'this self) -> &'this Allocation<'data, T> {
+        unsafe { self.ptr.as_ref().unwrap() }
+    }
+
+    pub(crate) fn as_gc<'this>(&'this self) -> Gc<'data, T> {
+        Gc { ptr: self.ptr }
+    }
+}
+
+impl<'data, T: Object + ?Sized> Clone for Root<'data, T> {
+    fn clone<'this>(&'this self) -> Root<'data, T> {
+        self.as_allocation().root();
+        Root { ptr: self.ptr }
+    }
+}
+
+impl<T: Object + ?Sized> Deref for Root<'_, T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        &self.as_allocation().data
+    }
+}
+
+impl<T: fmt::Debug + Object + ?Sized> fmt::Debug for Root<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let inner: &T = &*self;
+        write!(f, "Root({:?})", inner)
+    }
+}
+
+impl<T: fmt::Display + Object + ?Sized> fmt::Display for Root<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let inner: &T = &*self;
+        std::fmt::Display::fmt(inner, f)
+    }
+}
+
+impl<T: Object + ?Sized> Object for Root<'_, T> {
+    fn trace(&self) {
+        self.as_allocation().trace()
+    }
+
+    fn type_name(&self) -> &'static str {
+        T::type_name(self)
+    }
+}
+
+impl<T: Object + ?Sized> Drop for Root<'_, T> {
+    fn drop(&mut self) {
+        self.as_allocation().unroot();
+    }
+}
+// }}}
+
+// UniqueRoot<T> impl, Deref, DerefMut, Debug, Display, Object, Drop {{{
+impl<'data, T: Object + ?Sized> UniqueRoot<'data, T> {
+    // safety: the lifetime of the returned allocation is bound to self
+    fn as_allocation<'this>(&'this self) -> &'this Allocation<'data, T> {
+        unsafe { self.ptr.as_ref().unwrap() }
+    }
+
+    fn as_allocation_mut<'this>(&'this mut self) -> &'this mut Allocation<'data, T> {
+        unsafe { self.ptr.as_mut().unwrap() }
+    }
+}
+
+impl<T: Object + ?Sized> Deref for UniqueRoot<'_, T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        &self.as_allocation().data
+    }
+}
+
+impl<T: Object + ?Sized> DerefMut for UniqueRoot<'_, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.as_allocation_mut().data
+    }
+}
+
+impl<T: fmt::Debug + Object + ?Sized> fmt::Debug for UniqueRoot<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let inner: &T = &*self;
+        write!(f, "UniqueRoot({:?})", inner)
+    }
+}
+
+impl<T: fmt::Display + Object + ?Sized> fmt::Display for UniqueRoot<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let inner: &T = &*self;
+        std::fmt::Display::fmt(inner, f)
+    }
+}
+
+impl<T: Object + ?Sized> Object for UniqueRoot<'_, T> {
+    fn trace(&self) {
+        self.as_allocation().trace()
+    }
+
+    fn type_name(&self) -> &'static str {
+        T::type_name(self)
+    }
+}
+
+impl<T: Object + ?Sized> Drop for UniqueRoot<'_, T> {
+    fn drop(&mut self) {
+        self.as_allocation().unroot();
+    }
+}
+// }}}
 
 #[cfg(test)]
 mod test {
-    use crate::Value;
+    use super::*;
 
-    use super::super::object::Object;
-    use super::Heap;
+    #[test]
+    fn clean_up_roots() {
+        let mut heap = Heap::default();
 
-    #[derive(Debug, PartialEq)]
-    struct S(i64);
-    impl Object for S {
-        fn type_name(&self) -> &'static str {
-            "S"
+        {
+            let root = heap.manage(String::from("h"));
+            assert_eq!(*root, "h");
         }
-        fn eq(&self, rhs: &dyn Object) -> Option<bool> {
-            Some(rhs.downcast_ref::<S>()?.0 == self.0)
-        }
-        fn set(&mut self, _property: &str, value: Value) -> Option<()> {
-            match value {
-                Value::Integer(v) => self.0 = v,
-                _ => panic!(),
-            }
-            Some(())
-        }
-    }
-    impl core::fmt::Display for S {
-        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-            write!(f, "{:?}", self)
-        }
+
+        assert_eq!(1, heap.objects());
+        assert_eq!(std::mem::size_of::<String>(), heap.collect());
+        assert_eq!(0, heap.objects());
     }
 
     #[test]
-    fn heap_alloc() {
-        let mut h = Heap::new(30);
-        let _ = h.alloc(Box::new(S(32)));
+    fn clean_up_unique_roots() {
+        let mut heap = Heap::default();
+
+        {
+            let _root = heap.manage_unique(String::new());
+        }
+
+        assert_eq!(1, heap.objects());
+        assert_eq!(std::mem::size_of::<String>(), heap.collect());
+        assert_eq!(0, heap.objects());
     }
 
     #[test]
-    fn heap_deref() {
-        let mut h = Heap::new(30);
-        let s = h.alloc(Box::new(S(342)));
-        assert!(h.deref(s).eq(&S(342)).unwrap());
-    }
-
-    #[test]
-    fn heap_free() {
-        let mut h = Heap::new(30);
-        let s = h.alloc(Box::new(S(32)));
-        assert!(h.take(s).eq(&S(32)).unwrap());
-    }
-
-    #[test]
-    #[should_panic]
     fn use_after_free() {
-        let mut h = Heap::new(30);
-        let s = h.alloc(Box::new(S(34232)));
-        assert!(h.take(s).eq(&S(34232)).unwrap());
-        h.deref(s);
+        use crate::Object;
+
+        #[derive(Debug)]
+        struct S(u64);
+        impl Drop for S {
+            fn drop(&mut self) {
+                self.0 = 0xbeeeb000;
+            }
+        }
+        impl Object for S {
+            fn trace(&self) {}
+        }
+
+        let gc;
+
+        {
+            let mut heap = Heap::default();
+            gc = heap.manage(S(0)).as_gc();
+            println!("{:#?}", heap);
+        }
+
+        assert_ne!(gc.0, 0xbeeeb000);
     }
 
     #[test]
-    fn mutable() {
-        let mut heap = Heap::new(8);
-        let ptr = heap.alloc(Box::new(S(32)));
-        heap.deref_mut(ptr).set("", Value::Integer(78));
-        assert_eq!(heap.deref(ptr).downcast_ref::<S>().unwrap(), &S(78));
-    }
+    fn deep_copy() {
+        use std::cell::RefCell;
 
-    #[test]
-    fn bunches() {
-        let mut pointers = vec![];
-        let mut h = Heap::new(32);
+        let mut heap = Heap::default();
+        let root = heap.manage(RefCell::new(String::from("din")));
+        let copy = root.as_gc().deep_copy();
 
-        for i in 0..10 {
-            pointers.push(h.alloc(Box::new(S(i))));
-        }
-        for i in 0..10 {
-            assert!(h.deref(pointers[i]).eq(&S(i as i64)).unwrap());
-        }
-        for ptr in pointers {
-            h.take(ptr);
-        }
-    }
+        root.borrow_mut().push_str("gus");
 
-    #[test]
-    fn non_contiguous2() {
-        let mut pointers = vec![];
-        let mut heap = Heap::new(32);
-
-        heap.gc();
-        for i in 0..16 {
-            pointers.push(heap.alloc(Box::new(S(i))));
-        }
-
-        heap.gc();
-        for _ in 4..12 {
-            let _ = heap.take(pointers.remove(4));
-        }
-
-        heap.gc();
-        for i in 0..16 {
-            pointers.push(heap.alloc(Box::new(S(i))));
-        }
-
-        heap.gc();
-
-        for i in 50..58 {
-            pointers.push(heap.alloc(Box::new(S(i))));
-        }
-        heap.gc();
-
-        for _ in 4..12 {
-            let _ = heap.take(pointers.remove(16));
-        }
-        heap.gc();
-
-        for _ in 0..32 {
-            pointers.push(heap.alloc(Box::new(S(777))));
-        }
-    }
-
-    #[test]
-    fn non_contiguous() {
-        let mut pointers = vec![];
-        let mut heap = Heap::new(32);
-
-        for i in 0..16 {
-            pointers.push(heap.alloc(Box::new(S(i))));
-        }
-
-        for _ in 4..12 {
-            let _ = heap.take(pointers.remove(4));
-        }
-
-        for i in 0..16 {
-            pointers.push(heap.alloc(Box::new(S(i))));
-        }
-
-        // just to set the allocated size back to zero
-        heap.gc();
-        assert_eq!(heap.memory.len(), 49);
-        assert_eq!(pointers.len(), 24);
-
-        for i in 50..58 {
-            pointers.push(heap.alloc(Box::new(S(i))));
-        }
-
-        assert_eq!(heap.memory.len(), 49);
-        assert_eq!(pointers.len(), 32);
-
-        let v: Vec<Option<S>> = heap
-            .memory
-            .into_iter()
-            .map(|item: Option<Box<dyn Object>>| {
-                item.and_then(|item: Box<dyn Object>| {
-                    item.downcast::<S>()
-                        .ok()
-                        .take()
-                        .and_then(|item: Box<S>| Some(*item))
-                })
-            })
-            .collect();
-
-        assert_eq!(
-            v,
-            vec![
-                Some(S(0)),
-                Some(S(1)),
-                Some(S(2)),
-                Some(S(3)),
-                Some(S(50)),
-                Some(S(51)),
-                Some(S(52)),
-                Some(S(53)),
-                Some(S(54)),
-                Some(S(55)),
-                Some(S(56)),
-                Some(S(57)),
-                Some(S(12)),
-                Some(S(13)),
-                Some(S(14)),
-                Some(S(15)),
-                Some(S(0)),
-                Some(S(1)),
-                Some(S(2)),
-                Some(S(3)),
-                Some(S(4)),
-                Some(S(5)),
-                Some(S(6)),
-                Some(S(7)),
-                Some(S(8)),
-                Some(S(9)),
-                Some(S(10)),
-                Some(S(11)),
-                Some(S(12)),
-                Some(S(13)),
-                Some(S(14)),
-                Some(S(15)),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ]
-        );
+        assert_eq!(root.borrow().as_str(), "dingus");
+        assert_eq!(copy.borrow().as_str(), "din");
     }
 }
