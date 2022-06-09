@@ -22,12 +22,12 @@ fn main() -> Result<(), PiccoloError> {
             ignored += 1;
         } else if !name.ends_with("_fail.pc") {
             println!(" -- '{}'", name);
-            let _ = piccolo::do_file(&item).map_err(|errors| {
+            let _ = piccolo::do_file(item).map_err(|errors| {
                 test_errors.push(errors);
             });
         } else {
             println!(" xx '{}'", name);
-            let _ = piccolo::do_file(&item).map(|v| {
+            let _ = piccolo::do_file(item).map(|v| {
                 test_errors.push(vec![PiccoloError::new(ErrorKind::AssertFailed {
                     assertion: String::from("test file would fail"),
                 })

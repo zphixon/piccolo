@@ -60,9 +60,9 @@ macro_rules! opcodes {
             $($op = $num,)*
         }
 
-        impl Into<u8> for $name {
-            fn into(self) -> u8 {
-                match self {
+        impl From<$name> for u8 {
+            fn from(op: $name) -> u8 {
+                match op {
                     $($name::$op => $num,)*
                 }
             }

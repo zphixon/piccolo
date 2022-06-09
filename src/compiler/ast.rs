@@ -190,7 +190,7 @@ fn parenthesize_lists(indent: usize, name: &str, expr: Option<&Expr>, stmts: &[&
     let mut s = format!("({}", name);
     if expr.is_some() {
         s.push(' ');
-        s.push_str(&print_expr(indent + 1, &expr.as_ref().unwrap()));
+        s.push_str(&print_expr(indent + 1, expr.as_ref().unwrap()));
     }
     for stmt_list in stmts.iter() {
         for stmt in stmt_list.iter() {

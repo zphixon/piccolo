@@ -226,27 +226,27 @@ impl std::fmt::Display for Value<'_> {
     }
 }
 
-impl Into<bool> for Value<'_> {
-    fn into(self) -> bool {
-        match self {
+impl From<Value<'_>> for bool {
+    fn from(v: Value<'_>) -> Self {
+        match v {
             Value::Bool(v) => v,
             _ => panic!("could not cast to bool"),
         }
     }
 }
 
-impl Into<i64> for Value<'_> {
-    fn into(self) -> i64 {
-        match self {
+impl From<Value<'_>> for i64 {
+    fn from(v: Value<'_>) -> Self {
+        match v {
             Value::Integer(v) => v,
             _ => panic!("could not cast to i64"),
         }
     }
 }
 
-impl Into<f64> for Value<'_> {
-    fn into(self) -> f64 {
-        match self {
+impl From<Value<'_>> for f64 {
+    fn from(v: Value<'_>) -> Self {
+        match v {
             Value::Double(v) => v,
             _ => panic!("could not cast to f64"),
         }
@@ -290,14 +290,6 @@ impl Constant {
         })
     }
 
-    /// Convert a `Constant` into its base type.
-    pub fn into<T>(self) -> T
-    where
-        Constant: Into<T>,
-    {
-        core::convert::Into::<T>::into(self)
-    }
-
     pub fn is_string(&self) -> bool {
         matches!(self, Constant::String(_))
     }
@@ -317,27 +309,27 @@ impl fmt::Display for Constant {
     }
 }
 
-impl Into<bool> for Constant {
-    fn into(self) -> bool {
-        match self {
+impl From<Constant> for bool {
+    fn from(c: Constant) -> Self {
+        match c {
             Constant::Bool(v) => v,
             _ => panic!("could not cast to bool"),
         }
     }
 }
 
-impl Into<i64> for Constant {
-    fn into(self) -> i64 {
-        match self {
+impl From<Constant> for i64 {
+    fn from(c: Constant) -> Self {
+        match c {
             Constant::Integer(v) => v,
             _ => panic!("could not cast to i64"),
         }
     }
 }
 
-impl Into<f64> for Constant {
-    fn into(self) -> f64 {
-        match self {
+impl From<Constant> for f64 {
+    fn from(c: Constant) -> Self {
+        match c {
             Constant::Double(v) => v,
             _ => panic!("could not cast to f64"),
         }

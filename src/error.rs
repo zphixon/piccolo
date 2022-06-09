@@ -102,12 +102,12 @@ impl fmt::Display for PiccoloError {
             } else {
                 "".into()
             },
-            nl = if self.stack.is_some() && self.stack.as_ref().unwrap().len() > 0 {
+            nl = if self.stack.is_some() && self.stack.as_ref().unwrap().is_empty() {
                 "\n"
             } else {
                 ""
             },
-            stack_trace = if self.stack.is_some() && self.stack.as_ref().unwrap().len() > 0 {
+            stack_trace = if self.stack.is_some() && self.stack.as_ref().unwrap().is_empty() {
                 let mut s = String::new();
                 for (i, site) in self.stack.as_ref().unwrap().iter().enumerate() {
                     s.push_str(&format!("  {} called from line {}", site.name, site.line));

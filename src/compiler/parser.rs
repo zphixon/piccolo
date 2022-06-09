@@ -525,7 +525,7 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
         let t = scanner.next_token()?;
         Err(PiccoloError::new(ErrorKind::ExpectedExpression {
             was_eof: t.kind == TokenKind::Eof,
-            got: format!("{}", t.lexeme),
+            got: t.lexeme.to_string(),
         })
         .line(t.line))
     }

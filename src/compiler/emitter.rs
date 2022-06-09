@@ -871,6 +871,12 @@ impl Emitter {
     }
 }
 
+impl Default for Emitter {
+    fn default() -> Self {
+        Emitter::new()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

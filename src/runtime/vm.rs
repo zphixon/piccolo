@@ -192,7 +192,7 @@ impl<'value> Machine<'value> {
                 name: String::from("top level"),
                 base: 0,
                 ip,
-                chunk: &module.chunk(0),
+                chunk: module.chunk(0),
                 function: f,
             }],
         };
@@ -201,8 +201,7 @@ impl<'value> Machine<'value> {
         // TODO refactor to make this not look like hot garbage
         loop {
             let result = self.interpret_next_instruction(heap, module, &mut frames);
-            if result.is_ok() {
-                let state = result.unwrap();
+            if let Ok(state) = result {
                 match state {
                     VmState::Continue => {}
                     VmState::Stop(value) => {
@@ -477,7 +476,7 @@ impl<'value> Machine<'value> {
             Opcode::GetLocal => {
                 let slot = frames.read_short() as usize + frames.current_frame().base;
                 debug!("get local slot {}", slot);
-                self.push(self.stack[slot].clone());
+                self.push(self.stack[slot]);
             }
             Opcode::SetLocal => {
                 let slot = frames.read_short() as usize + frames.current_frame().base;
@@ -489,8 +488,7 @@ impl<'value> Machine<'value> {
                 let name = constant.ref_string();
 
                 if self.globals.contains_key(name) {
-                    let var = self.globals[name].clone();
-                    self.push(var);
+                    self.push(self.globals[name]);
                 } else {
                     return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                         name: name.to_owned(),

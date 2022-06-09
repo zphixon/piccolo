@@ -50,30 +50,28 @@ fn main() {
 
     if !matches.is_present("src") && !matches.is_present("bin") && !matches.is_present("string") {
         repl();
-    } else {
-        if matches.is_present("compile") {
-            let src = PathBuf::from(matches.value_of("src").unwrap());
-            let out = PathBuf::from(matches.value_of("compile").unwrap());
-            if let Err(errors) = piccolo::compile(&src, &out) {
-                print_errors(errors);
-            }
-        } else if matches.is_present("bin") {
-            let src = PathBuf::from(matches.value_of("bin").unwrap());
-            if let Err(errors) = piccolo::run_bin(&src) {
-                print_errors(errors);
-            }
-        } else if matches.is_present("string") {
-            let src = matches.value_of("string").unwrap();
-            match piccolo::interpret(&src) {
-                Ok(v) => {
-                    println!("{:?}", v);
-                }
-                Err(errors) => print_errors(errors),
-            }
-        } else {
-            let src = PathBuf::from(matches.value_of("src").unwrap());
-            file(&src);
+    } else if matches.is_present("compile") {
+        let src = PathBuf::from(matches.value_of("src").unwrap());
+        let out = PathBuf::from(matches.value_of("compile").unwrap());
+        if let Err(errors) = piccolo::compile(&src, &out) {
+            print_errors(errors);
         }
+    } else if matches.is_present("bin") {
+        let src = PathBuf::from(matches.value_of("bin").unwrap());
+        if let Err(errors) = piccolo::run_bin(&src) {
+            print_errors(errors);
+        }
+    } else if matches.is_present("string") {
+        let src = matches.value_of("string").unwrap();
+        match piccolo::interpret(src) {
+            Ok(v) => {
+                println!("{:?}", v);
+            }
+            Err(errors) => print_errors(errors),
+        }
+    } else {
+        let src = PathBuf::from(matches.value_of("src").unwrap());
+        file(&src);
     }
 }
 
@@ -134,7 +132,7 @@ fn repl() {
                                     .interpret_continue(&mut heap, emitter.module())
                                     .map_err(|e| vec![e])
                             })
-                            .map_err(|e| print_errors(e))
+                            .map_err(print_errors)
                             .map(|value| println!("{:?}", value));
 
                         prompt = "-- ";
