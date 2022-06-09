@@ -46,7 +46,12 @@ struct Args {
     string: Option<String>,
 }
 
-fn main() -> Result<(), Vec<PiccoloError>> {
+#[allow(unused_must_use)]
+fn main() {
+    run().map_err(print_errors);
+}
+
+fn run() -> Result<(), Vec<PiccoloError>> {
     #[cfg(feature = "pc-debug")]
     env_logger::init();
 
