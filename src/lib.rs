@@ -93,16 +93,6 @@ pub fn compile(src: &Path, dst: &Path) -> Result<(), Vec<PiccoloError>> {
     Ok(())
 }
 
-pub(crate) fn encode_bytes(low: u8, high: u8) -> u16 {
-    ((high as u16) << 8) | (low as u16)
-}
-
-pub(crate) fn decode_bytes(bytes: u16) -> (u8, u8) {
-    let high = (bytes >> 8) as u8;
-    let low = (bytes & 0xff) as u8;
-    (low, high)
-}
-
 #[cfg(feature = "fuzzer")]
 pub mod fuzzer {
     extern crate rand;
@@ -231,17 +221,6 @@ mod integration {
     fn very_long() {
         let path = std::path::Path::new("examples/long.pc");
         crate::do_file(path).unwrap();
-    }
-
-    #[test]
-    fn encode_decode() {
-        let bytes: u16 = 0xbead;
-        let (low, high) = crate::decode_bytes(bytes);
-        assert_eq!(high, 0xbe);
-        assert_eq!(low, 0xad);
-
-        let bytes2 = crate::encode_bytes(low, high);
-        assert_eq!(bytes, bytes2);
     }
 
     #[test]

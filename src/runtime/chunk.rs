@@ -76,7 +76,7 @@ impl Chunk {
     }
 
     pub(crate) fn write_u16<T: Into<u16>>(&mut self, bytes: T, line: usize) {
-        let (low, high) = crate::decode_bytes(bytes.into());
+        let [low, high] = bytes.into().to_le_bytes();
         self.write_u8(low, line);
         self.write_u8(high, line);
     }
@@ -99,7 +99,7 @@ impl Chunk {
         if jump > u16::MAX as usize {
             panic!("cannot jump further than u16::MAX instructions");
         } else {
-            let (low, high) = crate::decode_bytes(jump as u16);
+            let [low, high] = (jump as u16).to_le_bytes();
             trace!("patch jump at index {:x}={:04x}", jump, offset);
             self.data[offset] = low;
             self.data[offset + 1] = high;
@@ -118,7 +118,7 @@ impl Chunk {
 
         let low = self.data[offset];
         let high = self.data[offset + 1];
-        crate::encode_bytes(low, high)
+        u16::from_le_bytes([low, high])
     }
 
     // get a line number from a byte offset using run-length encoding
