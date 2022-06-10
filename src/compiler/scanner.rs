@@ -412,7 +412,6 @@ fn into_keyword(s: &str) -> Option<TokenKind> {
         "in" => Some(TokenKind::In),
         "data" => Some(TokenKind::Data),
         "let" => Some(TokenKind::Let),
-        "is" => Some(TokenKind::Is),
         "me" => Some(TokenKind::Me),
         "new" => Some(TokenKind::New),
         "err" => Some(TokenKind::Err),

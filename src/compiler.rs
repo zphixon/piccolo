@@ -118,14 +118,13 @@ pub enum TokenKind {
     In,       // in
     Data,     // data
     Let,      // let
-    Is,       // is
     Me,       // me
     New,      // new
     Err,      // err
     Break,    // break
     Continue, // continue
     Retn,     // retn
-    Assert,   // nil
+    Assert,   // assert
     Nil,      // nil
 
     // syntax
