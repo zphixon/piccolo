@@ -52,7 +52,6 @@ fn main() {
 }
 
 fn run() -> Result<(), Vec<PiccoloError>> {
-    #[cfg(feature = "pc-debug")]
     env_logger::init();
 
     let args = Args::parse_args_default_or_exit();

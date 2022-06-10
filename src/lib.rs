@@ -93,124 +93,6 @@ pub fn compile(src: &Path, dst: &Path) -> Result<(), Vec<PiccoloError>> {
     Ok(())
 }
 
-#[cfg(feature = "fuzzer")]
-pub mod fuzzer {
-    extern crate rand;
-
-    use crate::debug::*;
-    use crate::prelude::*;
-
-    use rand::distributions::{Distribution, Standard};
-    use rand::Rng;
-
-    /// Run `n` tests of random tokens.
-    pub fn fuzz(n: usize, min_len: usize, max_len: usize) -> Option<Vec<usize>> {
-        let mut ok = None;
-        let start = std::time::Instant::now();
-        let mut avg = 0.0;
-        for n in 1..=n {
-            let s = std::time::Instant::now();
-            if let Some(_) = run(n, min_len, max_len) {
-                if ok.is_none() {
-                    ok = Some(vec![n]);
-                } else {
-                    ok.as_mut().unwrap().push(n);
-                }
-            }
-            avg += (std::time::Instant::now() - s).as_secs_f64();
-        }
-        println!(
-            "{} runs, in {:.8} sec ({:.8} avg per run)",
-            n,
-            (std::time::Instant::now() - start).as_secs_f64(),
-            avg / n as f64
-        );
-        ok
-    }
-
-    // occasionally creates valid programs
-    fn run(n: usize, min_len: usize, max_len: usize) -> Option<()> {
-        let mut src = String::new();
-        let mut r = rand::thread_rng();
-        let lines = r.gen_range(min_len..max_len);
-        for _ in 1..lines {
-            let tk: TokenKind = r.gen();
-            src.push_str(&format!("{} ", tk).to_lowercase());
-        }
-
-        if let Ok(chunk) = compile_chunk(&src) {
-            println!("----- run {} compiles -----", n);
-            print_tokens(&scan_all(&src).unwrap());
-            disassemble(&chunk, "");
-            let mut heap = Heap::default();
-            let mut vm = Machine::new(&mut heap);
-            vm.interpret(&mut heap, &chunk).ok().map(|_| {
-                println!("----- run {} executes -----", n);
-            })
-        } else {
-            None
-        }
-    }
-
-    impl Distribution<TokenKind> for Standard {
-        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> TokenKind {
-            match rng.gen_range(0..50) {
-                0 => TokenKind::Do,
-                1 => TokenKind::End,
-                2 => TokenKind::Fn,
-                3 => TokenKind::If,
-                4 => TokenKind::Else,
-                5 => TokenKind::While,
-                6 => TokenKind::For,
-                // 7 => TokenKind::In,
-                // 8 => TokenKind::Data,
-                9 => TokenKind::Let,
-                // 10 => TokenKind::Is,
-                // 11 => TokenKind::Me,
-                // 12 => TokenKind::New,
-                // 13 => TokenKind::Err,
-                14 => TokenKind::Retn,
-                15 => TokenKind::Nil,
-                // 16 => TokenKind::LeftBracket,
-                // 17 => TokenKind::RightBracket,
-                18 => TokenKind::LeftParen,
-                19 => TokenKind::RightParen,
-                20 => TokenKind::Comma,
-                21 => TokenKind::Period,
-                // 22 => TokenKind::ExclusiveRange,
-                // 23 => TokenKind::InclusiveRange,
-                24 => TokenKind::Assign,
-                25 => TokenKind::Not,
-                26 => TokenKind::Plus,
-                27 => TokenKind::Minus,
-                28 => TokenKind::Multiply,
-                29 => TokenKind::Divide,
-                30 => TokenKind::Modulo,
-                31 => TokenKind::LogicalAnd,
-                32 => TokenKind::LogicalOr,
-                33 => TokenKind::BitwiseAnd,
-                34 => TokenKind::BitwiseOr,
-                35 => TokenKind::BitwiseXor,
-                36 => TokenKind::Equal,
-                37 => TokenKind::NotEqual,
-                38 => TokenKind::Less,
-                39 => TokenKind::Greater,
-                40 => TokenKind::LessEqual,
-                41 => TokenKind::GreaterEqual,
-                42 => TokenKind::ShiftLeft,
-                43 => TokenKind::ShiftRight,
-                44 => TokenKind::Identifier,
-                45 => TokenKind::String,
-                46 => TokenKind::True,
-                47 => TokenKind::False,
-                48 => TokenKind::Double(0.0),
-                49 => TokenKind::Integer(1),
-                _ => TokenKind::Nil,
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod integration {
     use crate::debug::*;
@@ -230,10 +112,7 @@ mod integration {
         let ast = parse(&mut scanner).unwrap();
         println!("{}", print_ast(&ast));
         let module = compile(&ast).unwrap();
-        #[cfg(feature = "pc-debug")]
-        {
-            println!("{}", disassemble(&module, "idklol"));
-        }
+        println!("{}", disassemble(&module, "idklol"));
         let mut heap = Heap::default();
         let mut vm = Machine::new(&mut heap);
         println!("{:?}", vm.interpret(&mut heap, &module).unwrap());
@@ -273,10 +152,7 @@ mod integration {
 
             let module = compile(&ast).unwrap();
 
-            #[cfg(feature = "pc-debug")]
-            {
-                println!("{}", disassemble(&module, "idklol"));
-            }
+            println!("{}", disassemble(&module, "idklol"));
 
             let mut heap = Heap::default();
             let mut vm = Machine::new(&mut heap);

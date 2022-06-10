@@ -3,7 +3,6 @@ use piccolo::prelude::*;
 
 #[allow(unused_assignments)]
 fn main() {
-    #[cfg(feature = "pc-debug")]
     env_logger::init();
 
     let ast1 = parse(&mut Scanner::new("x=:3")).unwrap();
