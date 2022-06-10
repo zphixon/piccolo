@@ -168,6 +168,11 @@ impl<'value> Machine<'value> {
         self.push(Value::String(root.as_gc()));
     }
 
+    pub fn clear_stack_and_move_to_end_of_module(&mut self, module: &Module) {
+        self.stack.clear();
+        self.ip = module.chunk(0).len();
+    }
+
     pub fn interpret(
         &mut self,
         heap: &mut Heap<'value>,

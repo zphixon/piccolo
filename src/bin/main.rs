@@ -271,7 +271,10 @@ fn repl<'heap>(
                                     .interpret_continue(&mut heap, emitter.module())
                                     .map_err(|e| vec![e])
                             })
-                            .map_err(print_errors)
+                            .map_err(|errs| {
+                                print_errors(errs);
+                                machine.clear_stack_and_move_to_end_of_module(emitter.module());
+                            })
                             .map(|value| println!("{:?}", value));
 
                         prompt = "-- ";
