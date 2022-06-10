@@ -1,8 +1,6 @@
 //! Types for dealing with errors in scanning, parsing, compiling, or executing Piccolo.
 
-use crate::Opcode;
-
-use core::fmt;
+use {crate::runtime::op::Opcode, core::fmt};
 
 #[derive(Debug)]
 pub struct Callsite {

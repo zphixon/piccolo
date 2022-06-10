@@ -5,9 +5,14 @@ pub mod emitter;
 pub mod parser;
 pub mod scanner;
 
-use crate::{ErrorKind, Module, PiccoloError};
-
-use core::fmt;
+use {
+    crate::{
+        error::{ErrorKind, PiccoloError},
+        runtime::{chunk, op::Opcode},
+    },
+    core::fmt,
+    scanner::Scanner,
+};
 
 #[derive(PartialEq, Eq, Hash, Default, Debug)]
 pub(crate) struct Local {
@@ -27,14 +32,14 @@ impl Local {
     }
 }
 
-pub fn compile_chunk(src: &str) -> Result<Module, Vec<PiccoloError>> {
-    let mut scanner = super::Scanner::new(src);
+pub fn compile_chunk(src: &str) -> Result<chunk::Module, Vec<PiccoloError>> {
+    let mut scanner = Scanner::new(src);
     let ast = parser::parse(&mut scanner)?;
     emitter::compile(&ast)
 }
 
 pub fn scan_all(source: &str) -> Result<Vec<Token>, PiccoloError> {
-    scanner::Scanner::new(source).scan_all()
+    Scanner::new(source).scan_all()
 }
 
 pub(crate) fn escape_string(t: Token) -> Result<String, PiccoloError> {
@@ -240,8 +245,7 @@ impl<'a> Token<'a> {
         )
     }
 
-    pub fn assign_by_mutate_op(&self) -> Option<crate::Opcode> {
-        use crate::Opcode;
+    pub fn assign_by_mutate_op(&self) -> Option<Opcode> {
         Some(match self.kind {
             TokenKind::PlusAssign => Opcode::Add,
             TokenKind::MinusAssign => Opcode::Subtract,

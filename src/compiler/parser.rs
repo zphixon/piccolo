@@ -1,6 +1,12 @@
 //! Contains `Parser`, which converts a source of tokens into a Piccolo AST.
 
-use crate::{ErrorKind, Expr, PiccoloError, Scanner, Stmt, Token, TokenKind};
+use crate::{
+    compiler::{
+        ast::{Expr, Stmt},
+        Scanner, Token, TokenKind,
+    },
+    error::{ErrorKind, PiccoloError},
+};
 
 /// Parse a stream of tokens into an AST. This method collects errors on statement
 /// boundaries, continuing until the end of the file.
@@ -589,7 +595,6 @@ fn parse_arguments<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Expr<'a>>, Picco
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::debug::*;
 
     #[test]
     fn assign() {
@@ -663,7 +668,7 @@ mod test {
             println!(
                 "{} -> {}",
                 src,
-                print_expression(&parse_expression(&mut scanner).unwrap())
+                crate::compiler::ast::print_expression(&parse_expression(&mut scanner).unwrap())
             );
         }
     }

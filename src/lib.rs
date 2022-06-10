@@ -11,45 +11,21 @@ pub mod compiler;
 pub mod error;
 pub mod runtime;
 
-/// Commonly used items that you might want access to.
-pub mod prelude {
-    pub use super::compiler::{
-        ast::Ast, ast::Expr, ast::Stmt, emitter::Emitter, scanner::Scanner, Token, TokenKind,
-    };
-    pub use super::error::{ErrorKind, PiccoloError};
-    pub use super::runtime::{
-        chunk::Chunk,
-        chunk::Module,
-        memory::{Gc, Heap, Root, UniqueRoot},
-        object::{Function, NativeFunction, Object},
-        op::Opcode,
-        value::Constant,
-        value::Value,
-        vm::Machine,
-    };
-}
-
-pub mod debug {
-    pub use crate::compiler::{
-        ast::print_ast, ast::print_expression, compile_chunk, emitter::compile,
-        emitter::compile_with, parser::parse, print_tokens, scan_all,
-    };
-    pub use crate::runtime::{chunk::disassemble, chunk::disassemble_instruction};
-}
-
-use prelude::*;
-
-use std::path::Path;
+use {error::PiccoloError, runtime::value::Constant, std::path::Path};
 
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
-    use debug::*;
+    use {
+        compiler::{ast, emitter, parser, scanner::Scanner},
+        runtime::{chunk, memory::Heap, vm::Machine},
+    };
+
     debug!("parse");
-    let ast = parse(&mut Scanner::new(src))?;
-    debug!("ast\n{}", print_ast(&ast));
+    let ast = parser::parse(&mut Scanner::new(src))?;
+    debug!("ast\n{}", ast::print_ast(&ast));
 
     debug!("compile");
-    let module = compile(&ast)?;
-    debug!("{}", disassemble(&module, ""));
+    let module = emitter::compile(&ast)?;
+    debug!("{}", chunk::disassemble(&module, ""));
 
     let mut heap = Heap::default();
 
@@ -69,6 +45,8 @@ pub fn do_file(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
 }
 
 pub fn run_bin(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
+    use runtime::{memory::Heap, vm::Machine};
+
     let bytes = std::fs::read(file).map_err(|e| vec![PiccoloError::from(e)])?;
     let module = bincode::deserialize(&bytes).map_err(|e| vec![PiccoloError::from(e)])?;
 
@@ -78,11 +56,11 @@ pub fn run_bin(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
 }
 
 pub fn compile(src: &Path, dst: &Path) -> Result<(), Vec<PiccoloError>> {
-    use debug::*;
+    use compiler::{emitter, parser, scanner::Scanner};
 
     let src = std::fs::read_to_string(src).map_err(|e| vec![PiccoloError::from(e)])?;
-    let ast = parse(&mut Scanner::new(&src))?;
-    let module = compile(&ast)?;
+    let ast = parser::parse(&mut Scanner::new(&src))?;
+    let module = emitter::compile(&ast)?;
 
     std::fs::write(
         dst,
@@ -95,8 +73,12 @@ pub fn compile(src: &Path, dst: &Path) -> Result<(), Vec<PiccoloError>> {
 
 #[cfg(test)]
 mod integration {
-    use crate::debug::*;
-    use crate::prelude::*;
+    use super::*;
+
+    use {
+        compiler::{ast, emitter, parser, scanner::Scanner},
+        runtime::{chunk, memory::Heap, vm::Machine},
+    };
 
     #[test]
     #[ignore]
@@ -109,10 +91,10 @@ mod integration {
     fn idk() {
         let src = "a=:1+2";
         let mut scanner = Scanner::new(src);
-        let ast = parse(&mut scanner).unwrap();
-        println!("{}", print_ast(&ast));
-        let module = compile(&ast).unwrap();
-        println!("{}", disassemble(&module, "idklol"));
+        let ast = parser::parse(&mut scanner).unwrap();
+        println!("{}", ast::print_ast(&ast));
+        let module = emitter::compile(&ast).unwrap();
+        println!("{}", chunk::disassemble(&module, "idklol"));
         let mut heap = Heap::default();
         let mut vm = Machine::new(&mut heap);
         println!("{:?}", vm.interpret(&mut heap, &module).unwrap());
@@ -120,9 +102,14 @@ mod integration {
 
     #[test]
     fn visitor_emitter() {
+        use {
+            ast::{Expr, Stmt},
+            compiler::{Token, TokenKind},
+        };
+
         let src = "1+2*3+4";
         let mut scanner = Scanner::new(src);
-        let ast = parse(&mut scanner).unwrap();
+        let ast = parser::parse(&mut scanner).unwrap();
         if let Stmt::Expr { expr, .. } = &ast[0] {
             let equiv = Expr::Binary {
                 lhs: Box::new(Expr::Binary {
@@ -146,13 +133,13 @@ mod integration {
                 }),
             };
 
-            println!("got:  {}", print_expression(expr));
-            println!("want: {}", print_expression(&equiv));
+            println!("got:  {}", ast::print_expression(expr));
+            println!("want: {}", ast::print_expression(&equiv));
             assert_eq!(expr, &equiv);
 
-            let module = compile(&ast).unwrap();
+            let module = emitter::compile(&ast).unwrap();
 
-            println!("{}", disassemble(&module, "idklol"));
+            println!("{}", chunk::disassemble(&module, "idklol"));
 
             let mut heap = Heap::default();
             let mut vm = Machine::new(&mut heap);

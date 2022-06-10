@@ -1,9 +1,9 @@
 extern crate piccolo;
 
-use piccolo::prelude::*;
-
-use std::fs;
-use std::{io, path};
+use {
+    piccolo::error::{ErrorKind, PiccoloError},
+    std::{fs, io, path},
+};
 
 fn main() -> Result<(), PiccoloError> {
     let mut path = path::PathBuf::new();

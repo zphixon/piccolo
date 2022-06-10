@@ -1,8 +1,12 @@
 //! Contains `Scanner`, an on-demand producer of tokens.
 
-use crate::{ErrorKind, PiccoloError, Token, TokenKind};
-
-use std::collections::VecDeque;
+use {
+    crate::{
+        compiler::{Token, TokenKind},
+        error::{ErrorKind, PiccoloError},
+    },
+    std::collections::VecDeque,
+};
 
 /// Converts a piccolo source into a stream of [`Token`].
 ///

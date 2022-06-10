@@ -2,14 +2,15 @@
 //!
 //! Shamelessly copied from <https://github.com/Darksecond/lox>
 
-use crate::Object;
-
-use std::{
-    cell::Cell,
-    fmt,
-    marker::PhantomData,
-    ops::{Deref, DerefMut},
-    sync::atomic::{AtomicUsize, Ordering},
+use {
+    crate::runtime::object::Object,
+    std::{
+        cell::Cell,
+        fmt,
+        marker::PhantomData,
+        ops::{Deref, DerefMut},
+        sync::atomic::{AtomicUsize, Ordering},
+    },
 };
 
 /// Allocation metadata for a GC object.
@@ -385,8 +386,6 @@ mod test {
 
     #[test]
     fn use_after_free() {
-        use crate::Object;
-
         #[derive(Debug)]
         struct S(u64);
         impl Drop for S {

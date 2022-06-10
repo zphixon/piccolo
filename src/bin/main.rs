@@ -1,10 +1,19 @@
 use {
     gumdrop::Options,
-    piccolo::prelude::*,
+    piccolo::{
+        compiler::{
+            self,
+            emitter::{self, Emitter},
+            parser,
+            scanner::Scanner,
+        },
+        error::PiccoloError,
+        runtime::{chunk, memory::Heap, vm::Machine},
+    },
     rustyline::{error::ReadlineError, Editor},
 };
 
-#[derive(Options)]
+#[derive(Options, Debug)]
 struct Args {
     #[options(help = "Print this message.", short = "h")]
     help: bool,
@@ -31,7 +40,7 @@ struct Args {
     print_compiled: bool,
 
     #[options(
-        help = "Quit after parsing and compiling a file. Requires filename.",
+        help = "Quit after parsing and compiling a file or string. Requires filename or -e/--eval.",
         short = "v"
     )]
     verify_syntax: bool,
@@ -43,7 +52,7 @@ struct Args {
     interactive: bool,
 
     #[options(help = "Run string argument. Conflicts with filename.", short = "e")]
-    string: Option<String>,
+    eval: Option<String>,
 }
 
 #[allow(unused_must_use)]
@@ -55,74 +64,133 @@ fn run() -> Result<(), Vec<PiccoloError>> {
     env_logger::init();
 
     let args = Args::parse_args_default_or_exit();
-    if args.string.is_some() && args.filename.is_some() {
-        println!("Cannot use both -e/--string and filename.");
-        return Ok(());
-    }
 
-    if args.verify_syntax && args.filename.is_none() {
-        println!("Cannot verify syntax without a filename.");
-        return Ok(());
-    }
+    let Args {
+        print_tokens,
+        print_ast,
+        print_compiled,
+        verify_syntax,
+        interactive,
+        ..
+    } = args;
 
-    if let Some((emitter, heap, vm)) = if let Some(filename) = args.filename.as_ref() {
-        let source = std::fs::read_to_string(filename).map_err(|e| vec![PiccoloError::from(e)])?;
-        maybe_exec(&args, &source, &filename)?
-    } else if let Some(string) = args.string.as_ref() {
-        maybe_exec(&args, &string, "-e/--string")?
-    } else {
-        Some((None, None, None))
-    } {
-        // filename   string   interactive   result
-        // x          x        *             not possible
-        // x                                 exit
-        //            x                      exit
-        // x                   x             repl
-        //            x        x             repl
-        //                     *             repl
-        if args.filename.is_some() && args.interactive
-            || args.string.is_some() && args.interactive
-            || args.filename.is_none() && args.string.is_none()
-        {
-            repl(&args, emitter, heap, vm)?;
+    if let Some((emitter, heap, machine)) = match args {
+        Args { help: true, .. } => unreachable!(),
+
+        Args {
+            eval: Some(_),
+            filename: Some(_),
+            ..
+        } => {
+            println!("Cannot use both -e/--eval and filename.");
+            return Ok(());
         }
-    }
 
-    Ok(())
+        Args {
+            verify_syntax: true,
+            eval: None,
+            filename: None,
+            ..
+        } => {
+            println!("Cannot verify syntax without a filename or string.");
+            return Ok(());
+        }
+
+        Args {
+            filename: Some(filename),
+            ..
+        } => {
+            let source =
+                std::fs::read_to_string(&filename).map_err(|e| vec![PiccoloError::from(e)])?;
+            maybe_exec(
+                &source,
+                &filename,
+                print_tokens,
+                print_ast,
+                print_compiled,
+                verify_syntax,
+            )?
+        }
+
+        Args {
+            eval: Some(eval), ..
+        } => maybe_exec(
+            &eval,
+            "-e/--eval",
+            print_tokens,
+            print_ast,
+            print_compiled,
+            verify_syntax,
+        )?,
+
+        Args {
+            eval: None,
+            filename: None,
+            ..
+        } => None,
+    } {
+        if interactive {
+            repl(
+                emitter,
+                heap,
+                machine,
+                print_tokens,
+                print_ast,
+                print_compiled,
+            )
+        } else {
+            Ok(())
+        }
+    } else {
+        let mut heap = Heap::default();
+        let machine = Machine::new(&mut heap);
+        let emitter = Emitter::default();
+
+        repl(
+            emitter,
+            heap,
+            machine,
+            print_tokens,
+            print_ast,
+            print_compiled,
+        )
+    }
 }
 
 fn maybe_exec<'source, 'heap>(
-    args: &Args,
     source: &'source str,
-    name: &str,
-) -> Result<Option<(Option<Emitter>, Option<Heap<'heap>>, Option<Machine<'heap>>)>, Vec<PiccoloError>>
-{
+    name_for_module: &str,
+    print_tokens: bool,
+    print_ast: bool,
+    print_compiled: bool,
+    verify_syntax: bool,
+) -> Result<Option<(Emitter, Heap<'heap>, Machine<'heap>)>, Vec<PiccoloError>> {
     let mut scanner = Scanner::new(source);
 
-    if args.print_tokens {
+    if print_tokens {
         println!("=== tokens ===");
         let tokens = scanner.scan_all()?;
-        piccolo::debug::print_tokens(&tokens);
-        scanner = Scanner::new(&source);
+        compiler::print_tokens(&tokens);
+        scanner = Scanner::new(source);
     }
 
     let ast = piccolo::compiler::parser::parse(&mut scanner)?;
 
-    if args.print_ast {
-        println!("=== ast ===\n{}", piccolo::debug::print_ast(&ast));
+    if print_ast {
+        println!("=== ast ===\n{}", piccolo::compiler::ast::print_ast(&ast));
     }
 
     let mut emitter = Emitter::new();
     piccolo::compiler::emitter::compile_with(&mut emitter, &ast)?;
 
-    if args.print_compiled {
+    if print_compiled {
         println!(
             "=== module ===\n{}",
-            piccolo::runtime::chunk::disassemble(emitter.module(), name)
+            piccolo::runtime::chunk::disassemble(emitter.module(), name_for_module)
         );
     }
 
-    if args.verify_syntax {
+    if verify_syntax {
         return Ok(None);
     }
 
@@ -131,7 +199,7 @@ fn maybe_exec<'source, 'heap>(
 
     vm.interpret(&mut heap, emitter.module())?;
 
-    Ok(Some((Some(emitter), Some(heap), Some(vm))))
+    Ok(Some((emitter, heap, vm)))
 }
 
 fn print_errors(errors: Vec<PiccoloError>) {
@@ -146,21 +214,17 @@ fn print_errors(errors: Vec<PiccoloError>) {
 }
 
 fn repl<'heap>(
-    args: &Args,
-    emitter: Option<Emitter>,
-    heap: Option<Heap<'heap>>,
-    machine: Option<Machine<'heap>>,
+    mut emitter: Emitter,
+    mut heap: Heap<'heap>,
+    mut machine: Machine<'heap>,
+    print_tokens: bool,
+    print_ast: bool,
+    print_compiled: bool,
 ) -> Result<(), Vec<PiccoloError>> {
-    use piccolo::debug::*;
-
     let mut rl = Editor::<()>::new();
     rl.load_history(".piccolo_history")
         .or_else(|_| std::fs::File::create(".piccolo_history").map(|_| ()))
         .unwrap();
-
-    let mut heap = heap.unwrap_or_else(Heap::default);
-    let mut machine = machine.unwrap_or_else(|| Machine::new(&mut heap));
-    let mut emitter = emitter.unwrap_or_else(Emitter::new);
 
     let mut input = String::new();
     let mut prompt = "-- ";
@@ -177,28 +241,28 @@ fn repl<'heap>(
 
                 let mut scanner = Scanner::new(&input);
 
-                if args.print_tokens {
+                if print_tokens {
                     println!("=== tokens ===");
                     let tokens = scanner.scan_all().map_err(|e| print_errors(vec![e]));
                     if let Ok(tokens) = tokens {
-                        piccolo::debug::print_tokens(&tokens);
+                        compiler::print_tokens(&tokens);
                     }
                     scanner = Scanner::new(&input);
                 }
 
-                let parse = parse(&mut scanner);
+                let parse = parser::parse(&mut scanner);
                 match parse {
                     Ok(ast) => {
-                        if args.print_ast {
-                            println!("=== ast ===\n{}", print_ast(&ast));
+                        if print_ast {
+                            println!("=== ast ===\n{}", compiler::ast::print_ast(&ast));
                         }
 
-                        let _: Result<(), ()> = compile_with(&mut emitter, &ast)
+                        let _: Result<(), ()> = emitter::compile_with(&mut emitter, &ast)
                             .and_then(|_| {
-                                if args.print_compiled {
+                                if print_compiled {
                                     println!(
                                         "=== module ===\n{}",
-                                        disassemble(emitter.module(), "")
+                                        chunk::disassemble(emitter.module(), "")
                                     );
                                 }
                                 machine

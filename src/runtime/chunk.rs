@@ -1,8 +1,9 @@
 //! Types for working with compiled Piccolo bytecode.
 
-use crate::{Constant, Opcode};
-
-use serde::{Deserialize, Serialize};
+use {
+    crate::runtime::{op::Opcode, value::Constant},
+    serde::{Deserialize, Serialize},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Module {
@@ -223,10 +224,12 @@ pub fn disassemble_instruction(module: &Module, chunk: &Chunk, offset: usize) ->
 }
 #[cfg(test)]
 mod test {
-    use crate::prelude::*;
+    use super::*;
 
     #[test]
     fn get_line_from_index() {
+        use crate::runtime::op::Opcode;
+
         let mut c = Chunk::default();
         c.write_u8(Opcode::Return, 1); // 0
         c.write_u8(Opcode::Return, 1); // 1

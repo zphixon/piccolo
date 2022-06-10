@@ -1,10 +1,21 @@
 //! Bytecode compiler.
 
-use crate::{Ast, Chunk, Constant, ErrorKind, Expr, Opcode, PiccoloError, Stmt, Token, TokenKind};
-
-use super::Local;
-
-use fnv::FnvHashMap;
+use {
+    crate::{
+        compiler::{
+            ast::{Ast, Expr, Stmt},
+            Local, Token, TokenKind,
+        },
+        error::{ErrorKind, PiccoloError},
+        runtime::{
+            chunk::{Chunk, Module},
+            object::Function,
+            op::Opcode,
+            value::Constant,
+        },
+    },
+    fnv::FnvHashMap,
+};
 
 // top level compile into chunk index 0
 // encounter a function, start compiling into a new chunk index
@@ -658,8 +669,6 @@ impl EmitterContext {
     }
 }
 
-use crate::prelude::{Function, Module};
-
 /// Bytecode compiler object
 ///
 /// Construct an Emitter, and pass a `&mut` reference to `compile_ast` along with
@@ -887,20 +896,21 @@ impl Default for Emitter {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::debug::*;
-    use crate::prelude::*;
-
     #[test]
     fn emitter() {
-        let ast = parse(&mut crate::Scanner::new(
+        use crate::{
+            compiler::{emitter, parser, scanner::Scanner},
+            runtime::{chunk, memory::Heap, vm::Machine},
+        };
+
+        let ast = parser::parse(&mut Scanner::new(
             "x =: 32\n\
              retn x",
         ))
         .unwrap();
 
-        let module = compile(&ast).unwrap();
-        println!("{}", disassemble(&module, "jioew"));
+        let module = emitter::compile(&ast).unwrap();
+        println!("{}", chunk::disassemble(&module, "jioew"));
         let mut heap = Heap::default();
         Machine::new(&mut heap)
             .interpret(&mut heap, &module)
@@ -909,23 +919,28 @@ mod test {
 
     #[test]
     fn reentrant() {
-        let ast1 = parse(&mut Scanner::new("x=:3")).unwrap();
-        let ast2 = parse(&mut Scanner::new("assert x == 3")).unwrap();
-        let ast3 = parse(&mut Scanner::new(
+        use crate::{
+            compiler::{emitter, parser, scanner::Scanner},
+            runtime::chunk,
+        };
+
+        let ast1 = parser::parse(&mut Scanner::new("x=:3")).unwrap();
+        let ast2 = parser::parse(&mut Scanner::new("assert x == 3")).unwrap();
+        let ast3 = parser::parse(&mut Scanner::new(
             "fn z(a) do\n  print(\"a is\", a)\n  end\n",
         ))
         .unwrap();
-        let ast4 = parse(&mut Scanner::new("z(x)")).unwrap();
+        let ast4 = parser::parse(&mut Scanner::new("z(x)")).unwrap();
 
-        let mut emitter = Emitter::new();
-        compile_with(&mut emitter, &ast1).unwrap();
-        println!("{}", disassemble(emitter.module(), ""));
-        compile_with(&mut emitter, &ast2).unwrap();
-        println!("{}", disassemble(emitter.module(), ""));
-        compile_with(&mut emitter, &ast3).unwrap();
-        println!("{}", disassemble(emitter.module(), ""));
-        compile_with(&mut emitter, &ast4).unwrap();
-        println!("{}", disassemble(emitter.module(), ""));
+        let mut emitter = emitter::Emitter::new();
+        emitter::compile_with(&mut emitter, &ast1).unwrap();
+        println!("{}", chunk::disassemble(emitter.module(), ""));
+        emitter::compile_with(&mut emitter, &ast2).unwrap();
+        println!("{}", chunk::disassemble(emitter.module(), ""));
+        emitter::compile_with(&mut emitter, &ast3).unwrap();
+        println!("{}", chunk::disassemble(emitter.module(), ""));
+        emitter::compile_with(&mut emitter, &ast4).unwrap();
+        println!("{}", chunk::disassemble(emitter.module(), ""));
 
         println!("{:?}", emitter);
     }

@@ -1,5 +1,11 @@
-use piccolo::debug::*;
-use piccolo::prelude::*;
+use piccolo::{
+    compiler::{
+        emitter::{compile_with, Emitter},
+        parser::parse,
+        scanner::Scanner,
+    },
+    runtime::{memory::Heap, vm::Machine},
+};
 
 #[allow(unused_assignments)]
 fn main() {

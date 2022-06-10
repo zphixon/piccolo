@@ -1,9 +1,16 @@
-use crate::{
-    Chunk, Constant, ErrorKind, Function, Heap, Module, NativeFunction, Object, Opcode,
-    PiccoloError, Root, UniqueRoot, Value,
+use {
+    crate::{
+        error::{ErrorKind, PiccoloError},
+        runtime::{
+            chunk::{Chunk, Module},
+            memory::{Heap, Root, UniqueRoot},
+            object::{Function, NativeFunction, Object},
+            op::Opcode,
+            value::{Constant, Value},
+        },
+    },
+    fnv::FnvHashMap,
 };
-
-use fnv::FnvHashMap;
 
 pub struct Frame<'chunk, 'value> {
     name: String,
@@ -635,18 +642,18 @@ impl<'value> Machine<'value> {
 
 #[cfg(test)]
 mod test {
-    use crate::debug::*;
-    use crate::prelude::*;
-
     #[test]
     fn how_could_this_happen_to_me() {
-        //env_logger::init();
+        use crate::{
+            compiler::{emitter, parser, scanner::Scanner},
+            runtime::{chunk, memory::Heap, vm::Machine},
+        };
 
         let src = r#"""+(11*3)+"heehee""#;
-        let ast = parse(&mut Scanner::new(src)).expect("parse");
-        let module = compile(&ast).expect("emit");
+        let ast = parser::parse(&mut Scanner::new(src)).expect("parse");
+        let module = emitter::compile(&ast).expect("emit");
 
-        println!("{}", disassemble(&module, ""));
+        println!("{}", chunk::disassemble(&module, ""));
 
         let mut heap = Heap::default();
 
