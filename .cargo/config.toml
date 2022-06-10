@@ -1,6 +1,5 @@
 [alias]
-r = ['run', '--example', 'main', '--']
 c = ['check', '--all-targets']
 b = ['build', '--all-targets']
-rr = ['run', '--release', '--example', 'main', '--']
-tt = ['run', '--example', 'test_files']
+rr = ['run', '--release']
+tt = ['run', '--bin', 'test_files']
