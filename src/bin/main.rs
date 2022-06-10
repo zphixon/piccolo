@@ -10,7 +10,10 @@ use {
         error::PiccoloError,
         runtime::{chunk, memory::Heap, vm::Machine},
     },
-    rustyline::{error::ReadlineError, Editor},
+    rustyline::{
+        error::ReadlineError, Cmd, ConditionalEventHandler, Editor, Event, EventContext,
+        EventHandler, KeyEvent, Movement, RepeatCount,
+    },
 };
 
 #[derive(Options, Debug)]
@@ -205,12 +208,25 @@ fn maybe_exec<'source, 'heap>(
 }
 
 fn print_errors(errors: Vec<PiccoloError>) {
-    if errors.len() == 1 {
+    if errors.is_empty() {
+        return;
+    } else if errors.len() == 1 {
         println!("Error {}", errors[0])
     } else {
         println!("{} Errors:", errors.len());
         for e in errors.iter() {
             println!("    {}", e);
+        }
+    }
+}
+
+struct MyCtrlCHandler;
+impl ConditionalEventHandler for MyCtrlCHandler {
+    fn handle(&self, _: &Event, _: RepeatCount, _: bool, ctx: &EventContext) -> Option<Cmd> {
+        if ctx.line().is_empty() {
+            Some(Cmd::Interrupt)
+        } else {
+            Some(Cmd::Kill(Movement::BeginningOfLine))
         }
     }
 }
@@ -224,9 +240,15 @@ fn repl<'heap>(
     print_compiled: bool,
 ) -> Result<(), Vec<PiccoloError>> {
     let mut rl = Editor::<()>::new();
+
     rl.load_history(".piccolo_history")
         .or_else(|_| std::fs::File::create(".piccolo_history").map(|_| ()))
         .unwrap();
+
+    rl.bind_sequence(
+        KeyEvent::ctrl('c'),
+        EventHandler::Conditional(Box::new(MyCtrlCHandler)),
+    );
 
     let mut input = String::new();
     let mut prompt = "-- ";
@@ -294,8 +316,12 @@ fn repl<'heap>(
                 }
             }
 
-            Err(ReadlineError::Interrupted) => {}
-            _ => break Ok(()),
+            Err(ReadlineError::Interrupted) => break Ok(()),
+
+            Err(err) => {
+                println!("{err}");
+                return Err(vec![PiccoloError::unknown(err)]);
+            }
         }
     }
 }

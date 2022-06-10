@@ -30,6 +30,16 @@ impl PiccoloError {
         }
     }
 
+    pub fn unknown(err: impl Into<Box<dyn std::error::Error>>) -> Self {
+        PiccoloError {
+            kind: ErrorKind::Unknown { err: err.into() },
+            line: None,
+            file: None,
+            msg: None,
+            stack: None,
+        }
+    }
+
     pub fn line(self, line: usize) -> Self {
         PiccoloError {
             line: Some(line),
@@ -178,6 +188,9 @@ pub enum ErrorKind {
     DeserializeError {
         err: Box<bincode::ErrorKind>,
     },
+    Unknown {
+        err: Box<dyn std::error::Error>,
+    },
 }
 
 pub struct ParseError {}
@@ -222,6 +235,8 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Incorrect arity: function {} expected {} arguments, got {}", name, exp, got),
             ErrorKind::DeserializeError { err }
                 => write!(f, "Cannot read binary file: {}", err),
+            ErrorKind::Unknown { err }
+                => write!(f, "{}", err),
         }
     }
 }
