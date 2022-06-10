@@ -40,13 +40,13 @@ struct Args {
     print_compiled: bool,
 
     #[options(
-        help = "Quit after parsing and compiling a file or string. Requires filename or -e/--eval.",
+        help = "Quit after parsing and compiling a file or string. Requires filename or -e/--eval. Overrides -i/--interactive.",
         short = "v"
     )]
     verify_syntax: bool,
 
     #[options(
-        help = "Continue an interactive session in the repl after running a file. Overrides -v/--verify-syntax.",
+        help = "Continue an interactive session in the repl after running a file.",
         short = "i"
     )]
     interactive: bool,
