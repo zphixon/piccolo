@@ -65,6 +65,8 @@ fn run() -> Result<(), Vec<PiccoloError>> {
 
     let args = Args::parse_args_default_or_exit();
 
+    log::debug!("{args:#?}");
+
     let Args {
         print_tokens,
         print_ast,
