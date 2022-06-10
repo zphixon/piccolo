@@ -1,0 +1,6 @@
+[alias]
+r = ['run', '--features', 'pc-debug', '--example', 'main', '--']
+c = ['check', '--all-targets']
+b = ['build', '--all-targets']
+rr = ['run', '--release', '--example', 'main', '--']
+tt = ['run', '--example', 'test_files', '--features', 'pc-debug']
