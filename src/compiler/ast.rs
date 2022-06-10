@@ -153,7 +153,7 @@ pub enum Stmt<'a> {
     Data {
         name: Token<'a>,
         methods: Vec<Stmt<'a>>,
-        fields: Vec<(Token<'a>, Expr<'a>)>,
+        fields: Vec<Stmt<'a>>,
     },
 }
 
@@ -347,7 +347,7 @@ fn print_assert(indent: usize, value: &Expr) -> String {
     parenthesize(indent, "assert", &[value])
 }
 
-fn print_data(indent: usize, _name: Token, _methods: &[Stmt], _fields: &[(Token, Expr)]) -> String {
+fn print_data(indent: usize, _name: Token, _methods: &[Stmt], _fields: &[Stmt]) -> String {
     // TODO
     parenthesize(indent, "data", &[])
 }

@@ -1,0 +1,3 @@
+data Foo do end
+
+#print Foo; // expect: Foo

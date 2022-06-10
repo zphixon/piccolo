@@ -57,9 +57,8 @@ fn compile_stmt(emitter: &mut Emitter, stmt: &Stmt) -> Result<(), PiccoloError> 
             => compile_retn(emitter, *retn, value.as_ref()),
         Stmt::Assert { assert, value }
             => compile_assert(emitter, *assert, value),
-        // Stmt::Data { name, methods, fields }
-        //     => compile_data(emitter, name, methods, fields),
-        _ => todo!("{:?}", stmt),
+        Stmt::Data { name, methods, fields }
+            => compile_data(emitter, *name, methods, fields),
     }
 }
 
@@ -402,6 +401,15 @@ fn compile_assert(emitter: &mut Emitter, assert: Token, value: &Expr) -> Result<
     emitter.add_instruction_arg(Opcode::Assert, c, assert.line);
 
     Ok(())
+}
+
+fn compile_data(
+    _emitter: &mut Emitter,
+    _name: Token,
+    _methods: &[Stmt],
+    _fields: &[Stmt],
+) -> Result<(), PiccoloError> {
+    todo!()
 }
 
 fn compile_literal(emitter: &mut Emitter, literal: Token) -> Result<(), PiccoloError> {

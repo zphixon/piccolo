@@ -47,6 +47,8 @@ fn parse_statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloErr
         parse_for(scanner)
     } else if scanner.peek_token(0)?.kind == TokenKind::Fn {
         parse_fn(scanner)
+    } else if scanner.peek_token(0)?.kind == TokenKind::Data {
+        parse_data(scanner)
     } else {
         trace!("expr");
 
@@ -206,6 +208,7 @@ fn parse_fn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
     let args = parse_parameters(scanner)?;
     let arity = args.len();
     consume(scanner, TokenKind::RightParen)?;
+    let method = args.first().is_some() && args.first().as_ref().unwrap().kind == TokenKind::Me;
 
     consume(scanner, TokenKind::Do)?;
     let body = parse_block(scanner)?;
@@ -216,8 +219,34 @@ fn parse_fn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
         args,
         arity,
         body,
-        method: false,
+        method,
         end,
+    })
+}
+
+fn parse_data<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
+    scanner.next_token()?;
+    let name = consume(scanner, TokenKind::Identifier)?;
+    consume(scanner, TokenKind::Do)?;
+
+    let mut fields = Vec::new();
+    let mut methods = Vec::new();
+
+    while scanner.peek_token(0)?.kind != TokenKind::End
+        && scanner.peek_token(0)?.kind != TokenKind::Fn
+    {
+        fields.push(parse_declaration(scanner)?);
+    }
+
+    while scanner.peek_token(0)?.kind != TokenKind::End {
+        methods.push(parse_fn(scanner)?);
+    }
+
+    consume(scanner, TokenKind::End)?;
+    Ok(Stmt::Data {
+        name,
+        methods,
+        fields,
     })
 }
 
