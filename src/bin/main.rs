@@ -226,7 +226,7 @@ impl ConditionalEventHandler for MyCtrlCHandler {
         if ctx.line().is_empty() {
             Some(Cmd::Interrupt)
         } else {
-            Some(Cmd::Kill(Movement::BeginningOfLine))
+            Some(Cmd::Kill(Movement::WholeBuffer))
         }
     }
 }
@@ -316,7 +316,7 @@ fn repl<'heap>(
                 }
             }
 
-            Err(ReadlineError::Interrupted) => break Ok(()),
+            Err(ReadlineError::Interrupted | ReadlineError::Eof) => break Ok(()),
 
             Err(err) => {
                 println!("{err}");
