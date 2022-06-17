@@ -7,11 +7,12 @@ pub mod scanner;
 
 use {
     crate::{
+        compiler::scanner::Scanner,
         error::{ErrorKind, PiccoloError},
         runtime::{chunk, op::Opcode},
     },
     core::fmt,
-    scanner::Scanner,
+    serde::{Deserialize, Serialize},
 };
 
 #[derive(PartialEq, Eq, Hash, Default, Debug)]
@@ -47,14 +48,14 @@ pub(crate) fn escape_string(t: Token) -> Result<String, PiccoloError> {
         TokenKind::String => {
             let s = t.lexeme;
             let mut value = Vec::new();
-            let line_start = t.line;
-            let mut line = line_start;
+            let line_start = t.pos;
+            let mut pos = line_start;
 
             let mut i = 1;
             while i < s.as_bytes().len() - 1 {
                 let byte = s.as_bytes()[i];
                 if byte == b'\n' {
-                    line += 1;
+                    pos.line += 1;
                 }
 
                 if byte == b'\\' {
@@ -88,7 +89,7 @@ pub(crate) fn escape_string(t: Token) -> Result<String, PiccoloError> {
                             return Err(PiccoloError::new(ErrorKind::UnknownFormatCode {
                                 code: c as char,
                             })
-                            .line(line));
+                            .pos(pos));
                         }
                     }
                 } else {
@@ -200,19 +201,47 @@ pub enum TokenKind {
     Eof,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct SourcePos {
+    pub line: usize,
+    pub col: usize,
+}
+
+impl SourcePos {
+    pub(crate) fn empty() -> Self {
+        SourcePos { line: 0, col: 0 }
+    }
+
+    pub(crate) fn with_line(line: usize) -> Self {
+        SourcePos { line, col: 0 }
+    }
+}
+
+impl fmt::Display for SourcePos {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.line, self.col)
+    }
+}
+
 /// Represents a token in source code.
 ///
 /// Maintains a reference to the original source.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy)]
 pub struct Token<'a> {
     pub(crate) kind: TokenKind,
     pub(crate) lexeme: &'a str,
-    pub(crate) line: usize,
+    pub(crate) pos: SourcePos,
+}
+
+impl PartialEq for Token<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+    }
 }
 
 impl<'a> Token<'a> {
-    pub fn new(kind: TokenKind, lexeme: &'a str, line: usize) -> Self {
-        Token { kind, lexeme, line }
+    pub fn new(kind: TokenKind, lexeme: &'a str, pos: SourcePos) -> Self {
+        Token { kind, lexeme, pos }
     }
 
     /// Whether or not the token is a value literal.
@@ -279,9 +308,9 @@ pub fn print_tokens(tokens: &[Token]) {
     for token in tokens.iter() {
         println!(
             "{} {:?}{}",
-            if token.line != previous_line {
-                previous_line = token.line;
-                format!("{:>4}", token.line)
+            if token.pos.line != previous_line {
+                previous_line = token.pos.line;
+                format!("{:>4}", token.pos.line)
             } else {
                 "   |".into()
             },

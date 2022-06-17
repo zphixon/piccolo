@@ -1,11 +1,14 @@
 //! Types for dealing with errors in scanning, parsing, compiling, or executing Piccolo.
 
-use {crate::runtime::op::Opcode, core::fmt};
+use {
+    crate::{compiler::SourcePos, runtime::op::Opcode},
+    core::fmt,
+};
 
 #[derive(Debug)]
 pub struct Callsite {
     pub name: String,
-    pub line: usize,
+    pub pos: SourcePos,
 }
 
 // TODO: impl Error for PiccoloError
@@ -13,7 +16,7 @@ pub struct Callsite {
 #[derive(Debug)]
 pub struct PiccoloError {
     kind: ErrorKind,
-    line: Option<usize>,
+    pos: Option<SourcePos>,
     file: Option<String>,
     msg: Option<String>,
     stack: Option<Vec<Callsite>>,
@@ -23,7 +26,7 @@ impl PiccoloError {
     pub fn new(kind: ErrorKind) -> Self {
         PiccoloError {
             kind,
-            line: None,
+            pos: None,
             file: None,
             msg: None,
             stack: None,
@@ -33,16 +36,16 @@ impl PiccoloError {
     pub fn unknown(err: impl Into<Box<dyn std::error::Error>>) -> Self {
         PiccoloError {
             kind: ErrorKind::Unknown { err: err.into() },
-            line: None,
+            pos: None,
             file: None,
             msg: None,
             stack: None,
         }
     }
 
-    pub fn line(self, line: usize) -> Self {
+    pub fn pos(self, pos: SourcePos) -> Self {
         PiccoloError {
-            line: Some(line),
+            pos: Some(pos),
             ..self
         }
     }
@@ -89,8 +92,8 @@ impl fmt::Display for PiccoloError {
         write!(
             f,
             "{line}{file}{separator}{kind}{msg}{nl}{stack_trace}",
-            line = if self.line.is_some() {
-                format!("at line {} ", self.line.unwrap())
+            line = if self.pos.is_some() {
+                format!("at line {} ", self.pos.unwrap())
             } else {
                 "".into()
             },
@@ -99,7 +102,7 @@ impl fmt::Display for PiccoloError {
             } else {
                 "".into()
             },
-            separator = if self.line.is_some() || self.file.is_some() {
+            separator = if self.pos.is_some() || self.file.is_some() {
                 "- "
             } else {
                 ""
@@ -118,7 +121,7 @@ impl fmt::Display for PiccoloError {
             stack_trace = if self.stack.is_some() && self.stack.as_ref().unwrap().is_empty() {
                 let mut s = String::new();
                 for (i, site) in self.stack.as_ref().unwrap().iter().enumerate() {
-                    s.push_str(&format!("  {} called from line {}", site.name, site.line));
+                    s.push_str(&format!("  {} called from line {}", site.name, site.pos));
                     if i + 1 != self.stack.as_ref().unwrap().len() {
                         s.push('\n');
                     }

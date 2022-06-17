@@ -4,7 +4,7 @@ use {
     crate::{
         compiler::{
             ast::{Ast, Expr, Stmt},
-            Local, Token, TokenKind,
+            Local, SourcePos, Token, TokenKind,
         },
         error::{ErrorKind, PiccoloError},
         runtime::{
@@ -105,19 +105,19 @@ fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> 
 }
 
 fn compile_expr_stmt(emitter: &mut Emitter, token: Token, expr: &Expr) -> Result<(), PiccoloError> {
-    trace!("{} expr stmt", token.line);
+    trace!("{} expr stmt", token.pos);
     compile_expr(emitter, expr)?;
-    emitter.add_instruction(Opcode::Pop, token.line);
+    emitter.add_instruction(Opcode::Pop, token.pos);
     Ok(())
 }
 
 fn compile_block(emitter: &mut Emitter, end: Token, body: &[Stmt]) -> Result<(), PiccoloError> {
-    trace!("{} block", end.line);
+    trace!("{} block", end.pos);
     emitter.begin_scope();
     for stmt in body {
         compile_stmt(emitter, stmt)?;
     }
-    emitter.end_scope(end.line);
+    emitter.end_scope(end.pos);
     Ok(())
 }
 
@@ -126,7 +126,7 @@ fn compile_declaration(
     name: Token,
     value: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} decl {}", name.line, name.lexeme);
+    trace!("{} decl {}", name.pos, name.lexeme);
 
     compile_expr(emitter, value)?;
     emitter.make_variable(name)
@@ -138,22 +138,22 @@ fn compile_assignment(
     op: Token,
     value: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} assign {}", name.line, name.lexeme);
+    trace!("{} assign {}", name.pos, name.lexeme);
 
     if let Some(opcode) = op.assign_by_mutate_op() {
         // if this is an assignment-by-mutation operator, first get the value of the variable
         if let Some(index) = emitter.current_context().get_local_slot(name) {
-            emitter.add_instruction_arg(Opcode::GetLocal, index, op.line);
+            emitter.add_instruction_arg(Opcode::GetLocal, index, op.pos);
         } else {
             let index = emitter.get_global_ident(name)?;
-            emitter.add_instruction_arg(Opcode::GetGlobal, index, op.line);
+            emitter.add_instruction_arg(Opcode::GetGlobal, index, op.pos);
         }
 
         // calculate the value to mutate with
         compile_expr(emitter, value)?;
 
         // then mutate
-        emitter.add_instruction(opcode, op.line);
+        emitter.add_instruction(opcode, op.pos);
     } else {
         // otherwise just calculate the value
         compile_expr(emitter, value)?;
@@ -162,14 +162,14 @@ fn compile_assignment(
     // then assign
     if emitter.current_context().is_local() {
         if let Some(index) = emitter.current_context().get_local_slot(name) {
-            emitter.add_instruction_arg(Opcode::SetLocal, index, op.line);
+            emitter.add_instruction_arg(Opcode::SetLocal, index, op.pos);
         } else {
             let index = emitter.get_global_ident(name)?;
-            emitter.add_instruction_arg(Opcode::SetGlobal, index, op.line);
+            emitter.add_instruction_arg(Opcode::SetGlobal, index, op.pos);
         }
     } else {
         let index = emitter.get_global_ident(name)?;
-        emitter.add_instruction_arg(Opcode::SetGlobal, index, op.line);
+        emitter.add_instruction_arg(Opcode::SetGlobal, index, op.pos);
     }
 
     Ok(())
@@ -184,42 +184,42 @@ fn compile_if(
     else_block: Option<&Vec<Stmt>>,
     end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} if", if_.line);
+    trace!("{} if", if_.pos);
 
     // compile the condition
     compile_expr(emitter, cond)?;
 
     if let (Some(else_), Some(else_block)) = (else_, else_block) {
         // if the condition is false, jump to patch_jump(jump_else)
-        let jump_else = emitter.start_jump(Opcode::JumpFalse, if_.line);
+        let jump_else = emitter.start_jump(Opcode::JumpFalse, if_.pos);
         // pop the condition after skipping the jump instruction
-        emitter.add_instruction(Opcode::Pop, if_.line);
+        emitter.add_instruction(Opcode::Pop, if_.pos);
         // compile the then block
         compile_block(emitter, end, then_block)?;
         // jump unconditionally past the else block to patch_jump(end_jump)
-        let end_jump = emitter.start_jump(Opcode::JumpForward, else_.line);
+        let end_jump = emitter.start_jump(Opcode::JumpForward, else_.pos);
 
         // jump here if the condition is false
         emitter.patch_jump(jump_else);
         // pop the condition
-        emitter.add_instruction(Opcode::Pop, else_.line);
+        emitter.add_instruction(Opcode::Pop, else_.pos);
         // compile the else block
         compile_block(emitter, *else_, else_block)?;
 
         emitter.patch_jump(end_jump);
     } else {
         // there is no else block, jump to patch_jump(jump_end) if false
-        let jump_end = emitter.start_jump(Opcode::JumpFalse, if_.line);
+        let jump_end = emitter.start_jump(Opcode::JumpFalse, if_.pos);
         // pop the condition after skipping the jump instruction
-        emitter.add_instruction(Opcode::Pop, if_.line);
+        emitter.add_instruction(Opcode::Pop, if_.pos);
 
         // compile then block
         compile_block(emitter, end, then_block)?;
 
         // jump over the condition pop if we jumped over the else block
-        let jump_pop = emitter.start_jump(Opcode::JumpForward, end.line);
+        let jump_pop = emitter.start_jump(Opcode::JumpForward, end.pos);
         emitter.patch_jump(jump_end);
-        emitter.add_instruction(Opcode::Pop, end.line);
+        emitter.add_instruction(Opcode::Pop, end.pos);
         emitter.patch_jump(jump_pop);
     }
 
@@ -233,15 +233,15 @@ fn compile_while(
     body: &[Stmt],
     end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} while", while_.line);
+    trace!("{} while", while_.pos);
 
     // loop condition
     let loop_start = emitter.start_loop_jumps();
     compile_expr(emitter, cond)?;
 
     // jump to the end if the condition was false, pop if true
-    let exit_jump = emitter.start_jump(Opcode::JumpFalse, while_.line);
-    emitter.add_instruction(Opcode::Pop, while_.line);
+    let exit_jump = emitter.start_jump(Opcode::JumpFalse, while_.pos);
+    emitter.add_instruction(Opcode::Pop, while_.pos);
 
     // loop body
     compile_block(emitter, end, body)?;
@@ -250,11 +250,11 @@ fn compile_while(
     emitter.patch_continue_jumps();
 
     // jump back to the loop condition
-    emitter.add_jump_back(loop_start, end.line);
+    emitter.add_jump_back(loop_start, end.pos);
 
     // pop the condition after false
     emitter.patch_jump(exit_jump);
-    emitter.add_instruction(Opcode::Pop, end.line);
+    emitter.add_instruction(Opcode::Pop, end.pos);
 
     // here after the whole thing if we encounter a break
     emitter.patch_break_jumps();
@@ -271,7 +271,7 @@ fn compile_for(
     body: &[Stmt],
     end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} for", for_.line);
+    trace!("{} for", for_.pos);
 
     // initializer
     emitter.begin_scope();
@@ -282,8 +282,8 @@ fn compile_for(
     compile_expr(emitter, cond)?;
 
     // if false jump to the end
-    let end_jump = emitter.start_jump(Opcode::JumpFalse, for_.line);
-    emitter.add_instruction(Opcode::Pop, for_.line);
+    let end_jump = emitter.start_jump(Opcode::JumpFalse, for_.pos);
+    emitter.add_instruction(Opcode::Pop, for_.pos);
 
     // loop body
     compile_block(emitter, end, body)?;
@@ -295,17 +295,17 @@ fn compile_for(
     compile_stmt(emitter, inc)?;
 
     // unconditional jump back to condition
-    emitter.add_jump_back(start_offset, end.line);
+    emitter.add_jump_back(start_offset, end.pos);
 
     // here if condition is false
     emitter.patch_jump(end_jump);
-    emitter.add_instruction(Opcode::Pop, end.line);
+    emitter.add_instruction(Opcode::Pop, end.pos);
 
     // here if we encounter a break
     emitter.patch_break_jumps();
 
     // pop loop variable (local variable)
-    emitter.end_scope(end.line);
+    emitter.end_scope(end.pos);
 
     Ok(())
 }
@@ -319,11 +319,11 @@ fn compile_fn(
     _method: bool,
     end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} fn {}", name.line, name.lexeme);
+    trace!("{} fn {}", name.pos, name.lexeme);
 
     //if let Some(_) = emitter.current_context().get_local_slot(name) {
     //    return Err(PiccoloError::new(ErrorKind::SyntaxError)
-    //        .line(name.line)
+    //        .pos(name.pos)
     //        .msg_string(format!(
     //            "Function/variable with name '{}' already exists",
     //            name.lexeme
@@ -348,15 +348,15 @@ fn compile_fn(
         compile_stmt(emitter, stmt)?;
     }
 
-    emitter.add_instruction(Opcode::Nil, end.line);
-    emitter.add_instruction(Opcode::Return, end.line);
+    emitter.add_instruction(Opcode::Nil, end.pos);
+    emitter.add_instruction(Opcode::Return, end.pos);
 
     let chunk_index = emitter.end_context();
 
     let function = Function::new(arity, name.lexeme.to_owned(), chunk_index);
 
     let constant = emitter.make_constant(Constant::Function(function));
-    emitter.add_instruction_arg(Opcode::Constant, constant, name.line);
+    emitter.add_instruction_arg(Opcode::Constant, constant, name.pos);
 
     //if !emitter.current_context().is_local() {
     // make_variable doesn't check if a global exists before declaring it
@@ -367,18 +367,18 @@ fn compile_fn(
 }
 
 fn compile_break(emitter: &mut Emitter, break_: Token) -> Result<(), PiccoloError> {
-    trace!("{} break", break_.line);
+    trace!("{} break", break_.pos);
 
-    let offset = emitter.start_jump(Opcode::JumpForward, break_.line);
+    let offset = emitter.start_jump(Opcode::JumpForward, break_.pos);
     emitter.add_break(offset, break_)?;
 
     Ok(())
 }
 
 fn compile_continue(emitter: &mut Emitter, continue_: Token) -> Result<(), PiccoloError> {
-    trace!("{} continue", continue_.line);
+    trace!("{} continue", continue_.pos);
 
-    let offset = emitter.start_jump(Opcode::JumpForward, continue_.line);
+    let offset = emitter.start_jump(Opcode::JumpForward, continue_.pos);
     emitter.add_continue(offset, continue_)?;
 
     Ok(())
@@ -389,27 +389,27 @@ fn compile_retn(
     retn: Token,
     expr: Option<&Expr>,
 ) -> Result<(), PiccoloError> {
-    trace!("{} retn", retn.line);
+    trace!("{} retn", retn.pos);
 
     if let Some(expr) = expr {
         compile_expr(emitter, expr)?;
     } else {
-        emitter.add_instruction(Opcode::Nil, retn.line);
+        emitter.add_instruction(Opcode::Nil, retn.pos);
     }
 
-    emitter.add_instruction(Opcode::Return, retn.line);
+    emitter.add_instruction(Opcode::Return, retn.pos);
 
     Ok(())
 }
 
 fn compile_assert(emitter: &mut Emitter, assert: Token, value: &Expr) -> Result<(), PiccoloError> {
-    trace!("{} assert", assert.line);
+    trace!("{} assert", assert.pos);
 
     compile_expr(emitter, value)?;
-    //emitter.add_instruction(Opcode::Assert, assert.line);
+    //emitter.add_instruction(Opcode::Assert, assert.pos);
 
     let c = emitter.make_constant(Constant::String(super::ast::print_expression(value)));
-    emitter.add_instruction_arg(Opcode::Assert, c, assert.line);
+    emitter.add_instruction_arg(Opcode::Assert, c, assert.pos);
 
     Ok(())
 }
@@ -424,10 +424,10 @@ fn compile_data(
 }
 
 fn compile_literal(emitter: &mut Emitter, literal: Token) -> Result<(), PiccoloError> {
-    trace!("{} literal", literal.line);
+    trace!("{} literal", literal.pos);
 
     // TODO: use constant ops instead of Constant ops
-    emitter.add_constant(Constant::try_from(literal)?, literal.line);
+    emitter.add_constant(Constant::try_from(literal)?, literal.pos);
     Ok(())
 }
 
@@ -436,36 +436,32 @@ fn compile_paren(
     right_paren: Token,
     expr: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} paren", right_paren.line);
+    trace!("{} paren", right_paren.pos);
 
-    compile_expr(emitter, expr).map_err(|e| {
-        e.msg_string(format!(
-            "in expression starting on line {}",
-            right_paren.line
-        ))
-    })
+    compile_expr(emitter, expr)
+        .map_err(|e| e.msg_string(format!("in expression starting on pos {}", right_paren.pos)))
 }
 
 fn compile_variable(emitter: &mut Emitter, variable: Token) -> Result<(), PiccoloError> {
-    trace!("{} variable {}", variable.line, variable.lexeme);
+    trace!("{} variable {}", variable.pos, variable.lexeme);
 
     if let Some(local) = emitter.current_context().get_local_slot(variable) {
-        emitter.add_instruction_arg(Opcode::GetLocal, local, variable.line);
+        emitter.add_instruction_arg(Opcode::GetLocal, local, variable.pos);
     } else {
         let global = emitter.get_global_ident(variable)?;
-        emitter.add_instruction_arg(Opcode::GetGlobal, global, variable.line);
+        emitter.add_instruction_arg(Opcode::GetGlobal, global, variable.pos);
     }
     Ok(())
 }
 
 fn compile_unary(emitter: &mut Emitter, op: Token, rhs: &Expr) -> Result<(), PiccoloError> {
-    trace!("{} unary {}", op.line, op.lexeme);
+    trace!("{} unary {}", op.pos, op.lexeme);
 
     compile_expr(emitter, rhs)?;
 
     match op.kind {
-        TokenKind::Minus => emitter.add_instruction(Opcode::Negate, op.line),
-        TokenKind::Not => emitter.add_instruction(Opcode::Not, op.line),
+        TokenKind::Minus => emitter.add_instruction(Opcode::Negate, op.pos),
+        TokenKind::Not => emitter.add_instruction(Opcode::Not, op.pos),
         _ => unreachable!("unary {:?}", op),
     }
 
@@ -478,32 +474,32 @@ fn compile_binary(
     op: Token,
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} binary {}", op.line, op.lexeme);
+    trace!("{} binary {}", op.pos, op.lexeme);
 
     compile_expr(emitter, lhs)?;
     compile_expr(emitter, rhs)?;
 
     match op.kind {
-        TokenKind::Plus => emitter.add_instruction(Opcode::Add, op.line),
-        TokenKind::Minus => emitter.add_instruction(Opcode::Subtract, op.line),
-        TokenKind::Divide => emitter.add_instruction(Opcode::Divide, op.line),
-        TokenKind::Multiply => emitter.add_instruction(Opcode::Multiply, op.line),
-        TokenKind::Equal => emitter.add_instruction(Opcode::Equal, op.line),
+        TokenKind::Plus => emitter.add_instruction(Opcode::Add, op.pos),
+        TokenKind::Minus => emitter.add_instruction(Opcode::Subtract, op.pos),
+        TokenKind::Divide => emitter.add_instruction(Opcode::Divide, op.pos),
+        TokenKind::Multiply => emitter.add_instruction(Opcode::Multiply, op.pos),
+        TokenKind::Equal => emitter.add_instruction(Opcode::Equal, op.pos),
         TokenKind::NotEqual => {
-            emitter.add_instruction(Opcode::Equal, op.line);
-            emitter.add_instruction(Opcode::Not, op.line);
+            emitter.add_instruction(Opcode::Equal, op.pos);
+            emitter.add_instruction(Opcode::Not, op.pos);
         }
-        TokenKind::Greater => emitter.add_instruction(Opcode::Greater, op.line),
-        TokenKind::GreaterEqual => emitter.add_instruction(Opcode::GreaterEqual, op.line),
-        TokenKind::Less => emitter.add_instruction(Opcode::Less, op.line),
-        TokenKind::LessEqual => emitter.add_instruction(Opcode::LessEqual, op.line),
-        TokenKind::Modulo => emitter.add_instruction(Opcode::Modulo, op.line),
+        TokenKind::Greater => emitter.add_instruction(Opcode::Greater, op.pos),
+        TokenKind::GreaterEqual => emitter.add_instruction(Opcode::GreaterEqual, op.pos),
+        TokenKind::Less => emitter.add_instruction(Opcode::Less, op.pos),
+        TokenKind::LessEqual => emitter.add_instruction(Opcode::LessEqual, op.pos),
+        TokenKind::Modulo => emitter.add_instruction(Opcode::Modulo, op.pos),
 
-        TokenKind::ShiftLeft => emitter.add_instruction(Opcode::ShiftLeft, op.line),
-        TokenKind::ShiftRight => emitter.add_instruction(Opcode::ShiftRight, op.line),
-        TokenKind::BitwiseAnd => emitter.add_instruction(Opcode::BitAnd, op.line),
-        TokenKind::BitwiseOr => emitter.add_instruction(Opcode::BitOr, op.line),
-        TokenKind::BitwiseXor => emitter.add_instruction(Opcode::BitXor, op.line),
+        TokenKind::ShiftLeft => emitter.add_instruction(Opcode::ShiftLeft, op.pos),
+        TokenKind::ShiftRight => emitter.add_instruction(Opcode::ShiftRight, op.pos),
+        TokenKind::BitwiseAnd => emitter.add_instruction(Opcode::BitAnd, op.pos),
+        TokenKind::BitwiseOr => emitter.add_instruction(Opcode::BitOr, op.pos),
+        TokenKind::BitwiseXor => emitter.add_instruction(Opcode::BitXor, op.pos),
 
         _ => unreachable!("binary {:?}", op),
     }
@@ -517,7 +513,7 @@ fn compile_logical(
     op: Token,
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} logical {}", op.line, op.lexeme);
+    trace!("{} logical {}", op.pos, op.lexeme);
 
     let jump_op = match op.kind {
         TokenKind::LogicalAnd => Opcode::JumpFalse,
@@ -527,8 +523,8 @@ fn compile_logical(
 
     compile_expr(emitter, lhs)?;
 
-    let short = emitter.start_jump(jump_op, op.line);
-    emitter.add_instruction(Opcode::Pop, op.line);
+    let short = emitter.start_jump(jump_op, op.pos);
+    emitter.add_instruction(Opcode::Pop, op.pos);
 
     compile_expr(emitter, rhs)?;
 
@@ -544,12 +540,12 @@ fn compile_call(
     arity: usize,
     args: &[Expr],
 ) -> Result<(), PiccoloError> {
-    trace!("{} call", paren.line);
+    trace!("{} call", paren.pos);
     compile_expr(emitter, callee)?;
     for arg in args {
         compile_expr(emitter, arg)?;
     }
-    emitter.add_instruction_arg(Opcode::Call, arity as u16, paren.line);
+    emitter.add_instruction_arg(Opcode::Call, arity as u16, paren.pos);
     Ok(())
 }
 
@@ -561,14 +557,14 @@ fn compile_lambda(
     body: &[Stmt],
     end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} lambda", fn_.line);
+    trace!("{} lambda", fn_.pos);
     emitter.begin_context();
     emitter.begin_scope();
 
     // ??? since recursion is a hack we need a fake local so that the slots are all correct
     emitter
         .current_context_mut()
-        .add_local(Token::new(TokenKind::Fn, "", fn_.line));
+        .add_local(Token::new(TokenKind::Fn, "", fn_.pos));
     for arg in args {
         emitter.make_variable(*arg)?;
     }
@@ -578,15 +574,15 @@ fn compile_lambda(
         compile_stmt(emitter, stmt)?;
     }
 
-    emitter.add_instruction(Opcode::Nil, end.line);
-    emitter.add_instruction(Opcode::Return, end.line);
+    emitter.add_instruction(Opcode::Nil, end.pos);
+    emitter.add_instruction(Opcode::Return, end.pos);
 
     let chunk_index = emitter.end_context();
 
     let function = Function::new(arity, String::from("<anon>"), chunk_index);
 
     let constant = emitter.make_constant(Constant::Function(function));
-    emitter.add_instruction_arg(Opcode::Constant, constant, fn_.line);
+    emitter.add_instruction_arg(Opcode::Constant, constant, fn_.pos);
 
     Ok(())
 }
@@ -647,7 +643,7 @@ impl EmitterContext {
     fn get_local_slot(&self, name: Token) -> Option<u16> {
         // IF SCOPE IS FUNCTION AND SCOPE DEPTH DOESN'T MATCH THIS IS A CAPTURE
         // mark as captured
-        trace!("{} get local slot {}", name.line, name.lexeme);
+        trace!("{} get local slot {}", name.pos, name.lexeme);
         for (i, local) in self.locals.iter().enumerate().rev() {
             if local.name == name.lexeme {
                 return Some(i as u16);
@@ -658,7 +654,7 @@ impl EmitterContext {
     }
 
     fn get_local_depth(&self, name: Token) -> Option<u16> {
-        trace!("{} get local depth {}", name.line, name.lexeme);
+        trace!("{} get local depth {}", name.pos, name.lexeme);
         for local in self.locals.iter().rev() {
             if local.name == name.lexeme {
                 return Some(local.depth);
@@ -695,7 +691,11 @@ impl Emitter {
         };
         // make_variable doesn't check if a global exists before declaring it, allowing us to hack
         // this in. later we should have something like a PiccoloState which manages everything.
-        let _ = r.make_global_ident(Token::new(TokenKind::Identifier, "print", 0));
+        let _ = r.make_global_ident(Token::new(
+            TokenKind::Identifier,
+            "print",
+            SourcePos::empty(),
+        ));
         r
     }
 
@@ -728,22 +728,22 @@ impl Emitter {
         self.module
     }
 
-    fn add_instruction(&mut self, op: Opcode, line: usize) {
-        self.current_chunk_mut().write_u8(op, line);
+    fn add_instruction(&mut self, op: Opcode, pos: SourcePos) {
+        self.current_chunk_mut().write_u8(op, pos);
     }
 
-    fn add_instruction_arg(&mut self, op: Opcode, arg: u16, line: usize) {
-        self.current_chunk_mut().write_arg_u16(op, arg, line);
+    fn add_instruction_arg(&mut self, op: Opcode, arg: u16, pos: SourcePos) {
+        self.current_chunk_mut().write_arg_u16(op, arg, pos);
     }
 
-    fn add_jump_back(&mut self, offset: usize, line: usize) {
-        self.current_chunk_mut().write_jump_back(offset, line);
+    fn add_jump_back(&mut self, offset: usize, pos: SourcePos) {
+        self.current_chunk_mut().write_jump_back(offset, pos);
     }
 
-    fn add_constant(&mut self, value: Constant, line: usize) {
+    fn add_constant(&mut self, value: Constant, pos: SourcePos) {
         let index = self.make_constant(value);
         self.current_chunk_mut()
-            .write_arg_u16(Opcode::Constant, index, line);
+            .write_arg_u16(Opcode::Constant, index, pos);
     }
 
     fn make_constant(&mut self, c: Constant) -> u16 {
@@ -751,7 +751,7 @@ impl Emitter {
     }
 
     fn make_global_ident(&mut self, name: Token) -> u16 {
-        trace!("{} make global {}", name.line, name.lexeme);
+        trace!("{} make global {}", name.pos, name.lexeme);
 
         if self.global_identifiers.contains_key(name.lexeme) {
             self.global_identifiers[name.lexeme]
@@ -764,7 +764,7 @@ impl Emitter {
     }
 
     fn get_global_ident(&self, name: Token) -> Result<u16, PiccoloError> {
-        trace!("{} get global {}", name.line, name.lexeme);
+        trace!("{} get global {}", name.pos, name.lexeme);
 
         self.global_identifiers
             .get(name.lexeme)
@@ -773,12 +773,12 @@ impl Emitter {
                 PiccoloError::new(ErrorKind::UndefinedVariable {
                     name: name.lexeme.to_owned(),
                 })
-                .line(name.line)
+                .pos(name.pos)
             })
     }
 
     fn make_variable(&mut self, name: Token) -> Result<(), PiccoloError> {
-        trace!("{} make variable {}", name.line, name.lexeme);
+        trace!("{} make variable {}", name.pos, name.lexeme);
 
         // are we in global scope?
         if self.current_context().is_local() {
@@ -786,28 +786,28 @@ impl Emitter {
             if let Some(index) = self.current_context().get_local_depth(name) {
                 // if we do,
                 if index != self.current_context().scope_depth() {
-                    trace!("{} new local in sub-scope {}", name.line, name.lexeme);
+                    trace!("{} new local in sub-scope {}", name.pos, name.lexeme);
                     // create a new local if we're in a different scope
                     self.current_context_mut().add_local(name);
                 } else {
                     // error if we're in the same scope
                     return Err(PiccoloError::new(ErrorKind::SyntaxError)
-                        .line(name.line)
+                        .pos(name.pos)
                         .msg_string(format!(
                             "variable with name '{}' already exists",
                             name.lexeme,
                         )));
                 }
             } else {
-                trace!("{} new local {}", name.line, name.lexeme);
+                trace!("{} new local {}", name.pos, name.lexeme);
                 // if we don't, create a new local with this name
                 self.current_context_mut().add_local(name);
             }
         } else {
-            trace!("{} new global {}", name.line, name.lexeme);
+            trace!("{} new global {}", name.pos, name.lexeme);
             // yes, make a global
             let index = self.make_global_ident(name);
-            self.add_instruction_arg(Opcode::DeclareGlobal, index, name.line);
+            self.add_instruction_arg(Opcode::DeclareGlobal, index, name.pos);
         }
 
         Ok(())
@@ -829,14 +829,14 @@ impl Emitter {
         self.current_context_mut().begin_scope();
     }
 
-    fn end_scope(&mut self, line: usize) {
+    fn end_scope(&mut self, pos: SourcePos) {
         for _ in self.current_context_mut().end_scope() {
-            self.add_instruction(Opcode::Pop, line);
+            self.add_instruction(Opcode::Pop, pos);
         }
     }
 
-    fn start_jump(&mut self, op: Opcode, line: usize) -> usize {
-        self.current_chunk_mut().start_jump(op, line)
+    fn start_jump(&mut self, op: Opcode, pos: SourcePos) -> usize {
+        self.current_chunk_mut().start_jump(op, pos)
     }
 
     fn patch_jump(&mut self, offset: usize) {
@@ -867,7 +867,7 @@ impl Emitter {
             .ok_or_else(|| {
                 PiccoloError::new(ErrorKind::SyntaxError)
                     .msg("cannot break outside of a loop")
-                    .line(break_.line)
+                    .pos(break_.pos)
             })?
             .push(offset);
 
@@ -880,7 +880,7 @@ impl Emitter {
             .ok_or_else(|| {
                 PiccoloError::new(ErrorKind::SyntaxError)
                     .msg("cannot continue outside of a loop")
-                    .line(continue_.line)
+                    .pos(continue_.pos)
             })?
             .push(offset);
 

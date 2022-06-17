@@ -1,7 +1,10 @@
 //! Types for working with compiled Piccolo bytecode.
 
 use {
-    crate::runtime::{op::Opcode, value::Constant},
+    crate::{
+        compiler::SourcePos,
+        runtime::{op::Opcode, value::Constant},
+    },
     serde::{Deserialize, Serialize},
 };
 
@@ -52,15 +55,19 @@ impl Module {
     }
 
     pub(crate) fn index_of(&self, chunk: &Chunk) -> usize {
-        self.chunks.iter().position(|c| c == chunk).unwrap()
+        self.chunks
+            .iter()
+            .position(|c| c.data == chunk.data)
+            .unwrap()
     }
 }
 
 /// Stores a piece of compiled Piccolo bytecode.
-#[derive(Default, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Chunk {
     pub(crate) data: Vec<u8>,
-    pub(crate) lines: Vec<usize>,
+    // each SourcePos represents one instruction
+    pub(crate) lines: Vec<Vec<SourcePos>>,
 }
 
 impl Chunk {
@@ -68,30 +75,30 @@ impl Chunk {
         self.data.len()
     }
 
-    pub(crate) fn write_u8<T: Into<u8>>(&mut self, byte: T, line: usize) {
+    pub(crate) fn write_u8<T: Into<u8>>(&mut self, byte: T, pos: SourcePos) {
         let byte = byte.into();
         trace!("write u8 {:04x}={:02x}", self.data.len(), byte);
 
         self.data.push(byte);
-        self.add_to_line(line);
+        self.add_to_line(pos);
     }
 
-    pub(crate) fn write_u16<T: Into<u16>>(&mut self, bytes: T, line: usize) {
+    pub(crate) fn write_u16<T: Into<u16>>(&mut self, bytes: T, pos: SourcePos) {
         let [low, high] = bytes.into().to_le_bytes();
-        self.write_u8(low, line);
-        self.write_u8(high, line);
+        self.write_u8(low, pos);
+        self.write_u8(high, pos);
     }
 
-    pub(crate) fn write_arg_u16<T: Into<u8>>(&mut self, op: T, arg: u16, line: usize) {
-        self.write_u8(op, line);
-        self.write_u16(arg, line);
+    pub(crate) fn write_arg_u16<T: Into<u8>>(&mut self, op: T, arg: u16, pos: SourcePos) {
+        self.write_u8(op, pos);
+        self.write_u16(arg, pos);
     }
 
-    pub(crate) fn start_jump(&mut self, op: Opcode, line: usize) -> usize {
+    pub(crate) fn start_jump(&mut self, op: Opcode, pos: SourcePos) -> usize {
         trace!("write jump to index {:x}", self.data.len());
-        self.write_u8(op, line);
-        self.write_u8(Opcode::Assert, line);
-        self.write_u8(Opcode::False, line);
+        self.write_u8(op, pos);
+        self.write_u8(Opcode::Assert, pos);
+        self.write_u8(Opcode::False, pos);
         self.data.len() - 2
     }
 
@@ -107,11 +114,11 @@ impl Chunk {
         }
     }
 
-    pub(crate) fn write_jump_back(&mut self, offset: usize, line: usize) {
+    pub(crate) fn write_jump_back(&mut self, offset: usize, pos: SourcePos) {
         // we haven't written the JumpBack instruction yet, so we need to add it
         // in order to calculate the actual offset when we write the jump instruction
         let offset = self.data.len() - offset + 3;
-        self.write_arg_u16(Opcode::JumpBack, offset as u16, line);
+        self.write_arg_u16(Opcode::JumpBack, offset as u16, pos);
     }
 
     pub(crate) fn read_short(&self, offset: usize) -> u16 {
@@ -122,13 +129,14 @@ impl Chunk {
         u16::from_le_bytes([low, high])
     }
 
-    // get a line number from a byte offset using run-length encoding
-    pub(crate) fn get_line_from_index(&self, index: usize) -> usize {
+    pub(crate) fn get_pos_from_index(&self, index: usize) -> SourcePos {
         let mut total_ops = 0;
-        for (offset_line, num_ops) in self.lines.iter().enumerate() {
-            total_ops += *num_ops;
+        for (offset_line, line) in self.lines.iter().enumerate() {
+            total_ops += line.len();
             if total_ops > index {
-                return offset_line + 1;
+                let pos = line[total_ops - index - 1];
+                debug_assert_eq!(pos.line, offset_line + 1);
+                return pos;
             }
         }
         panic!(
@@ -137,12 +145,11 @@ impl Chunk {
         );
     }
 
-    // add one opcode to a line
-    fn add_to_line(&mut self, line: usize) {
-        while line > self.lines.len() {
-            self.lines.push(0);
+    fn add_to_line(&mut self, pos: SourcePos) {
+        while self.lines.len() < pos.line {
+            self.lines.push(Vec::with_capacity(1));
         }
-        self.lines[line - 1] += 1;
+        self.lines[pos.line - 1].push(pos);
     }
 }
 
@@ -185,7 +192,7 @@ pub fn disassemble_instruction(module: &Module, chunk: &Chunk, offset: usize) ->
         }
     );
 
-    let line = chunk.get_line_from_index(offset);
+    let line = chunk.get_pos_from_index(offset);
     let line_str = format!("{:04x} {:>4}", offset, line);
 
     let op_str = format!("{:15}", format!("{:?}", op));
@@ -227,36 +234,36 @@ mod test {
     use super::*;
 
     #[test]
-    fn get_line_from_index() {
+    fn get_pos_from_index() {
         use crate::runtime::op::Opcode;
 
         let mut c = Chunk::default();
-        c.write_u8(Opcode::Return, 1); // 0
-        c.write_u8(Opcode::Return, 1); // 1
-        c.write_u8(Opcode::Return, 1); // 2
-        c.write_u8(Opcode::Return, 1); // 3
-        c.write_u8(Opcode::Return, 1); // 4
-        c.write_u8(Opcode::Return, 1); // 5
-        c.write_u8(Opcode::Return, 2); // 6
-        c.write_u8(Opcode::Return, 2); // 7
-        c.write_u8(Opcode::Return, 2); // 8
-        c.write_u8(Opcode::Return, 2); // 9
-        c.write_u8(Opcode::Return, 2); // 10
-        c.write_u8(Opcode::Return, 3); // 11
-        c.write_u8(Opcode::Return, 3); // 12
-        c.write_u8(Opcode::Return, 3); // 13
-        c.write_u8(Opcode::Return, 3); // 14
-        c.write_u8(Opcode::Return, 4); // 15
-        c.write_u8(Opcode::Return, 4); // 16
-        c.write_u8(Opcode::Return, 4); // 17
-        c.write_u8(Opcode::Return, 4); // 18
-        c.write_u8(Opcode::Return, 5); // 19
+        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 0
+        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 1
+        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 2
+        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 3
+        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 4
+        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 5
+        c.write_u8(Opcode::Return, SourcePos::with_line(2)); // 6
+        c.write_u8(Opcode::Return, SourcePos::with_line(2)); // 7
+        c.write_u8(Opcode::Return, SourcePos::with_line(2)); // 8
+        c.write_u8(Opcode::Return, SourcePos::with_line(2)); // 9
+        c.write_u8(Opcode::Return, SourcePos::with_line(2)); // 10
+        c.write_u8(Opcode::Return, SourcePos::with_line(3)); // 11
+        c.write_u8(Opcode::Return, SourcePos::with_line(3)); // 12
+        c.write_u8(Opcode::Return, SourcePos::with_line(3)); // 13
+        c.write_u8(Opcode::Return, SourcePos::with_line(3)); // 14
+        c.write_u8(Opcode::Return, SourcePos::with_line(4)); // 15
+        c.write_u8(Opcode::Return, SourcePos::with_line(4)); // 16
+        c.write_u8(Opcode::Return, SourcePos::with_line(4)); // 17
+        c.write_u8(Opcode::Return, SourcePos::with_line(4)); // 18
+        c.write_u8(Opcode::Return, SourcePos::with_line(5)); // 19
 
-        assert_eq!(c.get_line_from_index(0), 1);
-        assert_eq!(c.get_line_from_index(5), 1);
-        assert_eq!(c.get_line_from_index(6), 2);
-        assert_eq!(c.get_line_from_index(10), 2);
-        assert_eq!(c.get_line_from_index(11), 3);
-        assert_eq!(c.get_line_from_index(14), 3);
+        assert_eq!(c.get_pos_from_index(0).line, 1);
+        assert_eq!(c.get_pos_from_index(5).line, 1);
+        assert_eq!(c.get_pos_from_index(6).line, 2);
+        assert_eq!(c.get_pos_from_index(10).line, 2);
+        assert_eq!(c.get_pos_from_index(11).line, 3);
+        assert_eq!(c.get_pos_from_index(14).line, 3);
     }
 }

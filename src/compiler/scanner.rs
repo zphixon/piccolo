@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        compiler::{Token, TokenKind},
+        compiler::{SourcePos, Token, TokenKind},
         error::{ErrorKind, PiccoloError},
     },
     std::collections::VecDeque,
@@ -30,7 +30,7 @@ pub struct Scanner<'a> {
     tokens: VecDeque<Token<'a>>,
     start: usize,
     current: usize,
-    line: usize,
+    pos: SourcePos,
 }
 
 impl<'a> Scanner<'a> {
@@ -41,7 +41,7 @@ impl<'a> Scanner<'a> {
             tokens: VecDeque::new(),
             start: 0,
             current: 0,
-            line: 1,
+            pos: SourcePos::with_line(1),
         }
     }
 
@@ -84,7 +84,7 @@ impl<'a> Scanner<'a> {
             }
             while !self.is_at_end() && is_whitespace(self.peek_char()) {
                 if self.advance_char() == b'\n' {
-                    self.line += 1;
+                    self.advance_line();
                 }
             }
         }
@@ -288,22 +288,22 @@ impl<'a> Scanner<'a> {
     }
 
     fn scan_string(&mut self) -> Result<TokenKind, PiccoloError> {
-        let line_start = self.line;
+        let pos_start = self.pos;
         while self.peek_char() != b'"' && !self.is_at_end() {
             if self.peek_char() == b'\n' {
-                self.line += 1;
+                self.advance_line();
             }
 
             if self.peek_char() == b'\\' {
                 self.advance_char();
-                self.line += 1;
+                self.advance_line();
             }
 
             self.advance_char();
         }
 
         if self.is_at_end() {
-            Err(PiccoloError::new(ErrorKind::UnterminatedString).line(line_start))
+            Err(PiccoloError::new(ErrorKind::UnterminatedString).pos(pos_start))
         } else {
             self.advance_char();
             Ok(TokenKind::String)
@@ -334,7 +334,7 @@ impl<'a> Scanner<'a> {
             Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
                 literal: value.to_owned(),
             })
-            .line(self.line))
+            .pos(self.pos))
         }
     }
 
@@ -356,13 +356,20 @@ impl<'a> Scanner<'a> {
             Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
                 literal: value.to_owned(),
             })
-            .line(self.line))
+            .pos(self.pos))
         }
     }
 
     fn add_token(&mut self, kind: TokenKind) -> Result<(), PiccoloError> {
-        self.tokens
-            .push_back(Token::new(kind, self.lexeme()?, self.line));
+        let lexeme = self.lexeme()?;
+        let mut pos = self.pos;
+        if kind != TokenKind::Eof {
+            // TODO make Scanner.start use SourcePos instead
+            pos.col += 1;
+            pos.col = pos.col.saturating_sub(lexeme.len());
+        }
+
+        self.tokens.push_back(Token::new(kind, lexeme, pos));
 
         Ok(())
     }
@@ -377,7 +384,13 @@ impl<'a> Scanner<'a> {
         self.current >= self.source.len()
     }
 
+    fn advance_line(&mut self) {
+        self.pos.line += 1;
+        self.pos.col = 0;
+    }
+
     fn advance_char(&mut self) -> u8 {
+        self.pos.col += 1;
         self.current += 1;
         self.source[self.current - 1]
     }
@@ -484,7 +497,7 @@ fn is_non_identifier(c: u8) -> bool {
 
 #[cfg(test)]
 mod test {
-    use super::{Scanner, Token, TokenKind};
+    use super::*;
 
     #[test]
     fn multi_char_ops() {
@@ -555,40 +568,40 @@ mod test {
         let mut scanner = Scanner::new(src);
         assert_eq!(
             scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Identifier, "a", 1)
+            &Token::new(TokenKind::Identifier, "a", SourcePos::empty())
         );
         assert_eq!(
             scanner.peek_token(1).unwrap(),
-            &Token::new(TokenKind::Assign, "=", 1)
+            &Token::new(TokenKind::Assign, "=", SourcePos::empty())
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "a", 1)
+            Token::new(TokenKind::Identifier, "a", SourcePos::empty())
         );
 
         assert_eq!(
             scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Assign, "=", 1)
+            &Token::new(TokenKind::Assign, "=", SourcePos::empty())
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Assign, "=", 1)
+            Token::new(TokenKind::Assign, "=", SourcePos::empty())
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Integer(3), "3", 1)
+            Token::new(TokenKind::Integer(3), "3", SourcePos::empty())
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "io", 2)
+            Token::new(TokenKind::Identifier, "io", SourcePos::empty())
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Period, ".", 2)
+            Token::new(TokenKind::Period, ".", SourcePos::empty())
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "prln", 2)
+            Token::new(TokenKind::Identifier, "prln", SourcePos::empty())
         );
     }
 
@@ -600,40 +613,40 @@ mod test {
 
         assert_eq!(
             scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Identifier, "a", 1)
+            &Token::new(TokenKind::Identifier, "a", SourcePos::empty())
         );
         assert_eq!(
             scanner.peek_token(1).unwrap(),
-            &Token::new(TokenKind::Assign, "=", 1)
+            &Token::new(TokenKind::Assign, "=", SourcePos::empty())
         );
         assert_eq!(
             scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Identifier, "a", 1)
+            &Token::new(TokenKind::Identifier, "a", SourcePos::empty())
         );
         assert_eq!(
             scanner.peek_token(6).unwrap(),
-            &Token::new(TokenKind::LeftParen, "(", 2)
+            &Token::new(TokenKind::LeftParen, "(", SourcePos::empty())
         );
         assert_eq!(
             scanner.peek_token(8).unwrap(),
-            &Token::new(TokenKind::RightParen, ")", 2)
+            &Token::new(TokenKind::RightParen, ")", SourcePos::empty())
         );
 
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "a", 1)
+            Token::new(TokenKind::Identifier, "a", SourcePos::empty())
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Assign, "=", 1)
+            Token::new(TokenKind::Assign, "=", SourcePos::empty())
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Integer(3), "3", 1)
+            Token::new(TokenKind::Integer(3), "3", SourcePos::empty())
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "io", 2)
+            Token::new(TokenKind::Identifier, "io", SourcePos::empty())
         );
     }
 }

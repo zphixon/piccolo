@@ -10,7 +10,7 @@
 
 // https://github.com/Darksecond/lox/blob/master/lox-compiler/src/bettercompiler/statements.rs
 
-use crate::compiler::{Token, TokenKind};
+use crate::compiler::{SourcePos, Token, TokenKind};
 
 /// Simple type alias for the abstract syntax tree.
 pub type Ast<'a> = [Stmt<'a>];
@@ -265,7 +265,7 @@ fn print_expr(indent: usize, expr: &Expr) -> String {
         Expr::Index { object, index, .. }
             => print_index(indent, object, index),
         Expr::Fn { args, body, .. }
-            => print_fn(indent, Token::new(TokenKind::Identifier, "<anon>", 0), args, body),
+            => print_fn(indent, Token::new(TokenKind::Identifier, "<anon>", SourcePos::empty()), args, body),
     }
 }
 
@@ -338,7 +338,7 @@ fn print_retn(indent: usize, retn: Token, expr: Option<&Expr>) -> String {
         indent,
         "retn",
         &[expr.unwrap_or(&Expr::Literal {
-            literal: Token::new(TokenKind::Nil, "nil", retn.line),
+            literal: Token::new(TokenKind::Nil, "nil", retn.pos),
         })],
     )
 }

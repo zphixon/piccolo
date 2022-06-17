@@ -290,7 +290,7 @@ fn consume<'a>(scanner: &mut Scanner<'a>, kind: TokenKind) -> Result<Token<'a>, 
             exp: format!("{:?}", kind),
             got: format!("{:?}", tok.kind),
         })
-        .line(tok.line))
+        .pos(tok.pos))
     }
 }
 
@@ -562,7 +562,7 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
             was_eof: t.kind == TokenKind::Eof,
             got: t.lexeme.to_string(),
         })
-        .line(t.line))
+        .pos(t.pos))
     }
 }
 
@@ -596,6 +596,8 @@ fn parse_arguments<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Expr<'a>>, Picco
 mod test {
     use super::*;
 
+    use crate::compiler::SourcePos;
+
     #[test]
     fn assign() {
         let src = "a += 3";
@@ -603,10 +605,10 @@ mod test {
         assert_eq!(
             ast,
             &[Stmt::Assignment {
-                name: Token::new(TokenKind::Identifier, "a", 1),
-                op: Token::new(TokenKind::PlusAssign, "+=", 1),
+                name: Token::new(TokenKind::Identifier, "a", SourcePos::empty()),
+                op: Token::new(TokenKind::PlusAssign, "+=", SourcePos::empty()),
                 value: Expr::Literal {
-                    literal: Token::new(TokenKind::Integer(3), "3", 1),
+                    literal: Token::new(TokenKind::Integer(3), "3", SourcePos::empty()),
                 }
             }]
         );
@@ -621,13 +623,13 @@ mod test {
         assert_eq!(
             ast,
             &[Stmt::Expr {
-                token: Token::new(TokenKind::Identifier, "a", 1),
+                token: Token::new(TokenKind::Identifier, "a", SourcePos::empty()),
                 expr: Expr::Path {
                     names: vec![
-                        Token::new(TokenKind::Identifier, "a", 1),
-                        Token::new(TokenKind::Identifier, "b", 1),
-                        Token::new(TokenKind::Identifier, "c", 1),
-                        Token::new(TokenKind::Identifier, "d", 1),
+                        Token::new(TokenKind::Identifier, "a", SourcePos::empty()),
+                        Token::new(TokenKind::Identifier, "b", SourcePos::empty()),
+                        Token::new(TokenKind::Identifier, "c", SourcePos::empty()),
+                        Token::new(TokenKind::Identifier, "d", SourcePos::empty()),
                     ],
                 }
             }]

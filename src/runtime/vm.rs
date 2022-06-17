@@ -1,5 +1,6 @@
 use {
     crate::{
+        compiler::SourcePos,
         error::{ErrorKind, PiccoloError},
         runtime::{
             chunk::{Chunk, Module},
@@ -46,9 +47,9 @@ impl<'chunk, 'value> FrameStack<'chunk, 'value> {
         self.frames.pop().unwrap()
     }
 
-    fn current_line(&self) -> usize {
+    fn current_line(&self) -> SourcePos {
         self.current_chunk()
-            .get_line_from_index(self.current_ip() - 1)
+            .get_pos_from_index(self.current_ip() - 1)
     }
 
     fn current_ip(&self) -> usize {
@@ -84,7 +85,7 @@ impl<'chunk, 'value> FrameStack<'chunk, 'value> {
         for frame in self.frames.iter().take(self.frames.len() - 1) {
             calls.push(crate::error::Callsite {
                 name: frame.name.clone(),
-                line: frame.chunk.get_line_from_index(frame.ip),
+                pos: frame.chunk.get_pos_from_index(frame.ip),
             })
         }
         calls
@@ -228,7 +229,7 @@ impl<'value> Machine<'value> {
             } else if result.is_err() {
                 self.ip = frames.current_ip();
                 result
-                    .map_err(|err| err.line(frames.current_line()).stack_trace(frames.unwind()))?;
+                    .map_err(|err| err.pos(frames.current_line()).stack_trace(frames.unwind()))?;
             }
         }
     }

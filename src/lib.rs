@@ -104,7 +104,7 @@ mod integration {
     fn visitor_emitter() {
         use {
             ast::{Expr, Stmt},
-            compiler::{Token, TokenKind},
+            compiler::{SourcePos, Token, TokenKind},
         };
 
         let src = "1+2*3+4";
@@ -114,22 +114,22 @@ mod integration {
             let equiv = Expr::Binary {
                 lhs: Box::new(Expr::Binary {
                     lhs: Box::new(Expr::Literal {
-                        literal: Token::new(TokenKind::Integer(1), "1", 1),
+                        literal: Token::new(TokenKind::Integer(1), "1", SourcePos::empty()),
                     }),
-                    op: Token::new(TokenKind::Plus, "+", 1),
+                    op: Token::new(TokenKind::Plus, "+", SourcePos::empty()),
                     rhs: Box::new(Expr::Binary {
                         lhs: Box::new(Expr::Literal {
-                            literal: Token::new(TokenKind::Integer(2), "2", 1),
+                            literal: Token::new(TokenKind::Integer(2), "2", SourcePos::empty()),
                         }),
-                        op: Token::new(TokenKind::Multiply, "*", 1),
+                        op: Token::new(TokenKind::Multiply, "*", SourcePos::empty()),
                         rhs: Box::new(Expr::Literal {
-                            literal: Token::new(TokenKind::Integer(3), "3", 1),
+                            literal: Token::new(TokenKind::Integer(3), "3", SourcePos::empty()),
                         }),
                     }),
                 }),
-                op: Token::new(TokenKind::Plus, "+", 1),
+                op: Token::new(TokenKind::Plus, "+", SourcePos::empty()),
                 rhs: Box::new(Expr::Literal {
-                    literal: Token::new(TokenKind::Integer(4), "4", 1),
+                    literal: Token::new(TokenKind::Integer(4), "4", SourcePos::empty()),
                 }),
             };
 
