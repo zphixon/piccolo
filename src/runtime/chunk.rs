@@ -238,26 +238,26 @@ mod test {
         use crate::runtime::op::Opcode;
 
         let mut c = Chunk::default();
-        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 0
-        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 1
-        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 2
-        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 3
-        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 4
-        c.write_u8(Opcode::Return, SourcePos::with_line(1)); // 5
-        c.write_u8(Opcode::Return, SourcePos::with_line(2)); // 6
-        c.write_u8(Opcode::Return, SourcePos::with_line(2)); // 7
-        c.write_u8(Opcode::Return, SourcePos::with_line(2)); // 8
-        c.write_u8(Opcode::Return, SourcePos::with_line(2)); // 9
-        c.write_u8(Opcode::Return, SourcePos::with_line(2)); // 10
-        c.write_u8(Opcode::Return, SourcePos::with_line(3)); // 11
-        c.write_u8(Opcode::Return, SourcePos::with_line(3)); // 12
-        c.write_u8(Opcode::Return, SourcePos::with_line(3)); // 13
-        c.write_u8(Opcode::Return, SourcePos::with_line(3)); // 14
-        c.write_u8(Opcode::Return, SourcePos::with_line(4)); // 15
-        c.write_u8(Opcode::Return, SourcePos::with_line(4)); // 16
-        c.write_u8(Opcode::Return, SourcePos::with_line(4)); // 17
-        c.write_u8(Opcode::Return, SourcePos::with_line(4)); // 18
-        c.write_u8(Opcode::Return, SourcePos::with_line(5)); // 19
+        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 0
+        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 1
+        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 2
+        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 3
+        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 4
+        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 5
+        c.write_u8(Opcode::Return, SourcePos { line: 2, col: 1 }); // 6
+        c.write_u8(Opcode::Return, SourcePos { line: 2, col: 1 }); // 7
+        c.write_u8(Opcode::Return, SourcePos { line: 2, col: 1 }); // 8
+        c.write_u8(Opcode::Return, SourcePos { line: 2, col: 1 }); // 9
+        c.write_u8(Opcode::Return, SourcePos { line: 2, col: 1 }); // 10
+        c.write_u8(Opcode::Return, SourcePos { line: 3, col: 1 }); // 11
+        c.write_u8(Opcode::Return, SourcePos { line: 3, col: 1 }); // 12
+        c.write_u8(Opcode::Return, SourcePos { line: 3, col: 1 }); // 13
+        c.write_u8(Opcode::Return, SourcePos { line: 3, col: 1 }); // 14
+        c.write_u8(Opcode::Return, SourcePos { line: 4, col: 1 }); // 15
+        c.write_u8(Opcode::Return, SourcePos { line: 4, col: 1 }); // 16
+        c.write_u8(Opcode::Return, SourcePos { line: 4, col: 1 }); // 17
+        c.write_u8(Opcode::Return, SourcePos { line: 4, col: 1 }); // 18
+        c.write_u8(Opcode::Return, SourcePos { line: 5, col: 1 }); // 19
 
         assert_eq!(c.get_pos_from_index(0).line, 1);
         assert_eq!(c.get_pos_from_index(5).line, 1);
