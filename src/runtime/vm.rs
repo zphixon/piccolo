@@ -656,7 +656,7 @@ mod test {
         };
 
         let src = r#"""+(11*3)+"heehee""#;
-        let ast = parser::parse(&mut Scanner::new(src)).expect("parse");
+        let ast = parser::parse_with(&mut Scanner::new(src)).expect("parse");
         let module = emitter::compile(&ast).expect("emit");
 
         println!("{}", chunk::disassemble(&module, ""));

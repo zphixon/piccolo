@@ -179,7 +179,7 @@ fn maybe_exec<'source, 'heap>(
         scanner = Scanner::new(source);
     }
 
-    let ast = piccolo::compiler::parser::parse(&mut scanner)?;
+    let ast = piccolo::compiler::parser::parse_with(&mut scanner)?;
 
     if print_ast {
         println!("=== ast ===\n{}", piccolo::compiler::ast::print_ast(&ast));
@@ -273,7 +273,7 @@ fn repl<'heap>(
                     scanner = Scanner::new(&input);
                 }
 
-                let parse = parser::parse(&mut scanner);
+                let parse = parser::parse_with(&mut scanner);
                 match parse {
                     Ok(ast) => {
                         if print_ast {

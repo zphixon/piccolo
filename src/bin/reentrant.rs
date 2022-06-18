@@ -1,7 +1,7 @@
 use piccolo::{
     compiler::{
         emitter::{compile_with, Emitter},
-        parser::parse,
+        parser::parse_with,
         scanner::Scanner,
     },
     runtime::{memory::Heap, vm::Machine},
@@ -11,16 +11,16 @@ use piccolo::{
 fn main() {
     env_logger::init();
 
-    let ast1 = parse(&mut Scanner::new("x=:3")).unwrap();
-    let ast2 = parse(&mut Scanner::new("assert x == 3")).unwrap();
-    let ast3 = parse(&mut Scanner::new("fn z(a) do\n  print(\"a is\", a)\nend\n")).unwrap();
-    let ast4 = parse(&mut Scanner::new("z(x)")).unwrap();
-    let ast5 = parse(&mut Scanner::new(
+    let ast1 = parse_with(&mut Scanner::new("x=:3")).unwrap();
+    let ast2 = parse_with(&mut Scanner::new("assert x == 3")).unwrap();
+    let ast3 = parse_with(&mut Scanner::new("fn z(a) do\n  print(\"a is\", a)\nend\n")).unwrap();
+    let ast4 = parse_with(&mut Scanner::new("z(x)")).unwrap();
+    let ast5 = parse_with(&mut Scanner::new(
         "fn b(a) do\n  if a == x do\n    retn true\n  else\n    retn false\n  end\nend\n",
     ))
     .unwrap();
-    let ast6 = parse(&mut Scanner::new("assert b(3)")).unwrap();
-    let ast7 = parse(&mut Scanner::new("print(b(4))")).unwrap();
+    let ast6 = parse_with(&mut Scanner::new("assert b(3)")).unwrap();
+    let ast7 = parse_with(&mut Scanner::new("print(b(4))")).unwrap();
     let mut emitter = Emitter::new();
 
     compile_with(&mut emitter, &ast1).unwrap();

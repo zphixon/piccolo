@@ -903,7 +903,7 @@ mod test {
             runtime::{chunk, memory::Heap, vm::Machine},
         };
 
-        let ast = parser::parse(&mut Scanner::new(
+        let ast = parser::parse_with(&mut Scanner::new(
             "x =: 32\n\
              retn x",
         ))
@@ -924,13 +924,13 @@ mod test {
             runtime::chunk,
         };
 
-        let ast1 = parser::parse(&mut Scanner::new("x=:3")).unwrap();
-        let ast2 = parser::parse(&mut Scanner::new("assert x == 3")).unwrap();
-        let ast3 = parser::parse(&mut Scanner::new(
+        let ast1 = parser::parse_with(&mut Scanner::new("x=:3")).unwrap();
+        let ast2 = parser::parse_with(&mut Scanner::new("assert x == 3")).unwrap();
+        let ast3 = parser::parse_with(&mut Scanner::new(
             "fn z(a) do\n  print(\"a is\", a)\n  end\n",
         ))
         .unwrap();
-        let ast4 = parser::parse(&mut Scanner::new("z(x)")).unwrap();
+        let ast4 = parser::parse_with(&mut Scanner::new("z(x)")).unwrap();
 
         let mut emitter = emitter::Emitter::new();
         emitter::compile_with(&mut emitter, &ast1).unwrap();
