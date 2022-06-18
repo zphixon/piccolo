@@ -8,7 +8,7 @@ use piccolo::{
 
 #[allow(unused_assignments)]
 fn main() {
-    env_logger::init();
+    my_log::init();
 
     let ast1 = parse("x=:3").unwrap();
     let ast2 = parse("assert x == 3").unwrap();

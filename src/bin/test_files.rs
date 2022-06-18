@@ -6,7 +6,7 @@ use {
 };
 
 fn main() -> Result<(), PiccoloError> {
-    env_logger::init();
+    my_log::init();
 
     let mut path = path::PathBuf::new();
     path.push("examples");

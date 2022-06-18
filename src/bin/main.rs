@@ -64,10 +64,9 @@ fn main() {
 }
 
 fn run() -> Result<(), Vec<PiccoloError>> {
-    env_logger::init();
+    my_log::init();
 
     let args = Args::parse_args_default_or_exit();
-
     log::debug!("{args:#?}");
 
     let Args {
