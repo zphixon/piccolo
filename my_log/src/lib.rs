@@ -53,6 +53,9 @@ fn color_with_level(s: &str, level: Level) -> String {
     }
 }
 
+const CRATE: &'static str = "([a-z_]+)(?:::.*)?";
+static CRATE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(CRATE).unwrap());
+
 impl Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         let inner = self.inner.read().expect("could not acquire read lock");
@@ -81,25 +84,12 @@ impl Log for SimpleLogger {
             let module = color_with_level(&module, record.level());
 
             println!("{level} {module} {}", record.args());
-
-            //println!(
-            //    "{} {}",
-            //    record.level(),
-            //    format!("{}", record.args()).replace("\n", " ")
-            //);
         }
     }
 
     fn flush(&self) {}
 }
 
-unsafe impl Sync for SimpleLogger {}
-unsafe impl Send for SimpleLogger {}
-
-static LOGGER: Lazy<SimpleLogger> = Lazy::new(|| SimpleLogger::new());
-static CRATE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(CRATE).unwrap());
-
-const CRATE: &'static str = "([a-z_]+)(?:::.*)?";
 const ENV_TERM: &'static str = "([a-z_\\-]+)";
 
 fn make_multi_regex() -> Regex {
@@ -140,11 +130,11 @@ fn make_config(env: &str) -> LogConfig {
     }
 }
 
+static LOGGER: Lazy<SimpleLogger> = Lazy::new(|| SimpleLogger::new());
+
 pub fn init() {
     if let Ok(log) = std::env::var("RUST_LOG") {
-        let levels = make_config(&log);
-        dbg!(&levels);
-        LOGGER.set_config(levels);
+        LOGGER.set_config(make_config(&log));
     }
 
     log::set_logger(&*LOGGER)
