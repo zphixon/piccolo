@@ -143,10 +143,10 @@ fn compile_assignment(
     if let Some(opcode) = op.assign_by_mutate_op() {
         // if this is an assignment-by-mutation operator, first get the value of the variable
         if let Some(index) = emitter.current_context().get_local_slot(name) {
-            emitter.add_instruction_arg(Opcode::GetLocal, index, op.pos);
+            emitter.add_instruction(Opcode::GetLocal(index), op.pos);
         } else {
             let index = emitter.get_global_ident(name)?;
-            emitter.add_instruction_arg(Opcode::GetGlobal, index, op.pos);
+            emitter.add_instruction(Opcode::GetGlobal(index), op.pos);
         }
 
         // calculate the value to mutate with
@@ -162,14 +162,14 @@ fn compile_assignment(
     // then assign
     if emitter.current_context().is_local() {
         if let Some(index) = emitter.current_context().get_local_slot(name) {
-            emitter.add_instruction_arg(Opcode::SetLocal, index, op.pos);
+            emitter.add_instruction(Opcode::SetLocal(index), op.pos);
         } else {
             let index = emitter.get_global_ident(name)?;
-            emitter.add_instruction_arg(Opcode::SetGlobal, index, op.pos);
+            emitter.add_instruction(Opcode::SetGlobal(index), op.pos);
         }
     } else {
         let index = emitter.get_global_ident(name)?;
-        emitter.add_instruction_arg(Opcode::SetGlobal, index, op.pos);
+        emitter.add_instruction(Opcode::SetGlobal(index), op.pos);
     }
 
     Ok(())
@@ -191,13 +191,13 @@ fn compile_if(
 
     if let (Some(else_), Some(else_block)) = (else_, else_block) {
         // if the condition is false, jump to patch_jump(jump_else)
-        let jump_else = emitter.start_jump(Opcode::JumpFalse, if_.pos);
+        let jump_else = emitter.start_jump(Opcode::JumpFalse(0), if_.pos);
         // pop the condition after skipping the jump instruction
         emitter.add_instruction(Opcode::Pop, if_.pos);
         // compile the then block
         compile_block(emitter, end, then_block)?;
         // jump unconditionally past the else block to patch_jump(end_jump)
-        let end_jump = emitter.start_jump(Opcode::JumpForward, else_.pos);
+        let end_jump = emitter.start_jump(Opcode::JumpForward(0), else_.pos);
 
         // jump here if the condition is false
         emitter.patch_jump(jump_else);
@@ -209,7 +209,7 @@ fn compile_if(
         emitter.patch_jump(end_jump);
     } else {
         // there is no else block, jump to patch_jump(jump_end) if false
-        let jump_end = emitter.start_jump(Opcode::JumpFalse, if_.pos);
+        let jump_end = emitter.start_jump(Opcode::JumpFalse(0), if_.pos);
         // pop the condition after skipping the jump instruction
         emitter.add_instruction(Opcode::Pop, if_.pos);
 
@@ -217,7 +217,7 @@ fn compile_if(
         compile_block(emitter, end, then_block)?;
 
         // jump over the condition pop if we jumped over the else block
-        let jump_pop = emitter.start_jump(Opcode::JumpForward, end.pos);
+        let jump_pop = emitter.start_jump(Opcode::JumpForward(0), end.pos);
         emitter.patch_jump(jump_end);
         emitter.add_instruction(Opcode::Pop, end.pos);
         emitter.patch_jump(jump_pop);
@@ -240,7 +240,7 @@ fn compile_while(
     compile_expr(emitter, cond)?;
 
     // jump to the end if the condition was false, pop if true
-    let exit_jump = emitter.start_jump(Opcode::JumpFalse, while_.pos);
+    let exit_jump = emitter.start_jump(Opcode::JumpFalse(0), while_.pos);
     emitter.add_instruction(Opcode::Pop, while_.pos);
 
     // loop body
@@ -282,7 +282,7 @@ fn compile_for(
     compile_expr(emitter, cond)?;
 
     // if false jump to the end
-    let end_jump = emitter.start_jump(Opcode::JumpFalse, for_.pos);
+    let end_jump = emitter.start_jump(Opcode::JumpFalse(0), for_.pos);
     emitter.add_instruction(Opcode::Pop, for_.pos);
 
     // loop body
@@ -356,7 +356,7 @@ fn compile_fn(
     let function = Function::new(arity, name.lexeme.to_owned(), chunk_index);
 
     let constant = emitter.make_constant(Constant::Function(function));
-    emitter.add_instruction_arg(Opcode::Constant, constant, name.pos);
+    emitter.add_instruction(Opcode::Constant(constant), name.pos);
 
     //if !emitter.current_context().is_local() {
     // make_variable doesn't check if a global exists before declaring it
@@ -369,7 +369,7 @@ fn compile_fn(
 fn compile_break(emitter: &mut Emitter, break_: Token) -> Result<(), PiccoloError> {
     trace!("{} break", break_.pos);
 
-    let offset = emitter.start_jump(Opcode::JumpForward, break_.pos);
+    let offset = emitter.start_jump(Opcode::JumpForward(0), break_.pos);
     emitter.add_break(offset, break_)?;
 
     Ok(())
@@ -378,7 +378,7 @@ fn compile_break(emitter: &mut Emitter, break_: Token) -> Result<(), PiccoloErro
 fn compile_continue(emitter: &mut Emitter, continue_: Token) -> Result<(), PiccoloError> {
     trace!("{} continue", continue_.pos);
 
-    let offset = emitter.start_jump(Opcode::JumpForward, continue_.pos);
+    let offset = emitter.start_jump(Opcode::JumpForward(0), continue_.pos);
     emitter.add_continue(offset, continue_)?;
 
     Ok(())
@@ -409,7 +409,7 @@ fn compile_assert(emitter: &mut Emitter, assert: Token, value: &Expr) -> Result<
     //emitter.add_instruction(Opcode::Assert, assert.pos);
 
     let c = emitter.make_constant(Constant::String(super::ast::print_expression(value)));
-    emitter.add_instruction_arg(Opcode::Assert, c, assert.pos);
+    emitter.add_instruction(Opcode::Assert(c), assert.pos);
 
     Ok(())
 }
@@ -446,10 +446,10 @@ fn compile_variable(emitter: &mut Emitter, variable: Token) -> Result<(), Piccol
     trace!("{} variable {}", variable.pos, variable.lexeme);
 
     if let Some(local) = emitter.current_context().get_local_slot(variable) {
-        emitter.add_instruction_arg(Opcode::GetLocal, local, variable.pos);
+        emitter.add_instruction(Opcode::GetLocal(local), variable.pos);
     } else {
         let global = emitter.get_global_ident(variable)?;
-        emitter.add_instruction_arg(Opcode::GetGlobal, global, variable.pos);
+        emitter.add_instruction(Opcode::GetGlobal(global), variable.pos);
     }
     Ok(())
 }
@@ -463,7 +463,7 @@ fn compile_unary(emitter: &mut Emitter, op: Token, rhs: &Expr) -> Result<(), Pic
         TokenKind::Minus => emitter.add_instruction(Opcode::Negate, op.pos),
         TokenKind::Not => emitter.add_instruction(Opcode::Not, op.pos),
         _ => unreachable!("unary {:?}", op),
-    }
+    };
 
     Ok(())
 }
@@ -516,8 +516,8 @@ fn compile_logical(
     trace!("{} logical {}", op.pos, op.lexeme);
 
     let jump_op = match op.kind {
-        TokenKind::LogicalAnd => Opcode::JumpFalse,
-        TokenKind::LogicalOr => Opcode::JumpTrue,
+        TokenKind::LogicalAnd => Opcode::JumpFalse(0),
+        TokenKind::LogicalOr => Opcode::JumpTrue(0),
         _ => unreachable!("op {:?} for logical", op),
     };
 
@@ -545,7 +545,7 @@ fn compile_call(
     for arg in args {
         compile_expr(emitter, arg)?;
     }
-    emitter.add_instruction_arg(Opcode::Call, arity as u16, paren.pos);
+    emitter.add_instruction(Opcode::Call(arity as u16), paren.pos);
     Ok(())
 }
 
@@ -582,7 +582,7 @@ fn compile_lambda(
     let function = Function::new(arity, String::from("<anon>"), chunk_index);
 
     let constant = emitter.make_constant(Constant::Function(function));
-    emitter.add_instruction_arg(Opcode::Constant, constant, fn_.pos);
+    emitter.add_instruction(Opcode::Constant(constant), fn_.pos);
 
     Ok(())
 }
@@ -729,11 +729,7 @@ impl Emitter {
     }
 
     fn add_instruction(&mut self, op: Opcode, pos: SourcePos) {
-        self.current_chunk_mut().write_u8(op, pos);
-    }
-
-    fn add_instruction_arg(&mut self, op: Opcode, arg: u16, pos: SourcePos) {
-        self.current_chunk_mut().write_arg_u16(op, arg, pos);
+        self.current_chunk_mut().write(op, pos);
     }
 
     fn add_jump_back(&mut self, offset: usize, pos: SourcePos) {
@@ -742,8 +738,7 @@ impl Emitter {
 
     fn add_constant(&mut self, value: Constant, pos: SourcePos) {
         let index = self.make_constant(value);
-        self.current_chunk_mut()
-            .write_arg_u16(Opcode::Constant, index, pos);
+        self.current_chunk_mut().write(Opcode::Constant(index), pos);
     }
 
     fn make_constant(&mut self, c: Constant) -> u16 {
@@ -807,7 +802,7 @@ impl Emitter {
             trace!("{} new global {}", name.pos, name.lexeme);
             // yes, make a global
             let index = self.make_global_ident(name);
-            self.add_instruction_arg(Opcode::DeclareGlobal, index, name.pos);
+            self.add_instruction(Opcode::DeclareGlobal(index), name.pos);
         }
 
         Ok(())
@@ -846,7 +841,7 @@ impl Emitter {
     fn start_loop_jumps(&mut self) -> usize {
         self.continue_offsets.push(Vec::new());
         self.break_offsets.push(Vec::new());
-        self.current_chunk().data.len()
+        self.current_chunk().ops.len()
     }
 
     fn patch_continue_jumps(&mut self) {

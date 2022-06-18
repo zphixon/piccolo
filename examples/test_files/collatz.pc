@@ -6,6 +6,7 @@ while x > 1 do
     else
         x = 3 * x + 1
     end
+    print(x)
 end
 
 # is there a number n, for which the collatz contains n more than once?

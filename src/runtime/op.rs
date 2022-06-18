@@ -5,139 +5,116 @@
 //! Index means the index in the chunk's constant table, and slot means the
 //! index from the bottom of the call frame on the [`Machine`] stack.
 //!
-//! | Opcode            | Operands                  | Byte   |
-//! |-------------------|---------------------------|--------|
-//! | `Pop`             |                           | `0x00` |
-//! | `Return`          |                           | `0x01` |
-//! | <b>Constants</b>  |                           |        |
-//! | `Constant`        | index into constant table | `0x02` |
-//! | `Nil`             |                           | `0x03` |
-//! | `True`            |                           | `0x04` |
-//! | `False`           |                           | `0x05` |
-//! | <b>Math</b>       |                           |        |
-//! | `Negate`          |                           | `0x06` |
-//! | `Not`             |                           | `0x07` |
-//! | `Add`             |                           | `0x08` |
-//! | `Subtract`        |                           | `0x09` |
-//! | `Multiply`        |                           | `0x0a` |
-//! | `Divide`          |                           | `0x0b` |
-//! | `Modulo`          |                           | `0x0c` |
-//! | <b>Comparison</b> |                           |        |
-//! | `Equal`           |                           | `0x0d` |
-//! | `Greater`         |                           | `0x0e` |
-//! | `Less`            |                           | `0x0f` |
-//! | `GreaterEqual`    |                           | `0x10` |
-//! | `LessEqual`       |                           | `0x11` |
-//! | <b>Variables</b>  |                           |        |
-//! | `GetLocal`        | slot on stack             | `0x12` |
-//! | `SetLocal`        | slot on stack             | `0x13` |
-//! | `GetGlobal`       | index into constant table | `0x14` |
-//! | `SetGlobal`       | index into constant table | `0x15` |
-//! | `DeclareGlobal`   | index into constant table | `0x16` |
-//! | <b>Jumps</b>      |                           |        |
-//! | `Jump`            | forward offset            | `0x17` |
-//! | `JumpFalse`       | forward offset            | `0x18` |
-//! | `JumpTrue`        | forward offset            | `0x19` |
-//! | `JumpBack`        | backward offset           | `0x1a` |
-//! | <b>More math</b>  |                           |        |
-//! | `BitAnd`          |                           | `0x1b` |
-//! | `BitOr`           |                           | `0x1c` |
-//! | `BitXor`          |                           | `0x1d` |
-//! | `ShiftLeft`       |                           | `0x1e` |
-//! | `ShiftRight`      |                           | `0x1f` |
-//! | <b>Misc</b>       |                           |        |
-//! | `Call`            |                           | `0x20` |
-//! | `Assert`          |                           | `0xff` |
+//! | Opcode            | Operands                  |
+//! |-------------------|---------------------------|
+//! | `Pop`             |                           |
+//! | `Return`          |                           |
+//! | <b>Constants</b>  |                           |
+//! | `Constant`        | index into constant table |
+//! | `Nil`             |                           |
+//! | `True`            |                           |
+//! | `False`           |                           |
+//! | <b>Math</b>       |                           |
+//! | `Negate`          |                           |
+//! | `Not`             |                           |
+//! | `Add`             |                           |
+//! | `Subtract`        |                           |
+//! | `Multiply`        |                           |
+//! | `Divide`          |                           |
+//! | `Modulo`          |                           |
+//! | <b>Comparison</b> |                           |
+//! | `Equal`           |                           |
+//! | `Greater`         |                           |
+//! | `Less`            |                           |
+//! | `GreaterEqual`    |                           |
+//! | `LessEqual`       |                           |
+//! | <b>Variables</b>  |                           |
+//! | `GetLocal`        | slot on stack             |
+//! | `SetLocal`        | slot on stack             |
+//! | `GetGlobal`       | index into constant table |
+//! | `SetGlobal`       | index into constant table |
+//! | `DeclareGlobal`   | index into constant table |
+//! | <b>Jumps</b>      |                           |
+//! | `Jump`            | forward offset            |
+//! | `JumpFalse`       | forward offset            |
+//! | `JumpTrue`        | forward offset            |
+//! | `JumpBack`        | backward offset           |
+//! | <b>More math</b>  |                           |
+//! | `BitAnd`          |                           |
+//! | `BitOr`           |                           |
+//! | `BitXor`          |                           |
+//! | `ShiftLeft`       |                           |
+//! | `ShiftRight`      |                           |
+//! | <b>Misc</b>       |                           |
+//! | `Call`            |                           |
+//! | `Assert`          |                           |
 //!
 //! [`Machine`]: ../vm/struct.Machine.html
 
-macro_rules! opcodes {
-    ($name:ident => $($op:ident = $num:expr,)*) => {
-        /// Enum of Piccolo opcodes.
-        #[derive(Debug, PartialEq, Clone, Copy)]
-        #[repr(u8)]
-        pub enum $name {
-            $($op = $num,)*
-        }
+use serde::{Deserialize, Serialize};
 
-        impl From<$name> for u8 {
-            fn from(op: $name) -> u8 {
-                match op {
-                    $($name::$op => $num,)*
-                }
-            }
-        }
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum Opcode {
+    Pop,
+    Return,
 
-        impl From<u8> for $name {
-            fn from(v: u8) -> $name {
-                match v {
-                    $($num => $name::$op,)*
-                    _ => panic!("{} does not correspond to any opcode in {}", v, stringify!($name))
-                }
-            }
-        }
-    };
+    Constant(u16),
+    Nil,
+    True,
+    False,
+
+    Negate,
+    Not,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulo,
+
+    Equal,
+    Greater,
+    Less,
+    GreaterEqual,
+    LessEqual,
+
+    GetLocal(u16),
+    SetLocal(u16),
+    GetGlobal(u16),
+    SetGlobal(u16),
+    DeclareGlobal(u16),
+
+    JumpForward(u16),
+    JumpFalse(u16),
+    JumpTrue(u16),
+    JumpBack(u16),
+
+    BitAnd,
+    BitOr,
+    BitXor,
+    ShiftLeft,
+    ShiftRight,
+
+    Call(u16),
+
+    Assert(u16),
 }
 
-opcodes!(Opcode =>
-    Pop             = 0x00,
-    Return          = 0x01,
-
-    Constant        = 0x02,
-    Nil             = 0x03,
-    True            = 0x04,
-    False           = 0x05,
-
-    Negate          = 0x06,
-    Not             = 0x07,
-    Add             = 0x08,
-    Subtract        = 0x09,
-    Multiply        = 0x0a,
-    Divide          = 0x0b,
-    Modulo          = 0x0c,
-
-    Equal           = 0x0d,
-    Greater         = 0x0e,
-    Less            = 0x0f,
-    GreaterEqual    = 0x10,
-    LessEqual       = 0x11,
-
-    GetLocal        = 0x12,
-    SetLocal        = 0x13,
-    GetGlobal       = 0x14,
-    SetGlobal       = 0x15,
-    DeclareGlobal   = 0x16,
-
-    JumpForward     = 0x17,
-    JumpFalse       = 0x18,
-    JumpTrue        = 0x19,
-    JumpBack        = 0x1a,
-
-    BitAnd          = 0x1b,
-    BitOr           = 0x1c,
-    BitXor          = 0x1d,
-    ShiftLeft       = 0x1e,
-    ShiftRight      = 0x1f,
-
-    Call            = 0x20,
-
-    Assert          = 0xff,
-);
-
-pub(crate) fn op_len(op: Opcode) -> usize {
-    match op {
-        Opcode::Constant
-        | Opcode::GetLocal
-        | Opcode::SetLocal
-        | Opcode::GetGlobal
-        | Opcode::SetGlobal
-        | Opcode::DeclareGlobal
-        | Opcode::JumpForward
-        | Opcode::JumpFalse
-        | Opcode::JumpTrue
-        | Opcode::JumpBack
-        | Opcode::Call
-        | Opcode::Assert => 3,
-        _ => 1,
+impl Opcode {
+    pub(crate) fn has_arg(&self) -> bool {
+        matches!(
+            self,
+            Opcode::Constant(_)
+                | Opcode::GetLocal(_)
+                | Opcode::SetLocal(_)
+                | Opcode::GetGlobal(_)
+                | Opcode::SetGlobal(_)
+                | Opcode::DeclareGlobal(_)
+                | Opcode::JumpForward(_)
+                | Opcode::JumpFalse(_)
+                | Opcode::JumpTrue(_)
+                | Opcode::JumpBack(_)
+                | Opcode::Call(_)
+                | Opcode::Assert(_)
+        )
     }
 }

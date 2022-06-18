@@ -55,78 +55,64 @@ impl Module {
     }
 
     pub(crate) fn index_of(&self, chunk: &Chunk) -> usize {
-        self.chunks
-            .iter()
-            .position(|c| c.data == chunk.data)
-            .unwrap()
+        self.chunks.iter().position(|c| c.ops == chunk.ops).unwrap()
     }
 }
 
 /// Stores a piece of compiled Piccolo bytecode.
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Chunk {
-    pub(crate) data: Vec<u8>,
+    pub(crate) ops: Vec<Opcode>,
     // each SourcePos represents one instruction
     pub(crate) lines: Vec<Vec<SourcePos>>,
 }
 
 impl Chunk {
     pub(crate) fn len(&self) -> usize {
-        self.data.len()
+        self.ops.len()
     }
 
-    pub(crate) fn write_u8<T: Into<u8>>(&mut self, byte: T, pos: SourcePos) {
-        let byte = byte.into();
-        trace!("write u8 {:04x}={:02x}", self.data.len(), byte);
+    pub(crate) fn write(&mut self, op: Opcode, pos: SourcePos) {
+        trace!("write {:04x}={op:?}", self.ops.len());
 
-        self.data.push(byte);
+        self.ops.push(op);
         self.add_to_line(pos);
     }
 
-    pub(crate) fn write_u16<T: Into<u16>>(&mut self, bytes: T, pos: SourcePos) {
-        let [low, high] = bytes.into().to_le_bytes();
-        self.write_u8(low, pos);
-        self.write_u8(high, pos);
-    }
-
-    pub(crate) fn write_arg_u16<T: Into<u8>>(&mut self, op: T, arg: u16, pos: SourcePos) {
-        self.write_u8(op, pos);
-        self.write_u16(arg, pos);
-    }
-
     pub(crate) fn start_jump(&mut self, op: Opcode, pos: SourcePos) -> usize {
-        trace!("write jump to index {:x}", self.data.len());
-        self.write_u8(op, pos);
-        self.write_u8(Opcode::Assert, pos);
-        self.write_u8(Opcode::False, pos);
-        self.data.len() - 2
+        trace!("write jump to index {:x}", self.ops.len());
+        self.write(op, pos);
+        self.ops.len() - 1
     }
 
     pub(crate) fn patch_jump(&mut self, offset: usize) {
-        let jump = self.data.len() - offset - 2;
+        let jump = self.ops.len() - offset;
         if jump > u16::MAX as usize {
             panic!("cannot jump further than u16::MAX instructions");
         } else {
-            let [low, high] = (jump as u16).to_le_bytes();
-            trace!("patch jump at index {:x}={:04x}", jump, offset);
-            self.data[offset] = low;
-            self.data[offset + 1] = high;
+            trace!(
+                "patch jump at index {offset:x}={jump:04x} ({:?})",
+                self.ops[offset]
+            );
+            let jump = jump as u16;
+            self.ops[offset] = match self.ops[offset] {
+                Opcode::JumpForward(_) => Opcode::JumpForward(jump),
+                Opcode::JumpBack(_) => Opcode::JumpBack(jump),
+                Opcode::JumpTrue(_) => Opcode::JumpTrue(jump),
+                Opcode::JumpFalse(_) => Opcode::JumpFalse(jump),
+                _ => unreachable!(
+                    "non-jump {jump} at {offset} = {:?}\n{:#?}",
+                    self.ops[offset], self.ops
+                ),
+            };
         }
     }
 
     pub(crate) fn write_jump_back(&mut self, offset: usize, pos: SourcePos) {
         // we haven't written the JumpBack instruction yet, so we need to add it
         // in order to calculate the actual offset when we write the jump instruction
-        let offset = self.data.len() - offset + 3;
-        self.write_arg_u16(Opcode::JumpBack, offset as u16, pos);
-    }
-
-    pub(crate) fn read_short(&self, offset: usize) -> u16 {
-        trace!("read short {:x}", offset);
-
-        let low = self.data[offset];
-        let high = self.data[offset + 1];
-        u16::from_le_bytes([low, high])
+        let offset = self.ops.len() - offset;
+        self.write(Opcode::JumpBack(offset as u16), pos);
     }
 
     pub(crate) fn get_pos_from_index(&self, index: usize) -> SourcePos {
@@ -141,7 +127,7 @@ impl Chunk {
         }
         panic!(
             "no line for index {} {:?} {:?}",
-            index, self.lines, self.data
+            index, self.lines, self.ops
         );
     }
 
@@ -165,10 +151,10 @@ pub fn disassemble(module: &Module, name: &str) -> String {
     for (i, chunk) in module.chunks.iter().enumerate() {
         s.push_str(&format!(" ++ chunk {}\n", i));
         let mut offset = 0;
-        while offset < chunk.data.len() {
+        while offset < chunk.ops.len() {
             s.push_str(&disassemble_instruction(module, chunk, offset));
             s.push('\n');
-            offset += super::op::op_len(chunk.data[offset].into());
+            offset += 1;
         }
     }
 
@@ -176,59 +162,34 @@ pub fn disassemble(module: &Module, name: &str) -> String {
 }
 
 pub fn disassemble_instruction(module: &Module, chunk: &Chunk, offset: usize) -> String {
-    let op = chunk.data[offset].into();
-    let len = super::op::op_len(op);
-    let bytes = format!(
-        "{first:02x}{others}",
-        first = op as u8,
-        others = if len > 1 {
-            let mut s = String::new();
-            for i in 1..len {
-                s.push_str(&format!(" {:02x}", chunk.data[offset + i]));
-            }
-            s
-        } else {
-            String::from("")
-        }
-    );
-
-    let line = chunk.get_pos_from_index(offset);
-    let line_str = format!("{:04x} {:>4}", offset, line);
-
-    let op_str = format!("{:15}", format!("{:?}", op));
+    let op = chunk.ops[offset];
 
     let arg = match op {
-        Opcode::Constant => {
-            let index = chunk.read_short(offset + 1);
+        Opcode::Constant(index) => {
             format!("@{:04x} ({:?})", index, module.constants[index as usize])
         }
-        Opcode::GetLocal | Opcode::SetLocal => {
-            let index = chunk.read_short(offset + 1);
+        Opcode::GetLocal(index) | Opcode::SetLocal(index) => {
             format!("${}", index)
         }
-        Opcode::GetGlobal | Opcode::SetGlobal | Opcode::DeclareGlobal => {
-            let index = chunk.read_short(offset + 1);
+        Opcode::GetGlobal(index) | Opcode::SetGlobal(index) | Opcode::DeclareGlobal(index) => {
             format!("g{:04x} ({:?})", index, module.constants[index as usize])
         }
-        Opcode::JumpForward | Opcode::JumpFalse | Opcode::JumpTrue => {
-            let index = chunk.read_short(offset + 1);
-            format!("+{:04x}", index)
+        Opcode::JumpForward(jump) | Opcode::JumpFalse(jump) | Opcode::JumpTrue(jump) => {
+            format!("+{:04x} -> {:04x}", jump, offset + jump as usize)
         }
-        Opcode::JumpBack => {
-            let index = chunk.read_short(offset + 1);
-            format!("-{:04x}", index)
+        Opcode::JumpBack(jump) => {
+            format!("-{:04x} -> {:04x}", jump, offset - jump as usize)
         }
         _ => String::new(),
     };
 
     format!(
-        "{bytes:9} {line_str} | {op_str} {arg}",
-        bytes = bytes,
-        line_str = line_str,
-        op_str = op_str,
-        arg = arg
+        "{:<6} {offset:04x} {:20} {arg}",
+        format!("{}", chunk.get_pos_from_index(offset)),
+        format!("{op:?}")
     )
 }
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -238,26 +199,26 @@ mod test {
         use crate::runtime::op::Opcode;
 
         let mut c = Chunk::default();
-        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 0
-        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 1
-        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 2
-        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 3
-        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 4
-        c.write_u8(Opcode::Return, SourcePos { line: 1, col: 1 }); // 5
-        c.write_u8(Opcode::Return, SourcePos { line: 2, col: 1 }); // 6
-        c.write_u8(Opcode::Return, SourcePos { line: 2, col: 1 }); // 7
-        c.write_u8(Opcode::Return, SourcePos { line: 2, col: 1 }); // 8
-        c.write_u8(Opcode::Return, SourcePos { line: 2, col: 1 }); // 9
-        c.write_u8(Opcode::Return, SourcePos { line: 2, col: 1 }); // 10
-        c.write_u8(Opcode::Return, SourcePos { line: 3, col: 1 }); // 11
-        c.write_u8(Opcode::Return, SourcePos { line: 3, col: 1 }); // 12
-        c.write_u8(Opcode::Return, SourcePos { line: 3, col: 1 }); // 13
-        c.write_u8(Opcode::Return, SourcePos { line: 3, col: 1 }); // 14
-        c.write_u8(Opcode::Return, SourcePos { line: 4, col: 1 }); // 15
-        c.write_u8(Opcode::Return, SourcePos { line: 4, col: 1 }); // 16
-        c.write_u8(Opcode::Return, SourcePos { line: 4, col: 1 }); // 17
-        c.write_u8(Opcode::Return, SourcePos { line: 4, col: 1 }); // 18
-        c.write_u8(Opcode::Return, SourcePos { line: 5, col: 1 }); // 19
+        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 0
+        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 1
+        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 2
+        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 3
+        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 4
+        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 5
+        c.write(Opcode::Return, SourcePos { line: 2, col: 1 }); // 6
+        c.write(Opcode::Return, SourcePos { line: 2, col: 1 }); // 7
+        c.write(Opcode::Return, SourcePos { line: 2, col: 1 }); // 8
+        c.write(Opcode::Return, SourcePos { line: 2, col: 1 }); // 9
+        c.write(Opcode::Return, SourcePos { line: 2, col: 1 }); // 10
+        c.write(Opcode::Return, SourcePos { line: 3, col: 1 }); // 11
+        c.write(Opcode::Return, SourcePos { line: 3, col: 1 }); // 12
+        c.write(Opcode::Return, SourcePos { line: 3, col: 1 }); // 13
+        c.write(Opcode::Return, SourcePos { line: 3, col: 1 }); // 14
+        c.write(Opcode::Return, SourcePos { line: 4, col: 1 }); // 15
+        c.write(Opcode::Return, SourcePos { line: 4, col: 1 }); // 16
+        c.write(Opcode::Return, SourcePos { line: 4, col: 1 }); // 17
+        c.write(Opcode::Return, SourcePos { line: 4, col: 1 }); // 18
+        c.write(Opcode::Return, SourcePos { line: 5, col: 1 }); // 19
 
         assert_eq!(c.get_pos_from_index(0).line, 1);
         assert_eq!(c.get_pos_from_index(5).line, 1);

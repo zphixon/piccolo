@@ -24,7 +24,7 @@ pub struct Frame<'chunk, 'value> {
 
 impl Frame<'_, '_> {
     fn step(&mut self) -> Opcode {
-        let op = self.chunk.data[self.ip].into();
+        let op = self.chunk.ops[self.ip].into();
         self.ip += 1;
         op
     }
@@ -66,18 +66,6 @@ impl<'chunk, 'value> FrameStack<'chunk, 'value> {
 
     fn current_chunk(&self) -> &Chunk {
         self.current_frame().chunk
-    }
-
-    fn read_short(&mut self) -> u16 {
-        let s = self.current_chunk().read_short(self.current_ip());
-        self.current_frame_mut().ip += 2;
-        s
-    }
-
-    fn read_constant(&mut self, module: &Module) -> Constant {
-        let constant_index = self.read_short();
-        let c = module.get_constant(constant_index).clone();
-        c
     }
 
     fn unwind(&self) -> Vec<crate::error::Callsite> {
@@ -371,8 +359,8 @@ impl<'value> Machine<'value> {
                 }
                 self.push(result);
             }
-            Opcode::Constant => {
-                let c = frames.read_constant(module);
+            Opcode::Constant(index) => {
+                let c = module.get_constant(index);
                 self.push(Value::from_constant(c, heap));
             }
             Opcode::Nil => self.push(Value::Nil),
@@ -486,18 +474,18 @@ impl<'value> Machine<'value> {
                 )?));
             } // }}}
 
-            Opcode::GetLocal => {
-                let slot = frames.read_short() as usize + frames.current_frame().base;
+            Opcode::GetLocal(slot) => {
+                let slot = slot as usize + frames.current_frame().base;
                 debug!("get local slot {}", slot);
                 self.push(self.stack[slot]);
             }
-            Opcode::SetLocal => {
-                let slot = frames.read_short() as usize + frames.current_frame().base;
+            Opcode::SetLocal(slot) => {
+                let slot = slot as usize + frames.current_frame().base;
                 debug!("set local slot {}", slot);
                 self.stack[slot] = self.pop();
             }
-            Opcode::GetGlobal => {
-                let constant = frames.read_constant(module);
+            Opcode::GetGlobal(index) => {
+                let constant = module.get_constant(index);
                 let name = constant.ref_string();
 
                 if self.globals.contains_key(name) {
@@ -508,8 +496,8 @@ impl<'value> Machine<'value> {
                     }));
                 }
             }
-            Opcode::SetGlobal => {
-                let constant = frames.read_constant(module);
+            Opcode::SetGlobal(index) => {
+                let constant = module.get_constant(index);
                 let name = constant.ref_string();
 
                 let value = self.pop();
@@ -519,16 +507,16 @@ impl<'value> Machine<'value> {
                     }));
                 }
             }
-            Opcode::DeclareGlobal => {
-                let constant = frames.read_constant(module);
+            Opcode::DeclareGlobal(index) => {
+                let constant = module.get_constant(index);
                 let name = constant.ref_string();
 
                 let value = self.pop();
                 self.globals.insert(name.to_string(), value);
             }
 
-            Opcode::JumpForward => {
-                let offset = frames.read_short() as usize;
+            Opcode::JumpForward(offset) => {
+                let offset = offset as usize - 1;
 
                 debug!(
                     "jump ip {:x} -> {:x}",
@@ -537,8 +525,8 @@ impl<'value> Machine<'value> {
                 );
                 frames.current_frame_mut().ip += offset;
             }
-            Opcode::JumpFalse => {
-                let offset = frames.read_short() as usize;
+            Opcode::JumpFalse(offset) => {
+                let offset = offset as usize - 1;
 
                 if !self.peek().is_truthy() {
                     debug!(
@@ -550,8 +538,8 @@ impl<'value> Machine<'value> {
                     frames.current_frame_mut().ip += offset;
                 }
             }
-            Opcode::JumpTrue => {
-                let offset = frames.read_short() as usize;
+            Opcode::JumpTrue(offset) => {
+                let offset = offset as usize - 1;
 
                 if self.peek().is_truthy() {
                     debug!(
@@ -563,8 +551,8 @@ impl<'value> Machine<'value> {
                     frames.current_frame_mut().ip += offset;
                 }
             }
-            Opcode::JumpBack => {
-                let offset = frames.read_short() as usize;
+            Opcode::JumpBack(offset) => {
+                let offset = offset as usize + 1;
 
                 debug!(
                     "loop ip {:x} -> {:x}",
@@ -590,8 +578,7 @@ impl<'value> Machine<'value> {
                 bit_op!(Opcode::ShiftRight, >>);
             }
 
-            Opcode::Call => {
-                let arity = frames.read_short();
+            Opcode::Call(arity) => {
                 if let Value::Function(_) = self.peek_back(arity as usize) {
                     let f = self.peek_back(arity as usize).as_function();
 
@@ -632,9 +619,9 @@ impl<'value> Machine<'value> {
                 }
             }
 
-            Opcode::Assert => {
+            Opcode::Assert(index) => {
                 let v = self.pop();
-                let assertion = frames.read_constant(module);
+                let assertion = module.get_constant(index);
                 if !v.is_truthy() {
                     let assertion = assertion.ref_string().to_owned();
                     return Err(PiccoloError::new(ErrorKind::AssertFailed { assertion }));

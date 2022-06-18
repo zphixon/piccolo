@@ -36,21 +36,21 @@ impl<'data> Value<'data> {
         }
     }
 
-    pub fn from_constant(c: Constant, h: &mut Heap<'data>) -> Value<'data> {
+    pub fn from_constant(c: &Constant, h: &mut Heap<'data>) -> Value<'data> {
         match c {
-            Constant::Bool(v) => Value::Bool(v),
-            Constant::Integer(v) => Value::Integer(v),
-            Constant::Double(v) => Value::Double(v),
+            Constant::Bool(v) => Value::Bool(*v),
+            Constant::Integer(v) => Value::Integer(*v),
+            Constant::Double(v) => Value::Double(*v),
             Constant::String(v) => Value::String({
-                let root = h.manage(v);
+                let root = h.manage(v.to_owned());
                 root.as_gc()
             }),
             Constant::Function(v) => Value::Function({
-                let root = h.manage(v);
+                let root = h.manage(v.to_owned());
                 root.as_gc()
             }),
             Constant::NativeFunction(v) => Value::NativeFunction({
-                let root = h.manage(v);
+                let root = h.manage(v.to_owned());
                 root.as_gc()
             }),
             Constant::Nil => Value::Nil,
