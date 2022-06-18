@@ -209,7 +209,6 @@ fn maybe_exec<'source, 'heap>(
 
 fn print_errors(errors: Vec<PiccoloError>) {
     if errors.is_empty() {
-        return;
     } else if errors.len() == 1 {
         println!("Error {}", errors[0])
     } else {

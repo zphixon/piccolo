@@ -93,9 +93,9 @@ impl fmt::Display for PiccoloError {
             f,
             "{file}{flsep}{line}{separator}{kind}{msg}{nl}{stack_trace}",
             file = if self.file.is_some() {
-                format!("{}", self.file.as_ref().unwrap())
+                self.file.as_ref().unwrap()
             } else {
-                "".into()
+                ""
             },
             flsep = if self.file.is_some() && self.pos.is_some() {
                 ":"
