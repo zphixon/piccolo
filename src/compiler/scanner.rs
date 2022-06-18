@@ -30,7 +30,8 @@ pub struct Scanner<'a> {
     tokens: VecDeque<Token<'a>>,
     start: usize,
     current: usize,
-    pos: SourcePos,
+    start_pos: SourcePos,
+    current_pos: SourcePos,
 }
 
 impl<'a> Scanner<'a> {
@@ -41,7 +42,8 @@ impl<'a> Scanner<'a> {
             tokens: VecDeque::new(),
             start: 0,
             current: 0,
-            pos: SourcePos::with_line(1),
+            start_pos: SourcePos::one(),
+            current_pos: SourcePos::one(),
         }
     }
 
@@ -97,7 +99,7 @@ impl<'a> Scanner<'a> {
             return Ok(&self.tokens[self.tokens.len() - 1]);
         }
 
-        self.start = self.current;
+        self.set_start();
         let tk = match self.advance_char() {
             b'[' => TokenKind::LeftBracket,
             b']' => TokenKind::RightBracket,
@@ -288,7 +290,6 @@ impl<'a> Scanner<'a> {
     }
 
     fn scan_string(&mut self) -> Result<TokenKind, PiccoloError> {
-        let pos_start = self.pos;
         while self.peek_char() != b'"' && !self.is_at_end() {
             if self.peek_char() == b'\n' {
                 self.advance_line();
@@ -303,7 +304,7 @@ impl<'a> Scanner<'a> {
         }
 
         if self.is_at_end() {
-            Err(PiccoloError::new(ErrorKind::UnterminatedString).pos(pos_start))
+            Err(PiccoloError::new(ErrorKind::UnterminatedString).pos(self.start_pos))
         } else {
             self.advance_char();
             Ok(TokenKind::String)
@@ -334,7 +335,7 @@ impl<'a> Scanner<'a> {
             Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
                 literal: value.to_owned(),
             })
-            .pos(self.pos))
+            .pos(self.current_pos))
         }
     }
 
@@ -356,20 +357,13 @@ impl<'a> Scanner<'a> {
             Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
                 literal: value.to_owned(),
             })
-            .pos(self.pos))
+            .pos(self.current_pos))
         }
     }
 
     fn add_token(&mut self, kind: TokenKind) -> Result<(), PiccoloError> {
-        let lexeme = self.lexeme()?;
-        let mut pos = self.pos;
-        if kind != TokenKind::Eof {
-            // TODO make Scanner.start use SourcePos instead
-            pos.col += 1;
-            pos.col = pos.col.saturating_sub(lexeme.len());
-        }
-
-        self.tokens.push_back(Token::new(kind, lexeme, pos));
+        self.tokens
+            .push_back(Token::new(kind, self.lexeme()?, self.start_pos));
 
         Ok(())
     }
@@ -384,13 +378,18 @@ impl<'a> Scanner<'a> {
         self.current >= self.source.len()
     }
 
+    fn set_start(&mut self) {
+        self.start = self.current;
+        self.start_pos = self.current_pos;
+    }
+
     fn advance_line(&mut self) {
-        self.pos.line += 1;
-        self.pos.col = 0;
+        self.current_pos.line += 1;
+        self.current_pos.col = 1;
     }
 
     fn advance_char(&mut self) -> u8 {
-        self.pos.col += 1;
+        self.current_pos.col += 1;
         self.current += 1;
         self.source[self.current - 1]
     }

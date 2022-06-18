@@ -91,14 +91,19 @@ impl fmt::Display for PiccoloError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{line}{file}{separator}{kind}{msg}{nl}{stack_trace}",
-            line = if self.pos.is_some() {
-                format!("at line {} ", self.pos.unwrap())
+            "{file}{flsep}{line}{separator}{kind}{msg}{nl}{stack_trace}",
+            file = if self.file.is_some() {
+                format!("{}", self.file.as_ref().unwrap())
             } else {
                 "".into()
             },
-            file = if self.file.is_some() {
-                format!("in file {} ", self.file.as_ref().unwrap())
+            flsep = if self.file.is_some() && self.pos.is_some() {
+                ":"
+            } else {
+                " "
+            },
+            line = if self.pos.is_some() {
+                format!("{} ", self.pos.unwrap())
             } else {
                 "".into()
             },

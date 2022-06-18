@@ -212,6 +212,10 @@ impl SourcePos {
         SourcePos { line: 0, col: 0 }
     }
 
+    pub(crate) fn one() -> Self {
+        SourcePos { line: 1, col: 1 }
+    }
+
     pub(crate) fn with_line(line: usize) -> Self {
         SourcePos { line, col: 0 }
     }
