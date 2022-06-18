@@ -15,12 +15,12 @@ use {error::PiccoloError, runtime::value::Constant, std::path::Path};
 
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     use {
-        compiler::{ast, emitter, parser, scanner::Scanner},
+        compiler::{ast, emitter, parser},
         runtime::{chunk, memory::Heap, vm::Machine},
     };
 
     debug!("parse");
-    let ast = parser::parse_with(&mut Scanner::new(src))?;
+    let ast = parser::parse(src)?;
     debug!("ast\n{}", ast::print_ast(&ast));
 
     debug!("compile");
@@ -56,10 +56,10 @@ pub fn run_bin(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
 }
 
 pub fn compile(src: &Path, dst: &Path) -> Result<(), Vec<PiccoloError>> {
-    use compiler::{emitter, parser, scanner::Scanner};
+    use compiler::{emitter, parser};
 
     let src = std::fs::read_to_string(src).map_err(|e| vec![PiccoloError::from(e)])?;
-    let ast = parser::parse_with(&mut Scanner::new(&src))?;
+    let ast = parser::parse(&src)?;
     let module = emitter::compile(&ast)?;
 
     std::fs::write(
@@ -90,8 +90,7 @@ mod integration {
     #[test]
     fn idk() {
         let src = "a=:1+2";
-        let mut scanner = Scanner::new(src);
-        let ast = parser::parse_with(&mut scanner).unwrap();
+        let ast = parser::parse(src).unwrap();
         println!("{}", ast::print_ast(&ast));
         let module = emitter::compile(&ast).unwrap();
         println!("{}", chunk::disassemble(&module, "idklol"));
@@ -108,8 +107,7 @@ mod integration {
         };
 
         let src = "1+2*3+4";
-        let mut scanner = Scanner::new(src);
-        let ast = parser::parse_with(&mut scanner).unwrap();
+        let ast = parser::parse(src).unwrap();
         if let Stmt::Expr { expr, .. } = &ast[0] {
             let equiv = Expr::Binary {
                 lhs: Box::new(Expr::Binary {

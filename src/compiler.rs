@@ -34,8 +34,7 @@ impl Local {
 }
 
 pub fn compile_chunk(src: &str) -> Result<chunk::Module, Vec<PiccoloError>> {
-    let mut scanner = Scanner::new(src);
-    let ast = parser::parse(&mut scanner)?;
+    let ast = parser::parse(src)?;
     emitter::compile(&ast)
 }
 

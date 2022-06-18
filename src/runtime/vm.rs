@@ -651,12 +651,12 @@ mod test {
     #[test]
     fn how_could_this_happen_to_me() {
         use crate::{
-            compiler::{emitter, parser, scanner::Scanner},
+            compiler::{emitter, parser},
             runtime::{chunk, memory::Heap, vm::Machine},
         };
 
         let src = r#"""+(11*3)+"heehee""#;
-        let ast = parser::parse_with(&mut Scanner::new(src)).expect("parse");
+        let ast = parser::parse(src).expect("parse");
         let module = emitter::compile(&ast).expect("emit");
 
         println!("{}", chunk::disassemble(&module, ""));

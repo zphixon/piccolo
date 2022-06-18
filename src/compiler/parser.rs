@@ -8,9 +8,14 @@ use crate::{
     error::{ErrorKind, PiccoloError},
 };
 
+pub fn parse<'a>(src: &'a str) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
+    let mut scanner = Scanner::new(src);
+    parse_with(&mut scanner)
+}
+
 /// Parse a stream of tokens into an AST. This method collects errors on statement
 /// boundaries, continuing until the end of the file.
-pub fn parse<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
+pub fn parse_with<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
     let mut ast = Vec::new();
     let mut errors = Vec::new();
 
@@ -601,7 +606,7 @@ mod test {
     #[test]
     fn assign() {
         let src = "a += 3";
-        let ast = parse(&mut Scanner::new(src)).unwrap();
+        let ast = parse(src).unwrap();
         assert_eq!(
             ast,
             &[Stmt::Assignment {
@@ -619,7 +624,7 @@ mod test {
     fn path() {
         // TODO think about modules more
         let src = "a:b:c:d";
-        let ast = parse(&mut Scanner::new(src)).unwrap();
+        let ast = parse(src).unwrap();
         assert_eq!(
             ast,
             &[Stmt::Expr {
@@ -636,13 +641,13 @@ mod test {
         );
 
         let src = "a:3";
-        assert!(parse(&mut Scanner::new(src)).is_err());
+        assert!(parse(src).is_err());
 
         let src = "a:";
-        assert!(parse(&mut Scanner::new(src)).is_err());
+        assert!(parse(src).is_err());
 
         let src = ":a";
-        assert!(parse(&mut Scanner::new(src)).is_err());
+        assert!(parse(src).is_err());
     }
 
     #[test]

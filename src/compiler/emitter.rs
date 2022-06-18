@@ -899,14 +899,14 @@ mod test {
     #[test]
     fn emitter() {
         use crate::{
-            compiler::{emitter, parser, scanner::Scanner},
+            compiler::{emitter, parser},
             runtime::{chunk, memory::Heap, vm::Machine},
         };
 
-        let ast = parser::parse_with(&mut Scanner::new(
+        let ast = parser::parse(
             "x =: 32\n\
              retn x",
-        ))
+        )
         .unwrap();
 
         let module = emitter::compile(&ast).unwrap();
@@ -920,17 +920,14 @@ mod test {
     #[test]
     fn reentrant() {
         use crate::{
-            compiler::{emitter, parser, scanner::Scanner},
+            compiler::{emitter, parser},
             runtime::chunk,
         };
 
-        let ast1 = parser::parse_with(&mut Scanner::new("x=:3")).unwrap();
-        let ast2 = parser::parse_with(&mut Scanner::new("assert x == 3")).unwrap();
-        let ast3 = parser::parse_with(&mut Scanner::new(
-            "fn z(a) do\n  print(\"a is\", a)\n  end\n",
-        ))
-        .unwrap();
-        let ast4 = parser::parse_with(&mut Scanner::new("z(x)")).unwrap();
+        let ast1 = parser::parse("x=:3").unwrap();
+        let ast2 = parser::parse("assert x == 3").unwrap();
+        let ast3 = parser::parse("fn z(a) do\n  print(\"a is\", a)\n  end\n").unwrap();
+        let ast4 = parser::parse("z(x)").unwrap();
 
         let mut emitter = emitter::Emitter::new();
         emitter::compile_with(&mut emitter, &ast1).unwrap();

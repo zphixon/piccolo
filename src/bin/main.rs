@@ -170,16 +170,14 @@ fn maybe_exec<'source, 'heap>(
     print_compiled: bool,
     verify_syntax: bool,
 ) -> Result<Option<(Emitter, Heap<'heap>, Machine<'heap>)>, Vec<PiccoloError>> {
-    let mut scanner = Scanner::new(source);
-
     if print_tokens {
         println!("=== tokens ===");
+        let scanner = Scanner::new(source);
         let tokens = scanner.scan_all()?;
         compiler::print_tokens(&tokens);
-        scanner = Scanner::new(source);
     }
 
-    let ast = piccolo::compiler::parser::parse_with(&mut scanner)?;
+    let ast = piccolo::compiler::parser::parse(source)?;
 
     if print_ast {
         println!("=== ast ===\n{}", piccolo::compiler::ast::print_ast(&ast));
@@ -262,18 +260,16 @@ fn repl<'heap>(
                 input.push_str(&line);
                 input.push('\n');
 
-                let mut scanner = Scanner::new(&input);
-
                 if print_tokens {
                     println!("=== tokens ===");
+                    let scanner = Scanner::new(&input);
                     let tokens = scanner.scan_all().map_err(|e| print_errors(vec![e]));
                     if let Ok(tokens) = tokens {
                         compiler::print_tokens(&tokens);
                     }
-                    scanner = Scanner::new(&input);
                 }
 
-                let parse = parser::parse_with(&mut scanner);
+                let parse = parser::parse(&input);
                 match parse {
                     Ok(ast) => {
                         if print_ast {
