@@ -78,8 +78,17 @@ fn run() -> Result<(), Vec<PiccoloError>> {
         ..
     } = args;
 
-    if let Some((emitter, heap, machine)) = match args {
+    match args {
         Args { help: true, .. } => unreachable!(),
+
+        Args {
+            verify_syntax: true,
+            interactive: true,
+            ..
+        } => {
+            println!("Cannot use both -v/--verify-syntax and -i/--interactive.");
+            Ok(())
+        }
 
         Args {
             eval: Some(_),
@@ -87,7 +96,7 @@ fn run() -> Result<(), Vec<PiccoloError>> {
             ..
         } => {
             println!("Cannot use both -e/--eval and filename.");
-            return Ok(());
+            Ok(())
         }
 
         Args {
@@ -96,8 +105,8 @@ fn run() -> Result<(), Vec<PiccoloError>> {
             filename: None,
             ..
         } => {
-            println!("Cannot verify syntax without a filename or string.");
-            return Ok(());
+            println!("Cannot use -v/--verify-syntax without a filename or string.");
+            Ok(())
         }
 
         Args {
@@ -106,34 +115,38 @@ fn run() -> Result<(), Vec<PiccoloError>> {
         } => {
             let source =
                 std::fs::read_to_string(&filename).map_err(|e| vec![PiccoloError::from(e)])?;
-            maybe_exec(
+
+            maybe_exec_then_repl(
                 &source,
                 &filename,
                 print_tokens,
                 print_ast,
                 print_compiled,
                 verify_syntax,
-            )?
+                interactive,
+            )
         }
 
         Args {
             eval: Some(eval), ..
-        } => maybe_exec(
+        } => maybe_exec_then_repl(
             &eval,
             "-e/--eval",
             print_tokens,
             print_ast,
             print_compiled,
             verify_syntax,
-        )?,
+            interactive,
+        ),
 
         Args {
             eval: None,
             filename: None,
             ..
-        } => None,
-    } {
-        if interactive {
+        } => {
+            let emitter = Emitter::new();
+            let mut heap = Heap::default();
+            let machine = Machine::new(&mut heap);
             repl(
                 emitter,
                 heap,
@@ -142,33 +155,19 @@ fn run() -> Result<(), Vec<PiccoloError>> {
                 print_ast,
                 print_compiled,
             )
-        } else {
-            Ok(())
         }
-    } else {
-        let mut heap = Heap::default();
-        let machine = Machine::new(&mut heap);
-        let emitter = Emitter::default();
-
-        repl(
-            emitter,
-            heap,
-            machine,
-            print_tokens,
-            print_ast,
-            print_compiled,
-        )
     }
 }
 
-fn maybe_exec<'source, 'heap>(
+fn maybe_exec_then_repl<'source, 'heap>(
     source: &'source str,
     name_for_module: &str,
     print_tokens: bool,
     print_ast: bool,
     print_compiled: bool,
     verify_syntax: bool,
-) -> Result<Option<(Emitter, Heap<'heap>, Machine<'heap>)>, Vec<PiccoloError>> {
+    interactive: bool,
+) -> Result<(), Vec<PiccoloError>> {
     if print_tokens {
         println!("=== tokens ===");
         let scanner = Scanner::new(source);
@@ -192,16 +191,25 @@ fn maybe_exec<'source, 'heap>(
         );
     }
 
-    if verify_syntax {
-        return Ok(None);
+    if !verify_syntax {
+        let mut heap = Heap::default();
+        let mut machine = Machine::new(&mut heap);
+
+        machine.interpret(&mut heap, emitter.module())?;
+
+        if interactive {
+            repl(
+                emitter,
+                heap,
+                machine,
+                print_tokens,
+                print_ast,
+                print_compiled,
+            )?;
+        }
     }
 
-    let mut heap = Heap::default();
-    let mut vm = Machine::new(&mut heap);
-
-    vm.interpret(&mut heap, emitter.module())?;
-
-    Ok(Some((emitter, heap, vm)))
+    Ok(())
 }
 
 fn print_errors(errors: Vec<PiccoloError>) {
