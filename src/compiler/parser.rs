@@ -20,7 +20,7 @@ pub fn parse_with<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<Pi
     let mut errors = Vec::new();
 
     while scanner.peek_token(0)?.kind != TokenKind::Eof {
-        trace!("statement");
+        trace!("statement {:?}", scanner.peek_token(0)?);
 
         match parse_statement(scanner) {
             Ok(stmt) => ast.push(stmt),
@@ -61,7 +61,7 @@ fn parse_statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloErr
     } else if scanner.peek_token(0)?.kind == TokenKind::Data {
         parse_data(scanner)
     } else {
-        trace!("expr");
+        trace!("expr {:?}", scanner.peek_token(0)?);
 
         let token = *scanner.peek_token(0)?;
         let expr = parse_expression(scanner)?;
@@ -71,7 +71,7 @@ fn parse_statement<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloErr
 }
 
 fn parse_assignment<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    trace!("assign");
+    trace!("assign {:?}", scanner.peek_token(0)?);
 
     let name = consume(scanner, TokenKind::Identifier)?;
     let op = scanner.next_token()?;
@@ -81,7 +81,7 @@ fn parse_assignment<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloEr
 }
 
 fn parse_declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    trace!("declare");
+    trace!("declare {:?}", scanner.peek_token(0)?);
 
     let name = consume(scanner, TokenKind::Identifier)?;
     let op = consume(scanner, TokenKind::Declare)?;
@@ -91,7 +91,7 @@ fn parse_declaration<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloE
 }
 
 fn parse_break<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    trace!("break");
+    trace!("break {:?}", scanner.peek_token(0)?);
 
     let break_ = scanner.next_token()?;
 
@@ -99,7 +99,7 @@ fn parse_break<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
 }
 
 fn parse_continue<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    trace!("continue");
+    trace!("continue {:?}", scanner.peek_token(0)?);
 
     let continue_ = scanner.next_token()?;
 
@@ -107,7 +107,7 @@ fn parse_continue<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloErro
 }
 
 fn parse_retn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    trace!("retn");
+    trace!("retn {:?}", scanner.peek_token(0)?);
 
     let retn = scanner.next_token()?;
 
@@ -121,7 +121,7 @@ fn parse_retn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
 }
 
 fn parse_assert<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    trace!("assert");
+    trace!("assert {:?}", scanner.peek_token(0)?);
 
     let assert = scanner.next_token()?;
     let value = parse_expression(scanner)?;
@@ -130,7 +130,7 @@ fn parse_assert<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError>
 }
 
 fn parse_do<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    trace!("do");
+    trace!("do {:?}", scanner.peek_token(0)?);
 
     scanner.next_token()?;
     let body = parse_block(scanner)?;
@@ -140,7 +140,7 @@ fn parse_do<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
 }
 
 fn parse_if<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    trace!("if");
+    trace!("if {:?}", scanner.peek_token(0)?);
 
     let if_ = scanner.next_token()?;
     let cond = parse_expression(scanner)?;
@@ -169,7 +169,7 @@ fn parse_if<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
 }
 
 fn parse_while<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    trace!("while");
+    trace!("while {:?}", scanner.peek_token(0)?);
     let while_ = scanner.next_token()?;
     let cond = parse_expression(scanner)?;
     consume(scanner, TokenKind::Do)?;
@@ -185,7 +185,7 @@ fn parse_while<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> 
 }
 
 fn parse_for<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    trace!("for");
+    trace!("for {:?}", scanner.peek_token(0)?);
     let for_ = scanner.next_token()?;
 
     let init = Box::new(parse_declaration(scanner)?);
@@ -211,7 +211,7 @@ fn parse_for<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
 }
 
 fn parse_fn<'a>(scanner: &mut Scanner<'a>) -> Result<Stmt<'a>, PiccoloError> {
-    trace!("fn");
+    trace!("fn {:?}", scanner.peek_token(0)?);
     scanner.next_token()?;
     let name = consume(scanner, TokenKind::Identifier)?;
 
@@ -267,7 +267,10 @@ fn block_until_else_or_end<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>
     while scanner.peek_token(0)?.kind != TokenKind::End
         && scanner.peek_token(0)?.kind != TokenKind::Else
     {
-        trace!("declaration in block until else");
+        trace!(
+            "declaration in block until else {:?}",
+            scanner.peek_token(0)?
+        );
         stmts.push(parse_statement(scanner)?);
     }
 
@@ -278,7 +281,7 @@ fn parse_block<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, PiccoloEr
     let mut stmts = Vec::new();
 
     while scanner.peek_token(0)?.kind != TokenKind::End {
-        trace!("declaration in block");
+        trace!("declaration in block {:?}", scanner.peek_token(0)?);
         stmts.push(parse_statement(scanner)?);
     }
 
@@ -300,12 +303,12 @@ fn consume<'a>(scanner: &mut Scanner<'a>, kind: TokenKind) -> Result<Token<'a>, 
 }
 
 fn parse_expression<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("expression");
+    trace!("expression {:?}", scanner.peek_token(0)?);
     parse_logic_or(scanner)
 }
 
 fn parse_logic_or<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("logic_or");
+    trace!("logic_or {:?}", scanner.peek_token(0)?);
     let mut logic_and = parse_logic_and(scanner)?;
 
     loop {
@@ -322,7 +325,7 @@ fn parse_logic_or<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloErro
 }
 
 fn parse_logic_and<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("logic_and");
+    trace!("logic_and {:?}", scanner.peek_token(0)?);
     let mut bit_or = parse_bit_or(scanner)?;
 
     loop {
@@ -340,7 +343,7 @@ fn parse_logic_and<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloErr
 
 // TODO: probably move these below equality
 fn parse_bit_or<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("bit_or");
+    trace!("bit_or {:?}", scanner.peek_token(0)?);
     let mut bit_xor = parse_bit_xor(scanner)?;
 
     loop {
@@ -357,7 +360,7 @@ fn parse_bit_or<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError>
 }
 
 fn parse_bit_xor<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("bit_xor");
+    trace!("bit_xor {:?}", scanner.peek_token(0)?);
     let mut bit_and = parse_bit_and(scanner)?;
 
     loop {
@@ -374,7 +377,7 @@ fn parse_bit_xor<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
 }
 
 fn parse_bit_and<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("bit_and");
+    trace!("bit_and {:?}", scanner.peek_token(0)?);
     let mut equality = parse_equality(scanner)?;
 
     loop {
@@ -391,7 +394,7 @@ fn parse_bit_and<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
 }
 
 fn parse_equality<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("equality");
+    trace!("equality {:?}", scanner.peek_token(0)?);
     let mut comparison = parse_comparison(scanner)?;
 
     loop {
@@ -408,7 +411,7 @@ fn parse_equality<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloErro
 }
 
 fn parse_comparison<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("comparison");
+    trace!("comparison {:?}", scanner.peek_token(0)?);
     let mut bit_shift = parse_bit_shift(scanner)?;
 
     loop {
@@ -428,7 +431,7 @@ fn parse_comparison<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloEr
 }
 
 fn parse_bit_shift<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("bit_shift");
+    trace!("bit_shift {:?}", scanner.peek_token(0)?);
     let mut term = parse_term(scanner)?;
 
     loop {
@@ -445,7 +448,7 @@ fn parse_bit_shift<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloErr
 }
 
 fn parse_term<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("term");
+    trace!("term {:?}", scanner.peek_token(0)?);
     let mut factor = parse_factor(scanner)?;
 
     loop {
@@ -462,7 +465,7 @@ fn parse_term<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
 }
 
 fn parse_factor<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("factor");
+    trace!("factor {:?}", scanner.peek_token(0)?);
     let mut unary = parse_unary(scanner)?;
 
     loop {
@@ -482,7 +485,7 @@ fn parse_factor<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError>
 }
 
 fn parse_unary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("unary");
+    trace!("unary {:?}", scanner.peek_token(0)?);
     let t = scanner.peek_token(0)?;
     if matches!(t.kind, TokenKind::Not | TokenKind::Minus) {
         let op = scanner.next_token()?;
@@ -494,7 +497,7 @@ fn parse_unary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> 
 }
 
 fn parse_call<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("call");
+    trace!("call {:?}", scanner.peek_token(0)?);
     let mut primary = parse_primary(scanner)?;
 
     loop {
@@ -523,7 +526,7 @@ fn parse_call<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
 }
 
 fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError> {
-    trace!("primary");
+    trace!("primary {:?}", scanner.peek_token(0)?);
     let t = scanner.peek_token(0)?;
     if t.kind == TokenKind::LeftParen {
         consume(scanner, TokenKind::LeftParen)?;
@@ -573,7 +576,7 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
 }
 
 fn parse_parameters<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Token<'a>>, PiccoloError> {
-    trace!("parameters");
+    trace!("parameters {:?}", scanner.peek_token(0)?);
     let mut params = vec![];
     if scanner.peek_token(0)?.kind == TokenKind::Identifier {
         params.push(consume(scanner, TokenKind::Identifier)?);
@@ -586,7 +589,7 @@ fn parse_parameters<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Token<'a>>, Pic
 }
 
 fn parse_arguments<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Expr<'a>>, PiccoloError> {
-    trace!("arguments");
+    trace!("arguments {:?}", scanner.peek_token(0)?);
     let mut args = vec![];
     if scanner.peek_token(0)?.kind != TokenKind::RightParen {
         args.push(parse_expression(scanner)?);
