@@ -100,7 +100,7 @@ fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> 
         //     => compile_index(emitter, right_bracket, object, index),
         Expr::Fn { fn_, args, arity, body, end }
             => compile_lambda(emitter, *fn_, args, *arity, body, *end),
-        _ => todo!("{:?}", expr),
+        _ => Err(PiccoloError::todo(format!("compile_expr: {expr:#?}"))),
     }
 }
 
@@ -416,11 +416,11 @@ fn compile_assert(emitter: &mut Emitter, assert: Token, value: &Expr) -> Result<
 
 fn compile_data(
     _emitter: &mut Emitter,
-    _name: Token,
+    name: Token,
     _methods: &[Stmt],
     _fields: &[Stmt],
 ) -> Result<(), PiccoloError> {
-    todo!()
+    Err(PiccoloError::todo(format!("compile_data {}", name.lexeme)))
 }
 
 fn compile_literal(emitter: &mut Emitter, literal: Token) -> Result<(), PiccoloError> {

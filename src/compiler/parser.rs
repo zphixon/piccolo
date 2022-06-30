@@ -560,7 +560,8 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>) -> Result<Expr<'a>, PiccoloError
             end,
         })
     } else if t.kind == TokenKind::Me {
-        todo!()
+        consume(scanner, TokenKind::Me)?;
+        Err(PiccoloError::todo(String::from("parse me in expr")))
     } else {
         let t = scanner.next_token()?;
         Err(PiccoloError::new(ErrorKind::ExpectedExpression {

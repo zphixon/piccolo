@@ -111,6 +111,7 @@ pub(crate) fn escape_string(t: Token) -> Result<String, PiccoloError> {
 ///
 /// Some of these don't currently have a use, and only exist for the creation of
 /// syntax errors :^)
+#[cfg_attr(fuzzing, derive(arbitrary::Arbitrary))]
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     // keywords
@@ -201,6 +202,7 @@ pub enum TokenKind {
     Eof,
 }
 
+#[cfg_attr(fuzzing, derive(arbitrary::Arbitrary))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct SourcePos {
     pub line: usize,
@@ -226,6 +228,7 @@ impl fmt::Display for SourcePos {
 /// Represents a token in source code.
 ///
 /// Maintains a reference to the original source.
+#[cfg_attr(fuzzing, derive(arbitrary::Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct Token<'a> {
     pub(crate) kind: TokenKind,

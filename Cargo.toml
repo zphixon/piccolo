@@ -23,3 +23,6 @@ paste = '1.0.7'
 
 [profile.release]
 debug = true
+
+[target.'cfg(fuzzing)'.dependencies]
+arbitrary = { version = '*', features = ['derive'] }

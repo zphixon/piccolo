@@ -33,6 +33,16 @@ impl PiccoloError {
         }
     }
 
+    pub(crate) fn todo(why: String) -> Self {
+        PiccoloError {
+            kind: ErrorKind::Todo { why },
+            pos: None,
+            file: None,
+            msg: None,
+            stack: None,
+        }
+    }
+
     pub fn unknown(err: impl Into<Box<dyn std::error::Error>>) -> Self {
         PiccoloError {
             kind: ErrorKind::Unknown { err: err.into() },
@@ -196,6 +206,9 @@ pub enum ErrorKind {
     DeserializeError {
         err: Box<bincode::ErrorKind>,
     },
+    Todo {
+        why: String,
+    },
     Unknown {
         err: Box<dyn std::error::Error>,
     },
@@ -243,6 +256,8 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Incorrect arity: function {} expected {} arguments, got {}", name, exp, got),
             ErrorKind::DeserializeError { err }
                 => write!(f, "Cannot read binary file: {}", err),
+            ErrorKind::Todo { why }
+                => write!(f, "TODO: {why}"),
             ErrorKind::Unknown { err }
                 => write!(f, "{}", err),
         }
