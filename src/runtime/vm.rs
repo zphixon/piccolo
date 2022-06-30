@@ -286,13 +286,16 @@ impl<'value> Machine<'value> {
 
         // boolean argument to enable/disable string concatenation
         macro_rules! bin_op {
-            ($opcode:path, $op:tt, nostring) => {
-                bin_op!($opcode, $op, false)
+            ($opcode:path, $op:tt) => {
+                bin_op!($opcode, $op, false, true)
             };
-            ($opcode:path, $op:tt, string) => {
-                bin_op!($opcode, $op, true)
+            ($opcode:path, $op:tt, may concat strings) => {
+                bin_op!($opcode, $op, true, true)
             };
-            ($opcode:path, $op:tt, $allow_string:tt) => {
+            ($opcode:path, $op:tt, rhs may not be zero) => {
+                bin_op!($opcode, $op, false, false)
+            };
+            ($opcode:path, $op:tt, $allow_string:tt, $allow_rhs_zero:tt) => {
                 let rhs = self.pop();
                 let lhs = self.pop();
                 if lhs.is_double() {
@@ -314,6 +317,9 @@ impl<'value> Machine<'value> {
                     let lhs = lhs.into::<i64>();
                     if rhs.is_integer() {
                         let rhs = rhs.into::<i64>();
+                        if rhs == 0 && !$allow_rhs_zero {
+                            return Err(PiccoloError::new(ErrorKind::DivideByZero));
+                        }
                         self.push(Value::Integer(lhs $op rhs));
                     } else if rhs.is_double() {
                         let rhs = rhs.into::<f64>();
@@ -392,19 +398,19 @@ impl<'value> Machine<'value> {
                 }
             }
             Opcode::Add => {
-                bin_op!(Opcode::Add, +, string);
+                bin_op!(Opcode::Add, +, may concat strings);
             }
             Opcode::Subtract => {
-                bin_op!(Opcode::Subtract, -, nostring);
+                bin_op!(Opcode::Subtract, -);
             }
             Opcode::Multiply => {
-                bin_op!(Opcode::Multiply, *, nostring);
+                bin_op!(Opcode::Multiply, *);
             }
             Opcode::Divide => {
-                bin_op!(Opcode::Divide, /, nostring);
+                bin_op!(Opcode::Divide, /, rhs may not be zero);
             }
             Opcode::Modulo => {
-                bin_op!(Opcode::Modulo, %, nostring);
+                bin_op!(Opcode::Modulo, %, rhs may not be zero);
             }
 
             // comparison {{{
