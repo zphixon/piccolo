@@ -300,7 +300,9 @@ impl<'a> Scanner<'a> {
                 self.advance_line();
             }
 
-            self.advance_char();
+            if !self.is_at_end() {
+                self.advance_char();
+            }
         }
 
         if self.is_at_end() {
