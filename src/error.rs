@@ -181,6 +181,9 @@ pub enum ErrorKind {
         exp: String,
     },
     DivideByZero,
+    InvalidShift {
+        value: i64,
+    },
     UndefinedVariable {
         name: String,
     },
@@ -243,6 +246,8 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Cannot compare {} and {}", exp, got),
             ErrorKind::DivideByZero
                 => write!(f, "Cannot divide by zero"),
+            ErrorKind::InvalidShift { value }
+                => write!(f, "Cannot shift by {value}"),
             ErrorKind::UndefinedVariable { name }
                 => write!(f, "Undefined variable '{}'", name),
             ErrorKind::UnknownField { obj, name }
