@@ -74,14 +74,17 @@ impl Log for SimpleLogger {
 
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
-            let level = format!("{:5}", record.level());
-            let level = color_with_level(&level, record.level());
+            let mut level = format!("{:5}", record.level());
 
-            let module = record
+            let mut module = record
                 .module_path()
                 .map(|module| format!("[{module}]"))
                 .unwrap_or("(unknown)".to_string());
-            let module = color_with_level(&module, record.level());
+
+            if atty::is(atty::Stream::Stdout) {
+                level = color_with_level(&level, record.level());
+                module = color_with_level(&module, record.level());
+            }
 
             println!("{level} {module} {}", record.args());
         }
