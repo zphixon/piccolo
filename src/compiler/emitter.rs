@@ -696,6 +696,11 @@ impl Emitter {
             "print",
             SourcePos::empty(),
         ));
+        let _ = r.make_global_ident(Token::new(
+            TokenKind::Identifier,
+            "rand",
+            SourcePos::empty(),
+        ));
         r
     }
 

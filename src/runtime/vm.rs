@@ -109,6 +109,10 @@ fn print<'value>(values: &[Value<'value>]) -> Value<'value> {
     Value::Nil
 }
 
+fn rand<'value>(_: &[Value<'value>]) -> Value<'value> {
+    Value::Double(rand::random())
+}
+
 impl<'value> Machine<'value> {
     pub fn new(heap: &mut Heap<'value>) -> Self {
         let mut globals = heap.manage_unique(FnvHashMap::default());
@@ -125,8 +129,20 @@ impl<'value> Machine<'value> {
             }),
         );
 
+        globals.insert(
+            String::from("rand"),
+            Value::NativeFunction({
+                heap.manage(NativeFunction {
+                    arity: 0,
+                    name: "rand".to_string(),
+                })
+                .as_gc()
+            }),
+        );
+
         let mut native_functions = FnvHashMap::default();
         native_functions.insert(String::from("print"), print as PiccoloFunction);
+        native_functions.insert(String::from("rand"), rand as PiccoloFunction);
 
         Machine {
             stack: heap.manage_unique(Vec::new()),
