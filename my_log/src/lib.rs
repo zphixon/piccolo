@@ -1,7 +1,7 @@
 use std::{str::FromStr, sync::RwLock};
 
 use fnv::FnvHashMap;
-use log::{Level, LevelFilter, Log, Metadata, Record, SetLoggerError};
+use log::{Level, LevelFilter, Log, Metadata, Record};
 use once_cell::sync::Lazy;
 use regex::Regex;
 
