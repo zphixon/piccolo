@@ -1,4 +1,8 @@
-use std::{str::FromStr, sync::RwLock};
+use std::{
+    str::FromStr,
+    sync::atomic::{AtomicBool, Ordering},
+    sync::RwLock,
+};
 
 use fnv::FnvHashMap;
 use log::{Level, LevelFilter, Log, Metadata, Record};
@@ -22,12 +26,14 @@ impl Default for LogConfig {
 
 struct SimpleLogger {
     inner: RwLock<LogConfig>,
+    enabled: AtomicBool,
 }
 
 impl SimpleLogger {
     fn new() -> Self {
         Self {
             inner: RwLock::new(Default::default()),
+            enabled: false.into(),
         }
     }
 
@@ -58,6 +64,10 @@ static CRATE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(CRATE).unwrap());
 
 impl Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
+        if !self.enabled.load(Ordering::Relaxed) {
+            return false;
+        }
+
         let inner = self.inner.read().expect("could not acquire read lock");
 
         if let Some(all) = inner.all {
@@ -138,6 +148,7 @@ static LOGGER: Lazy<SimpleLogger> = Lazy::new(|| SimpleLogger::new());
 pub fn init() {
     if let Ok(log) = std::env::var("RUST_LOG") {
         LOGGER.set_config(make_config(&log));
+        LOGGER.enabled.store(true, Ordering::SeqCst);
     }
 
     log::set_logger(&*LOGGER)

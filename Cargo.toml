@@ -7,8 +7,9 @@ default-run = 'main'
 
 [features]
 default = ['log/max_level_trace', 'cli', 'binary']
-cli = ['gumdrop', 'my_log', 'rustyline']
+cli = ['gumdrop', 'rustyline']
 binary = ['bincode', 'serde']
+log = ['my_log']
 
 [dependencies]
 paste = '1.0.7'

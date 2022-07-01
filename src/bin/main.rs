@@ -64,6 +64,7 @@ fn main() {
 }
 
 fn run() -> Result<(), Vec<PiccoloError>> {
+    #[cfg(feature = "log")]
     my_log::init();
 
     let args = Args::parse_args_default_or_exit();
