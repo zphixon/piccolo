@@ -8,6 +8,43 @@ use crate::{
     error::{ErrorKind, PiccoloError},
 };
 
+//pub(crate) enum ParserState {
+//    Stmt,
+//    StmtAssignment,
+//    StmtDeclaration,
+//    StmtBreak,
+//    StmtContinue,
+//    StmtRetn,
+//    StmtAssert,
+//    StmtDo,
+//    StmtIf,
+//    StmtWhile,
+//    StmtFor,
+//    StmtFn,
+//    StmtData,
+//    Expr,
+//    ExprLogicOr,
+//    ExprLogicAnd,
+//    ExprBitOr,
+//    ExprBitXor,
+//    ExprBitAnd,
+//    ExprEquality,
+//    ExprComparison,
+//    ExprBitShift,
+//    ExprTerm,
+//    ExprFactor,
+//    ExprUnary,
+//    ExprCall,
+//    ExprPrimary,
+//    ExprParameters,
+//    ExprArguments,
+//}
+//
+//pub struct Parser<'a> {
+//    scanner: Scanner<'a>,
+//    depth: usize,
+//}
+
 pub fn parse<'a>(src: &'a str) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
     let mut scanner = Scanner::new(src);
     parse_with(&mut scanner)
@@ -93,7 +130,7 @@ fn parse_declaration<'a>(
     Ok(Stmt::Declaration { name, op, value })
 }
 
-fn parse_break<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, PiccoloError> {
+fn parse_break<'a>(scanner: &mut Scanner<'a>, _depth: usize) -> Result<Stmt<'a>, PiccoloError> {
     trace!("break {:?}", scanner.peek_token(0)?);
 
     let break_ = scanner.next_token()?;
@@ -101,7 +138,7 @@ fn parse_break<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, 
     Ok(Stmt::Break { break_ })
 }
 
-fn parse_continue<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, PiccoloError> {
+fn parse_continue<'a>(scanner: &mut Scanner<'a>, _depth: usize) -> Result<Stmt<'a>, PiccoloError> {
     trace!("continue {:?}", scanner.peek_token(0)?);
 
     let continue_ = scanner.next_token()?;
