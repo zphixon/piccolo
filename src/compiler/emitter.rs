@@ -746,7 +746,18 @@ impl Emitter {
     }
 
     fn make_constant(&mut self, c: Constant) -> u16 {
-        self.module_mut().make_constant(c)
+        if let Some((idx, _)) = self
+            .module()
+            .constants()
+            .iter()
+            .enumerate()
+            .find(|(_, constant)| **constant == c)
+        {
+            idx.try_into()
+                .expect("number of constants should fit into u16")
+        } else {
+            self.module_mut().make_constant(c)
+        }
     }
 
     fn make_global_ident(&mut self, name: Token) -> u16 {

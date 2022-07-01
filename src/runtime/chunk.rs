@@ -34,6 +34,10 @@ impl Module {
         }
     }
 
+    pub(crate) fn constants(&self) -> &[Constant] {
+        &self.constants
+    }
+
     pub(crate) fn get_constant(&self, index: u16) -> &Constant {
         self.constants
             .get(index as usize)
@@ -53,6 +57,7 @@ impl Module {
         self.chunks.len() - 1
     }
 
+    #[cfg(feature = "log")]
     pub(crate) fn index_of(&self, chunk: &Chunk) -> usize {
         self.chunks.iter().position(|c| c.ops == chunk.ops).unwrap()
     }

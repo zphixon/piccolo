@@ -1,7 +1,7 @@
 [alias]
 c = ['check', '--all-targets']
 b = ['build', '--all-targets']
-r = ['use run (or rl to enable logging)']
+r = ['use run or rr (or rl to enable logging)']
 rl = ['run', '--features', 'log']
 rr = ['run', '--release']
 tt = ['run', '--bin', 'test_files']
