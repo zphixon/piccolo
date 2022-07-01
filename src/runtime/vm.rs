@@ -1,6 +1,7 @@
 use {
     crate::{
         compiler::SourcePos,
+        debug,
         error::{ErrorKind, PiccoloError},
         runtime::{
             chunk::{Chunk, Module},
@@ -9,6 +10,7 @@ use {
             op::Opcode,
             value::Value,
         },
+        trace,
     },
     fnv::FnvHashMap,
 };
@@ -259,7 +261,7 @@ impl<'value> Machine<'value> {
             },
             module.index_of(frames.current_chunk()),
             frames.current_ip(),
-            self.stack,
+            self.stack
         );
         debug!(
             " └─{} {}",

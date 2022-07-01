@@ -68,7 +68,7 @@ fn run() -> Result<(), Vec<PiccoloError>> {
     my_log::init();
 
     let args = Args::parse_args_default_or_exit();
-    log::debug!("{args:#?}");
+    piccolo::debug!("{args:#?}");
 
     let Args {
         print_tokens,

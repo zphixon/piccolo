@@ -4,6 +4,7 @@ use {
     crate::{
         compiler::SourcePos,
         runtime::{op::Opcode, value::Constant},
+        trace,
     },
     serde::{Deserialize, Serialize},
 };

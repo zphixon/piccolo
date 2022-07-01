@@ -6,6 +6,7 @@ use crate::{
         Scanner, Token, TokenKind,
     },
     error::{ErrorKind, PiccoloError},
+    trace,
 };
 
 pub fn parse<'a>(src: &'a str) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {

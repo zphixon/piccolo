@@ -13,6 +13,7 @@ use {
             op::Opcode,
             value::Constant,
         },
+        trace,
     },
     fnv::FnvHashMap,
 };

@@ -4,28 +4,65 @@
 //! for embedding in Rust projects.
 
 pub extern crate fnv;
-#[macro_use]
-pub extern crate log;
-
 pub mod compiler;
 pub mod error;
 pub mod runtime;
+
+#[macro_export]
+macro_rules! trace {
+    ($($log:expr),*) => {
+        #[cfg(feature = "log")]
+        log::trace!($($log),*);
+    };
+}
+
+#[macro_export]
+macro_rules! debug {
+    ($($log:expr),*) => {
+        #[cfg(feature = "log")]
+        log::debug!($($log),*);
+    };
+}
+
+#[macro_export]
+macro_rules! info {
+    ($($log:expr),*) => {
+        #[cfg(feature = "log")]
+        log::info!($($log),*);
+    };
+}
+
+#[macro_export]
+macro_rules! warn {
+    ($($log:expr),*) => {
+        #[cfg(feature = "log")]
+        log::warn!($($log),*);
+    };
+}
+
+#[macro_export]
+macro_rules! error {
+    ($($log:expr),*) => {
+        #[cfg(feature = "log")]
+        log::error!($($log),*);
+    };
+}
 
 use {error::PiccoloError, runtime::value::Constant, std::path::Path};
 
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     use {
-        compiler::{ast, emitter, parser},
-        runtime::{chunk, memory::Heap, vm::Machine},
+        compiler::{emitter, parser},
+        runtime::{memory::Heap, vm::Machine},
     };
 
     debug!("parse");
     let ast = parser::parse(src)?;
-    debug!("ast\n{}", ast::print_ast(&ast));
+    debug!("ast\n{}", compiler::ast::print_ast(&ast));
 
     debug!("compile");
     let module = emitter::compile(&ast)?;
-    debug!("{}", chunk::disassemble(&module, ""));
+    debug!("{}", runtime::chunk::disassemble(&module, ""));
 
     let mut heap = Heap::default();
 
