@@ -7,7 +7,7 @@ use {
             memory::{Heap, Root, UniqueRoot},
             object::{Function, NativeFunction, Object},
             op::Opcode,
-            value::{Constant, Value},
+            value::Value,
         },
     },
     fnv::FnvHashMap,

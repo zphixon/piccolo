@@ -148,15 +148,16 @@ impl CheckedExpr<'_> {
         match self {
             CheckedExpr::Literal { type_, .. } => type_.id,
             CheckedExpr::Binary { type_, .. } => type_.id,
-            _ => todo!("id for {self:#?}"),
+            //_ => todo!("id for {self:#?}"),
         }
     }
 
+    #[allow(dead_code)]
     fn id(&self) -> TypeId {
         match self {
             CheckedExpr::Literal { type_, .. } => type_.clone(),
             CheckedExpr::Binary { type_, .. } => type_.clone(),
-            _ => todo!("id for {self:#?}"),
+            //_ => todo!("id for {self:#?}"),
         }
     }
 }

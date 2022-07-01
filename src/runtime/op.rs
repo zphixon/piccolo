@@ -98,23 +98,3 @@ pub enum Opcode {
 
     Assert(u16),
 }
-
-impl Opcode {
-    pub(crate) fn has_arg(&self) -> bool {
-        matches!(
-            self,
-            Opcode::Constant(_)
-                | Opcode::GetLocal(_)
-                | Opcode::SetLocal(_)
-                | Opcode::GetGlobal(_)
-                | Opcode::SetGlobal(_)
-                | Opcode::DeclareGlobal(_)
-                | Opcode::JumpForward(_)
-                | Opcode::JumpFalse(_)
-                | Opcode::JumpTrue(_)
-                | Opcode::JumpBack(_)
-                | Opcode::Call(_)
-                | Opcode::Assert(_)
-        )
-    }
-}
