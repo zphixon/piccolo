@@ -1,17 +1,15 @@
 //! Contains types for working with Piccolo values.
 
-use {
-    crate::{
-        compiler::{Token, TokenKind},
-        error::PiccoloError,
-        runtime::{
-            memory::{Gc, Heap},
-            object::{Function, NativeFunction, Object},
-        },
+use crate::{
+    compiler::{Token, TokenKind},
+    error::PiccoloError,
+    runtime::{
+        memory::{Gc, Heap},
+        object::{Function, NativeFunction, Object},
     },
-    core::fmt,
-    serde::{Deserialize, Serialize},
 };
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Value<'data> {

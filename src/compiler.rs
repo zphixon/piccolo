@@ -6,15 +6,13 @@ pub mod parser;
 pub mod scanner;
 pub mod typeck;
 
-use {
-    crate::{
-        compiler::scanner::Scanner,
-        error::{ErrorKind, PiccoloError},
-        runtime::{chunk, op::Opcode},
-    },
-    core::fmt,
-    serde::{Deserialize, Serialize},
+use crate::{
+    compiler::scanner::Scanner,
+    error::{ErrorKind, PiccoloError},
+    runtime::{chunk, op::Opcode},
 };
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(PartialEq, Eq, Hash, Default, Debug)]
 pub(crate) struct Local {

@@ -1,9 +1,7 @@
 //! Objects defined in Rust that may exist at runtime.
 
-use {
-    core::fmt,
-    serde::{Deserialize, Serialize},
-};
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Trait to trace objects for marking and sweeping.
 pub trait Object: std::fmt::Debug {

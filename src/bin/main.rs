@@ -1,19 +1,17 @@
-use {
-    gumdrop::Options,
-    piccolo::{
-        compiler::{
-            self,
-            emitter::{self, Emitter},
-            parser,
-            scanner::Scanner,
-        },
-        error::PiccoloError,
-        runtime::{chunk, memory::Heap, vm::Machine},
+use gumdrop::Options;
+use piccolo::{
+    compiler::{
+        self,
+        emitter::{self, Emitter},
+        parser,
+        scanner::Scanner,
     },
-    rustyline::{
-        error::ReadlineError, Cmd, ConditionalEventHandler, Editor, Event, EventContext,
-        EventHandler, KeyEvent, Movement, RepeatCount,
-    },
+    error::PiccoloError,
+    runtime::{chunk, memory::Heap, vm::Machine},
+};
+use rustyline::{
+    error::ReadlineError, Cmd, ConditionalEventHandler, Editor, Event, EventContext, EventHandler,
+    KeyEvent, Movement, RepeatCount,
 };
 
 #[derive(Options, Debug)]

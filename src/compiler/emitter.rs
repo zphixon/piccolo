@@ -1,22 +1,20 @@
 //! Bytecode compiler.
 
-use {
-    crate::{
-        compiler::{
-            ast::{Ast, Expr, Stmt},
-            Local, SourcePos, Token, TokenKind,
-        },
-        error::{ErrorKind, PiccoloError},
-        runtime::{
-            chunk::{Chunk, Module},
-            object::Function,
-            op::Opcode,
-            value::Constant,
-        },
-        trace,
+use crate::{
+    compiler::{
+        ast::{Ast, Expr, Stmt},
+        Local, SourcePos, Token, TokenKind,
     },
-    fnv::FnvHashMap,
+    error::{ErrorKind, PiccoloError},
+    runtime::{
+        chunk::{Chunk, Module},
+        object::Function,
+        op::Opcode,
+        value::Constant,
+    },
+    trace,
 };
+use fnv::FnvHashMap;
 
 // top level compile into chunk index 0
 // encounter a function, start compiling into a new chunk index

@@ -1,13 +1,11 @@
 //! Types for working with compiled Piccolo bytecode.
 
-use {
-    crate::{
-        compiler::SourcePos,
-        runtime::{op::Opcode, value::Constant},
-        trace,
-    },
-    serde::{Deserialize, Serialize},
+use crate::{
+    compiler::SourcePos,
+    runtime::{op::Opcode, value::Constant},
+    trace,
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Module {

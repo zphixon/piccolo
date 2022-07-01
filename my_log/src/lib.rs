@@ -1,13 +1,12 @@
+use fnv::FnvHashMap;
+use log::{Level, LevelFilter, Log, Metadata, Record};
+use once_cell::sync::Lazy;
+use regex::Regex;
 use std::{
     str::FromStr,
     sync::atomic::{AtomicBool, Ordering},
     sync::RwLock,
 };
-
-use fnv::FnvHashMap;
-use log::{Level, LevelFilter, Log, Metadata, Record};
-use once_cell::sync::Lazy;
-use regex::Regex;
 
 #[derive(Clone, Debug)]
 struct LogConfig {

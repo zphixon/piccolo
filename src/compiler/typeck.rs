@@ -1,13 +1,11 @@
-use {
-    crate::{
-        compiler::{
-            ast::{Ast, Expr, Stmt},
-            Token, TokenKind,
-        },
-        error::PiccoloError,
+use crate::{
+    compiler::{
+        ast::{Ast, Expr, Stmt},
+        Token, TokenKind,
     },
-    fnv::FnvHashMap,
+    error::PiccoloError,
 };
+use fnv::FnvHashMap;
 
 macro_rules! type_names {
     ($name:ident : $str:expr) => {

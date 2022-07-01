@@ -1,9 +1,7 @@
 //! Types for dealing with errors in scanning, parsing, compiling, or executing Piccolo.
 
-use {
-    crate::{compiler::SourcePos, runtime::op::Opcode},
-    core::fmt,
-};
+use crate::{compiler::SourcePos, runtime::op::Opcode};
+use std::fmt;
 
 #[derive(Debug)]
 pub struct Callsite {

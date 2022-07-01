@@ -1,9 +1,7 @@
 extern crate piccolo;
 
-use {
-    piccolo::error::{ErrorKind, PiccoloError},
-    std::{fs, io, path},
-};
+use piccolo::error::{ErrorKind, PiccoloError};
+use std::{fs, io, path};
 
 fn main() -> Result<(), PiccoloError> {
     #[cfg(feature = "log")]

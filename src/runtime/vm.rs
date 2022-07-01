@@ -1,19 +1,17 @@
-use {
-    crate::{
-        compiler::SourcePos,
-        debug,
-        error::{ErrorKind, PiccoloError},
-        runtime::{
-            chunk::{Chunk, Module},
-            memory::{Heap, Root, UniqueRoot},
-            object::{Function, NativeFunction, Object},
-            op::Opcode,
-            value::Value,
-        },
-        trace,
+use crate::{
+    compiler::SourcePos,
+    debug,
+    error::{ErrorKind, PiccoloError},
+    runtime::{
+        chunk::{Chunk, Module},
+        memory::{Heap, Root, UniqueRoot},
+        object::{Function, NativeFunction, Object},
+        op::Opcode,
+        value::Value,
     },
-    fnv::FnvHashMap,
+    trace,
 };
+use fnv::FnvHashMap;
 
 pub struct Frame<'chunk, 'value> {
     name: String,

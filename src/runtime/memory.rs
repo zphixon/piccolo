@@ -2,15 +2,13 @@
 //!
 //! Shamelessly copied from <https://github.com/Darksecond/lox>
 
-use {
-    crate::runtime::object::Object,
-    std::{
-        cell::Cell,
-        fmt,
-        marker::PhantomData,
-        ops::{Deref, DerefMut},
-        sync::atomic::{AtomicUsize, Ordering},
-    },
+use crate::runtime::object::Object;
+use std::{
+    cell::Cell,
+    fmt,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+    sync::atomic::{AtomicUsize, Ordering},
 };
 
 /// Allocation metadata for a GC object.
