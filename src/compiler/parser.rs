@@ -8,43 +8,6 @@ use crate::{
     error::{ErrorKind, PiccoloError},
 };
 
-//pub(crate) enum ParserState {
-//    Stmt,
-//    StmtAssignment,
-//    StmtDeclaration,
-//    StmtBreak,
-//    StmtContinue,
-//    StmtRetn,
-//    StmtAssert,
-//    StmtDo,
-//    StmtIf,
-//    StmtWhile,
-//    StmtFor,
-//    StmtFn,
-//    StmtData,
-//    Expr,
-//    ExprLogicOr,
-//    ExprLogicAnd,
-//    ExprBitOr,
-//    ExprBitXor,
-//    ExprBitAnd,
-//    ExprEquality,
-//    ExprComparison,
-//    ExprBitShift,
-//    ExprTerm,
-//    ExprFactor,
-//    ExprUnary,
-//    ExprCall,
-//    ExprPrimary,
-//    ExprParameters,
-//    ExprArguments,
-//}
-//
-//pub struct Parser<'a> {
-//    scanner: Scanner<'a>,
-//    depth: usize,
-//}
-
 pub fn parse<'a>(src: &'a str) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
     let mut scanner = Scanner::new(src);
     parse_with(&mut scanner)

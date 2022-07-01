@@ -76,7 +76,7 @@ mod integration {
     use super::*;
 
     use {
-        compiler::{ast, emitter, parser, scanner::Scanner},
+        compiler::{ast, emitter, parser},
         runtime::{chunk, memory::Heap, vm::Machine},
     };
 
