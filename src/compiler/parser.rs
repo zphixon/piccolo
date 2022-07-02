@@ -637,7 +637,7 @@ mod test {
         assert_eq!(
             ast,
             &[Stmt::Assignment {
-                name: Token::new(TokenKind::Identifier, "a", SourcePos::empty()),
+                name: Token::identifier("a"),
                 op: Token::new(TokenKind::PlusAssign, "+=", SourcePos::empty()),
                 value: Expr::Literal {
                     literal: Token::new(TokenKind::Integer(3), "3", SourcePos::empty()),
@@ -655,13 +655,13 @@ mod test {
         assert_eq!(
             ast,
             &[Stmt::Expr {
-                token: Token::new(TokenKind::Identifier, "a", SourcePos::empty()),
+                token: Token::identifier("a"),
                 expr: Expr::Path {
                     names: vec![
-                        Token::new(TokenKind::Identifier, "a", SourcePos::empty()),
-                        Token::new(TokenKind::Identifier, "b", SourcePos::empty()),
-                        Token::new(TokenKind::Identifier, "c", SourcePos::empty()),
-                        Token::new(TokenKind::Identifier, "d", SourcePos::empty()),
+                        Token::identifier("a"),
+                        Token::identifier("b"),
+                        Token::identifier("c"),
+                        Token::identifier("d"),
                     ],
                 }
             }]

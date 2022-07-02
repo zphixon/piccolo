@@ -565,18 +565,12 @@ mod test {
     fn scanner() {
         let src = "a = 3\nio.prln(a)\n";
         let mut scanner = Scanner::new(src);
-        assert_eq!(
-            scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Identifier, "a", SourcePos::empty())
-        );
+        assert_eq!(scanner.peek_token(0).unwrap(), &Token::identifier("a"));
         assert_eq!(
             scanner.peek_token(1).unwrap(),
             &Token::new(TokenKind::Assign, "=", SourcePos::empty())
         );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "a", SourcePos::empty())
-        );
+        assert_eq!(scanner.next_token().unwrap(), Token::identifier("a"));
 
         assert_eq!(
             scanner.peek_token(0).unwrap(),
@@ -590,18 +584,12 @@ mod test {
             scanner.next_token().unwrap(),
             Token::new(TokenKind::Integer(3), "3", SourcePos::empty())
         );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "io", SourcePos::empty())
-        );
+        assert_eq!(scanner.next_token().unwrap(), Token::identifier("io"));
         assert_eq!(
             scanner.next_token().unwrap(),
             Token::new(TokenKind::Period, ".", SourcePos::empty())
         );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "prln", SourcePos::empty())
-        );
+        assert_eq!(scanner.next_token().unwrap(), Token::identifier("prln"));
     }
 
     #[test]
@@ -610,18 +598,12 @@ mod test {
         let src = "a = 3\nio.prln(a)\n";
         let mut scanner = Scanner::new(src);
 
-        assert_eq!(
-            scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Identifier, "a", SourcePos::empty())
-        );
+        assert_eq!(scanner.peek_token(0).unwrap(), &Token::identifier("a"));
         assert_eq!(
             scanner.peek_token(1).unwrap(),
             &Token::new(TokenKind::Assign, "=", SourcePos::empty())
         );
-        assert_eq!(
-            scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Identifier, "a", SourcePos::empty())
-        );
+        assert_eq!(scanner.peek_token(0).unwrap(), &Token::identifier("a"));
         assert_eq!(
             scanner.peek_token(6).unwrap(),
             &Token::new(TokenKind::LeftParen, "(", SourcePos::empty())
@@ -631,10 +613,7 @@ mod test {
             &Token::new(TokenKind::RightParen, ")", SourcePos::empty())
         );
 
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "a", SourcePos::empty())
-        );
+        assert_eq!(scanner.next_token().unwrap(), Token::identifier("a"));
         assert_eq!(
             scanner.next_token().unwrap(),
             Token::new(TokenKind::Assign, "=", SourcePos::empty())
@@ -643,9 +622,6 @@ mod test {
             scanner.next_token().unwrap(),
             Token::new(TokenKind::Integer(3), "3", SourcePos::empty())
         );
-        assert_eq!(
-            scanner.next_token().unwrap(),
-            Token::new(TokenKind::Identifier, "io", SourcePos::empty())
-        );
+        assert_eq!(scanner.next_token().unwrap(), Token::identifier("io"));
     }
 }

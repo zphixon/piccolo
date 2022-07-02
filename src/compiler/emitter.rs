@@ -690,16 +690,8 @@ impl Emitter {
         };
         // make_variable doesn't check if a global exists before declaring it, allowing us to hack
         // this in. later we should have something like a PiccoloState which manages everything.
-        let _ = r.make_global_ident(Token::new(
-            TokenKind::Identifier,
-            "print",
-            SourcePos::empty(),
-        ));
-        let _ = r.make_global_ident(Token::new(
-            TokenKind::Identifier,
-            "rand",
-            SourcePos::empty(),
-        ));
+        let _ = r.make_global_ident(Token::identifier("print"));
+        let _ = r.make_global_ident(Token::identifier("rand"));
         r
     }
 

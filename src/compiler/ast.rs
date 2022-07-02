@@ -267,7 +267,7 @@ fn print_expr(indent: usize, expr: &Expr) -> String {
         Expr::Index { object, index, .. }
             => print_index(indent, object, index),
         Expr::Fn { args, body, .. }
-            => print_fn(indent, Token::new(TokenKind::Identifier, "<anon>", SourcePos::empty()), args, body),
+            => print_fn(indent, Token::identifier("<anon>"), args, body),
     }
 }
 

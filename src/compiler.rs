@@ -241,6 +241,10 @@ impl PartialEq for Token<'_> {
 }
 
 impl<'a> Token<'a> {
+    pub(crate) fn identifier(lexeme: &'a str) -> Self {
+        Token::new(TokenKind::Identifier, lexeme, SourcePos::empty())
+    }
+
     pub fn new(kind: TokenKind, lexeme: &'a str, pos: SourcePos) -> Self {
         Token { kind, lexeme, pos }
     }
