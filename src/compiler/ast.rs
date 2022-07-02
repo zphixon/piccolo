@@ -10,7 +10,7 @@
 
 // https://github.com/Darksecond/lox/blob/master/lox-compiler/src/bettercompiler/statements.rs
 
-use crate::compiler::{SourcePos, Token, TokenKind};
+use crate::compiler::{Token, TokenKind};
 
 /// Simple type alias for the abstract syntax tree.
 pub type Ast<'a> = [Stmt<'a>];
