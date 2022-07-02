@@ -80,8 +80,7 @@ impl<'chunk, 'value> FrameStack<'chunk, 'value> {
     }
 }
 
-type PiccoloFunction = for<'value> fn(&[Value<'value>]) -> Value<'value>;
-//type PiccoloFunction<'a> = fn(&[Value<'a>]) -> Value<'a>;
+pub type PiccoloFunction = for<'value> fn(&[Value<'value>]) -> Value<'value>;
 
 pub struct Machine<'value> {
     stack: UniqueRoot<'value, Vec<Value<'value>>>,
