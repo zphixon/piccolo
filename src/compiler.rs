@@ -12,7 +12,10 @@ use crate::{
     runtime::{chunk, op::Opcode},
 };
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
 
 #[derive(PartialEq, Eq, Hash, Default, Debug)]
 pub(crate) struct Local {
@@ -233,6 +236,14 @@ pub struct Token<'a> {
     pub(crate) lexeme: &'a str,
     pub(crate) pos: SourcePos,
 }
+
+impl Hash for Token<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.lexeme.hash(state);
+    }
+}
+
+impl Eq for Token<'_> {}
 
 impl PartialEq for Token<'_> {
     fn eq(&self, other: &Self) -> bool {
