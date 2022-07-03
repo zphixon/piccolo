@@ -73,6 +73,15 @@ impl Heap {
             ),
         );
 
+        native_functions.insert(
+            "toString",
+            NativeFunction::new(
+                heap.alloc_string(String::from("toString")),
+                Arity::Any,
+                builtin::to_string,
+            ),
+        );
+
         heap.native_functions = native_functions;
         heap
     }

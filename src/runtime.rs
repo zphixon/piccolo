@@ -57,6 +57,9 @@ impl Object for Value {
             Value::String(ptr) => {
                 heap.trace(*ptr);
             }
+            Value::Function(f) => {
+                heap.trace(f.name);
+            }
             _ => {}
         }
     }

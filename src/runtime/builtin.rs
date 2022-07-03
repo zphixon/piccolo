@@ -4,7 +4,7 @@ use crate::{
 };
 use std::fmt::{Debug, Write};
 
-pub fn print(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
+pub fn to_string(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
     let mut s = String::new();
 
     for (i, value) in values.iter().enumerate() {
@@ -26,7 +26,18 @@ pub fn print(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
         }
     }
 
-    println!("{s}");
+    let ptr = heap.alloc_string(s);
+
+    Ok(Value::String(ptr))
+}
+
+pub fn print(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
+    match to_string(heap, values)? {
+        Value::String(ptr) => {
+            println!("{}", heap.get_string(ptr).unwrap());
+        }
+        _ => unreachable!(),
+    }
 
     Ok(Value::Nil)
 }
