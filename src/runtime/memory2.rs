@@ -2,12 +2,12 @@ use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{
         builtin::{self, NativeFunction},
-        interner::Interner,
+        interner::{Interner, StringPtr},
         Arity, Value,
     },
 };
 use fnv::FnvHashMap;
-use slotmap::SlotMap;
+use slotmap::{DefaultKey, SlotMap};
 use std::{
     fmt::Debug,
     sync::atomic::{AtomicBool, Ordering},
@@ -41,11 +41,19 @@ pub struct ObjectHeader {
     marked: AtomicBool,
 }
 
-pub type Ptr = slotmap::DefaultKey;
+#[derive(Copy, Clone, Debug)]
+pub struct Ptr(DefaultKey);
+
+impl Ptr {
+    pub fn null() -> Ptr {
+        use slotmap::Key;
+        Ptr(DefaultKey::null())
+    }
+}
 
 #[derive(Default)]
 pub struct Heap {
-    objects: SlotMap<Ptr, ObjectHeader>,
+    objects: SlotMap<DefaultKey, ObjectHeader>,
     native_functions: FnvHashMap<&'static str, NativeFunction>,
     interner: Interner,
 }
@@ -87,15 +95,14 @@ impl Heap {
     }
 
     pub fn null_ptr() -> Ptr {
-        use slotmap::Key;
         Ptr::null()
     }
 
     pub fn allocate(&mut self, object: impl Object) -> Ptr {
-        self.objects.insert(ObjectHeader {
+        Ptr(self.objects.insert(ObjectHeader {
             inner: Box::new(object),
             marked: AtomicBool::new(false),
-        })
+        }))
     }
 
     pub fn get(&self, ptr: Ptr) -> Option<&dyn Object> {
@@ -103,11 +110,11 @@ impl Heap {
     }
 
     fn get_header(&self, ptr: Ptr) -> Option<&ObjectHeader> {
-        self.objects.get(ptr)
+        self.objects.get(ptr.0)
     }
 
     pub fn take(&mut self, ptr: Ptr) -> Option<Box<dyn Object>> {
-        self.objects.remove(ptr).map(|header| header.inner)
+        self.objects.remove(ptr.0).map(|header| header.inner)
     }
 
     pub fn collect<'iter>(&mut self, roots: impl Iterator<Item = Option<&'iter Ptr>>) {
@@ -144,11 +151,11 @@ impl Heap {
         self.get(ptr)?.downcast_ref::<T>()
     }
 
-    pub fn alloc_string(&mut self, string: String) -> Ptr {
+    pub fn alloc_string(&mut self, string: String) -> StringPtr {
         self.interner.alloc_string(string)
     }
 
-    pub fn get_string(&self, ptr: Ptr) -> Option<&str> {
+    pub fn get_string(&self, ptr: StringPtr) -> Option<&str> {
         self.interner.get_string(ptr)
     }
 }

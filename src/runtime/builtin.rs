@@ -1,6 +1,6 @@
 use crate::{
     error::{ErrorKind, PiccoloError},
-    runtime::{memory2::Heap, Arity, Ptr, Value},
+    runtime::{interner::StringPtr, memory2::Heap, Arity, Value},
 };
 use std::fmt::{Debug, Write};
 
@@ -50,13 +50,13 @@ pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError
 
 #[derive(Clone, Copy)]
 pub struct NativeFunction {
-    name: Ptr,
+    name: StringPtr,
     arity: Arity,
     ptr: PiccoloFunction,
 }
 
 impl NativeFunction {
-    pub fn new(name: Ptr, arity: Arity, ptr: PiccoloFunction) -> Self {
+    pub fn new(name: StringPtr, arity: Arity, ptr: PiccoloFunction) -> Self {
         NativeFunction { name, arity, ptr }
     }
 

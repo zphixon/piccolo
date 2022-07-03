@@ -1,17 +1,19 @@
-use crate::runtime::memory2::Ptr;
 use fnv::FnvHashMap;
-use slotmap::SlotMap;
+use slotmap::{DefaultKey, SlotMap};
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StringPtr(DefaultKey);
 
 #[derive(Default, Debug)]
 pub struct Interner {
-    table: FnvHashMap<&'static str, Ptr>,
-    strings: SlotMap<Ptr, String>,
+    table: FnvHashMap<&'static str, DefaultKey>,
+    strings: SlotMap<DefaultKey, String>,
 }
 
 impl Interner {
-    pub fn alloc_string(&mut self, string: String) -> Ptr {
+    pub fn alloc_string(&mut self, string: String) -> StringPtr {
         if let Some(ptr) = self.table.get(string.as_str()) {
-            return *ptr;
+            return StringPtr(*ptr);
         }
 
         let ptr = self.strings.insert(string);
@@ -21,11 +23,11 @@ impl Interner {
             unsafe { std::mem::transmute(self.strings[ptr].as_str()) },
             ptr,
         );
-        ptr
+        StringPtr(ptr)
     }
 
-    pub fn get_string(&self, ptr: Ptr) -> Option<&str> {
-        self.strings.get(ptr).map(|string| string.as_str())
+    pub fn get_string(&self, ptr: StringPtr) -> Option<&str> {
+        self.strings.get(ptr.0).map(|string| string.as_str())
     }
 }
 
@@ -59,7 +61,7 @@ mod test {
                 }
 
                 let ptr = interner.alloc_string(string.clone());
-                if ptrs.iter().all(|contained: &Ptr| contained != &ptr) {
+                if ptrs.iter().all(|contained: &StringPtr| contained != &ptr) {
                     ptrs.push(ptr);
                     println!("    unique {string}");
                 } else {

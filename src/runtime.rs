@@ -11,6 +11,7 @@ pub mod vm;
 pub mod interner;
 pub mod memory2;
 
+use interner::StringPtr;
 use memory2::{Heap, Object, Ptr};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -23,7 +24,7 @@ pub enum Arity {
 pub struct Function {
     arity: Arity,
     chunk: usize,
-    name: Ptr,
+    name: StringPtr,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -31,7 +32,7 @@ pub enum Value {
     Bool(bool),
     Integer(i64),
     Double(f64),
-    String(Ptr),
+    String(StringPtr),
     Function(Function),
     NativeFunction(builtin::NativeFunction),
     Object(Ptr),
@@ -53,12 +54,6 @@ impl Object for Value {
         match self {
             Value::Object(ptr) => {
                 heap.trace(*ptr);
-            }
-            Value::String(ptr) => {
-                heap.trace(*ptr);
-            }
-            Value::Function(f) => {
-                heap.trace(f.name);
             }
             _ => {}
         }
