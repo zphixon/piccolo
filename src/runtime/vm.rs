@@ -12,6 +12,7 @@ use crate::{
     trace,
 };
 use fnv::FnvHashMap;
+use std::fmt::Write;
 
 pub struct Frame<'chunk, 'value> {
     name: String,
@@ -24,7 +25,7 @@ pub struct Frame<'chunk, 'value> {
 
 impl Frame<'_, '_> {
     fn step(&mut self) -> Opcode {
-        let op = self.chunk.ops[self.ip].into();
+        let op = self.chunk.ops[self.ip];
         self.ip += 1;
         op
     }
@@ -99,12 +100,12 @@ enum VmState<'value> {
 fn print<'value>(values: &[Value<'value>]) -> Value<'value> {
     let mut s = String::new();
     for (i, value) in values.iter().enumerate() {
-        s.push_str(&format!("{}", value));
+        write!(s, "{value}").unwrap();
         if i != values.len() {
             s.push('\t');
         }
     }
-    println!("{}", s);
+    println!("{s}");
     Value::Nil
 }
 
@@ -387,7 +388,7 @@ impl<'value> Machine<'value> {
                         }));
                     }
                 } else if lhs.is_string() {
-                    let value = format!("{}{}", &lhs, &rhs);
+                    let value = format!("{lhs}{rhs}");
                     self.push_string(heap, value);
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {

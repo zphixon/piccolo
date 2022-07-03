@@ -11,6 +11,7 @@
 // https://github.com/Darksecond/lox/blob/master/lox-compiler/src/bettercompiler/statements.rs
 
 use crate::compiler::{Token, TokenKind};
+use std::fmt::Write;
 
 /// Simple type alias for the abstract syntax tree.
 pub type Ast<'a> = [Stmt<'a>];
@@ -175,7 +176,7 @@ pub fn print_expression(expr: &Expr) -> String {
 }
 
 fn parenthesize(indent: usize, name: &str, expressions: &[&Expr]) -> String {
-    let mut s = format!("({}", name);
+    let mut s = format!("({name}");
     for expr in expressions {
         s.push(' ');
         s.push_str(&print_expr(indent, expr));
@@ -189,7 +190,7 @@ fn parenthesize_list(indent: usize, name: &str, expr: Option<&Expr>, stmts: &[St
 }
 
 fn parenthesize_lists(indent: usize, name: &str, expr: Option<&Expr>, stmts: &[&[Stmt]]) -> String {
-    let mut s = format!("({}", name);
+    let mut s = format!("({name}");
     if expr.is_some() {
         s.push(' ');
         s.push_str(&print_expr(indent + 1, expr.as_ref().unwrap()));
@@ -318,7 +319,7 @@ fn print_fn(indent: usize, name: Token, args: &[Token], body: &[Stmt]) -> String
     let mut s = format!("fn {} (", name.lexeme);
     for (n, arg) in args.iter().enumerate() {
         if n + 1 != args.len() {
-            s.push_str(&format!("{} ", arg.lexeme));
+            write!(s, "{} ", arg.lexeme).unwrap();
         } else {
             s.push_str(arg.lexeme);
         }
@@ -355,7 +356,7 @@ fn print_data(indent: usize, _name: Token, _methods: &[Stmt], _fields: &[Stmt]) 
 }
 
 fn print_literal(literal: Token) -> String {
-    format!("{}", literal)
+    format!("{literal}")
 }
 
 fn print_paren(indent: usize, expr: &Expr) -> String {

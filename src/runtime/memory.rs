@@ -400,7 +400,7 @@ mod test {
         {
             let mut heap = Heap::default();
             gc = heap.manage(S(0)).as_gc();
-            println!("{:#?}", heap);
+            println!("{heap:#?}");
         }
 
         assert_ne!(gc.0, 0xbeeeb000);

@@ -123,6 +123,6 @@ fn main() {
     assert_eq!(Some(1), scope.get_slot("hello"));
     assert_eq!(Some(2), scope.get_slot("world"));
 
-    println!("{:#?}", scope);
+    println!("{scope:#?}");
     println!("all good bruv");
 }

@@ -153,7 +153,7 @@ impl std::fmt::Debug for NamespaceRepository<'_> {
     }
 }
 
-pub fn analyze_ns<'src>(ast: &Ast<'src>) -> Result<(), PiccoloError> {
+pub fn analyze_ns(ast: &Ast) -> Result<(), PiccoloError> {
     let mut repo = NamespaceRepository::new();
 
     for stmt in ast {

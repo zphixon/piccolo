@@ -22,18 +22,18 @@ fn main() -> Result<(), PiccoloError> {
         if name.ends_with("ignore") {
             ignored += 1;
         } else if !name.ends_with("_fail.pc") {
-            println!(" -- '{}'", name);
+            println!(" -- '{name}'");
             let _ = piccolo::do_file(item).map_err(|errors| {
                 test_errors.push(errors);
             });
         } else {
-            println!(" xx '{}'", name);
+            println!(" xx '{name}'");
             let _ = piccolo::do_file(item).map(|v| {
                 test_errors.push(vec![PiccoloError::new(ErrorKind::AssertFailed {
                     assertion: String::from("test file would fail"),
                 })
                 .file(name)
-                .msg_string(format!("resulted in {}", v))])
+                .msg_string(format!("resulted in {v}"))])
             });
         }
     }
@@ -47,16 +47,15 @@ fn main() -> Result<(), PiccoloError> {
         } else {
             println!("{} Errors:", errors.len());
             for e in errors.iter() {
-                println!("        {}", e);
+                println!("        {e}");
             }
         }
     }
 
     println!(
-        "\nreported {} successful, {} failures, {} ignored",
+        "\nreported {} successful, {} failures, {ignored} ignored",
         files.len() - test_errors.len() - ignored,
         test_errors.len(),
-        ignored,
     );
 
     Ok(())

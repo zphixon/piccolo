@@ -6,6 +6,7 @@ use crate::{
     trace,
 };
 use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Module {
@@ -146,14 +147,14 @@ impl Chunk {
 pub fn disassemble(module: &Module, name: &str) -> String {
     trace!("disassemble");
 
-    let mut s = format!(" -- {} --\n", name);
+    let mut s = format!(" -- {name} --\n");
     s.push_str(" ++ constants\n");
     for (index, constant) in module.constants.iter().enumerate() {
-        s.push_str(&format!("{:04x} {:?}\n", index, constant));
+        writeln!(s, "{index:04x} {constant:?}").unwrap();
     }
 
     for (i, chunk) in module.chunks.iter().enumerate() {
-        s.push_str(&format!(" ++ chunk {}\n", i));
+        writeln!(s, " ++ chunk {i}").unwrap();
         let mut offset = 0;
         while offset < chunk.ops.len() {
             s.push_str(&disassemble_instruction(module, chunk, offset));
@@ -170,27 +171,27 @@ pub fn disassemble_instruction(module: &Module, chunk: &Chunk, offset: usize) ->
 
     let arg = match op {
         Opcode::Constant(index) => {
-            format!("@{:04x} ({:?})", index, module.constants[index as usize])
+            format!("@{index:04x} ({:?})", module.constants[index as usize])
         }
         Opcode::GetLocal(index) | Opcode::SetLocal(index) => {
-            format!("${}", index)
+            format!("${index}")
         }
         Opcode::GetGlobal(index) | Opcode::SetGlobal(index) | Opcode::DeclareGlobal(index) => {
-            format!("g{:04x} ({:?})", index, module.constants[index as usize])
+            format!("g{index:04x} ({:?})", module.constants[index as usize])
         }
         Opcode::JumpForward(jump) | Opcode::JumpFalse(jump) | Opcode::JumpTrue(jump) => {
-            format!("+{:04x} -> {:04x}", jump, offset + jump as usize)
+            format!("+{jump:04x} -> {:04x}", offset + jump as usize)
         }
         Opcode::JumpBack(jump) => {
-            format!("-{:04x} -> {:04x}", jump, offset - jump as usize)
+            format!("-{jump:04x} -> {:04x}", offset - jump as usize)
         }
         _ => String::new(),
     };
 
     format!(
         "{:<6} {offset:04x} {:20} {arg}",
-        format!("{}", chunk.get_pos_from_index(offset)),
-        format!("{op:?}")
+        format_args!("{}", chunk.get_pos_from_index(offset)),
+        format_args!("{op:?}")
     )
 }
 

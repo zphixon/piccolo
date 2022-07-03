@@ -158,8 +158,8 @@ fn run() -> Result<(), Vec<PiccoloError>> {
     }
 }
 
-fn maybe_exec_then_repl<'source, 'heap>(
-    source: &'source str,
+fn maybe_exec_then_repl(
+    source: &str,
     name_for_module: &str,
     print_tokens: bool,
     print_ast: bool,
@@ -218,7 +218,7 @@ fn print_errors(errors: Vec<PiccoloError>) {
     } else {
         println!("{} Errors:", errors.len());
         for e in errors.iter() {
-            println!("    {}", e);
+            println!("    {e}");
         }
     }
 }
@@ -298,7 +298,7 @@ fn repl<'heap>(
                                 print_errors(errs);
                                 machine.clear_stack_and_move_to_end_of_module(emitter.module());
                             })
-                            .map(|value| println!("{:?}", value));
+                            .map(|value| println!("{value:?}"));
 
                         prompt = "-- ";
                         input = String::new();

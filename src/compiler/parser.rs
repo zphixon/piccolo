@@ -9,7 +9,7 @@ use crate::{
     trace,
 };
 
-pub fn parse<'a>(src: &'a str) -> Result<Vec<Stmt<'a>>, Vec<PiccoloError>> {
+pub fn parse(src: &str) -> Result<Vec<Stmt<'_>>, Vec<PiccoloError>> {
     let mut scanner = Scanner::new(src);
     parse_with(&mut scanner)
 }
@@ -312,7 +312,7 @@ fn consume<'a>(
     } else {
         Err(PiccoloError::new(ErrorKind::UnexpectedToken {
             was_eof: tok.kind == TokenKind::Eof,
-            exp: format!("{:?}", kind),
+            exp: format!("{kind:?}"),
             got: format!("{:?}", tok.kind),
         })
         .pos(tok.pos))
@@ -700,8 +700,7 @@ mod test {
         for src in src {
             let mut scanner = Scanner::new(src);
             println!(
-                "{} -> {}",
-                src,
+                "{src} -> {}",
                 crate::compiler::ast::print_expression(&parse_expression(&mut scanner, 0).unwrap())
             );
         }

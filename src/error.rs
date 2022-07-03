@@ -2,6 +2,7 @@
 
 use crate::{compiler::SourcePos, runtime::op::Opcode};
 use std::fmt;
+use std::fmt::Write;
 
 #[derive(Debug)]
 pub struct Callsite {
@@ -134,7 +135,7 @@ impl fmt::Display for PiccoloError {
             stack_trace = if self.stack.is_some() && self.stack.as_ref().unwrap().is_empty() {
                 let mut s = String::new();
                 for (i, site) in self.stack.as_ref().unwrap().iter().enumerate() {
-                    s.push_str(&format!("  {} called from line {}", site.name, site.pos));
+                    write!(s, "  {} called from line {}", site.name, site.pos).unwrap();
                     if i + 1 != self.stack.as_ref().unwrap().len() {
                         s.push('\n');
                     }
@@ -233,35 +234,35 @@ impl fmt::Display for ErrorKind {
             ErrorKind::UnterminatedString
                 => write!(f, "Unterminated string"),
             ErrorKind::UnknownFormatCode { code }
-                => write!(f, "Unknown format code '\\{}'", code),
+                => write!(f, "Unknown format code '\\{code}'"),
             ErrorKind::InvalidNumberLiteral { literal }
-                => write!(f, "Invalid number literal '{}'", literal),
+                => write!(f, "Invalid number literal '{literal}'"),
             ErrorKind::UnexpectedToken { exp, got, .. }
-                => write!(f, "Unexpected token: expected {}, got {}", exp, got),
+                => write!(f, "Unexpected token: expected {exp}, got {got}"),
             ErrorKind::IncorrectType { exp, got, op }
-                => write!(f, "Incorrect type: expected {}, got {} for op {:?}", exp, got, op),
+                => write!(f, "Incorrect type: expected {exp}, got {got} for op {op:?}"),
             ErrorKind::CannotCompare { exp, got }
-                => write!(f, "Cannot compare {} and {}", exp, got),
+                => write!(f, "Cannot compare {exp} and {got}"),
             ErrorKind::DivideByZero
                 => write!(f, "Cannot divide by zero"),
             ErrorKind::InvalidShift { value }
                 => write!(f, "Cannot shift by {value}"),
             ErrorKind::UndefinedVariable { name }
-                => write!(f, "Undefined variable '{}'", name),
+                => write!(f, "Undefined variable '{name}'"),
             ErrorKind::UnknownField { obj, name }
-                => write!(f, "Unknown field '{}' on {}", name, obj),
+                => write!(f, "Unknown field '{name}' on {obj}"),
             ErrorKind::ExpectedExpression { got, .. }
-                => write!(f, "Expected expression, got {}", got),
+                => write!(f, "Expected expression, got {got}"),
             ErrorKind::CannotClone { ty }
-                => write!(f, "Cannot clone type {}", ty),
+                => write!(f, "Cannot clone type {ty}"),
             ErrorKind::AssertFailed { assertion }
-                => write!(f, "Assertion failed: {}", assertion),
+                => write!(f, "Assertion failed: {assertion}"),
             ErrorKind::SyntaxError
                 => write!(f, "Syntax error"),
             ErrorKind::IncorrectArity { name, exp, got }
-                => write!(f, "Incorrect arity: function {} expected {} arguments, got {}", name, exp, got),
+                => write!(f, "Incorrect arity: function {name} expected {exp} arguments, got {got}"),
             ErrorKind::DeserializeError { err }
-                => write!(f, "Cannot read binary file: {}", err),
+                => write!(f, "Cannot read binary file: {err}"),
             ErrorKind::Todo { why }
                 => write!(f, "TODO: {why}"),
             ErrorKind::Unknown { err }
