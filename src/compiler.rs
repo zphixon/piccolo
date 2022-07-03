@@ -11,7 +11,6 @@ use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{chunk, op::Opcode},
 };
-use serde::{Deserialize, Serialize};
 use std::{
     fmt,
     hash::{Hash, Hasher},
@@ -204,7 +203,7 @@ pub enum TokenKind {
 }
 
 #[cfg_attr(fuzzing, derive(arbitrary::Arbitrary))]
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy)]
 pub struct SourcePos {
     pub line: usize,
     pub col: usize,

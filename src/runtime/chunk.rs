@@ -5,10 +5,9 @@ use crate::{
     runtime::{op::Opcode, value::Constant},
     trace,
 };
-use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Module {
     chunks: Vec<Chunk>,
     constants: Vec<Constant>,
@@ -65,7 +64,7 @@ impl Module {
 }
 
 /// Stores a piece of compiled Piccolo bytecode.
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default, Debug)]
 pub struct Chunk {
     pub(crate) ops: Vec<Opcode>,
     // each SourcePos represents one instruction

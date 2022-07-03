@@ -8,7 +8,6 @@ use crate::{
         object::{Function, NativeFunction, Object},
     },
 };
-use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Copy, Clone, Debug)]
@@ -263,7 +262,7 @@ impl From<Value<'_>> for f64 {
 /// Similar to [`Value`]. `Constant` is also used to return from Piccolo execution.
 ///
 /// [`Value`]: ../value/enum.Value.html
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Constant {
     String(String),
     Bool(bool),

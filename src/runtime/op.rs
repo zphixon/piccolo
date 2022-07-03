@@ -51,9 +51,7 @@
 //!
 //! [`Machine`]: ../vm/struct.Machine.html
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Opcode {
     Pop,
     Return,

@@ -1,6 +1,5 @@
 //! Objects defined in Rust that may exist at runtime.
 
-use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// Trait to trace objects for marking and sweeping.
@@ -16,7 +15,7 @@ pub trait Object: std::fmt::Debug {
     }
 }
 
-#[derive(Default, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, PartialEq)]
 pub struct Function {
     arity: usize,
     name: String,
@@ -63,7 +62,7 @@ impl Object for Function {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct NativeFunction {
     pub(crate) arity: usize,
     pub(crate) name: String,

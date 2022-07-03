@@ -81,33 +81,6 @@ pub fn do_file(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
     })
 }
 
-pub fn run_bin(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
-    use runtime::{memory::Heap, vm::Machine};
-
-    let bytes = std::fs::read(file).map_err(|e| vec![PiccoloError::from(e)])?;
-    let module = bincode::deserialize(&bytes).map_err(|e| vec![PiccoloError::from(e)])?;
-
-    let mut heap = Heap::default();
-    let mut vm = Machine::new(&mut heap);
-    Ok(vm.interpret(&mut heap, &module)?.into_constant())
-}
-
-pub fn compile(src: &Path, dst: &Path) -> Result<(), Vec<PiccoloError>> {
-    use compiler::{emitter, parser};
-
-    let src = std::fs::read_to_string(src).map_err(|e| vec![PiccoloError::from(e)])?;
-    let ast = parser::parse(&src)?;
-    let module = emitter::compile(&ast)?;
-
-    std::fs::write(
-        dst,
-        bincode::serialize(&module).map_err(|e| vec![PiccoloError::from(e)])?,
-    )
-    .map_err(|e| vec![PiccoloError::from(e)])?;
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod integration {
     use super::*;

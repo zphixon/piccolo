@@ -6,9 +6,8 @@ edition = '2021'
 default-run = 'main'
 
 [features]
-default = ['log/max_level_trace', 'cli', 'binary']
+default = ['log/max_level_trace', 'cli']
 cli = ['gumdrop', 'rustyline']
-binary = ['bincode', 'serde']
 log = ['my_log']
 
 [dependencies]
@@ -18,8 +17,6 @@ fnv = '1.0.7'
 rand = { version = '0.8.5' }
 my_log = { path = 'my_log', optional = true }
 log = '*'
-bincode = { version = '1.3.3', optional = true }
-serde = { version = '1.0.137', features = ['derive'], optional = true }
 gumdrop = { version = '0.8.1', optional = true }
 rustyline = { version = '9.1.2', optional = true }
 

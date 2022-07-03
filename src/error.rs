@@ -206,9 +206,6 @@ pub enum ErrorKind {
         exp: usize,
         got: usize,
     },
-    DeserializeError {
-        err: Box<bincode::ErrorKind>,
-    },
     Todo {
         why: String,
     },
@@ -261,8 +258,6 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Syntax error"),
             ErrorKind::IncorrectArity { name, exp, got }
                 => write!(f, "Incorrect arity: function {name} expected {exp} arguments, got {got}"),
-            ErrorKind::DeserializeError { err }
-                => write!(f, "Cannot read binary file: {err}"),
             ErrorKind::Todo { why }
                 => write!(f, "TODO: {why}"),
             ErrorKind::Unknown { err }
@@ -297,11 +292,5 @@ impl From<std::io::Error> for PiccoloError {
 impl From<PiccoloError> for Vec<PiccoloError> {
     fn from(e: PiccoloError) -> Vec<PiccoloError> {
         vec![e]
-    }
-}
-
-impl From<Box<bincode::ErrorKind>> for PiccoloError {
-    fn from(err: Box<bincode::ErrorKind>) -> PiccoloError {
-        PiccoloError::new(ErrorKind::DeserializeError { err })
     }
 }
