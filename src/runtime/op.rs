@@ -46,8 +46,8 @@
 //! | `ShiftLeft`       |                           |
 //! | `ShiftRight`      |                           |
 //! | <b>Misc</b>       |                           |
-//! | `Call`            |                           |
-//! | `Assert`          |                           |
+//! | `Call`            | number of arguments       |
+//! | `Assert`          | index into constant table |
 //!
 //! [`Machine`]: ../vm/struct.Machine.html
 
