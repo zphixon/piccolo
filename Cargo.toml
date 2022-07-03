@@ -12,6 +12,7 @@ log = ['my_log']
 
 [dependencies]
 slotmap = '1.0.6'
+downcast-rs = '1.2.0'
 paste = '1.0.7'
 fnv = '1.0.7'
 rand = { version = '0.8.5' }

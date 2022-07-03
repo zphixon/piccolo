@@ -206,6 +206,9 @@ pub enum ErrorKind {
         exp: usize,
         got: usize,
     },
+    CannotCall {
+        callee: String,
+    },
     Todo {
         why: String,
     },
@@ -258,6 +261,8 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Syntax error"),
             ErrorKind::IncorrectArity { name, exp, got }
                 => write!(f, "Incorrect arity: function {name} expected {exp} arguments, got {got}"),
+            ErrorKind::CannotCall { callee }
+                => write!(f, "Cannot call value {callee}"),
             ErrorKind::Todo { why }
                 => write!(f, "TODO: {why}"),
             ErrorKind::Unknown { err }

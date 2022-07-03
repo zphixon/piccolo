@@ -6,3 +6,6 @@ pub mod object;
 pub mod op;
 pub mod value;
 pub mod vm;
+
+pub mod memory2;
+pub mod object2;
