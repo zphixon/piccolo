@@ -174,19 +174,19 @@ fn maybe_exec_then_repl<'source, 'heap>(
         compiler::print_tokens(&tokens);
     }
 
-    let ast = piccolo::compiler::parser::parse(source)?;
+    let ast = parser::parse(source)?;
 
     if print_ast {
-        println!("=== ast ===\n{}", piccolo::compiler::ast::print_ast(&ast));
+        println!("=== ast ===\n{}", compiler::ast::print_ast(&ast));
     }
 
     let mut emitter = Emitter::new();
-    piccolo::compiler::emitter::compile_with(&mut emitter, &ast)?;
+    emitter::compile_with(&mut emitter, &ast)?;
 
     if print_compiled {
         println!(
             "=== module ===\n{}",
-            piccolo::runtime::chunk::disassemble(emitter.module(), name_for_module)
+            chunk::disassemble(emitter.module(), name_for_module)
         );
     }
 
