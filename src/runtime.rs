@@ -8,8 +8,8 @@ pub mod op;
 pub mod value;
 pub mod vm;
 
+pub mod interner;
 pub mod memory2;
-pub mod object2;
 
 use memory2::{Heap, Object, Ptr};
 
@@ -23,17 +23,19 @@ pub enum Arity {
 pub struct Function {
     arity: Arity,
     chunk: usize,
-    //name: InternedString,
+    name: Ptr,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum Value {
-    Nil,
-    String(()),
     Bool(bool),
+    Integer(i64),
     Double(f64),
+    String(Ptr),
     Function(Function),
+    NativeFunction(builtin::NativeFunction),
     Object(Ptr),
+    Nil,
 }
 
 impl Value {
@@ -50,6 +52,9 @@ impl Object for Value {
     fn trace(&self, heap: &Heap) {
         match self {
             Value::Object(ptr) => {
+                heap.trace(*ptr);
+            }
+            Value::String(ptr) => {
                 heap.trace(*ptr);
             }
             _ => {}

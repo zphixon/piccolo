@@ -2,6 +2,7 @@ use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{
         builtin::{self, NativeFunction},
+        interner::Interner,
         Arity, Value,
     },
 };
@@ -42,39 +43,40 @@ pub struct ObjectHeader {
 
 pub type Ptr = slotmap::DefaultKey;
 
+#[derive(Default)]
 pub struct Heap {
     objects: SlotMap<Ptr, ObjectHeader>,
     native_functions: FnvHashMap<&'static str, NativeFunction>,
+    interner: Interner,
 }
 
-impl Default for Heap {
-    fn default() -> Self {
+impl Heap {
+    pub fn new() -> Heap {
+        let mut heap = Heap::default();
         let mut native_functions = FnvHashMap::default();
 
         native_functions.insert(
             "print",
-            NativeFunction {
-                arity: Arity::Any,
-                ptr: builtin::print,
-            },
+            NativeFunction::new(
+                heap.alloc_string(String::from("print")),
+                Arity::Any,
+                builtin::rand,
+            ),
         );
 
         native_functions.insert(
             "rand",
-            NativeFunction {
-                arity: Arity::Exact(0),
-                ptr: builtin::rand,
-            },
+            NativeFunction::new(
+                heap.alloc_string(String::from("rand")),
+                Arity::Exact(0),
+                builtin::rand,
+            ),
         );
 
-        Heap {
-            objects: Default::default(),
-            native_functions,
-        }
+        heap.native_functions = native_functions;
+        heap
     }
-}
 
-impl Heap {
     pub fn null_ptr() -> Ptr {
         use slotmap::Key;
         Ptr::null()
@@ -115,17 +117,8 @@ impl Heap {
     }
 
     pub fn call_native(&mut self, name: &str, args: &[Value]) -> Result<Value, PiccoloError> {
-        if let Arity::Exact(arity) = self.native_functions[name].arity {
-            if arity != args.len() {
-                return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                    name: name.to_string(),
-                    exp: arity,
-                    got: args.len(),
-                }));
-            }
-        }
-
-        (self.native_functions[name].ptr)(self, args)
+        let f = self.native_functions[name];
+        f.call(self, args)
     }
 
     pub fn trace(&self, ptr: Ptr) {
@@ -140,6 +133,14 @@ impl Heap {
         T: Object,
     {
         self.get(ptr)?.downcast_ref::<T>()
+    }
+
+    pub fn alloc_string(&mut self, string: String) -> Ptr {
+        self.interner.alloc_string(string)
+    }
+
+    pub fn get_string(&self, ptr: Ptr) -> Option<&str> {
+        self.interner.get_string(ptr)
     }
 }
 
@@ -157,7 +158,7 @@ mod test {
             }
         }
 
-        let mut heap = Heap::default();
+        let mut heap = Heap::new();
         let mut stack = crate::runtime::Stack::default();
 
         let unrooted = heap.allocate(O::default());
@@ -203,7 +204,7 @@ mod test {
             }
         }
 
-        let mut heap = Heap::default();
+        let mut heap = Heap::new();
         let inner1 = heap.allocate(Cons {
             car: 1,
             cdr: Heap::null_ptr(),
@@ -237,7 +238,7 @@ mod test {
 
     #[test]
     fn arity() {
-        let mut heap = Heap::default();
+        let mut heap = Heap::new();
         assert!(heap.call_native("print", &[]).is_ok());
         assert!(heap.call_native("print", &[Value::Nil]).is_ok());
 
