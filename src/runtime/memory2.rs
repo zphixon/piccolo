@@ -1,73 +1,43 @@
-use crate::error::{ErrorKind, PiccoloError};
+use crate::{
+    error::{ErrorKind, PiccoloError},
+    runtime::{
+        builtin::{self, NativeFunction},
+        Arity, Value,
+    },
+};
 use fnv::FnvHashMap;
 use slotmap::SlotMap;
 use std::{
-    fmt::{Debug, Write},
-    ops::Index,
+    fmt::Debug,
     sync::atomic::{AtomicBool, Ordering},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Arity {
-    Any,
-    Exact(usize),
-}
+pub trait Object: Debug + downcast_rs::Downcast {
+    fn trace(&self, heap: &Heap);
 
-fn print(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
-    let mut s = String::new();
-    for (i, value) in values.iter().enumerate() {
-        match value {
-            Value::Nil => s.push_str("nil"),
-            Value::String(_) => s.push_str("string todo"),
-            Value::Bool(b) => write!(s, "{b}").unwrap(),
-            Value::Double(d) => write!(s, "{d}").unwrap(),
-            Value::Function(_) => write!(s, "<func>").unwrap(),
-            Value::Object(ptr) => write!(s, "{}", heap.get(*ptr).unwrap().format(heap)).unwrap(),
-        }
-        if i != values.len() {
-            s.push('\t');
-        }
+    fn type_name(&self) -> &'static str {
+        "object"
     }
-    println!("{s}");
-    Ok(Value::Nil)
-}
 
-fn rand(_: &mut Heap, _: &[Value]) -> Result<Value, PiccoloError> {
-    Ok(Value::Double(rand::random()))
-}
+    fn format(&self, heap: &Heap) -> String {
+        let _ = heap;
+        format!("{self:?}")
+    }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Function {
-    arity: Arity,
-    chunk: usize,
-    //name: InternedString,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Value {
-    Nil,
-    String(()),
-    Bool(bool),
-    Double(f64),
-    Function(Function),
-    Object(Ptr),
-}
-
-impl Value {
-    pub fn as_ptr(&self) -> Ptr {
-        if let Value::Object(ptr) = self {
-            *ptr
-        } else {
-            panic!("called as_ptr on non-object {self:?}");
-        }
+    fn call(&self, heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
+        let _ = values;
+        Err(PiccoloError::new(ErrorKind::CannotCall {
+            callee: self.format(heap),
+        }))
     }
 }
 
-pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError>;
+downcast_rs::impl_downcast!(Object);
 
-pub struct NativeFunction {
-    arity: Arity,
-    ptr: PiccoloFunction,
+#[derive(Debug)]
+pub struct ObjectHeader {
+    inner: Box<dyn Object>,
+    marked: AtomicBool,
 }
 
 pub type Ptr = slotmap::DefaultKey;
@@ -85,7 +55,7 @@ impl Default for Heap {
             "print",
             NativeFunction {
                 arity: Arity::Any,
-                ptr: print,
+                ptr: builtin::print,
             },
         );
 
@@ -93,7 +63,7 @@ impl Default for Heap {
             "rand",
             NativeFunction {
                 arity: Arity::Exact(0),
-                ptr: rand,
+                ptr: builtin::rand,
             },
         );
 
@@ -173,77 +143,6 @@ impl Heap {
     }
 }
 
-#[derive(Debug)]
-pub struct ObjectHeader {
-    inner: Box<dyn Object>,
-    marked: AtomicBool,
-}
-
-pub trait Object: Debug + downcast_rs::Downcast {
-    fn trace(&self, heap: &Heap);
-
-    fn type_name(&self) -> &'static str {
-        "object"
-    }
-
-    fn format(&self, heap: &Heap) -> String {
-        let _ = heap;
-        format!("{self:?}")
-    }
-
-    fn call(&self, heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
-        let _ = values;
-        Err(PiccoloError::new(ErrorKind::CannotCall {
-            callee: self.format(heap),
-        }))
-    }
-}
-
-downcast_rs::impl_downcast!(Object);
-
-impl Object for Value {
-    fn trace(&self, heap: &Heap) {
-        match self {
-            Value::Object(ptr) => {
-                heap.trace(*ptr);
-            }
-            _ => {}
-        }
-    }
-}
-
-#[derive(Default)]
-pub struct Stack {
-    values: Vec<Value>,
-}
-
-impl Stack {
-    pub fn as_collectable(&self) -> impl Iterator<Item = Option<&Ptr>> {
-        self.values.iter().map(|value| {
-            if let Value::Object(ptr) = value {
-                Some(ptr)
-            } else {
-                None
-            }
-        })
-    }
-
-    pub fn push(&mut self, value: Value) {
-        self.values.push(value);
-    }
-
-    pub fn peek(&self, index: usize) -> Option<Value> {
-        self.values.get(self.values.len() - index - 1).cloned()
-    }
-}
-
-impl Index<usize> for Stack {
-    type Output = Value;
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.values[index]
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -259,7 +158,7 @@ mod test {
         }
 
         let mut heap = Heap::default();
-        let mut stack = Stack::default();
+        let mut stack = crate::runtime::Stack::default();
 
         let unrooted = heap.allocate(O::default());
         stack.push(Value::Object(heap.allocate(O::default())));
