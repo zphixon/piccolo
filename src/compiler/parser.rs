@@ -536,6 +536,16 @@ fn parse_call<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, P
             let object = Box::new(primary);
             let name = consume(scanner, TokenKind::Identifier, depth)?;
             primary = Expr::Get { object, name };
+        } else if t.kind == TokenKind::LeftBracket {
+            consume(scanner, TokenKind::LeftBracket, depth)?;
+            let object = Box::new(primary);
+            let index = Box::new(parse_expression(scanner, depth + 1)?);
+            let right_bracket = consume(scanner, TokenKind::RightBracket, depth)?;
+            primary = Expr::Index {
+                right_bracket,
+                object,
+                index,
+            }
         } else {
             return Ok(primary);
         }
