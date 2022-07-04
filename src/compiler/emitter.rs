@@ -1082,6 +1082,12 @@ impl Emitter {
         self.children.last_mut().unwrap()
     }
 
+    pub fn reset_after_errors(&mut self) {
+        while self.current_context().is_local() {
+            self.current_context_mut().end_scope();
+        }
+    }
+
     pub fn current_chunk(&self) -> &Chunk {
         self.module().chunk(self.current_context().chunk_index)
     }

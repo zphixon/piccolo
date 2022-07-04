@@ -297,6 +297,7 @@ fn repl(
                             .map_err(|errs| {
                                 print_errors(errs);
                                 machine.clear_stack_and_move_to_end_of_module(emitter.module());
+                                emitter.reset_after_errors();
                             })
                             .map(|value| println!("{}", value.debug_format(&heap)));
 
