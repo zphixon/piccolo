@@ -132,7 +132,7 @@ impl fmt::Display for PiccoloError {
             } else {
                 ""
             },
-            stack_trace = if self.stack.is_some() && self.stack.as_ref().unwrap().is_empty() {
+            stack_trace = if self.stack.is_some() && !self.stack.as_ref().unwrap().is_empty() {
                 let mut s = String::new();
                 for (i, site) in self.stack.as_ref().unwrap().iter().enumerate() {
                     write!(s, "  {} called from line {}", site.name, site.pos).unwrap();

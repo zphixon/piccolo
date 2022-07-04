@@ -9,7 +9,7 @@ use crate::{
         value::Value,
         Object,
     },
-    trace,
+    trace, warn,
 };
 use fnv::FnvHashMap;
 
@@ -71,8 +71,10 @@ impl<'chunk> FrameStack<'chunk> {
     }
 
     fn unwind(&self) -> Vec<crate::error::Callsite> {
+        warn!("unwinding stack");
         let mut calls = Vec::new();
         for frame in self.frames.iter().take(self.frames.len() - 1) {
+            warn!("-- {}", frame.name);
             calls.push(crate::error::Callsite {
                 name: frame.name.clone(),
                 pos: frame.chunk.get_pos_from_index(frame.ip),
