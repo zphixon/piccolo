@@ -286,7 +286,7 @@ impl Object for Value {
             Value::NativeFunction(f) => {
                 format!("NativeFunction({:?})", heap.get_string(f.name()).unwrap())
             }
-            Value::Object(p) => format!("Object({})", heap.get(*p).unwrap().debug_format(heap)),
+            Value::Object(p) => heap.get(*p).unwrap().debug_format(heap),
             Value::Nil => String::from("nil"),
         }
     }
