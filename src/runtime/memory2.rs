@@ -14,7 +14,21 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-pub trait Object: downcast_rs::Downcast {
+// https://stackoverflow.com/a/30353928/18270160
+pub trait ObjectClone {
+    fn clone_object(&self) -> Box<dyn Object>;
+}
+
+impl<T> ObjectClone for T
+where
+    T: 'static + Object + Clone,
+{
+    fn clone_object(&self) -> Box<dyn Object> {
+        Box::new(self.clone())
+    }
+}
+
+pub trait Object: downcast_rs::Downcast + ObjectClone {
     fn trace(&self, heap: &Heap);
 
     fn type_name(&self, heap: &Heap) -> &'static str {
@@ -174,6 +188,13 @@ impl Heap {
     pub fn get_native(&self, name: &str) -> Option<NativeFunction> {
         self.native_functions.get(name).map(|f| *f)
     }
+
+    pub fn clone(&mut self, ptr: Ptr) -> Ptr {
+        Ptr(self.objects.insert(ObjectHeader {
+            inner: self.get(ptr).unwrap().clone_object(),
+            marked: AtomicBool::new(false),
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -187,6 +208,11 @@ mod test {
         impl Object for O {
             fn trace(&self, _: &Heap) {
                 self.0.store(true, Ordering::SeqCst);
+            }
+        }
+        impl ObjectClone for O {
+            fn clone_object(&self) -> Box<dyn Object> {
+                Box::new(O(AtomicBool::new(self.0.load(Ordering::SeqCst))))
             }
         }
 
@@ -215,7 +241,7 @@ mod test {
 
     #[test]
     fn more_complicated() {
-        #[derive(Debug)]
+        #[derive(Debug, Clone)]
         struct Cons {
             car: i32,
             cdr: Ptr,
