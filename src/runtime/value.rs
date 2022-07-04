@@ -251,11 +251,8 @@ impl From<Value> for f64 {
 
 impl Object for Value {
 	fn trace(&self, heap: &Heap) {
-		match self {
-			Value::Object(ptr) => {
-				heap.trace(*ptr);
-			}
-			_ => {}
+		if let Value::Object(ptr) = self {
+			heap.trace(*ptr);
 		}
 	}
 

@@ -36,6 +36,12 @@ pub struct Heap {
 	interner: Interner,
 }
 
+impl Default for Heap {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl Heap {
 	pub fn new() -> Heap {
 		let mut heap = Heap {
@@ -107,10 +113,8 @@ impl Heap {
 			.iter_mut()
 			.for_each(|(_, header)| header.marked.store(false, Ordering::SeqCst));
 
-		for root in roots {
-			if let Some(&root) = root {
-				self.trace(root);
-			}
+		for root in roots.flatten() {
+			self.trace(*root);
 		}
 
 		self.objects
@@ -145,7 +149,7 @@ impl Heap {
 	}
 
 	pub fn get_native(&self, name: &str) -> Option<NativeFunction> {
-		self.native_functions.get(name).map(|f| *f)
+		self.native_functions.get(name).copied()
 	}
 
 	pub fn clone(&mut self, ptr: Ptr) -> Ptr {
