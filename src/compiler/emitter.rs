@@ -784,10 +784,17 @@ fn compile_literal(emitter: &mut Emitter, literal: Token) -> Result<(), PiccoloE
 fn compile_array_literal(
     emitter: &mut Emitter,
     right_bracket: Token,
-    _values: &[Expr],
+    values: &[Expr],
 ) -> Result<(), PiccoloError> {
-    // TODO
-    emitter.add_instruction(Opcode::Array(0), right_bracket.pos);
+    for value in values.iter() {
+        compile_expr(emitter, value)?;
+    }
+
+    emitter.add_instruction(
+        Opcode::Array(values.len().try_into().unwrap()),
+        right_bracket.pos,
+    );
+
     Ok(())
 }
 

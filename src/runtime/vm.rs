@@ -292,17 +292,15 @@ impl Machine {
             Opcode::True => self.push(Value::Bool(true)),
             Opcode::False => self.push(Value::Bool(false)),
 
-            Opcode::Array(_len) => {
-                // TODO
-                //self.push(Value::Object(heap.allocate(Array::new(len as usize))));
-                let array = Array::new_with(vec![
-                    Value::Integer(1),
-                    Value::Integer(2),
-                    Value::Integer(3),
-                    Value::Integer(4),
-                    Value::Integer(5),
-                ]);
-                self.push(Value::Object(heap.allocate(array)));
+            Opcode::Array(len) => {
+                let len = len as usize;
+                let mut values = Vec::with_capacity(len);
+                for _ in 0..len {
+                    values.push(self.pop());
+                }
+                values.reverse();
+
+                self.push(Value::Object(heap.allocate(Array::new_with(values))));
             }
 
             Opcode::Negate => {
