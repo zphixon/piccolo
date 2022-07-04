@@ -423,6 +423,8 @@ fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> 
     match expr {
         Expr::Literal { literal }
             => compile_literal(emitter, *literal),
+        Expr::ArrayLiteral { right_bracket, values }
+            => compile_array_literal(emitter, *right_bracket, values),
         Expr::Paren { right_paren, expr }
             => compile_paren(emitter, *right_paren, expr),
         Expr::Variable { variable }
@@ -441,8 +443,8 @@ fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> 
         //     => compile_get(emitter, object, name),
         // Expr::Set { object, name, value }
         //     => compile_set(emitter, object, name, value),
-        // Expr::Index { right_bracket, object, index }
-        //     => compile_index(emitter, right_bracket, object, index),
+        Expr::Index { right_bracket, object, index }
+            => compile_index(emitter, *right_bracket, object, index),
         Expr::Fn { fn_, args, arity, body, end }
             => compile_lambda(emitter, *fn_, args, *arity, body, *end),
         _ => Err(PiccoloError::todo(format!("compile_expr: {expr:#?}"))),
@@ -779,6 +781,16 @@ fn compile_literal(emitter: &mut Emitter, literal: Token) -> Result<(), PiccoloE
     Ok(())
 }
 
+fn compile_array_literal(
+    emitter: &mut Emitter,
+    right_bracket: Token,
+    _values: &[Expr],
+) -> Result<(), PiccoloError> {
+    // TODO
+    emitter.add_instruction(Opcode::Array(0), right_bracket.pos);
+    Ok(())
+}
+
 fn compile_paren(
     emitter: &mut Emitter,
     right_paren: Token,
@@ -894,6 +906,19 @@ fn compile_call(
         compile_expr(emitter, arg)?;
     }
     emitter.add_instruction(Opcode::Call(arity as u16), paren.pos);
+    Ok(())
+}
+
+fn compile_index(
+    emitter: &mut Emitter,
+    right_bracket: Token,
+    object: &Expr,
+    index: &Expr,
+) -> Result<(), PiccoloError> {
+    trace!("{} index", right_bracket.pos);
+    compile_expr(emitter, object)?;
+    compile_expr(emitter, index)?;
+    emitter.add_instruction(Opcode::Index, right_bracket.pos);
     Ok(())
 }
 

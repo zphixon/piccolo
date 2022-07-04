@@ -206,6 +206,14 @@ pub enum ErrorKind {
     CannotCall {
         callee: String,
     },
+    CannotIndex {
+        object: String,
+        with: String,
+    },
+    OutOfBounds {
+        object: String,
+        with: String,
+    },
     FormatError,
     Todo {
         why: String,
@@ -259,6 +267,10 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Incorrect arity: function {name} expected {exp:?} arguments, got {got}"),
             ErrorKind::CannotCall { callee }
                 => write!(f, "Cannot call value {callee}"),
+            ErrorKind::CannotIndex { object, with }
+                => write!(f, "Cannot index value {object} with {with}"),
+            ErrorKind::OutOfBounds { object, with }
+                => write!(f, "Cannot index {with} out of bounds of {object}"),
             ErrorKind::FormatError
                 => write!(f, "The value could not be formatted"),
             ErrorKind::Todo { why }

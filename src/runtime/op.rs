@@ -60,6 +60,7 @@ pub enum Opcode {
     Nil,
     True,
     False,
+    Array(u16),
 
     Negate,
     Not,
@@ -80,6 +81,8 @@ pub enum Opcode {
     GetGlobal(u16),
     SetGlobal(u16),
     DeclareGlobal(u16),
+
+    Index,
 
     JumpForward(u16),
     JumpFalse(u16),

@@ -2,7 +2,7 @@
 
 use crate::{
     compiler::{Token, TokenKind},
-    error::PiccoloError,
+    error::{ErrorKind, PiccoloError},
     runtime::{
         builtin,
         builtin::NativeFunction,
@@ -32,6 +32,10 @@ pub enum Value {
 }
 
 impl Value {
+    pub fn is_object(&self) -> bool {
+        matches!(self, Value::Object(_))
+    }
+
     pub fn as_ptr(&self) -> Ptr {
         if let Value::Object(ptr) = self {
             *ptr
@@ -53,6 +57,13 @@ impl Value {
             }),
             //Constant::NativeFunction(f) => Value::NativeFunction(f),
             //Constant::Object(Box<dyn Object>) => {} // TODO?
+            Constant::Array(v) => {
+                let values = v
+                    .into_iter()
+                    .map(|constant| Value::from_constant(constant, heap))
+                    .collect();
+                Value::Object(heap.allocate(Array { values }))
+            }
             Constant::Nil => Value::Nil,
         }
     }
@@ -300,6 +311,7 @@ pub enum Constant {
     Integer(i64),
     Double(f64),
     Function(ConstantFunction),
+    Array(Vec<Constant>),
     Nil,
 }
 
@@ -332,7 +344,129 @@ impl std::fmt::Display for Constant {
             Constant::Integer(v) => write!(f, "{}", v),
             Constant::Double(v) => write!(f, "{}", v),
             Constant::Function(v) => write!(f, "{}", v.name),
+            Constant::Array(v) => {
+                let mut s = String::from("[");
+                for (i, value) in v.iter().enumerate() {
+                    s.push_str(&value.to_string());
+                    if i + 1 != v.len() {
+                        s.push_str(", ");
+                    }
+                }
+                s.push(']');
+                write!(f, "{s}")
+            }
             Constant::Nil => write!(f, "nil"),
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct Array {
+    values: Vec<Value>,
+}
+
+impl Array {
+    pub fn new(len: usize) -> Self {
+        Array {
+            values: Vec::with_capacity(len),
+        }
+    }
+
+    pub fn new_with(values: Vec<Value>) -> Self {
+        Array { values }
+    }
+}
+
+impl Object for Array {
+    fn trace(&self, heap: &Heap) {
+        for value in self.values.iter() {
+            value.trace(heap);
+        }
+    }
+
+    fn type_name(&self) -> &'static str {
+        "array"
+    }
+
+    fn format(&self, heap: &Heap) -> String {
+        let mut s = String::from("[");
+        for (i, value) in self.values.iter().enumerate() {
+            s.push_str(&value.format(heap));
+            if i + 1 != self.values.len() {
+                s.push_str(", ");
+            }
+        }
+        s.push(']');
+        s
+    }
+
+    fn debug_format(&self, heap: &Heap) -> String {
+        let mut s = String::from("[");
+        for (i, value) in self.values.iter().enumerate() {
+            s.push_str(&value.debug_format(heap));
+            if i + 1 != self.values.len() {
+                s.push_str(", ");
+            }
+        }
+        s.push(']');
+        s
+    }
+
+    fn index(&self, heap: &Heap, value: Value) -> Result<Value, PiccoloError> {
+        if value.is_integer() {
+            let index = value.into::<i64>();
+            let index: usize = index.try_into().map_err(|_| {
+                PiccoloError::new(ErrorKind::CannotIndex {
+                    object: self.format(heap),
+                    with: value.format(heap),
+                })
+            })?;
+
+            if index >= self.values.len() {
+                return Err(PiccoloError::new(ErrorKind::OutOfBounds {
+                    object: self.format(heap),
+                    with: format!("{index}"),
+                }));
+            }
+
+            return Ok(self.values[index]);
+        }
+
+        Err(PiccoloError::new(ErrorKind::CannotIndex {
+            object: self.format(heap),
+            with: value.format(heap),
+        }))
+    }
+
+    fn index_assign(
+        &mut self,
+        heap: &Heap,
+        index: Value,
+        value: Value,
+    ) -> Result<(), PiccoloError> {
+        if index.is_integer() {
+            let index = value.into::<i64>();
+            let index: usize = index.try_into().map_err(|_| {
+                PiccoloError::new(ErrorKind::CannotIndex {
+                    object: self.format(heap),
+                    with: value.format(heap),
+                })
+            })?;
+
+            if index >= self.values.len() {
+                return Err(PiccoloError::new(ErrorKind::OutOfBounds {
+                    object: self.format(heap),
+                    with: format!("{index}"),
+                }));
+            }
+
+            self.values[index] = value;
+            return Ok(());
+        }
+
+        Err(PiccoloError::new(ErrorKind::CannotIndex {
+            object: self.format(heap),
+            with: value.format(heap),
+        }))
     }
 }

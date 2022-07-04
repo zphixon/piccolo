@@ -74,6 +74,28 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
             callee: self.format(heap),
         }))
     }
+
+    fn index(&self, heap: &Heap, value: Value) -> Result<Value, PiccoloError> {
+        let _ = value;
+        Err(PiccoloError::new(ErrorKind::CannotIndex {
+            object: self.format(heap),
+            with: value.format(heap),
+        }))
+    }
+
+    fn index_assign(
+        &mut self,
+        heap: &Heap,
+        index: Value,
+        value: Value,
+    ) -> Result<(), PiccoloError> {
+        let _ = index;
+        let _ = value;
+        Err(PiccoloError::new(ErrorKind::CannotIndex {
+            object: self.format(heap),
+            with: value.format(heap),
+        }))
+    }
 }
 
 downcast_rs::impl_downcast!(Object);

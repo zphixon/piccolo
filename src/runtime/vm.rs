@@ -6,7 +6,7 @@ use crate::{
         chunk::{Chunk, Module},
         memory::Heap,
         op::Opcode,
-        value::Value,
+        value::{Array, Value},
         Object,
     },
     trace, warn,
@@ -291,6 +291,19 @@ impl Machine {
             Opcode::Nil => self.push(Value::Nil),
             Opcode::True => self.push(Value::Bool(true)),
             Opcode::False => self.push(Value::Bool(false)),
+
+            Opcode::Array(_len) => {
+                // TODO
+                //self.push(Value::Object(heap.allocate(Array::new(len as usize))));
+                let array = Array::new_with(vec![
+                    Value::Integer(1),
+                    Value::Integer(2),
+                    Value::Integer(3),
+                    Value::Integer(4),
+                    Value::Integer(5),
+                ]);
+                self.push(Value::Object(heap.allocate(array)));
+            }
 
             Opcode::Negate => {
                 let v = self.pop();
@@ -645,6 +658,19 @@ impl Machine {
 
                 let value = self.pop();
                 self.globals.insert(name.to_string(), value);
+            }
+
+            Opcode::Index => {
+                let index = self.pop();
+                if self.peek().is_object() {
+                    let ptr = self.pop().as_ptr();
+                    self.push(heap.get(ptr).unwrap().index(heap, index)?);
+                } else {
+                    return Err(PiccoloError::new(ErrorKind::CannotIndex {
+                        object: self.peek().format(heap),
+                        with: index.format(heap),
+                    }));
+                }
             }
 
             Opcode::JumpForward(offset) => {
