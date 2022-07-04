@@ -25,6 +25,10 @@ pub enum Expr<'a> {
     Literal {
         literal: Token<'a>,
     },
+    ArrayLiteral {
+        right_bracket: Token<'a>,
+        values: Vec<Expr<'a>>,
+    },
     Paren {
         right_paren: Token<'a>,
         expr: Box<Expr<'a>>,
@@ -245,6 +249,8 @@ fn print_expr(indent: usize, expr: &Expr) -> String {
     match expr {
         Expr::Literal { literal }
             => print_literal(*literal),
+        Expr::ArrayLiteral { values, .. }
+            => print_array_literal(indent, values),
         Expr::Paren { expr, .. }
             => print_paren(indent, expr),
         Expr::Path { names }
@@ -357,6 +363,18 @@ fn print_data(indent: usize, _name: Token, _methods: &[Stmt], _fields: &[Stmt]) 
 
 fn print_literal(literal: Token) -> String {
     format!("{literal}")
+}
+
+fn print_array_literal(indent: usize, values: &[Expr]) -> String {
+    let mut s = String::from("[");
+    for (i, value) in values.iter().enumerate() {
+        s.push_str(&print_expr(indent, value));
+        if i + 1 != values.len() {
+            s.push_str(", ");
+        }
+    }
+    s.push(']');
+    s
 }
 
 fn print_paren(indent: usize, expr: &Expr) -> String {

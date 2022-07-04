@@ -522,7 +522,7 @@ fn parse_call<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, P
         if t.kind == TokenKind::LeftParen {
             let callee = Box::new(primary);
             let paren = consume(scanner, TokenKind::LeftParen, depth)?;
-            let args = parse_arguments(scanner, depth + 1)?;
+            let args = parse_arguments(scanner, depth + 1, TokenKind::RightParen)?;
             consume(scanner, TokenKind::RightParen, depth)?;
             let arity = args.len();
             primary = Expr::Call {
@@ -566,6 +566,14 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>
         let literal = scanner.next_token()?;
 
         Ok(Expr::Literal { literal })
+    } else if t.kind == TokenKind::LeftBracket {
+        consume(scanner, TokenKind::LeftBracket, depth)?;
+        let values = parse_arguments(scanner, depth + 1, TokenKind::RightBracket)?;
+        let right_bracket = consume(scanner, TokenKind::RightBracket, depth)?;
+        Ok(Expr::ArrayLiteral {
+            right_bracket,
+            values,
+        })
     } else if t.kind == TokenKind::Identifier {
         let variable = scanner.next_token()?;
 
@@ -621,10 +629,11 @@ fn parse_parameters<'a>(
 fn parse_arguments<'a>(
     scanner: &mut Scanner<'a>,
     depth: usize,
+    end: TokenKind,
 ) -> Result<Vec<Expr<'a>>, PiccoloError> {
     trace!("arguments {:?}", scanner.peek_token(0)?);
     let mut args = vec![];
-    if scanner.peek_token(0)?.kind != TokenKind::RightParen {
+    if scanner.peek_token(0)?.kind != end {
         args.push(parse_expression(scanner, depth + 1)?);
         while scanner.peek_token(0)?.kind == TokenKind::Comma {
             consume(scanner, TokenKind::Comma, depth)?;
