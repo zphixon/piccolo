@@ -152,9 +152,6 @@ impl fmt::Display for PiccoloError {
 /// Types of errors possible in Piccolo.
 #[derive(Debug)]
 pub enum ErrorKind {
-    StackUnderflow {
-        op: Opcode,
-    },
     InvalidUTF8,
     FileNotFound,
     IOError,
@@ -223,8 +220,6 @@ pub struct ParseError {}
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ErrorKind::StackUnderflow { op }
-                => write!(f, "Stack underflow due to {:?}", op),
             ErrorKind::InvalidUTF8
                 => write!(f, "Invalid UTF-8 sequence"),
             ErrorKind::FileNotFound

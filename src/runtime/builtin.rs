@@ -12,7 +12,7 @@ pub fn to_string(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloErro
             Value::Bool(b) => write!(s, "{b}").unwrap(),
             Value::Integer(i) => write!(s, "{i}").unwrap(),
             Value::Double(d) => write!(s, "{d}").unwrap(),
-            Value::String(_) => s.push_str("string todo"),
+            Value::String(ptr) => write!(s, "{}", heap.get_string(*ptr).unwrap()).unwrap(),
             Value::Function(f) => write!(s, "<func {}>", heap.get_string(f.name).unwrap()).unwrap(),
             Value::NativeFunction(f) => {
                 write!(s, "<native func {}>", heap.get_string(f.name).unwrap()).unwrap()
@@ -60,15 +60,17 @@ impl NativeFunction {
         NativeFunction { name, arity, ptr }
     }
 
+    pub fn name(&self) -> StringPtr {
+        self.name
+    }
+
     pub fn call(&self, heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
-        if let Arity::Exact(arity) = self.arity {
-            if arity != args.len() {
-                return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                    name: heap.get_string(self.name).unwrap().to_string(),
-                    exp: arity,
-                    got: args.len(),
-                }));
-            }
+        if !self.arity.is_compatible(args.len()) {
+            return Err(PiccoloError::new(ErrorKind::IncorrectArity {
+                name: heap.get_string(self.name).unwrap().to_string(),
+                exp: self.arity.number(),
+                got: args.len(),
+            }));
         }
 
         (self.ptr)(heap, args)

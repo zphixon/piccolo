@@ -10,6 +10,7 @@ pub mod vm;
 
 pub mod interner;
 pub mod memory2;
+pub mod vm2;
 
 use interner::StringPtr;
 use memory2::{Heap, Object, Ptr};
@@ -20,6 +21,24 @@ pub enum Arity {
     Exact(usize),
 }
 
+impl Arity {
+    pub fn is_compatible(&self, with: usize) -> bool {
+        if let Arity::Exact(arity) = self {
+            *arity == with
+        } else {
+            true
+        }
+    }
+
+    pub fn number(&self) -> usize {
+        if let Arity::Exact(arity) = self {
+            *arity
+        } else {
+            unreachable!()
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Function {
     arity: Arity,
@@ -27,7 +46,7 @@ pub struct Function {
     name: StringPtr,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum Value {
     Bool(bool),
     Integer(i64),
@@ -44,8 +63,31 @@ impl Value {
         if let Value::Object(ptr) = self {
             *ptr
         } else {
-            panic!("called as_ptr on non-object {self:?}");
+            panic!("called as_ptr on non-object");
         }
+    }
+
+    pub fn from_constant(c: value::Constant, heap: &mut Heap) -> Value {
+        use value::Constant;
+        match c {
+            Constant::Bool(b) => Value::Bool(b),
+            Constant::Integer(i) => Value::Integer(i),
+            Constant::Double(d) => Value::Double(d),
+            Constant::String(s) => Value::String(heap.alloc_string(s)),
+            Constant::Function(f) => Value::Function(Function {
+                arity: Arity::Exact(f.arity()),
+                chunk: f.chunk(),
+                name: heap.alloc_string(f.name().to_string()),
+            }),
+            //Constant::NativeFunction(f) => Value::NativeFunction(f),
+            //Constant::Object(Box<dyn Object>) => {} // TODO?
+            Constant::Nil => Value::Nil,
+            _ => todo!(),
+        }
+    }
+
+    pub fn to_string(&self, heap: &Heap) -> String {
+        self.format(heap)
     }
 }
 
@@ -56,6 +98,38 @@ impl Object for Value {
                 heap.trace(*ptr);
             }
             _ => {}
+        }
+    }
+
+    fn type_name(&self, heap: &Heap) -> &'static str {
+        "value"
+    }
+
+    fn format(&self, heap: &Heap) -> String {
+        match self {
+            Value::Bool(b) => format!("{b}"),
+            Value::Integer(i) => format!("{i}"),
+            Value::Double(d) => format!("{d}"),
+            Value::String(p) => heap.get_string(*p).unwrap().to_string(),
+            Value::Function(f) => heap.get_string(f.name).unwrap().to_string(),
+            Value::NativeFunction(f) => heap.get_string(f.name()).unwrap().to_string(),
+            Value::Object(p) => heap.get(*p).unwrap().format(heap),
+            Value::Nil => String::from("nil"),
+        }
+    }
+
+    fn debug_format(&self, heap: &Heap) -> String {
+        match self {
+            Value::Bool(v) => format!("Bool({v})"),
+            Value::Integer(v) => format!("Integer({v})"),
+            Value::Double(v) => format!("Double({v})"),
+            Value::String(v) => format!("String({v:?})"),
+            Value::Function(f) => format!("Function({:?})", heap.get_string(f.name).unwrap()),
+            Value::NativeFunction(f) => {
+                format!("NativeFunction({:?})", heap.get_string(f.name()).unwrap())
+            }
+            Value::Object(p) => format!("Object({})", heap.get(*p).unwrap().debug_format(heap)),
+            Value::Nil => String::from("nil"),
         }
     }
 }

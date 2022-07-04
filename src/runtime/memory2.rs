@@ -10,22 +10,29 @@ use fnv::FnvHashMap;
 use slotmap::{DefaultKey, SlotMap};
 use std::{
     fmt::Debug,
+    hash::BuildHasherDefault,
     sync::atomic::{AtomicBool, Ordering},
 };
 
-pub trait Object: Debug + downcast_rs::Downcast {
+pub trait Object: downcast_rs::Downcast {
     fn trace(&self, heap: &Heap);
 
-    fn type_name(&self) -> &'static str {
+    fn type_name(&self, heap: &Heap) -> &'static str {
+        let _ = heap;
         "object"
     }
 
     fn format(&self, heap: &Heap) -> String {
         let _ = heap;
-        format!("{self:?}")
+        self.type_name(heap).to_string()
     }
 
-    fn call(&self, heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
+    fn debug_format(&self, heap: &Heap) -> String {
+        let _ = heap;
+        format!("{}(?)", self.type_name(heap))
+    }
+
+    fn call(&self, heap: &Heap, values: &[Value]) -> Result<Value, PiccoloError> {
         let _ = values;
         Err(PiccoloError::new(ErrorKind::CannotCall {
             callee: self.format(heap),
@@ -35,7 +42,6 @@ pub trait Object: Debug + downcast_rs::Downcast {
 
 downcast_rs::impl_downcast!(Object);
 
-#[derive(Debug)]
 pub struct ObjectHeader {
     inner: Box<dyn Object>,
     marked: AtomicBool,
@@ -51,7 +57,6 @@ impl Ptr {
     }
 }
 
-#[derive(Default)]
 pub struct Heap {
     objects: SlotMap<DefaultKey, ObjectHeader>,
     native_functions: FnvHashMap<&'static str, NativeFunction>,
@@ -60,7 +65,14 @@ pub struct Heap {
 
 impl Heap {
     pub fn new() -> Heap {
-        let mut heap = Heap::default();
+        let mut heap = Heap {
+            objects: Default::default(),
+            native_functions: FnvHashMap::with_capacity_and_hasher(
+                0,
+                BuildHasherDefault::default(),
+            ),
+            interner: Default::default(),
+        };
         let mut native_functions = FnvHashMap::default();
 
         native_functions.insert(
@@ -68,7 +80,7 @@ impl Heap {
             NativeFunction::new(
                 heap.alloc_string(String::from("print")),
                 Arity::Any,
-                builtin::rand,
+                builtin::print,
             ),
         );
 
@@ -158,6 +170,10 @@ impl Heap {
     pub fn get_string(&self, ptr: StringPtr) -> Option<&str> {
         self.interner.get_string(ptr)
     }
+
+    pub fn get_native(&self, name: &str) -> Option<NativeFunction> {
+        self.native_functions.get(name).map(|f| *f)
+    }
 }
 
 #[cfg(test)]
@@ -207,6 +223,10 @@ mod test {
         impl Object for Cons {
             fn trace(&self, heap: &Heap) {
                 heap.trace(self.cdr);
+            }
+
+            fn type_name(&self, _: &Heap) -> &'static str {
+                "cons"
             }
 
             fn format(&self, heap: &Heap) -> String {
