@@ -15,13 +15,6 @@ pub trait Object: std::fmt::Debug {
     }
 }
 
-#[derive(Default, Clone, PartialEq)]
-pub struct Function {
-    arity: usize,
-    name: String,
-    chunk: usize,
-}
-
 impl fmt::Debug for Function {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}, {}", self.name, self.chunk)
@@ -31,24 +24,6 @@ impl fmt::Debug for Function {
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<fn {}>", self.name)
-    }
-}
-
-impl Function {
-    pub fn new(arity: usize, name: String, chunk: usize) -> Self {
-        Self { arity, name, chunk }
-    }
-
-    pub fn arity(&self) -> usize {
-        self.arity
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn chunk(&self) -> usize {
-        self.chunk
     }
 }
 

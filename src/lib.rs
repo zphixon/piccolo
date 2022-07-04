@@ -64,11 +64,11 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     let module = emitter::compile(&ast)?;
     debug!("{}", runtime::chunk::disassemble(&module, ""));
 
-    let mut heap = Heap::default();
+    let mut heap = Heap::new();
 
     debug!("interpret");
     let mut vm = Machine::new(&mut heap);
-    Ok(vm.interpret(&mut heap, &module)?.into_constant())
+    Ok(vm.interpret(&mut heap, &module)?.into_constant(&heap))
 }
 
 /// Reads a file and interprets its contents.
@@ -104,7 +104,7 @@ mod integration {
         println!("{}", ast::print_ast(&ast));
         let module = emitter::compile(&ast).unwrap();
         println!("{}", chunk::disassemble(&module, "idklol"));
-        let mut heap = Heap::default();
+        let mut heap = Heap::new();
         let mut vm = Machine::new(&mut heap);
         println!("{:?}", vm.interpret(&mut heap, &module).unwrap());
     }
@@ -149,11 +149,13 @@ mod integration {
 
             println!("{}", chunk::disassemble(&module, "idklol"));
 
-            let mut heap = Heap::default();
+            let mut heap = Heap::new();
             let mut vm = Machine::new(&mut heap);
             // TODO
             assert_eq!(
-                vm.interpret(&mut heap, &module).unwrap().into_constant(),
+                vm.interpret(&mut heap, &module)
+                    .unwrap()
+                    .into_constant(&heap),
                 Constant::Integer(11)
             );
         } else {

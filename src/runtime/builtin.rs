@@ -1,6 +1,6 @@
 use crate::{
     error::{ErrorKind, PiccoloError},
-    runtime::{interner::StringPtr, memory2::Heap, Arity, Value},
+    runtime::{interner::StringPtr, memory::Heap, Arity, Value},
 };
 use std::fmt::{Debug, Write};
 
@@ -50,9 +50,15 @@ pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError
 
 #[derive(Clone, Copy)]
 pub struct NativeFunction {
-    name: StringPtr,
-    arity: Arity,
-    ptr: PiccoloFunction,
+    pub name: StringPtr,
+    pub arity: Arity,
+    pub ptr: PiccoloFunction,
+}
+
+impl PartialEq for NativeFunction {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.arity == other.arity
+    }
 }
 
 impl NativeFunction {
@@ -68,7 +74,7 @@ impl NativeFunction {
         if !self.arity.is_compatible(args.len()) {
             return Err(PiccoloError::new(ErrorKind::IncorrectArity {
                 name: heap.get_string(self.name).unwrap().to_string(),
-                exp: self.arity.number(),
+                exp: self.arity,
                 got: args.len(),
             }));
         }

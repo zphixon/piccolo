@@ -4,74 +4,85 @@ use crate::{
     compiler::{Token, TokenKind},
     error::PiccoloError,
     runtime::{
-        memory::{Gc, Heap},
-        object::{Function, NativeFunction, Object},
+        builtin,
+        builtin::NativeFunction,
+        interner::StringPtr,
+        memory::{Heap, Ptr},
+        Arity, Object,
     },
 };
-use std::fmt;
 
-#[derive(Copy, Clone, Debug)]
-pub enum Value<'data> {
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Function {
+    pub arity: Arity,
+    pub chunk: usize,
+    pub name: StringPtr,
+}
+
+#[derive(Clone, Copy)]
+pub enum Value {
     Bool(bool),
     Integer(i64),
     Double(f64),
-    String(Gc<'data, String>),
-    Function(Gc<'data, Function>),
-    NativeFunction(Gc<'data, NativeFunction>),
-    Object(Gc<'data, dyn Object>),
+    String(StringPtr),
+    Function(Function),
+    NativeFunction(builtin::NativeFunction),
+    Object(Ptr),
     Nil,
 }
 
-impl<'data> Value<'data> {
-    /// A value is only false-y if it is of type bool and false, or of type nil.
-    /// All other values are truth-y.
+impl Value {
+    pub fn as_ptr(&self) -> Ptr {
+        if let Value::Object(ptr) = self {
+            *ptr
+        } else {
+            panic!("called as_ptr on non-object");
+        }
+    }
+
+    pub fn from_constant(c: Constant, heap: &mut Heap) -> Value {
+        match c {
+            Constant::Bool(b) => Value::Bool(b),
+            Constant::Integer(i) => Value::Integer(i),
+            Constant::Double(d) => Value::Double(d),
+            Constant::String(s) => Value::String(heap.alloc_string(s)),
+            Constant::Function(f) => Value::Function(Function {
+                arity: Arity::Exact(f.arity),
+                chunk: f.chunk,
+                name: heap.alloc_string(f.name),
+            }),
+            //Constant::NativeFunction(f) => Value::NativeFunction(f),
+            //Constant::Object(Box<dyn Object>) => {} // TODO?
+            Constant::Nil => Value::Nil,
+        }
+    }
+
+    pub fn into_constant(self, heap: &Heap) -> Constant {
+        match self {
+            Value::Bool(b) => Constant::Bool(b),
+            Value::Integer(i) => Constant::Integer(i),
+            Value::Double(d) => Constant::Double(d),
+            Value::String(ptr) => Constant::String(heap.get_string(ptr).unwrap().to_string()),
+            Value::Nil => Constant::Nil,
+            Value::Function(f) => Constant::Function(ConstantFunction {
+                arity: f.arity.number(),
+                name: heap.get_string(f.name).unwrap().to_string(),
+                chunk: f.chunk,
+            }),
+            _ => todo!("{self:?}"),
+        }
+    }
+
+    pub fn to_string(&self, heap: &Heap) -> String {
+        self.format(heap)
+    }
+
     pub fn is_truthy(&self) -> bool {
         match self {
             Value::Bool(b) => *b,
             Value::Nil => false,
             _ => true,
         }
-    }
-
-    pub fn from_constant(c: &Constant, h: &mut Heap<'data>) -> Value<'data> {
-        match c {
-            Constant::Bool(v) => Value::Bool(*v),
-            Constant::Integer(v) => Value::Integer(*v),
-            Constant::Double(v) => Value::Double(*v),
-            Constant::String(v) => Value::String({
-                let root = h.manage(v.to_owned());
-                root.as_gc()
-            }),
-            Constant::Function(v) => Value::Function({
-                let root = h.manage(v.to_owned());
-                root.as_gc()
-            }),
-            Constant::NativeFunction(v) => Value::NativeFunction({
-                let root = h.manage(v.to_owned());
-                root.as_gc()
-            }),
-            Constant::Nil => Value::Nil,
-        }
-    }
-
-    pub fn into_constant(self) -> Constant {
-        match self {
-            Value::Bool(v) => Constant::Bool(v),
-            Value::Integer(v) => Constant::Integer(v),
-            Value::Double(v) => Constant::Double(v),
-            Value::String(v) => Constant::String(String::clone(&*v)),
-            Value::Function(v) => Constant::Function(v.deep_copy()),
-            Value::NativeFunction(v) => Constant::NativeFunction(v.deep_copy()),
-            Value::Object(_) => todo!(),
-            Value::Nil => Constant::Nil,
-        }
-    }
-
-    pub fn into<T>(self) -> T
-    where
-        Value<'data>: Into<T>,
-    {
-        std::convert::Into::into(self)
     }
 
     pub fn is_string(&self) -> bool {
@@ -94,7 +105,7 @@ impl<'data> Value<'data> {
         matches!(self, Value::Function(_))
     }
 
-    pub fn as_function(&self) -> Gc<'data, Function> {
+    pub fn as_function(&self) -> Function {
         assert!(self.is_function());
         match self {
             Value::Function(f) => *f,
@@ -106,7 +117,7 @@ impl<'data> Value<'data> {
         matches!(self, Value::NativeFunction(_))
     }
 
-    pub fn as_native_function(&self) -> Gc<'data, NativeFunction> {
+    pub fn as_native_function(&self) -> NativeFunction {
         assert!(self.is_native_function());
         match self {
             Value::NativeFunction(f) => *f,
@@ -135,15 +146,15 @@ impl<'data> Value<'data> {
                 _ => None?,
             },
             Value::String(l) => match other {
-                Value::String(r) => **l == **r,
+                Value::String(r) => l == r,
                 _ => None?,
             },
             Value::Function(l) => match other {
-                Value::Function(r) => **l == **r,
+                Value::Function(r) => l == r,
                 _ => None?,
             },
             Value::NativeFunction(l) => match other {
-                Value::NativeFunction(r) => **l == **r,
+                Value::NativeFunction(r) => *l == *r,
                 _ => None?,
             },
             Value::Nil => match other {
@@ -185,76 +196,96 @@ impl<'data> Value<'data> {
             _ => None?,
         })
     }
+
+    pub fn into<T>(self) -> T
+    where
+        T: From<Value>,
+    {
+        T::from(self)
+    }
 }
 
-impl Object for Value<'_> {
-    fn trace(&self) {
+impl std::fmt::Debug for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::Bool(v) => v.trace(),
-            Value::Integer(v) => v.trace(),
-            Value::Double(v) => v.trace(),
-            Value::String(v) => v.trace(),
-            Value::Function(v) => v.trace(),
-            Value::NativeFunction(v) => v.trace(),
-            Value::Object(v) => v.trace(),
-            Value::Nil => {}
+            Value::Bool(v) => write!(f, "Bool({v})"),
+            Value::Integer(v) => write!(f, "Integer({v})"),
+            Value::Double(v) => write!(f, "Double({v})"),
+            Value::String(_) => write!(f, "String(?)"),
+            Value::Function(_) => write!(f, "Function(?)"),
+            Value::NativeFunction(_) => write!(f, "NativeFunction(?)"),
+            Value::Object(_) => write!(f, "Object(?)"),
+            Value::Nil => write!(f, "Nil"),
+        }
+    }
+}
+
+impl From<Value> for i64 {
+    fn from(v: Value) -> Self {
+        match v {
+            Value::Integer(i) => i,
+            _ => panic!("not an integer: {v:?}"),
+        }
+    }
+}
+
+impl From<Value> for f64 {
+    fn from(v: Value) -> Self {
+        match v {
+            Value::Double(f) => f,
+            _ => panic!("not a double: {v:?}"),
+        }
+    }
+}
+
+impl Object for Value {
+    fn trace(&self, heap: &Heap) {
+        match self {
+            Value::Object(ptr) => {
+                heap.trace(*ptr);
+            }
+            _ => {}
         }
     }
 
     fn type_name(&self) -> &'static str {
+        "value"
+    }
+
+    fn format(&self, heap: &Heap) -> String {
         match self {
-            Value::Bool(v) => v.type_name(),
-            Value::Integer(v) => v.type_name(),
-            Value::Double(v) => v.type_name(),
-            Value::String(v) => v.type_name(),
-            Value::Function(v) => v.type_name(),
-            Value::NativeFunction(v) => v.type_name(),
-            Value::Object(v) => v.type_name(),
-            Value::Nil => "nil",
+            Value::Bool(b) => format!("{b}"),
+            Value::Integer(i) => format!("{i}"),
+            Value::Double(d) => format!("{d}"),
+            Value::String(p) => heap.get_string(*p).unwrap().to_string(),
+            Value::Function(f) => heap.get_string(f.name).unwrap().to_string(),
+            Value::NativeFunction(f) => heap.get_string(f.name()).unwrap().to_string(),
+            Value::Object(p) => heap.get(*p).unwrap().format(heap),
+            Value::Nil => String::from("nil"),
         }
     }
-}
 
-impl std::fmt::Display for Value<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn debug_format(&self, heap: &Heap) -> String {
         match self {
-            Value::Bool(v) => write!(f, "{}", v),
-            Value::Integer(v) => write!(f, "{}", v),
-            Value::Double(v) => write!(f, "{}", v),
-            Value::String(v) => write!(f, "{}", v),
-            Value::Function(v) => write!(f, "{}", v),
-            Value::NativeFunction(v) => write!(f, "{}", v),
-            Value::Object(v) => write!(f, "{}", v.format()),
-            Value::Nil => write!(f, "nil"),
+            Value::Bool(v) => format!("Bool({v})"),
+            Value::Integer(v) => format!("Integer({v})"),
+            Value::Double(v) => format!("Double({v})"),
+            Value::String(v) => format!("String({v:?})"),
+            Value::Function(f) => format!("Function({:?})", heap.get_string(f.name).unwrap()),
+            Value::NativeFunction(f) => {
+                format!("NativeFunction({:?})", heap.get_string(f.name()).unwrap())
+            }
+            Value::Object(p) => format!("Object({})", heap.get(*p).unwrap().debug_format(heap)),
+            Value::Nil => String::from("nil"),
         }
     }
 }
 
-impl From<Value<'_>> for bool {
-    fn from(v: Value<'_>) -> Self {
-        match v {
-            Value::Bool(v) => v,
-            _ => panic!("could not cast to bool"),
-        }
-    }
-}
-
-impl From<Value<'_>> for i64 {
-    fn from(v: Value<'_>) -> Self {
-        match v {
-            Value::Integer(v) => v,
-            _ => panic!("could not cast to i64"),
-        }
-    }
-}
-
-impl From<Value<'_>> for f64 {
-    fn from(v: Value<'_>) -> Self {
-        match v {
-            Value::Double(v) => v,
-            _ => panic!("could not cast to f64"),
-        }
-    }
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct ConstantFunction {
+    pub arity: usize,
+    pub name: String,
+    pub chunk: usize,
 }
 
 /// Compile-time constant Piccolo values.
@@ -268,9 +299,7 @@ pub enum Constant {
     Bool(bool),
     Integer(i64),
     Double(f64),
-    Function(Function),
-    NativeFunction(NativeFunction),
-    //Object(Box<dyn Object>), // TODO
+    Function(ConstantFunction),
     Nil,
 }
 
@@ -293,49 +322,17 @@ impl Constant {
             _ => panic!("cannot create value from token {:?}", token),
         })
     }
-
-    pub fn is_string(&self) -> bool {
-        matches!(self, Constant::String(_))
-    }
 }
 
-impl fmt::Display for Constant {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl std::fmt::Display for Constant {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Constant::String(v) => write!(f, "{}", v),
             Constant::Bool(v) => write!(f, "{}", v),
             Constant::Integer(v) => write!(f, "{}", v),
             Constant::Double(v) => write!(f, "{}", v),
-            Constant::Function(v) => write!(f, "{}", v),
-            Constant::NativeFunction(v) => write!(f, "{}", v),
+            Constant::Function(v) => write!(f, "{}", v.name),
             Constant::Nil => write!(f, "nil"),
-        }
-    }
-}
-
-impl From<Constant> for bool {
-    fn from(c: Constant) -> Self {
-        match c {
-            Constant::Bool(v) => v,
-            _ => panic!("could not cast to bool"),
-        }
-    }
-}
-
-impl From<Constant> for i64 {
-    fn from(c: Constant) -> Self {
-        match c {
-            Constant::Integer(v) => v,
-            _ => panic!("could not cast to i64"),
-        }
-    }
-}
-
-impl From<Constant> for f64 {
-    fn from(c: Constant) -> Self {
-        match c {
-            Constant::Double(v) => v,
-            _ => panic!("could not cast to f64"),
         }
     }
 }

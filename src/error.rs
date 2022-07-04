@@ -200,7 +200,7 @@ pub enum ErrorKind {
     SyntaxError,
     IncorrectArity {
         name: String,
-        exp: usize,
+        exp: crate::runtime::Arity,
         got: usize,
     },
     CannotCall {
@@ -255,7 +255,7 @@ impl fmt::Display for ErrorKind {
             ErrorKind::SyntaxError
                 => write!(f, "Syntax error"),
             ErrorKind::IncorrectArity { name, exp, got }
-                => write!(f, "Incorrect arity: function {name} expected {exp} arguments, got {got}"),
+                => write!(f, "Incorrect arity: function {name} expected {exp:?} arguments, got {got}"),
             ErrorKind::CannotCall { callee }
                 => write!(f, "Cannot call value {callee}"),
             ErrorKind::Todo { why }

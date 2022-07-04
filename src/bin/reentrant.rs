@@ -24,7 +24,7 @@ fn main() {
 
     compile_with(&mut emitter, &ast1).unwrap();
 
-    let mut heap = Heap::default();
+    let mut heap = Heap::new();
     let mut vm = Machine::new(&mut heap);
     println!("run 1");
     vm.interpret_continue(&mut heap, emitter.module()).unwrap();

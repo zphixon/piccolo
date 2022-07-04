@@ -9,9 +9,8 @@ use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{
         chunk::{Chunk, Module},
-        object::Function,
         op::Opcode,
-        value::Constant,
+        value::{Constant, ConstantFunction},
     },
     trace,
 };
@@ -699,7 +698,11 @@ fn compile_fn(
 
     let chunk_index = emitter.end_context();
 
-    let function = Function::new(arity, name.lexeme.to_owned(), chunk_index);
+    let function = ConstantFunction {
+        arity,
+        name: name.lexeme.to_string(),
+        chunk: chunk_index,
+    };
 
     let constant = emitter.make_constant(Constant::Function(function));
     emitter.add_instruction(Opcode::Constant(constant), name.pos);
@@ -924,7 +927,11 @@ fn compile_lambda(
 
     let chunk_index = emitter.end_context();
 
-    let function = Function::new(arity, String::from("<anon>"), chunk_index);
+    let function = ConstantFunction {
+        arity,
+        name: String::from("<anon>"),
+        chunk: chunk_index,
+    };
 
     let constant = emitter.make_constant(Constant::Function(function));
     emitter.add_instruction(Opcode::Constant(constant), fn_.pos);
@@ -1291,7 +1298,7 @@ mod test {
 
         let module = emitter::compile(&ast).unwrap();
         println!("{}", chunk::disassemble(&module, "jioew"));
-        let mut heap = Heap::default();
+        let mut heap = Heap::new();
         Machine::new(&mut heap)
             .interpret(&mut heap, &module)
             .unwrap();

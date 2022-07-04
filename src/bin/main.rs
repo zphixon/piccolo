@@ -144,7 +144,7 @@ fn run() -> Result<(), Vec<PiccoloError>> {
             ..
         } => {
             let emitter = Emitter::new();
-            let mut heap = Heap::default();
+            let mut heap = Heap::new();
             let machine = Machine::new(&mut heap);
             repl(
                 emitter,
@@ -191,7 +191,7 @@ fn maybe_exec_then_repl(
     }
 
     if !verify_syntax {
-        let mut heap = Heap::default();
+        let mut heap = Heap::new();
         let mut machine = Machine::new(&mut heap);
 
         machine.interpret(&mut heap, emitter.module())?;
@@ -234,10 +234,10 @@ impl ConditionalEventHandler for MyCtrlCHandler {
     }
 }
 
-fn repl<'heap>(
+fn repl(
     mut emitter: Emitter,
-    mut heap: Heap<'heap>,
-    mut machine: Machine<'heap>,
+    mut heap: Heap,
+    mut machine: Machine,
     print_tokens: bool,
     print_ast: bool,
     print_compiled: bool,

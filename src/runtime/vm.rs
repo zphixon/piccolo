@@ -4,26 +4,27 @@ use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{
         chunk::{Chunk, Module},
-        memory::{Heap, Root, UniqueRoot},
-        object::{Function, NativeFunction, Object},
+        memory::Heap,
         op::Opcode,
         value::Value,
+        Object,
     },
     trace,
 };
 use fnv::FnvHashMap;
-use std::fmt::Write;
 
-pub struct Frame<'chunk, 'value> {
+pub struct Frame<'chunk> {
+    // TODO probably make this a StringPtr
     name: String,
     ip: usize,
     base: usize,
     chunk: &'chunk Chunk,
-    function: Root<'value, Function>,
+    // TODO: these need to be part of the iterator yielding rooted Objects
+    //function: Function,
     //closure: Root<Closure>,
 }
 
-impl Frame<'_, '_> {
+impl Frame<'_> {
     fn step(&mut self) -> Opcode {
         let op = self.chunk.ops[self.ip];
         self.ip += 1;
@@ -31,20 +32,20 @@ impl Frame<'_, '_> {
     }
 }
 
-pub struct FrameStack<'chunk, 'value> {
-    frames: Vec<Frame<'chunk, 'value>>,
+pub struct FrameStack<'chunk> {
+    frames: Vec<Frame<'chunk>>,
 }
 
-impl<'chunk, 'value> FrameStack<'chunk, 'value> {
+impl<'chunk> FrameStack<'chunk> {
     fn len(&self) -> usize {
         self.frames.len()
     }
 
-    fn push(&mut self, frame: Frame<'chunk, 'value>) {
+    fn push(&mut self, frame: Frame<'chunk>) {
         self.frames.push(frame);
     }
 
-    fn pop(&mut self) -> Frame<'chunk, 'value> {
+    fn pop(&mut self) -> Frame<'chunk> {
         self.frames.pop().unwrap()
     }
 
@@ -57,11 +58,11 @@ impl<'chunk, 'value> FrameStack<'chunk, 'value> {
         self.current_frame().ip
     }
 
-    fn current_frame<'this>(&'this self) -> &'this Frame<'chunk, 'value> {
+    fn current_frame<'this>(&'this self) -> &'this Frame<'chunk> {
         self.frames.last().unwrap()
     }
 
-    fn current_frame_mut<'this>(&'this mut self) -> &'this mut Frame<'chunk, 'value> {
+    fn current_frame_mut<'this>(&'this mut self) -> &'this mut Frame<'chunk> {
         self.frames.last_mut().unwrap()
     }
 
@@ -81,96 +82,62 @@ impl<'chunk, 'value> FrameStack<'chunk, 'value> {
     }
 }
 
-pub type PiccoloFunction = for<'value> fn(&[Value<'value>]) -> Value<'value>;
-
-pub struct Machine<'value> {
-    stack: UniqueRoot<'value, Vec<Value<'value>>>,
-    globals: UniqueRoot<'value, FnvHashMap<String, Value<'value>>>,
-    native_functions: FnvHashMap<String, PiccoloFunction>,
+pub struct Machine {
+    stack: Vec<Value>,
+    globals: FnvHashMap<String, Value>,
     ip: usize,
 }
 
 #[derive(Copy, Clone)]
-enum VmState<'value> {
+enum VmState {
     Continue,
-    ReturnFromTop(Value<'value>, usize),
-    Stop(Value<'value>),
+    ReturnFromTop(Value, usize),
+    Stop(Value),
 }
 
-fn print<'value>(values: &[Value<'value>]) -> Value<'value> {
-    let mut s = String::new();
-    for (i, value) in values.iter().enumerate() {
-        write!(s, "{value}").unwrap();
-        if i != values.len() {
-            s.push('\t');
-        }
-    }
-    println!("{s}");
-    Value::Nil
-}
-
-fn rand<'value>(_: &[Value<'value>]) -> Value<'value> {
-    Value::Double(rand::random())
-}
-
-impl<'value> Machine<'value> {
-    pub fn new(heap: &mut Heap<'value>) -> Self {
-        let mut globals = heap.manage_unique(FnvHashMap::default());
+impl Machine {
+    pub fn new(heap: &mut Heap) -> Self {
+        let mut globals = FnvHashMap::default();
 
         // TODO make this nicer
         globals.insert(
             String::from("print"),
-            Value::NativeFunction({
-                heap.manage(NativeFunction {
-                    arity: 0,
-                    name: "print".to_string(),
-                })
-                .as_gc()
-            }),
+            Value::NativeFunction(heap.get_native("print").unwrap()),
         );
-
         globals.insert(
             String::from("rand"),
-            Value::NativeFunction({
-                heap.manage(NativeFunction {
-                    arity: 0,
-                    name: "rand".to_string(),
-                })
-                .as_gc()
-            }),
+            Value::NativeFunction(heap.get_native("rand").unwrap()),
+        );
+        globals.insert(
+            String::from("toString"),
+            Value::NativeFunction(heap.get_native("toString").unwrap()),
         );
 
-        let mut native_functions = FnvHashMap::default();
-        native_functions.insert(String::from("print"), print as PiccoloFunction);
-        native_functions.insert(String::from("rand"), rand as PiccoloFunction);
-
         Machine {
-            stack: heap.manage_unique(Vec::new()),
+            stack: Vec::new(),
             globals,
-            native_functions,
             ip: 0,
         }
     }
 
-    fn push(&mut self, value: Value<'value>) {
+    fn push(&mut self, value: Value) {
         self.stack.push(value);
     }
 
-    fn pop(&mut self) -> Value<'value> {
+    fn pop(&mut self) -> Value {
         self.stack.pop().unwrap()
     }
 
-    fn peek(&self) -> &Value<'value> {
+    fn peek(&self) -> &Value {
         &self.stack[self.stack.len() - 1]
     }
 
-    fn peek_back(&self, len: usize) -> &Value<'value> {
+    fn peek_back(&self, len: usize) -> &Value {
         &self.stack[self.stack.len() - 1 - len]
     }
 
-    fn push_string(&mut self, heap: &mut Heap<'value>, string: String) {
-        let root = heap.manage(string);
-        self.push(Value::String(root.as_gc()));
+    fn push_string(&mut self, heap: &mut Heap, string: String) {
+        self.push(Value::String(heap.alloc_string(string)));
     }
 
     pub fn clear_stack_and_move_to_end_of_module(&mut self, module: &Module) {
@@ -178,30 +145,26 @@ impl<'value> Machine<'value> {
         self.ip = module.chunk(0).len();
     }
 
-    pub fn interpret(
-        &mut self,
-        heap: &mut Heap<'value>,
-        module: &Module,
-    ) -> Result<Value<'value>, PiccoloError> {
+    pub fn interpret(&mut self, heap: &mut Heap, module: &Module) -> Result<Value, PiccoloError> {
         self.interpret_from(heap, module, 0)
     }
 
     pub fn interpret_continue(
         &mut self,
-        heap: &mut Heap<'value>,
+        heap: &mut Heap,
         module: &Module,
-    ) -> Result<Value<'value>, PiccoloError> {
+    ) -> Result<Value, PiccoloError> {
         self.interpret_from(heap, module, self.ip)
     }
 
     fn interpret_from<'chunk>(
         &mut self,
-        heap: &mut Heap<'value>,
+        heap: &mut Heap,
         module: &'chunk Module,
         ip: usize,
-    ) -> Result<Value<'value>, PiccoloError> {
+    ) -> Result<Value, PiccoloError> {
         // :)
-        let f = heap.manage(Function::new(0, String::from("top level"), 0));
+        //let f = heap.manage(Function::new(0, String::from("top level"), 0));
         //self.push(Value::Function(f.as_gc()));
 
         let mut frames = FrameStack {
@@ -210,7 +173,7 @@ impl<'value> Machine<'value> {
                 base: 0,
                 ip,
                 chunk: module.chunk(0),
-                function: f,
+                //function: f,
             }],
         };
 
@@ -240,10 +203,10 @@ impl<'value> Machine<'value> {
 
     fn interpret_next_instruction<'chunk>(
         &mut self,
-        heap: &mut Heap<'value>,
+        heap: &mut Heap,
         module: &'chunk Module,
-        frames: &mut FrameStack<'chunk, 'value>,
-    ) -> Result<VmState<'value>, PiccoloError> {
+        frames: &mut FrameStack<'chunk>,
+    ) -> Result<VmState, PiccoloError> {
         // TODO: move to Opcode::Return
         if frames.current_ip() + 1 > frames.current_chunk().len() {
             return Ok(VmState::Stop(Value::Nil));
@@ -321,7 +284,7 @@ impl<'value> Machine<'value> {
             }
             Opcode::Constant(index) => {
                 let c = module.get_constant(index);
-                self.push(Value::from_constant(c, heap));
+                self.push(Value::from_constant(c.clone(), heap));
             }
             Opcode::Nil => self.push(Value::Nil),
             Opcode::True => self.push(Value::Bool(true)),
@@ -388,7 +351,7 @@ impl<'value> Machine<'value> {
                         }));
                     }
                 } else if lhs.is_string() {
-                    let value = format!("{lhs}{rhs}");
+                    let value = format!("{}{}", lhs.format(heap), rhs.format(heap));
                     self.push_string(heap, value);
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
@@ -783,48 +746,50 @@ impl<'value> Machine<'value> {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer".into(),
-                        got: format!("{} << {}", lhs.type_name(), rhs.type_name(),),
+                        got: format!("{} << {}", lhs.type_name(), rhs.type_name()),
                         op,
                     }));
                 }
             }
 
             Opcode::Call(arity) => {
+                let arity = arity as usize;
                 if let Value::Function(_) = self.peek_back(arity as usize) {
-                    let f = self.peek_back(arity as usize).as_function();
+                    let f = self.peek_back(arity).as_function();
 
-                    if f.arity() != arity as usize {
+                    if !f.arity.is_compatible(arity) {
                         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                            name: f.name().to_owned(),
-                            exp: f.arity(),
-                            got: arity as usize,
+                            name: heap.get_string(f.name).unwrap().to_string(),
+                            exp: f.arity,
+                            got: arity,
                         }));
                     }
 
                     debug!(
                         "go to chunk {} base {}",
-                        f.chunk(),
-                        self.stack.len() as u16 - 1 - arity
+                        f.chunk,
+                        self.stack.len() - 1 - arity
                     );
 
                     frames.push(Frame {
-                        name: f.name().to_string(),
+                        name: heap.get_string(f.name).unwrap().to_string(),
                         ip: 0,
-                        base: (self.stack.len() as u16 - arity - 1) as usize,
-                        chunk: module.chunk(f.chunk()),
-                        function: heap.root(f),
+                        base: self.stack.len() - arity - 1,
+                        chunk: module.chunk(f.chunk),
+                        //function: heap.allocate(f),
                     });
-                } else if let Value::NativeFunction(_) = self.peek_back(arity as usize) {
+                } else if let Value::NativeFunction(_) = self.peek_back(arity) {
                     let mut args = vec![];
                     for _ in 0..arity {
                         args.insert(0, self.pop());
                     }
                     let f = self.pop().as_native_function();
-                    self.push(self.native_functions[&f.name](&args));
+                    let name = heap.get_string(f.name()).unwrap().to_string();
+                    self.push(heap.call_native(&name, &args)?);
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "fn".to_owned(),
-                        got: self.peek_back(arity as usize).type_name().to_owned(),
+                        got: self.peek_back(arity).type_name().to_owned(),
                         op,
                     }));
                 }
@@ -859,7 +824,7 @@ mod test {
 
         println!("{}", chunk::disassemble(&module, ""));
 
-        let mut heap = Heap::default();
+        let mut heap = Heap::new();
 
         let mut vm = Machine::new(&mut heap);
         vm.interpret(&mut heap, &module).unwrap();
