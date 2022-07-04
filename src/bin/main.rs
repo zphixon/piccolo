@@ -7,7 +7,7 @@ use piccolo::{
         scanner::Scanner,
     },
     error::PiccoloError,
-    runtime::{chunk, memory::Heap, vm::Machine},
+    runtime::{chunk, memory::Heap, vm::Machine, Object},
 };
 use rustyline::{
     error::ReadlineError, Cmd, ConditionalEventHandler, Editor, Event, EventContext, EventHandler,
@@ -298,7 +298,7 @@ fn repl(
                                 print_errors(errs);
                                 machine.clear_stack_and_move_to_end_of_module(emitter.module());
                             })
-                            .map(|value| println!("{value:?}"));
+                            .map(|value| println!("{}", value.debug_format(&heap)));
 
                         prompt = "-- ";
                         input = String::new();

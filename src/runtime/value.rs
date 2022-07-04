@@ -270,7 +270,7 @@ impl Object for Value {
             Value::Bool(v) => format!("Bool({v})"),
             Value::Integer(v) => format!("Integer({v})"),
             Value::Double(v) => format!("Double({v})"),
-            Value::String(v) => format!("String({v:?})"),
+            Value::String(v) => format!("String({:?})", heap.get_string(*v).unwrap()),
             Value::Function(f) => format!("Function({:?})", heap.get_string(f.name).unwrap()),
             Value::NativeFunction(f) => {
                 format!("NativeFunction({:?})", heap.get_string(f.name()).unwrap())

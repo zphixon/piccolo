@@ -1045,6 +1045,7 @@ impl Emitter {
         // this in. later we should have something like a PiccoloState which manages everything.
         let _ = r.make_global_ident(Token::identifier("print"));
         let _ = r.make_global_ident(Token::identifier("rand"));
+        let _ = r.make_global_ident(Token::identifier("toString"));
         r
     }
 

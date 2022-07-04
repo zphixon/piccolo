@@ -206,6 +206,7 @@ pub enum ErrorKind {
     CannotCall {
         callee: String,
     },
+    FormatError,
     Todo {
         why: String,
     },
@@ -258,6 +259,8 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Incorrect arity: function {name} expected {exp:?} arguments, got {got}"),
             ErrorKind::CannotCall { callee }
                 => write!(f, "Cannot call value {callee}"),
+            ErrorKind::FormatError
+                => write!(f, "The value could not be formatted"),
             ErrorKind::Todo { why }
                 => write!(f, "TODO: {why}"),
             ErrorKind::Unknown { err }
@@ -292,5 +295,11 @@ impl From<std::io::Error> for PiccoloError {
 impl From<PiccoloError> for Vec<PiccoloError> {
     fn from(e: PiccoloError) -> Vec<PiccoloError> {
         vec![e]
+    }
+}
+
+impl From<std::fmt::Error> for PiccoloError {
+    fn from(_: std::fmt::Error) -> Self {
+        PiccoloError::new(ErrorKind::FormatError)
     }
 }

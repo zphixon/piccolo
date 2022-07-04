@@ -1,6 +1,6 @@
 use crate::{
     error::{ErrorKind, PiccoloError},
-    runtime::{interner::StringPtr, memory::Heap, Arity, Value},
+    runtime::{interner::StringPtr, memory::Heap, Arity, Object, Value},
 };
 use std::fmt::{Debug, Write};
 
@@ -8,20 +8,9 @@ pub fn to_string(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloErro
     let mut s = String::new();
 
     for (i, value) in values.iter().enumerate() {
-        match value {
-            Value::Bool(b) => write!(s, "{b}").unwrap(),
-            Value::Integer(i) => write!(s, "{i}").unwrap(),
-            Value::Double(d) => write!(s, "{d}").unwrap(),
-            Value::String(ptr) => write!(s, "{}", heap.get_string(*ptr).unwrap()).unwrap(),
-            Value::Function(f) => write!(s, "<func {}>", heap.get_string(f.name).unwrap()).unwrap(),
-            Value::NativeFunction(f) => {
-                write!(s, "<native func {}>", heap.get_string(f.name).unwrap()).unwrap()
-            }
-            Value::Object(ptr) => write!(s, "{}", heap.get(*ptr).unwrap().format(heap)).unwrap(),
-            Value::Nil => s.push_str("nil"),
-        }
+        write!(s, "{}", value.format(heap))?;
 
-        if i != values.len() {
+        if i + 1 != values.len() {
             s.push('\t');
         }
     }
