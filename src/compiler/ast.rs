@@ -214,68 +214,68 @@ fn parenthesize_lists(indent: usize, name: &str, expr: Option<&Expr>, stmts: &[&
 
 #[rustfmt::skip]
 fn print_stmt(indent: usize, stmt: &Stmt) -> String {
-    match stmt {
-        Stmt::Expr { expr, .. }
-            => print_expr_stmt(indent, expr),
-        Stmt::Block { body, .. }
-            => print_block(indent, body),
-        Stmt::Declaration { name, value, .. }
-            => print_declaration(indent, *name, value),
-        Stmt::Assignment { name, value, .. }
-            => print_assignment(indent, *name, value),
-        Stmt::If { cond, then_block, else_block, .. }
-            => print_if(indent, cond, then_block, else_block.as_ref()),
-        Stmt::While { cond, body, .. }
-            => print_while(indent, cond, body),
-        Stmt::For { init, cond, inc, body, .. }
-            => print_for(indent, init.as_ref(), cond, inc.as_ref(), body),
-        Stmt::Fn { name, args, body, .. }
-            => print_fn(indent, *name, args, body),
-        Stmt::Break { .. }
-            => print_break(),
-        Stmt::Continue { .. }
-            => print_continue(),
-        Stmt::Retn { retn, value }
-            => print_retn(indent, *retn, value.as_ref()),
-        Stmt::Assert { value, .. }
-            => print_assert(indent, value),
-        Stmt::Data { name, methods, fields }
-            => print_data(indent, *name, methods, fields),
-    }
+	match stmt {
+		Stmt::Expr { expr, .. }
+			=> print_expr_stmt(indent, expr),
+		Stmt::Block { body, .. }
+			=> print_block(indent, body),
+		Stmt::Declaration { name, value, .. }
+			=> print_declaration(indent, *name, value),
+		Stmt::Assignment { name, value, .. }
+			=> print_assignment(indent, *name, value),
+		Stmt::If { cond, then_block, else_block, .. }
+			=> print_if(indent, cond, then_block, else_block.as_ref()),
+		Stmt::While { cond, body, .. }
+			=> print_while(indent, cond, body),
+		Stmt::For { init, cond, inc, body, .. }
+			=> print_for(indent, init.as_ref(), cond, inc.as_ref(), body),
+		Stmt::Fn { name, args, body, .. }
+			=> print_fn(indent, *name, args, body),
+		Stmt::Break { .. }
+			=> print_break(),
+		Stmt::Continue { .. }
+			=> print_continue(),
+		Stmt::Retn { retn, value }
+			=> print_retn(indent, *retn, value.as_ref()),
+		Stmt::Assert { value, .. }
+			=> print_assert(indent, value),
+		Stmt::Data { name, methods, fields }
+			=> print_data(indent, *name, methods, fields),
+	}
 }
 
 #[rustfmt::skip]
 fn print_expr(indent: usize, expr: &Expr) -> String {
-    match expr {
-        Expr::Literal { literal }
-            => print_literal(*literal),
-        Expr::ArrayLiteral { values, .. }
-            => print_array_literal(indent, values),
-        Expr::Paren { expr, .. }
-            => print_paren(indent, expr),
-        Expr::Path { names }
-            => print_path(names),
-        Expr::Variable { variable }
-            => print_variable(*variable),
-        Expr::Unary { op, rhs }
-            => print_unary(indent, *op, rhs),
-        Expr::Binary { lhs, op, rhs }
-            => print_binary(indent, lhs, *op, rhs),
-        Expr::Logical { lhs, op, rhs }
-            => print_logical(indent, lhs, *op, rhs),
-        Expr::Call { callee, args, .. }
-            => print_call(indent, callee, args),
-        Expr::New { name, args }
-            => print_new(indent, *name, args),
-        Expr::Get { object, name }
-            => print_get(indent, object, *name),
-        Expr::Set { object, name, value }
-            => print_set(indent, object, *name, value),
-        Expr::Index { object, index, .. }
-            => print_index(indent, object, index),
-        Expr::Fn { args, body, .. }
-            => print_fn(indent, Token::identifier("<anon>"), args, body),
-    }
+	match expr {
+		Expr::Literal { literal }
+			=> print_literal(*literal),
+		Expr::ArrayLiteral { values, .. }
+			=> print_array_literal(indent, values),
+		Expr::Paren { expr, .. }
+			=> print_paren(indent, expr),
+		Expr::Path { names }
+			=> print_path(names),
+		Expr::Variable { variable }
+			=> print_variable(*variable),
+		Expr::Unary { op, rhs }
+			=> print_unary(indent, *op, rhs),
+		Expr::Binary { lhs, op, rhs }
+			=> print_binary(indent, lhs, *op, rhs),
+		Expr::Logical { lhs, op, rhs }
+			=> print_logical(indent, lhs, *op, rhs),
+		Expr::Call { callee, args, .. }
+			=> print_call(indent, callee, args),
+		Expr::New { name, args }
+			=> print_new(indent, *name, args),
+		Expr::Get { object, name }
+			=> print_get(indent, object, *name),
+		Expr::Set { object, name, value }
+			=> print_set(indent, object, *name, value),
+		Expr::Index { object, index, .. }
+			=> print_index(indent, object, index),
+		Expr::Fn { args, body, .. }
+			=> print_fn(indent, Token::identifier("<anon>"), args, body),
+	}
 }
 
 fn print_expr_stmt(indent: usize, expr: &Expr) -> String {

@@ -447,14 +447,7 @@ fn is_digit(c: u8) -> bool {
 }
 
 pub(super) fn is_whitespace(c: u8) -> bool {
-	c == 0x09        // tab
-        || c == 0x0A // line feed
-        || c == 0x0B // line tab
-        || c == 0x0C // form feed
-        || c == 0x0D // carriage return
-        || c == 0x20 // space
-	                 //  || c == 0x85 // next line      !! represented in utf-8 as C2 85
-	                 //  || c == 0xA0 // no-break space !! represented in utf-8 as C2 A0
+	c == 0x09 || c == 0x0A || c == 0x0B || c == 0x0C || c == 0x0D || c == 0x20
 }
 
 fn is_non_identifier(c: u8) -> bool {

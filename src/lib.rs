@@ -10,42 +10,42 @@ pub mod runtime;
 
 #[macro_export]
 macro_rules! trace {
-    ($($log:expr),*) => {
-        #[cfg(feature = "log")]
-        log::trace!($($log),*);
-    };
+	($($log:expr),*) => {
+		#[cfg(feature = "log")]
+		log::trace!($($log),*);
+	};
 }
 
 #[macro_export]
 macro_rules! debug {
-    ($($log:expr),*) => {
-        #[cfg(feature = "log")]
-        log::debug!($($log),*);
-    };
+	($($log:expr),*) => {
+		#[cfg(feature = "log")]
+		log::debug!($($log),*);
+	};
 }
 
 #[macro_export]
 macro_rules! info {
-    ($($log:expr),*) => {
-        #[cfg(feature = "log")]
-        log::info!($($log),*);
-    };
+	($($log:expr),*) => {
+		#[cfg(feature = "log")]
+		log::info!($($log),*);
+	};
 }
 
 #[macro_export]
 macro_rules! warn {
-    ($($log:expr),*) => {
-        #[cfg(feature = "log")]
-        log::warn!($($log),*);
-    };
+	($($log:expr),*) => {
+		#[cfg(feature = "log")]
+		log::warn!($($log),*);
+	};
 }
 
 #[macro_export]
 macro_rules! error {
-    ($($log:expr),*) => {
-        #[cfg(feature = "log")]
-        log::error!($($log),*);
-    };
+	($($log:expr),*) => {
+		#[cfg(feature = "log")]
+		log::error!($($log),*);
+	};
 }
 
 use {error::PiccoloError, runtime::value::Constant, std::path::Path};

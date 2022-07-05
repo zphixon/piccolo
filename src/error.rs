@@ -227,58 +227,58 @@ pub struct ParseError {}
 
 #[rustfmt::skip]
 impl fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ErrorKind::InvalidUTF8
-                => write!(f, "Invalid UTF-8 sequence"),
-            ErrorKind::FileNotFound
-                => write!(f, "File not found"),
-            ErrorKind::IOError
-                => write!(f, "Unknown IO error occurred"),
-            ErrorKind::UnterminatedString
-                => write!(f, "Unterminated string"),
-            ErrorKind::UnknownFormatCode { code }
-                => write!(f, "Unknown format code '\\{code}'"),
-            ErrorKind::InvalidNumberLiteral { literal }
-                => write!(f, "Invalid number literal '{literal}'"),
-            ErrorKind::UnexpectedToken { exp, got, .. }
-                => write!(f, "Unexpected token: expected {exp}, got {got}"),
-            ErrorKind::IncorrectType { exp, got, op }
-                => write!(f, "Incorrect type: expected {exp}, got {got} for op {op:?}"),
-            ErrorKind::CannotCompare { exp, got }
-                => write!(f, "Cannot compare {exp} and {got}"),
-            ErrorKind::DivideByZero
-                => write!(f, "Cannot divide by zero"),
-            ErrorKind::InvalidShift { value }
-                => write!(f, "Cannot shift by {value}"),
-            ErrorKind::UndefinedVariable { name }
-                => write!(f, "Undefined variable '{name}'"),
-            ErrorKind::UnknownField { obj, name }
-                => write!(f, "Unknown field '{name}' on {obj}"),
-            ErrorKind::ExpectedExpression { got, .. }
-                => write!(f, "Expected expression, got {got}"),
-            ErrorKind::CannotClone { ty }
-                => write!(f, "Cannot clone type {ty}"),
-            ErrorKind::AssertFailed { assertion }
-                => write!(f, "Assertion failed: {assertion}"),
-            ErrorKind::SyntaxError
-                => write!(f, "Syntax error"),
-            ErrorKind::IncorrectArity { name, exp, got }
-                => write!(f, "Incorrect arity: function {name} expected {exp:?} arguments, got {got}"),
-            ErrorKind::CannotCall { callee }
-                => write!(f, "Cannot call value {callee}"),
-            ErrorKind::CannotIndex { object, with }
-                => write!(f, "Cannot index value {object} with {with}"),
-            ErrorKind::OutOfBounds { object, with }
-                => write!(f, "Cannot index {with} out of bounds of {object}"),
-            ErrorKind::FormatError
-                => write!(f, "The value could not be formatted"),
-            ErrorKind::Todo { why }
-                => write!(f, "TODO: {why}"),
-            ErrorKind::Unknown { err }
-                => write!(f, "{}", err),
-        }
-    }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		match self {
+			ErrorKind::InvalidUTF8
+				=> write!(f, "Invalid UTF-8 sequence"),
+			ErrorKind::FileNotFound
+				=> write!(f, "File not found"),
+			ErrorKind::IOError
+				=> write!(f, "Unknown IO error occurred"),
+			ErrorKind::UnterminatedString
+				=> write!(f, "Unterminated string"),
+			ErrorKind::UnknownFormatCode { code }
+				=> write!(f, "Unknown format code '\\{code}'"),
+			ErrorKind::InvalidNumberLiteral { literal }
+				=> write!(f, "Invalid number literal '{literal}'"),
+			ErrorKind::UnexpectedToken { exp, got, .. }
+				=> write!(f, "Unexpected token: expected {exp}, got {got}"),
+			ErrorKind::IncorrectType { exp, got, op }
+				=> write!(f, "Incorrect type: expected {exp}, got {got} for op {op:?}"),
+			ErrorKind::CannotCompare { exp, got }
+				=> write!(f, "Cannot compare {exp} and {got}"),
+			ErrorKind::DivideByZero
+				=> write!(f, "Cannot divide by zero"),
+			ErrorKind::InvalidShift { value }
+				=> write!(f, "Cannot shift by {value}"),
+			ErrorKind::UndefinedVariable { name }
+				=> write!(f, "Undefined variable '{name}'"),
+			ErrorKind::UnknownField { obj, name }
+				=> write!(f, "Unknown field '{name}' on {obj}"),
+			ErrorKind::ExpectedExpression { got, .. }
+				=> write!(f, "Expected expression, got {got}"),
+			ErrorKind::CannotClone { ty }
+				=> write!(f, "Cannot clone type {ty}"),
+			ErrorKind::AssertFailed { assertion }
+				=> write!(f, "Assertion failed: {assertion}"),
+			ErrorKind::SyntaxError
+				=> write!(f, "Syntax error"),
+			ErrorKind::IncorrectArity { name, exp, got }
+				=> write!(f, "Incorrect arity: function {name} expected {exp:?} arguments, got {got}"),
+			ErrorKind::CannotCall { callee }
+				=> write!(f, "Cannot call value {callee}"),
+			ErrorKind::CannotIndex { object, with }
+				=> write!(f, "Cannot index value {object} with {with}"),
+			ErrorKind::OutOfBounds { object, with }
+				=> write!(f, "Cannot index {with} out of bounds of {object}"),
+			ErrorKind::FormatError
+				=> write!(f, "The value could not be formatted"),
+			ErrorKind::Todo { why }
+				=> write!(f, "TODO: {why}"),
+			ErrorKind::Unknown { err }
+				=> write!(f, "{}", err),
+		}
+	}
 }
 
 impl From<std::str::Utf8Error> for PiccoloError {

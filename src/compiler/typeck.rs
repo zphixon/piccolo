@@ -8,39 +8,39 @@ use crate::{
 use fnv::FnvHashMap;
 
 macro_rules! type_names {
-    ($name:ident : $str:expr) => {
-        paste::paste! {
-            pub const [<TYPE_NAME_ $name>]: &'static str = $str;
-        }
-    };
+	($name:ident : $str:expr) => {
+		paste::paste! {
+			pub const [<TYPE_NAME_ $name>]: &'static str = $str;
+		}
+	};
 
-    ($($name:ident : $str:expr,)*) => {
-        $(type_names!($name: $str);)*
-    };
+	($($name:ident : $str:expr,)*) => {
+		$(type_names!($name: $str);)*
+	};
 }
 
 macro_rules! integer_constants {
-    ($($bits:expr),*) => {
-        paste::paste! {
-            $(
-                type_names!(
-                    [<INT $bits>]: concat!("Int", stringify!($bits)),
-                    [<UINT $bits>]: concat!("UInt", stringify!($bits)),
-                );
-            )*
-        }
-    };
+	($($bits:expr),*) => {
+		paste::paste! {
+			$(
+				type_names!(
+					[<INT $bits>]: concat!("Int", stringify!($bits)),
+					[<UINT $bits>]: concat!("UInt", stringify!($bits)),
+				);
+			)*
+		}
+	};
 }
 
 macro_rules! integer_register {
-    ($whomst:ident, $($bits:expr),*) => {
-        paste::paste! {
-            $(
-                $whomst.register([<TYPE_NAME_INT $bits>]);
-                $whomst.register([<TYPE_NAME_UINT $bits>]);
-            )*
-        }
-    };
+	($whomst:ident, $($bits:expr),*) => {
+		paste::paste! {
+			$(
+				$whomst.register([<TYPE_NAME_INT $bits>]);
+				$whomst.register([<TYPE_NAME_UINT $bits>]);
+			)*
+		}
+	};
 }
 
 integer_constants!(8, 16, 32, 64);
@@ -181,35 +181,35 @@ pub fn check<'src>(ast: &Ast<'src>) -> Result<Vec<CheckedStmt<'src>>, PiccoloErr
 
 #[rustfmt::skip]
 fn check_stmt<'src>(type_kb: &mut TypeKb<'src>, stmt: &Stmt<'src>) -> Result<CheckedStmt<'src>, PiccoloError> {
-    match stmt {
-        Stmt::Expr { token, expr }
-            => check_expr_stmt(type_kb, *token, expr),
-        //Stmt::Block { end, body }
-        //    => check_block(type_kb, *end, body),
-        //Stmt::Declaration { name, value, .. }
-        //    => check_declaration(type_kb, *name, value),
-        //Stmt::Assignment { name, op, value }
-        //    => check_assignment(type_kb, *name, *op, value),
-        //Stmt::If { if_, cond, then_block, else_, else_block, end }
-        //    => check_if(type_kb, *if_, cond, then_block, else_.as_ref(), else_block.as_ref(), *end),
-        //Stmt::While { while_, cond, body, end }
-        //    => check_while(type_kb, *while_, cond, body, *end),
-        //Stmt::For { for_, init, cond, inc, body, end }
-        //    => check_for(type_kb, *for_, init.as_ref(), cond, inc.as_ref(), body, *end),
-        //Stmt::Fn { name, args, arity, body, method, end }
-        //    => check_fn(type_kb, *name, args, *arity, body, *method, *end),
-        //Stmt::Break { break_ }
-        //    => check_break(type_kb, *break_),
-        //Stmt::Continue { continue_ }
-        //    => check_continue(type_kb, *continue_),
-        //Stmt::Retn { retn, value }
-        //    => check_retn(type_kb, *retn, value.as_ref()),
-        //Stmt::Assert { assert, value }
-        //    => check_assert(type_kb, *assert, value),
-        //Stmt::Data { name, methods, fields }
-        //    => check_data(type_kb, *name, methods, fields),
-        _ => todo!("type check Stmt::{stmt:#?}")
-    }
+	match stmt {
+		Stmt::Expr { token, expr }
+			=> check_expr_stmt(type_kb, *token, expr),
+		//Stmt::Block { end, body }
+		//	=> check_block(type_kb, *end, body),
+		//Stmt::Declaration { name, value, .. }
+		//	=> check_declaration(type_kb, *name, value),
+		//Stmt::Assignment { name, op, value }
+		//	=> check_assignment(type_kb, *name, *op, value),
+		//Stmt::If { if_, cond, then_block, else_, else_block, end }
+		//	=> check_if(type_kb, *if_, cond, then_block, else_.as_ref(), else_block.as_ref(), *end),
+		//Stmt::While { while_, cond, body, end }
+		//	=> check_while(type_kb, *while_, cond, body, *end),
+		//Stmt::For { for_, init, cond, inc, body, end }
+		//	=> check_for(type_kb, *for_, init.as_ref(), cond, inc.as_ref(), body, *end),
+		//Stmt::Fn { name, args, arity, body, method, end }
+		//	=> check_fn(type_kb, *name, args, *arity, body, *method, *end),
+		//Stmt::Break { break_ }
+		//	=> check_break(type_kb, *break_),
+		//Stmt::Continue { continue_ }
+		//	=> check_continue(type_kb, *continue_),
+		//Stmt::Retn { retn, value }
+		//	=> check_retn(type_kb, *retn, value.as_ref()),
+		//Stmt::Assert { assert, value }
+		//	=> check_assert(type_kb, *assert, value),
+		//Stmt::Data { name, methods, fields }
+		//	=> check_data(type_kb, *name, methods, fields),
+		_ => todo!("type check Stmt::{stmt:#?}")
+	}
 }
 
 fn check_expr_stmt<'src>(
@@ -223,36 +223,36 @@ fn check_expr_stmt<'src>(
 
 #[rustfmt::skip]
 fn check_expr<'src>(
-    type_kb: &mut TypeKb<'src>,
-    expr: &Expr<'src>,
+	type_kb: &mut TypeKb<'src>,
+	expr: &Expr<'src>,
 ) -> Result<CheckedExpr<'src>, PiccoloError> {
-    match expr {
-        Expr::Literal { literal }
-            => check_literal(type_kb, *literal),
-        //Expr::Paren { right_paren, expr }
-        //    => check_paren(type_kb, *right_paren, expr),
-        //Expr::Variable { variable }
-        //    => check_variable(type_kb, *variable),
-        //Expr::Unary { op, rhs }
-        //    => check_unary(type_kb, *op, rhs),
-        Expr::Binary { lhs, op, rhs }
-            => check_binary(type_kb, lhs, *op, rhs),
-        //Expr::Logical { lhs, op, rhs }
-        //    => check_logical(type_kb, lhs, *op, rhs),
-        //Expr::Call { callee, paren, arity, args }
-        //    => check_call(type_kb, callee, *paren, *arity, args),
-        // Expr::New { name, args }
-        //     => check_new(type_kb, name, args),
-        // Expr::Get { object, name }
-        //     => check_get(type_kb, object, name),
-        // Expr::Set { object, name, value }
-        //     => check_set(type_kb, object, name, value),
-        // Expr::Index { right_bracket, object, index }
-        //     => check_index(type_kb, right_bracket, object, index),
-        //Expr::Fn { fn_, args, arity, body, end }
-        //    => check_lambda(type_kb, *fn_, args, *arity, body, *end),
-        _ => todo!("type check Expr::{:#?}", expr),
-    }
+	match expr {
+		Expr::Literal { literal }
+			=> check_literal(type_kb, *literal),
+		//Expr::Paren { right_paren, expr }
+		//	=> check_paren(type_kb, *right_paren, expr),
+		//Expr::Variable { variable }
+		//	=> check_variable(type_kb, *variable),
+		//Expr::Unary { op, rhs }
+		//	=> check_unary(type_kb, *op, rhs),
+		//Expr::Binary { lhs, op, rhs }
+		//	=> check_binary(type_kb, lhs, *op, rhs),
+		//Expr::Logical { lhs, op, rhs }
+		//	=> check_logical(type_kb, lhs, *op, rhs),
+		//Expr::Call { callee, paren, arity, args }
+		//	=> check_call(type_kb, callee, *paren, *arity, args),
+		//Expr::New { name, args }
+		//	 => check_new(type_kb, name, args),
+		//Expr::Get { object, name }
+		//	 => check_get(type_kb, object, name),
+		//Expr::Set { object, name, value }
+		//	 => check_set(type_kb, object, name, value),
+		//Expr::Index { right_bracket, object, index }
+		//	 => check_index(type_kb, right_bracket, object, index),
+		//Expr::Fn { fn_, args, arity, body, end }
+		//	=> check_lambda(type_kb, *fn_, args, *arity, body, *end),
+		_ => todo!("type check Expr::{:#?}", expr),
+	}
 }
 
 fn check_literal<'src>(

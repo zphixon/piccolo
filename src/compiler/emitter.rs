@@ -388,67 +388,67 @@ pub fn compile_with(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloE
 
 #[rustfmt::skip]
 fn compile_stmt(emitter: &mut Emitter, stmt: &Stmt) -> Result<(), PiccoloError> {
-    match stmt {
-        Stmt::Expr { token, expr }
-            => compile_expr_stmt(emitter, *token, expr),
-        Stmt::Block { end, body }
-            => compile_block(emitter, *end, body),
-        Stmt::Declaration { name, value, .. }
-            => compile_declaration(emitter, *name, value),
-        Stmt::Assignment { name, op, value }
-            => compile_assignment(emitter, *name, *op, value),
-        Stmt::If { if_, cond, then_block, else_, else_block, end }
-            => compile_if(emitter, *if_, cond, then_block, else_.as_ref(), else_block.as_ref(), *end),
-        Stmt::While { while_, cond, body, end }
-            => compile_while(emitter, *while_, cond, body, *end),
-        Stmt::For { for_, init, cond, inc, body, end }
-            => compile_for(emitter, *for_, init.as_ref(), cond, inc.as_ref(), body, *end),
-        Stmt::Fn { name, args, arity, body, method, end }
-            => compile_fn(emitter, *name, args, *arity, body, *method, *end),
-        Stmt::Break { break_ }
-            => compile_break(emitter, *break_),
-        Stmt::Continue { continue_ }
-            => compile_continue(emitter, *continue_),
-        Stmt::Retn { retn, value }
-            => compile_retn(emitter, *retn, value.as_ref()),
-        Stmt::Assert { assert, value }
-            => compile_assert(emitter, *assert, value),
-        Stmt::Data { name, methods, fields }
-            => compile_data(emitter, *name, methods, fields),
-    }
+	match stmt {
+		Stmt::Expr { token, expr }
+			=> compile_expr_stmt(emitter, *token, expr),
+		Stmt::Block { end, body }
+			=> compile_block(emitter, *end, body),
+		Stmt::Declaration { name, value, .. }
+			=> compile_declaration(emitter, *name, value),
+		Stmt::Assignment { name, op, value }
+			=> compile_assignment(emitter, *name, *op, value),
+		Stmt::If { if_, cond, then_block, else_, else_block, end }
+			=> compile_if(emitter, *if_, cond, then_block, else_.as_ref(), else_block.as_ref(), *end),
+		Stmt::While { while_, cond, body, end }
+			=> compile_while(emitter, *while_, cond, body, *end),
+		Stmt::For { for_, init, cond, inc, body, end }
+			=> compile_for(emitter, *for_, init.as_ref(), cond, inc.as_ref(), body, *end),
+		Stmt::Fn { name, args, arity, body, method, end }
+			=> compile_fn(emitter, *name, args, *arity, body, *method, *end),
+		Stmt::Break { break_ }
+			=> compile_break(emitter, *break_),
+		Stmt::Continue { continue_ }
+			=> compile_continue(emitter, *continue_),
+		Stmt::Retn { retn, value }
+			=> compile_retn(emitter, *retn, value.as_ref()),
+		Stmt::Assert { assert, value }
+			=> compile_assert(emitter, *assert, value),
+		Stmt::Data { name, methods, fields }
+			=> compile_data(emitter, *name, methods, fields),
+	}
 }
 
 #[rustfmt::skip]
 fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> {
-    match expr {
-        Expr::Literal { literal }
-            => compile_literal(emitter, *literal),
-        Expr::ArrayLiteral { right_bracket, values }
-            => compile_array_literal(emitter, *right_bracket, values),
-        Expr::Paren { right_paren, expr }
-            => compile_paren(emitter, *right_paren, expr),
-        Expr::Variable { variable }
-            => compile_variable(emitter, *variable),
-        Expr::Unary { op, rhs }
-            => compile_unary(emitter, *op, rhs),
-        Expr::Binary { lhs, op, rhs }
-            => compile_binary(emitter, lhs, *op, rhs),
-        Expr::Logical { lhs, op, rhs }
-            => compile_logical(emitter, lhs, *op, rhs),
-        Expr::Call { callee, paren, arity, args }
-            => compile_call(emitter, callee, *paren, *arity, args),
-        // Expr::New { name, args }
-        //     => compile_new(emitter, name, args),
-        // Expr::Get { object, name }
-        //     => compile_get(emitter, object, name),
-        // Expr::Set { object, name, value }
-        //     => compile_set(emitter, object, name, value),
-        Expr::Index { right_bracket, object, index }
-            => compile_index(emitter, *right_bracket, object, index),
-        Expr::Fn { fn_, args, arity, body, end }
-            => compile_lambda(emitter, *fn_, args, *arity, body, *end),
-        _ => Err(PiccoloError::todo(format!("compile_expr: {expr:#?}"))),
-    }
+	match expr {
+		Expr::Literal { literal }
+			=> compile_literal(emitter, *literal),
+		Expr::ArrayLiteral { right_bracket, values }
+			=> compile_array_literal(emitter, *right_bracket, values),
+		Expr::Paren { right_paren, expr }
+			=> compile_paren(emitter, *right_paren, expr),
+		Expr::Variable { variable }
+			=> compile_variable(emitter, *variable),
+		Expr::Unary { op, rhs }
+			=> compile_unary(emitter, *op, rhs),
+		Expr::Binary { lhs, op, rhs }
+			=> compile_binary(emitter, lhs, *op, rhs),
+		Expr::Logical { lhs, op, rhs }
+			=> compile_logical(emitter, lhs, *op, rhs),
+		Expr::Call { callee, paren, arity, args }
+			=> compile_call(emitter, callee, *paren, *arity, args),
+		// Expr::New { name, args }
+		//	 => compile_new(emitter, name, args),
+		// Expr::Get { object, name }
+		//	 => compile_get(emitter, object, name),
+		// Expr::Set { object, name, value }
+		//	 => compile_set(emitter, object, name, value),
+		Expr::Index { right_bracket, object, index }
+			=> compile_index(emitter, *right_bracket, object, index),
+		Expr::Fn { fn_, args, arity, body, end }
+			=> compile_lambda(emitter, *fn_, args, *arity, body, *end),
+		_ => Err(PiccoloError::todo(format!("compile_expr: {expr:#?}"))),
+	}
 }
 
 fn compile_expr_stmt(emitter: &mut Emitter, token: Token, expr: &Expr) -> Result<(), PiccoloError> {
@@ -669,16 +669,16 @@ fn compile_fn(
 	trace!("{} fn {}", name.pos, name.lexeme);
 
 	//if let Some(_) = emitter.current_context().get_local_slot(name) {
-	//    return Err(PiccoloError::new(ErrorKind::SyntaxError)
-	//        .pos(name.pos)
-	//        .msg_string(format!(
-	//            "Function/variable with name '{}' already exists",
-	//            name.lexeme
-	//        )));
+	//	return Err(PiccoloError::new(ErrorKind::SyntaxError)
+	//		.pos(name.pos)
+	//		.msg_string(format!(
+	//			"Function/variable with name '{}' already exists",
+	//			name.lexeme
+	//		)));
 	//} else if emitter.current_context().is_local() {
-	//    emitter.make_variable(name)?;
+	//	emitter.make_variable(name)?;
 	//} else if !emitter.current_context().is_local() {
-	//    emitter.make_global_ident(name);
+	//	emitter.make_global_ident(name);
 	//}
 
 	emitter.begin_context();
@@ -1331,7 +1331,7 @@ mod test {
 
 		let ast = parser::parse(
 			"x =: 32\n\
-             retn x",
+			retn x",
 		)
 		.unwrap();
 

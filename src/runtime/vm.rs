@@ -242,27 +242,27 @@ impl Machine {
 		// }}}
 
 		macro_rules! bit_op {
-            ($opcode:path, $op:tt) => {
-                let rhs = self.pop();
-                let lhs = self.pop();
-                if lhs.is_integer() && rhs.is_integer() {
-                    let rhs = rhs.into::<i64>();
-                    let lhs = lhs.into::<i64>();
-                    self.push(Value::Integer(lhs $op rhs));
-                } else {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
-                        exp: "integer".into(),
-                        got: format!(
-                            "{} {} {}",
-                            lhs.type_name(),
-                            stringify!($op),
-                            rhs.type_name(),
-                        ),
-                        op: $opcode,
-                    }));
-                }
-            };
-        }
+			($opcode:path, $op:tt) => {
+				let rhs = self.pop();
+				let lhs = self.pop();
+				if lhs.is_integer() && rhs.is_integer() {
+					let rhs = rhs.into::<i64>();
+					let lhs = lhs.into::<i64>();
+					self.push(Value::Integer(lhs $op rhs));
+				} else {
+					return Err(PiccoloError::new(ErrorKind::IncorrectType {
+						exp: "integer".into(),
+						got: format!(
+							"{} {} {}",
+							lhs.type_name(),
+							stringify!($op),
+							rhs.type_name(),
+						),
+						op: $opcode,
+					}));
+				}
+			};
+		}
 
 		let op = frames.current_frame_mut().step();
 		match op {
