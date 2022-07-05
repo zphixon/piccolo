@@ -486,9 +486,9 @@ fn compile_assignment(
 	emitter: &mut Emitter,
 	lval: &Expr,
 	op: Token,
-	value: &Expr,
+	rval: &Expr,
 ) -> Result<(), PiccoloError> {
-	trace!("{} assign {}", name.pos, name.lexeme);
+	trace!("{} assign {lval:?} {}, {rval:?}", op.pos, op.lexeme);
 
 	if let Expr::Variable { variable: name } = lval {
 		let name = *name;
@@ -502,13 +502,13 @@ fn compile_assignment(
 			}
 
 			// calculate the value to mutate with
-			compile_expr(emitter, value)?;
+			compile_expr(emitter, rval)?;
 
 			// then mutate
 			emitter.add_instruction(opcode, op.pos);
 		} else {
 			// otherwise just calculate the value
-			compile_expr(emitter, value)?;
+			compile_expr(emitter, rval)?;
 		}
 
 		// then assign
@@ -524,7 +524,10 @@ fn compile_assignment(
 			emitter.add_instruction(Opcode::SetGlobal(index), op.pos);
 		}
 	} else if let Expr::Get { object, name } = lval {
-		todo!("get {} of {:?}", name.lexeme, object);
+		compile_expr(emitter, rval)?;
+		compile_expr(emitter, object)?;
+		emitter.add_constant(Constant::String(name.lexeme.to_string()), name.pos);
+		emitter.add_instruction(Opcode::Set, name.pos);
 	}
 
 	Ok(())
@@ -932,7 +935,10 @@ fn compile_call(
 }
 
 fn compile_get(emitter: &mut Emitter, object: &Expr, name: Token) -> Result<(), PiccoloError> {
-	todo!()
+	compile_expr(emitter, object)?;
+	emitter.add_constant(Constant::String(name.lexeme.to_string()), name.pos);
+	emitter.add_instruction(Opcode::Get, name.pos);
+	Ok(())
 }
 
 fn compile_index(

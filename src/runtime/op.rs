@@ -84,6 +84,7 @@ pub enum Opcode {
 
 	Index,
 	Get,
+	Set,
 
 	JumpForward(u16),
 	JumpFalse(u16),
