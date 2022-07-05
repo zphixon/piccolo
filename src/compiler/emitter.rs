@@ -527,7 +527,14 @@ fn compile_assignment(
 		compile_expr(emitter, rval)?;
 		compile_expr(emitter, object)?;
 		emitter.add_constant(Constant::String(name.lexeme.to_string()), name.pos);
-		emitter.add_instruction(Opcode::Set, name.pos);
+		emitter.add_instruction(Opcode::Set, op.pos);
+	} else if let Expr::Index { object, index, .. } = lval {
+		compile_expr(emitter, rval)?;
+		compile_expr(emitter, object)?;
+		compile_expr(emitter, index)?;
+		emitter.add_instruction(Opcode::Set, op.pos);
+	} else {
+		return Err(PiccoloError::todo(format!("{lval:#?} {op:?} {rval:#?}")));
 	}
 
 	Ok(())
@@ -950,7 +957,7 @@ fn compile_index(
 	trace!("{} index", right_bracket.pos);
 	compile_expr(emitter, object)?;
 	compile_expr(emitter, index)?;
-	emitter.add_instruction(Opcode::Index, right_bracket.pos);
+	emitter.add_instruction(Opcode::Get, right_bracket.pos);
 	Ok(())
 }
 

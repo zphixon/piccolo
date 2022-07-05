@@ -82,7 +82,6 @@ pub enum Opcode {
 	SetGlobal(u16),
 	DeclareGlobal(u16),
 
-	Index,
 	Get,
 	Set,
 

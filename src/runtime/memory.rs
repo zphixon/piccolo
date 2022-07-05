@@ -100,16 +100,26 @@ impl Heap {
 		self.get_header(ptr).map(|header| header.inner.as_ref())
 	}
 
-	pub fn get_mut(&mut self, ptr: Ptr) -> Option<&mut dyn Object> {
-		self.get_header_mut(ptr).map(|header| header.inner.as_mut())
+	pub fn get_mut<'this>(&'this self, ptr: Ptr) -> &'this mut dyn Object {
+		if self.objects.contains_key(ptr.0) {
+			unsafe {
+				// this is definitely not right - see note on transmute::<&T, &mut T>() and
+				// consider using unsafecell. perhaps think a little more about how it should be
+				// architected if we want to eventually support multithreading. this is currently
+				// mostly fine since we can't currently have more than one &Heap around and it
+				// isn't possible to have self-referential `Object`s (I don't think anyway) but if
+				// either of those ever change this needs to be reworked.
+				let const_ptr: *const dyn Object = self.objects.get_unchecked(ptr.0).inner.as_ref();
+				let mut_ptr: *mut dyn Object = std::mem::transmute(const_ptr);
+				std::mem::transmute(mut_ptr)
+			}
+		} else {
+			todo!();
+		}
 	}
 
 	fn get_header(&self, ptr: Ptr) -> Option<&ObjectHeader> {
 		self.objects.get(ptr.0)
-	}
-
-	fn get_header_mut(&mut self, ptr: Ptr) -> Option<&mut ObjectHeader> {
-		self.objects.get_mut(ptr.0)
 	}
 
 	pub fn take(&mut self, ptr: Ptr) -> Option<Box<dyn Object>> {

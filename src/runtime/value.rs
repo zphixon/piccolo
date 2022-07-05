@@ -409,13 +409,13 @@ impl Object for Array {
 		s
 	}
 
-	fn index(&self, heap: &Heap, value: Value) -> Result<Value, PiccoloError> {
-		if value.is_integer() {
-			let index = value.into::<i64>();
+	fn get(&self, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
+		if index_value.is_integer() {
+			let index = index_value.into::<i64>();
 			let index: usize = index.try_into().map_err(|_| {
 				PiccoloError::new(ErrorKind::CannotIndex {
 					object: self.format(heap),
-					with: value.format(heap),
+					with: index_value.format(heap),
 				})
 			})?;
 
@@ -431,18 +431,13 @@ impl Object for Array {
 
 		Err(PiccoloError::new(ErrorKind::CannotIndex {
 			object: self.format(heap),
-			with: value.format(heap),
+			with: index_value.format(heap),
 		}))
 	}
 
-	fn index_assign(
-		&mut self,
-		heap: &Heap,
-		index: Value,
-		value: Value,
-	) -> Result<(), PiccoloError> {
-		if index.is_integer() {
-			let index = value.into::<i64>();
+	fn set(&mut self, heap: &Heap, index_value: Value, value: Value) -> Result<(), PiccoloError> {
+		if index_value.is_integer() {
+			let index = index_value.into::<i64>();
 			let index: usize = index.try_into().map_err(|_| {
 				PiccoloError::new(ErrorKind::CannotIndex {
 					object: self.format(heap),
