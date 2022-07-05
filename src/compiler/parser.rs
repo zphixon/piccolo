@@ -37,9 +37,7 @@ pub fn parse_with<'a>(scanner: &mut Scanner<'a>) -> Result<Vec<Stmt<'a>>, Vec<Pi
 }
 
 fn parse_statement<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, PiccoloError> {
-	if scanner.peek_token(1)?.is_assign() {
-		parse_assignment(scanner, depth + 1)
-	} else if scanner.peek_token(1)?.kind == TokenKind::Declare {
+	if scanner.peek_token(1)?.kind == TokenKind::Declare {
 		parse_declaration(scanner, depth + 1)
 	} else if scanner.peek_token(0)?.kind == TokenKind::Break {
 		parse_break(scanner, depth + 1)
@@ -67,18 +65,18 @@ fn parse_statement<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'
 		let token = *scanner.peek_token(0)?;
 		let expr = parse_expression(scanner, depth + 1)?;
 
-		Ok(Stmt::Expr { token, expr })
+		if scanner.peek_token(0)?.is_assign() {
+			let op = scanner.next_token()?;
+			let value = parse_expression(scanner, depth + 1)?;
+			Ok(Stmt::Assignment {
+				lval: expr,
+				op,
+				rval: value,
+			})
+		} else {
+			Ok(Stmt::Expr { token, expr })
+		}
 	}
-}
-
-fn parse_assignment<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, PiccoloError> {
-	trace!("assign {:?}", scanner.peek_token(0)?);
-
-	let name = consume(scanner, TokenKind::Identifier, depth)?;
-	let op = scanner.next_token()?;
-	let value = parse_expression(scanner, depth + 1)?;
-
-	Ok(Stmt::Assignment { name, op, value })
 }
 
 fn parse_declaration<'a>(
@@ -198,7 +196,17 @@ fn parse_for<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pi
 	let cond = parse_expression(scanner, depth + 1)?;
 
 	consume(scanner, TokenKind::Comma, depth)?;
-	let inc = Box::new(parse_assignment(scanner, depth + 1)?);
+
+	let name = consume(scanner, TokenKind::Identifier, depth)?;
+
+	let inc_op = scanner.next_token()?;
+	if !inc_op.is_assign() {
+		return Err(PiccoloError::new(ErrorKind::SyntaxError)
+			.msg("Final clause of a `for` statement must be an assignment")
+			.pos(inc_op.pos));
+	}
+
+	let inc_expr = parse_expression(scanner, depth + 1)?;
 
 	consume(scanner, TokenKind::Do, depth)?;
 	let body = parse_block(scanner, depth + 1)?;
@@ -208,7 +216,9 @@ fn parse_for<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pi
 		for_,
 		init,
 		cond,
-		inc,
+		name,
+		inc_op,
+		inc_expr,
 		body,
 		end,
 	})
@@ -656,9 +666,11 @@ mod test {
 		assert_eq!(
 			ast,
 			&[Stmt::Assignment {
-				name: Token::identifier("a"),
+				lval: Expr::Variable {
+					variable: Token::identifier("a")
+				},
 				op: Token::new(TokenKind::PlusAssign, "+=", SourcePos::empty()),
-				value: Expr::Literal {
+				rval: Expr::Literal {
 					literal: Token::new(TokenKind::Integer(3), "3", SourcePos::empty()),
 				}
 			}]

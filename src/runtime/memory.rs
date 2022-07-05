@@ -100,8 +100,16 @@ impl Heap {
 		self.get_header(ptr).map(|header| header.inner.as_ref())
 	}
 
+	pub fn get_mut(&mut self, ptr: Ptr) -> Option<&mut dyn Object> {
+		self.get_header_mut(ptr).map(|header| header.inner.as_mut())
+	}
+
 	fn get_header(&self, ptr: Ptr) -> Option<&ObjectHeader> {
 		self.objects.get(ptr.0)
+	}
+
+	fn get_header_mut(&mut self, ptr: Ptr) -> Option<&mut ObjectHeader> {
+		self.objects.get_mut(ptr.0)
 	}
 
 	pub fn take(&mut self, ptr: Ptr) -> Option<Box<dyn Object>> {

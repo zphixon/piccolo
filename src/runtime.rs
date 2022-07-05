@@ -76,7 +76,6 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
 	}
 
 	fn index(&self, heap: &Heap, value: Value) -> Result<Value, PiccoloError> {
-		let _ = value;
 		Err(PiccoloError::new(ErrorKind::CannotIndex {
 			object: self.format(heap),
 			with: value.format(heap),
@@ -89,11 +88,25 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
 		index: Value,
 		value: Value,
 	) -> Result<(), PiccoloError> {
-		let _ = index;
 		let _ = value;
 		Err(PiccoloError::new(ErrorKind::CannotIndex {
 			object: self.format(heap),
-			with: value.format(heap),
+			with: index.format(heap),
+		}))
+	}
+
+	fn get(&self, heap: &Heap, index: Value) -> Result<Value, PiccoloError> {
+		Err(PiccoloError::new(ErrorKind::OutOfBounds {
+			object: self.format(heap),
+			with: index.format(heap),
+		}))
+	}
+
+	fn set(&mut self, heap: &Heap, index: Value, value: Value) -> Result<Value, PiccoloError> {
+		let _ = value;
+		Err(PiccoloError::new(ErrorKind::OutOfBounds {
+			object: self.format(heap),
+			with: index.format(heap),
 		}))
 	}
 }

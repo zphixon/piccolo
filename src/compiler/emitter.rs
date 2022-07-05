@@ -188,14 +188,15 @@ fn analyze_ns_stmt<'src>(
 			repo.new_variable(ns, *name)?;
 		}
 
-		Stmt::Assignment { name, value, .. } => {
+		Stmt::Assignment { lval, rval, .. } => {
 			trace!("analyze stmt::assignment");
-			if repo.find(ns, *name).is_none() {
-				return Err(PiccoloError::new(ErrorKind::SyntaxError)
-					.msg_string(format!("unknown variable '{}'", name.lexeme))
-					.pos(name.pos));
-			}
-			analyze_ns_expr(repo, ns, value)?;
+			// TODO
+			//if repo.find(ns, *name).is_none() {
+			//	return Err(PiccoloError::new(ErrorKind::SyntaxError)
+			//		.msg_string(format!("unknown variable '{}'", name.lexeme))
+			//		.pos(name.pos));
+			//}
+			//analyze_ns_expr(repo, ns, value)?;
 		}
 
 		Stmt::If {
@@ -233,15 +234,17 @@ fn analyze_ns_stmt<'src>(
 		Stmt::For {
 			init,
 			cond,
-			inc,
+			name,
+			inc_expr,
 			body,
 			..
 		} => {
 			trace!("analyze stmt::for");
 			let child = repo.with_parent(ns);
+			repo.new_variable(ns, *name)?;
 			analyze_ns_stmt(repo, child, init)?;
 			analyze_ns_expr(repo, child, cond)?;
-			analyze_ns_stmt(repo, child, inc)?;
+			analyze_ns_expr(repo, child, inc_expr)?;
 			let inner = repo.with_parent(child);
 			for stmt in body {
 				analyze_ns_stmt(repo, inner, stmt)?;
@@ -395,14 +398,14 @@ fn compile_stmt(emitter: &mut Emitter, stmt: &Stmt) -> Result<(), PiccoloError> 
 			=> compile_block(emitter, *end, body),
 		Stmt::Declaration { name, value, .. }
 			=> compile_declaration(emitter, *name, value),
-		Stmt::Assignment { name, op, value }
-			=> compile_assignment(emitter, *name, *op, value),
+		Stmt::Assignment { lval, op, rval }
+			=> compile_assignment(emitter, lval, *op, rval),
 		Stmt::If { if_, cond, then_block, else_, else_block, end }
 			=> compile_if(emitter, *if_, cond, then_block, else_.as_ref(), else_block.as_ref(), *end),
 		Stmt::While { while_, cond, body, end }
 			=> compile_while(emitter, *while_, cond, body, *end),
-		Stmt::For { for_, init, cond, inc, body, end }
-			=> compile_for(emitter, *for_, init.as_ref(), cond, inc.as_ref(), body, *end),
+		Stmt::For { for_, init, cond, name, inc_op, inc_expr, body, end }
+			=> compile_for(emitter, *for_, init.as_ref(), cond, *name, *inc_op, inc_expr, body, *end),
 		Stmt::Fn { name, args, arity, body, method, end }
 			=> compile_fn(emitter, *name, args, *arity, body, *method, *end),
 		Stmt::Break { break_ }
@@ -439,8 +442,8 @@ fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> 
 			=> compile_call(emitter, callee, *paren, *arity, args),
 		// Expr::New { name, args }
 		//	 => compile_new(emitter, name, args),
-		// Expr::Get { object, name }
-		//	 => compile_get(emitter, object, name),
+		Expr::Get { object, name }
+			=> compile_get(emitter, object, *name),
 		// Expr::Set { object, name, value }
 		//	 => compile_set(emitter, object, name, value),
 		Expr::Index { right_bracket, object, index }
@@ -481,42 +484,47 @@ fn compile_declaration(
 
 fn compile_assignment(
 	emitter: &mut Emitter,
-	name: Token,
+	lval: &Expr,
 	op: Token,
 	value: &Expr,
 ) -> Result<(), PiccoloError> {
 	trace!("{} assign {}", name.pos, name.lexeme);
 
-	if let Some(opcode) = op.assign_by_mutate_op() {
-		// if this is an assignment-by-mutation operator, first get the value of the variable
-		if let Some(index) = emitter.current_context().get_local_slot(name) {
-			emitter.add_instruction(Opcode::GetLocal(index), op.pos);
+	if let Expr::Variable { variable: name } = lval {
+		let name = *name;
+		if let Some(opcode) = op.assign_by_mutate_op() {
+			// if this is an assignment-by-mutation operator, first get the value of the variable
+			if let Some(index) = emitter.current_context().get_local_slot(name) {
+				emitter.add_instruction(Opcode::GetLocal(index), op.pos);
+			} else {
+				let index = emitter.get_global_ident(name)?;
+				emitter.add_instruction(Opcode::GetGlobal(index), op.pos);
+			}
+
+			// calculate the value to mutate with
+			compile_expr(emitter, value)?;
+
+			// then mutate
+			emitter.add_instruction(opcode, op.pos);
 		} else {
-			let index = emitter.get_global_ident(name)?;
-			emitter.add_instruction(Opcode::GetGlobal(index), op.pos);
+			// otherwise just calculate the value
+			compile_expr(emitter, value)?;
 		}
 
-		// calculate the value to mutate with
-		compile_expr(emitter, value)?;
-
-		// then mutate
-		emitter.add_instruction(opcode, op.pos);
-	} else {
-		// otherwise just calculate the value
-		compile_expr(emitter, value)?;
-	}
-
-	// then assign
-	if emitter.current_context().is_local() {
-		if let Some(index) = emitter.current_context().get_local_slot(name) {
-			emitter.add_instruction(Opcode::SetLocal(index), op.pos);
+		// then assign
+		if emitter.current_context().is_local() {
+			if let Some(index) = emitter.current_context().get_local_slot(name) {
+				emitter.add_instruction(Opcode::SetLocal(index), op.pos);
+			} else {
+				let index = emitter.get_global_ident(name)?;
+				emitter.add_instruction(Opcode::SetGlobal(index), op.pos);
+			}
 		} else {
 			let index = emitter.get_global_ident(name)?;
 			emitter.add_instruction(Opcode::SetGlobal(index), op.pos);
 		}
-	} else {
-		let index = emitter.get_global_ident(name)?;
-		emitter.add_instruction(Opcode::SetGlobal(index), op.pos);
+	} else if let Expr::Get { object, name } = lval {
+		todo!("get {} of {:?}", name.lexeme, object);
 	}
 
 	Ok(())
@@ -614,7 +622,9 @@ fn compile_for(
 	for_: Token,
 	init: &Stmt,
 	cond: &Expr,
-	inc: &Stmt,
+	name: Token,
+	inc_op: Token,
+	inc_expr: &Expr,
 	body: &[Stmt],
 	end: Token,
 ) -> Result<(), PiccoloError> {
@@ -639,7 +649,12 @@ fn compile_for(
 	emitter.patch_continue_jumps();
 
 	// increment
-	compile_stmt(emitter, inc)?;
+	compile_assignment(
+		emitter,
+		&Expr::Variable { variable: name },
+		inc_op,
+		inc_expr,
+	)?;
 
 	// unconditional jump back to condition
 	emitter.add_jump_back(start_offset, end.pos);
@@ -914,6 +929,10 @@ fn compile_call(
 	}
 	emitter.add_instruction(Opcode::Call(arity as u16), paren.pos);
 	Ok(())
+}
+
+fn compile_get(emitter: &mut Emitter, object: &Expr, name: Token) -> Result<(), PiccoloError> {
+	todo!()
 }
 
 fn compile_index(

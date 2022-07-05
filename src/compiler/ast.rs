@@ -67,11 +67,6 @@ pub enum Expr<'a> {
 		object: Box<Expr<'a>>,
 		name: Token<'a>,
 	},
-	Set {
-		object: Box<Expr<'a>>,
-		name: Token<'a>,
-		value: Box<Expr<'a>>,
-	},
 	Index {
 		right_bracket: Token<'a>,
 		object: Box<Expr<'a>>,
@@ -102,9 +97,9 @@ pub enum Stmt<'a> {
 		body: Vec<Stmt<'a>>,
 	},
 	Assignment {
-		name: Token<'a>,
+		lval: Expr<'a>,
 		op: Token<'a>,
-		value: Expr<'a>,
+		rval: Expr<'a>,
 	},
 	Declaration {
 		name: Token<'a>,
@@ -129,7 +124,9 @@ pub enum Stmt<'a> {
 		for_: Token<'a>,
 		init: Box<Stmt<'a>>,
 		cond: Expr<'a>,
-		inc: Box<Stmt<'a>>,
+		name: Token<'a>,
+		inc_op: Token<'a>,
+		inc_expr: Expr<'a>,
 		body: Vec<Stmt<'a>>,
 		end: Token<'a>,
 	},
@@ -221,14 +218,14 @@ fn print_stmt(indent: usize, stmt: &Stmt) -> String {
 			=> print_block(indent, body),
 		Stmt::Declaration { name, value, .. }
 			=> print_declaration(indent, *name, value),
-		Stmt::Assignment { name, value, .. }
-			=> print_assignment(indent, *name, value),
+		Stmt::Assignment { lval, rval, .. }
+			=> print_assignment(indent, lval, rval),
 		Stmt::If { cond, then_block, else_block, .. }
 			=> print_if(indent, cond, then_block, else_block.as_ref()),
 		Stmt::While { cond, body, .. }
 			=> print_while(indent, cond, body),
-		Stmt::For { init, cond, inc, body, .. }
-			=> print_for(indent, init.as_ref(), cond, inc.as_ref(), body),
+		Stmt::For { init, cond, name, inc_op, inc_expr, body, .. }
+			=> print_for(indent, init.as_ref(), cond, *name, *inc_op, inc_expr, body),
 		Stmt::Fn { name, args, body, .. }
 			=> print_fn(indent, *name, args, body),
 		Stmt::Break { .. }
@@ -269,8 +266,6 @@ fn print_expr(indent: usize, expr: &Expr) -> String {
 			=> print_new(indent, *name, args),
 		Expr::Get { object, name }
 			=> print_get(indent, object, *name),
-		Expr::Set { object, name, value }
-			=> print_set(indent, object, *name, value),
 		Expr::Index { object, index, .. }
 			=> print_index(indent, object, index),
 		Expr::Fn { args, body, .. }
@@ -290,8 +285,8 @@ fn print_declaration(indent: usize, name: Token, value: &Expr) -> String {
 	parenthesize(indent, &format!("=: {}", name.lexeme), &[value])
 }
 
-fn print_assignment(indent: usize, name: Token, value: &Expr) -> String {
-	parenthesize(indent, &format!("= {}", name.lexeme), &[value])
+fn print_assignment(indent: usize, lval: &Expr, rval: &Expr) -> String {
+	parenthesize(indent, "=", &[lval, rval])
 }
 
 fn print_if(
@@ -311,12 +306,22 @@ fn print_while(indent: usize, cond: &Expr, body: &[Stmt]) -> String {
 	parenthesize_list(indent, "while", Some(cond), body)
 }
 
-fn print_for(indent: usize, init: &Stmt, cond: &Expr, inc: &Stmt, body: &[Stmt]) -> String {
+fn print_for(
+	indent: usize,
+	init: &Stmt,
+	cond: &Expr,
+	name: Token,
+	inc_op: Token,
+	inc_expr: &Expr,
+	body: &[Stmt],
+) -> String {
 	let s = format!(
-		"for {}, {}, {}",
+		"for {}, {}, {} {} {}",
 		print_stmt(indent, init),
 		print_expr(indent, cond),
-		print_stmt(indent, inc),
+		name.lexeme,
+		inc_op.lexeme,
+		print_expr(indent, inc_expr),
 	);
 	parenthesize_list(indent, &s, None, body)
 }
@@ -421,11 +426,6 @@ fn print_new(indent: usize, name: Token, args: &[(Token, Box<Expr>)]) -> String 
 
 fn print_get(indent: usize, object: &Expr, name: Token) -> String {
 	parenthesize(indent, &format!("get {}", name.lexeme), &[object])
-}
-
-fn print_set(indent: usize, object: &Expr, name: Token, value: &Expr) -> String {
-	let s = format!("set {} = {}", name.lexeme, print_expr(indent, value));
-	parenthesize(indent, &s, &[object])
 }
 
 fn print_index(indent: usize, object: &Expr, index: &Expr) -> String {

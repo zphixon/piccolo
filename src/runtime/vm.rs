@@ -671,6 +671,19 @@ impl Machine {
 				}
 			}
 
+			Opcode::Get => {
+				let index = self.pop();
+				if self.peek().is_object() {
+					let ptr = self.pop().as_ptr();
+					self.push(heap.get(ptr).unwrap().get(heap, index)?);
+				} else {
+					return Err(PiccoloError::new(ErrorKind::CannotIndex {
+						object: self.peek().format(heap),
+						with: index.format(heap),
+					}));
+				}
+			}
+
 			Opcode::JumpForward(offset) => {
 				let offset = offset as usize - 1;
 

@@ -83,6 +83,7 @@ pub enum Opcode {
 	DeclareGlobal(u16),
 
 	Index,
+	Get,
 
 	JumpForward(u16),
 	JumpFalse(u16),
