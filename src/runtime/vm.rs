@@ -216,7 +216,7 @@ impl Machine {
 
 		// debug {{{
 		debug!(
-			" ┌─{} {}.{:04x} {:?}",
+			" ┌─{} {}.{:04x} {}",
 			if frames.current_ip() + 1 == frames.current_chunk().len() {
 				"─vm─exit─"
 			} else {
@@ -224,7 +224,17 @@ impl Machine {
 			},
 			module.index_of(frames.current_chunk()),
 			frames.current_ip(),
-			self.stack
+			{
+				let mut s = String::from("[");
+				for (i, value) in self.stack.iter().enumerate() {
+					s.push_str(&value.debug_format(heap));
+					if i + 1 != self.stack.len() {
+						s.push_str(", ");
+					}
+				}
+				s.push(']');
+				s
+			}
 		);
 		debug!(
 			" └─{} {}",
