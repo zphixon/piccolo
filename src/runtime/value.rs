@@ -330,6 +330,8 @@ pub enum Constant {
     Double(f64),
     Function(ConstantFunction),
     Array(Vec<Constant>),
+    // TODO: implement Clone, Debug, PartialEq manually
+    // Object(Box<dyn Object>),
     Nil,
 }
 
