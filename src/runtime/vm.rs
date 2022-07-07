@@ -564,7 +564,7 @@ impl Machine {
             Opcode::Equal => {
                 let a = self.pop();
                 let b = self.pop();
-                self.push(Value::Bool(a.eq(&b).map_or_else(
+                self.push(Value::Bool(a.eq(heap, &b).map_or_else(
                     || {
                         Err(PiccoloError::new(ErrorKind::CannotCompare {
                             exp: a.type_name().to_owned(),

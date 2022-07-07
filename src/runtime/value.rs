@@ -161,7 +161,7 @@ impl Value {
         matches!(self, Value::Nil)
     }
 
-    pub fn eq(&self, other: &Value) -> Option<bool> {
+    pub fn eq(&self, heap: &Heap, other: &Value) -> Option<bool> {
         Some(match self {
             Value::Bool(l) => match other {
                 Value::Bool(r) => l == r,
@@ -189,11 +189,11 @@ impl Value {
                 Value::NativeFunction(r) => *l == *r,
                 _ => None?,
             },
+            Value::Object(l) => heap.get(*l).unwrap().eq(heap, *other).ok()?,
             Value::Nil => match other {
                 Value::Nil => true,
                 _ => None?,
             },
-            _ => None?,
         })
     }
 
@@ -278,7 +278,16 @@ impl Object for Value {
     }
 
     fn type_name(&self) -> &'static str {
-        "value"
+        match self {
+            Value::Bool(_) => "bool",
+            Value::Integer(_) => "int",
+            Value::Double(_) => "float",
+            Value::String(_) => "string",
+            Value::Function(_) => "function",
+            Value::NativeFunction(_) => "function",
+            Value::Object(_) => "object",
+            Value::Nil => "nil",
+        }
     }
 
     fn format(&self, heap: &Heap) -> String {
@@ -482,6 +491,24 @@ impl Object for Array {
         Err(PiccoloError::new(ErrorKind::CannotIndex {
             object: self.format(heap),
             with: value.format(heap),
+        }))
+    }
+
+    fn eq(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+        if let Value::Object(ptr) = other {
+            if let Some(other) = heap.get(ptr).unwrap().downcast_ref::<Array>() {
+                return Ok(self.values.len() == other.values.len()
+                    && self
+                        .values
+                        .iter()
+                        .zip(other.values.iter())
+                        .all(|(l, r)| l.eq(heap, r).unwrap_or(false)));
+            }
+        }
+
+        Err(PiccoloError::new(ErrorKind::CannotCompare {
+            got: other.type_name().to_string(),
+            exp: self.type_name().to_string(),
         }))
     }
 }
