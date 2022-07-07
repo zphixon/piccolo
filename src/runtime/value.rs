@@ -49,11 +49,11 @@ impl Value {
             Constant::Bool(b) => Value::Bool(b),
             Constant::Integer(i) => Value::Integer(i),
             Constant::Double(d) => Value::Double(d),
-            Constant::String(s) => Value::String(heap.alloc_string(s)),
+            Constant::String(s) => Value::String(heap.allocate_string(s)),
             Constant::Function(f) => Value::Function(Function {
                 arity: Arity::Exact(f.arity),
                 chunk: f.chunk,
-                name: heap.alloc_string(f.name),
+                name: heap.allocate_string(f.name),
             }),
             //Constant::NativeFunction(f) => Value::NativeFunction(f),
             //Constant::Object(Box<dyn Object>) => {} // TODO?

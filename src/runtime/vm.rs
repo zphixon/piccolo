@@ -139,7 +139,7 @@ impl Machine {
     }
 
     fn push_string(&mut self, heap: &mut Heap, string: String) {
-        self.push(Value::String(heap.alloc_string(string)));
+        self.push(Value::String(heap.allocate_string(string)));
     }
 
     pub fn clear_stack_and_move_to_end_of_module(&mut self, module: &Module) {

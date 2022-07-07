@@ -11,7 +11,7 @@ pub struct Interner {
 }
 
 impl Interner {
-    pub fn alloc_string(&mut self, string: String) -> StringPtr {
+    pub fn allocate_string(&mut self, string: String) -> StringPtr {
         if let Some(ptr) = self.table.get(string.as_str()) {
             return StringPtr(*ptr);
         }
@@ -38,7 +38,7 @@ mod test {
     #[test]
     fn intern() {
         let mut interner = Interner::default();
-        let wow = interner.alloc_string(String::from("wow!"));
+        let wow = interner.allocate_string(String::from("wow!"));
         assert_eq!("wow!", interner.get_string(wow).unwrap());
     }
 
@@ -60,7 +60,7 @@ mod test {
                     string.push(rand::thread_rng().gen_range('a'..='b'));
                 }
 
-                let ptr = interner.alloc_string(string.clone());
+                let ptr = interner.allocate_string(string.clone());
                 if ptrs.iter().all(|contained: &StringPtr| contained != &ptr) {
                     ptrs.push(ptr);
                     println!("    unique {string}");

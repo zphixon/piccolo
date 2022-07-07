@@ -15,7 +15,7 @@ pub fn to_string(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloErro
         }
     }
 
-    let ptr = heap.alloc_string(s);
+    let ptr = heap.allocate_string(s);
 
     Ok(Value::String(ptr))
 }

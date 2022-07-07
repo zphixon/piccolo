@@ -58,7 +58,7 @@ impl Heap {
         native_functions.insert(
             "print",
             NativeFunction::new(
-                heap.alloc_string(String::from("print")),
+                heap.allocate_string(String::from("print")),
                 Arity::Any,
                 builtin::print,
             ),
@@ -67,7 +67,7 @@ impl Heap {
         native_functions.insert(
             "rand",
             NativeFunction::new(
-                heap.alloc_string(String::from("rand")),
+                heap.allocate_string(String::from("rand")),
                 Arity::Exact(0),
                 builtin::rand,
             ),
@@ -76,7 +76,7 @@ impl Heap {
         native_functions.insert(
             "toString",
             NativeFunction::new(
-                heap.alloc_string(String::from("toString")),
+                heap.allocate_string(String::from("toString")),
                 Arity::Any,
                 builtin::to_string,
             ),
@@ -157,8 +157,8 @@ impl Heap {
         self.get(ptr)?.downcast_ref::<T>()
     }
 
-    pub fn alloc_string(&mut self, string: String) -> StringPtr {
-        self.interner.alloc_string(string)
+    pub fn allocate_string(&mut self, string: String) -> StringPtr {
+        self.interner.allocate_string(string)
     }
 
     pub fn get_string(&self, ptr: StringPtr) -> Option<&str> {
