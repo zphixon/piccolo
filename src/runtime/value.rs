@@ -161,72 +161,87 @@ impl Value {
         matches!(self, Value::Nil)
     }
 
-    pub fn eq(&self, heap: &Heap, other: &Value) -> Option<bool> {
-        Some(match self {
+    pub fn eq(&self, heap: &Heap, other: &Value) -> Result<bool, PiccoloError> {
+        match self {
             Value::Bool(l) => match other {
-                Value::Bool(r) => l == r,
-                _ => None?,
+                Value::Bool(r) => return Ok(l == r),
+                _ => {}
             },
             Value::Integer(l) => match other {
-                Value::Integer(r) => l == r,
-                Value::Double(r) => *l as f64 == *r,
-                _ => None?,
+                Value::Integer(r) => return Ok(l == r),
+                Value::Double(r) => return Ok(*l as f64 == *r),
+                _ => {}
             },
             Value::Double(l) => match other {
-                Value::Integer(r) => *l == *r as f64,
-                Value::Double(r) => l == r,
-                _ => None?,
+                Value::Integer(r) => return Ok(*l == *r as f64),
+                Value::Double(r) => return Ok(l == r),
+                _ => {}
             },
             Value::String(l) => match other {
-                Value::String(r) => l == r,
-                _ => None?,
+                Value::String(r) => return Ok(l == r),
+                _ => {}
             },
             Value::Function(l) => match other {
-                Value::Function(r) => l == r,
-                _ => None?,
+                Value::Function(r) => return Ok(l == r),
+                _ => {}
             },
             Value::NativeFunction(l) => match other {
-                Value::NativeFunction(r) => *l == *r,
-                _ => None?,
+                Value::NativeFunction(r) => return Ok(*l == *r),
+                _ => {}
             },
-            Value::Object(l) => heap.get(*l).unwrap().eq(heap, *other).ok()?,
+            Value::Object(l) => return heap.get(*l).unwrap().eq(heap, *other),
             Value::Nil => match other {
-                Value::Nil => true,
-                _ => None?,
+                Value::Nil => return Ok(true),
+                _ => {}
             },
-        })
+        }
+
+        Err(PiccoloError::new(ErrorKind::CannotCompare {
+            got: other.type_name().to_string(),
+            exp: self.type_name().to_string(),
+        }))
     }
 
-    pub fn gt(&self, other: &Value) -> Option<bool> {
-        Some(match self {
+    pub fn gt(&self, other: &Value) -> Result<bool, PiccoloError> {
+        match self {
             Value::Integer(l) => match other {
-                Value::Integer(r) => l > r,
-                Value::Double(r) => *l as f64 > *r,
-                _ => None?,
+                Value::Integer(r) => return Ok(l > r),
+                Value::Double(r) => return Ok(*l as f64 > *r),
+                _ => {}
             },
             Value::Double(l) => match other {
-                Value::Integer(r) => *l > *r as f64,
-                Value::Double(r) => l > r,
-                _ => None?,
+                Value::Integer(r) => return Ok(*l > *r as f64),
+                Value::Double(r) => return Ok(l > r),
+                _ => {}
             },
-            _ => None?,
-        })
+            _ => {}
+        }
+
+        Err(PiccoloError::new(ErrorKind::CannotCompare {
+            got: other.type_name().to_string(),
+            exp: self.type_name().to_string(),
+        }))
     }
 
-    pub fn lt(&self, other: &Value) -> Option<bool> {
-        Some(match self {
+    pub fn lt(&self, other: &Value) -> Result<bool, PiccoloError> {
+        match self {
             Value::Integer(l) => match other {
-                Value::Integer(r) => l < r,
-                Value::Double(r) => (*l as f64) < (*r),
-                _ => None?,
+                Value::Integer(r) => return Ok(l < r),
+                Value::Double(r) => return Ok((*l as f64) < (*r)),
+                _ => {}
             },
             Value::Double(l) => match other {
-                Value::Integer(r) => *l < *r as f64,
-                Value::Double(r) => l < r,
-                _ => None?,
+                Value::Integer(r) => return Ok(*l < *r as f64),
+                Value::Double(r) => return Ok(l < r),
+                _ => {}
             },
-            _ => None?,
-        })
+            _ => {}
+        }
+
+        Err(PiccoloError::new(ErrorKind::CannotCompare {
+            got: other.type_name().to_string(),
+            exp: self.type_name().to_string(),
+        }))
     }
 
     pub fn into<T>(self) -> T
@@ -497,12 +512,17 @@ impl Object for Array {
     fn eq(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
         if let Value::Object(ptr) = other {
             if let Some(other) = heap.get(ptr).unwrap().downcast_ref::<Array>() {
-                return Ok(self.values.len() == other.values.len()
-                    && self
-                        .values
-                        .iter()
-                        .zip(other.values.iter())
-                        .all(|(l, r)| l.eq(heap, r).unwrap_or(false)));
+                if self.values.len() != other.values.len() {
+                    return Ok(false);
+                }
+
+                for (l, r) in self.values.iter().zip(other.values.iter()) {
+                    if !l.eq(heap, r)? {
+                        return Ok(false);
+                    }
+                }
+
+                return Ok(true);
             }
         }
 

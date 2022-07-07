@@ -564,67 +564,27 @@ impl Machine {
             Opcode::Equal => {
                 let a = self.pop();
                 let b = self.pop();
-                self.push(Value::Bool(a.eq(heap, &b).map_or_else(
-                    || {
-                        Err(PiccoloError::new(ErrorKind::CannotCompare {
-                            exp: a.type_name().to_owned(),
-                            got: b.type_name().to_owned(),
-                        }))
-                    },
-                    Ok,
-                )?));
+                self.push(Value::Bool(a.eq(heap, &b)?));
             }
             Opcode::Greater => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(lhs.gt(&rhs).map_or_else(
-                    || {
-                        Err(PiccoloError::new(ErrorKind::CannotCompare {
-                            exp: lhs.type_name().to_owned(),
-                            got: rhs.type_name().to_owned(),
-                        }))
-                    },
-                    Ok,
-                )?));
+                self.push(Value::Bool(lhs.gt(&rhs)?));
             }
             Opcode::Less => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(lhs.lt(&rhs).map_or_else(
-                    || {
-                        Err(PiccoloError::new(ErrorKind::CannotCompare {
-                            exp: lhs.type_name().to_owned(),
-                            got: rhs.type_name().to_owned(),
-                        }))
-                    },
-                    Ok,
-                )?));
+                self.push(Value::Bool(lhs.lt(&rhs)?));
             }
             Opcode::GreaterEqual => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(!lhs.lt(&rhs).map_or_else(
-                    || {
-                        Err(PiccoloError::new(ErrorKind::CannotCompare {
-                            exp: lhs.type_name().to_owned(),
-                            got: rhs.type_name().to_owned(),
-                        }))
-                    },
-                    Ok,
-                )?));
+                self.push(Value::Bool(!lhs.lt(&rhs)?));
             }
             Opcode::LessEqual => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(!lhs.gt(&rhs).map_or_else(
-                    || {
-                        Err(PiccoloError::new(ErrorKind::CannotCompare {
-                            exp: lhs.type_name().to_owned(),
-                            got: rhs.type_name().to_owned(),
-                        }))
-                    },
-                    Ok,
-                )?));
+                self.push(Value::Bool(!lhs.gt(&rhs)?));
             } // }}}
 
             Opcode::GetLocal(slot) => {
