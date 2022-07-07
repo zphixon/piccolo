@@ -80,7 +80,28 @@ impl Value {
                 name: heap.get_string(f.name).unwrap().to_string(),
                 chunk: f.chunk,
             }),
-            _ => todo!("{self:?}"),
+            Value::NativeFunction(f) => Constant::Function(ConstantFunction {
+                arity: f.arity.number(),
+                name: heap.get_string(f.name).unwrap().to_string(),
+                chunk: 0,
+            }),
+            Value::Object(ptr) => {
+                let object = heap.get(ptr).unwrap().clone_object();
+                if let Ok(array) = object.downcast::<Array>() {
+                    Constant::Array(
+                        array
+                            .values
+                            .into_iter()
+                            .map(|value| value.into_constant(heap))
+                            .collect(),
+                    )
+                } else {
+                    panic!(
+                        "cannot convert object {} to constant",
+                        heap.get(ptr).unwrap().debug_format(heap)
+                    );
+                }
+            }
         }
     }
 
