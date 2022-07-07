@@ -190,13 +190,17 @@ fn analyze_ns_stmt<'src>(
 
         Stmt::Assignment { lval, rval, .. } => {
             trace!("analyze stmt::assignment");
-            // TODO
-            //if repo.find(ns, *name).is_none() {
-            //    return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            //        .msg_string(format!("unknown variable '{}'", name.lexeme))
-            //        .pos(name.pos));
-            //}
-            //analyze_ns_expr(repo, ns, value)?;
+            if let Expr::Variable { variable } = lval {
+                if repo.find(ns, *variable).is_none() {
+                    return Err(PiccoloError::new(ErrorKind::SyntaxError)
+                        .msg_string(format!("unknown variable '{}'", variable.lexeme))
+                        .pos(variable.pos));
+                }
+            } else {
+                analyze_ns_expr(repo, ns, lval)?;
+            }
+
+            analyze_ns_expr(repo, ns, rval)?;
         }
 
         Stmt::If {
