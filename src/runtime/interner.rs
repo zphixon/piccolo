@@ -4,13 +4,31 @@ use slotmap::{DefaultKey, SlotMap};
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StringPtr(DefaultKey);
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Interner {
     table: FnvHashMap<&'static str, DefaultKey>,
     strings: SlotMap<DefaultKey, String>,
 }
 
+impl Default for Interner {
+    fn default() -> Self {
+        Interner::new()
+    }
+}
+
 impl Interner {
+    pub fn new() -> Self {
+        let mut interner = Interner {
+            table: Default::default(),
+            strings: Default::default(),
+        };
+
+        interner.allocate_string(String::from("print"));
+        interner.allocate_string(String::from("len"));
+
+        interner
+    }
+
     pub fn allocate_string(&mut self, string: String) -> StringPtr {
         if let Some(ptr) = self.table.get(string.as_str()) {
             return StringPtr(*ptr);
@@ -28,6 +46,10 @@ impl Interner {
 
     pub fn get_string(&self, ptr: StringPtr) -> Option<&str> {
         self.strings.get(ptr.0).map(|string| string.as_str())
+    }
+
+    pub fn get_string_ptr(&self, string: &str) -> Option<StringPtr> {
+        self.table.get(string).cloned().map(|key| StringPtr(key))
     }
 }
 

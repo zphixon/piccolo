@@ -165,6 +165,10 @@ impl Heap {
         self.interner.get_string(ptr)
     }
 
+    pub fn get_string_ptr(&self, string: &str) -> Option<StringPtr> {
+        self.interner.get_string_ptr(string)
+    }
+
     pub fn get_native(&self, name: &str) -> Option<NativeFunction> {
         self.native_functions.get(name).copied()
     }

@@ -457,8 +457,7 @@ impl Object for Array {
     }
 
     fn get(&self, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
-        if index_value.is_integer() {
-            let index = index_value.into::<i64>();
+        if let Value::Integer(index) = index_value {
             let index: usize = index.try_into().map_err(|_| {
                 PiccoloError::new(ErrorKind::CannotIndex {
                     object: self.format(heap),
@@ -474,6 +473,14 @@ impl Object for Array {
             }
 
             return Ok(self.values[index]);
+        } else if let Value::String(string) = index_value {
+            // slow?
+            // if heap.get_string(string).unwrap() == "len" {}
+
+            let len = heap.get_string_ptr("len").unwrap();
+            if string == len {
+                return Ok(Value::Integer(self.values.len() as i64));
+            }
         }
 
         Err(PiccoloError::new(ErrorKind::CannotIndex {
