@@ -686,7 +686,7 @@ impl Machine {
                 if self.peek().is_object() {
                     let ptr = self.pop().as_ptr();
                     let value = self.pop();
-                    heap.get_mut(ptr).set(heap, index, value)?;
+                    unsafe { heap.get_mut(ptr).set(heap, index, value)? };
                 } else {
                     return Err(PiccoloError::new(ErrorKind::CannotIndex {
                         object: self.peek().format(heap),

@@ -10,13 +10,14 @@ use crate::{
 use fnv::FnvHashMap;
 use slotmap::{DefaultKey, SlotMap};
 use std::{
+    cell::UnsafeCell,
     fmt::Debug,
     hash::BuildHasherDefault,
     sync::atomic::{AtomicBool, Ordering},
 };
 
 pub struct ObjectHeader {
-    inner: Box<dyn Object>,
+    inner: UnsafeCell<Box<dyn Object>>,
     marked: AtomicBool,
 }
 
@@ -91,30 +92,24 @@ impl Heap {
 
     pub fn allocate(&mut self, object: impl Object) -> Ptr {
         Ptr(self.objects.insert(ObjectHeader {
-            inner: Box::new(object),
+            inner: UnsafeCell::new(Box::new(object)),
             marked: AtomicBool::new(false),
         }))
     }
 
     pub fn get(&self, ptr: Ptr) -> Option<&dyn Object> {
-        self.get_header(ptr).map(|header| header.inner.as_ref())
+        self.get_header(ptr)
+            .and_then(|header| unsafe { header.inner.get().as_ref() })
+            .map(|inner| inner.as_ref())
     }
 
-    pub fn get_mut<'this>(&'this self, ptr: Ptr) -> &'this mut dyn Object {
+    pub unsafe fn get_mut<'this>(&'this self, ptr: Ptr) -> &'this mut dyn Object {
         if self.objects.contains_key(ptr.0) {
-            unsafe {
-                // this is definitely not right - see note on transmute::<&T, &mut T>() and
-                // consider using unsafecell. perhaps think a little more about how it should be
-                // architected if we want to eventually support multithreading. this is currently
-                // mostly fine since we can't currently have more than one &Heap around and it
-                // isn't possible to have self-referential `Object`s (I don't think anyway) but if
-                // either of those ever change this needs to be reworked.
-                let const_ptr: *const dyn Object = self.objects.get_unchecked(ptr.0).inner.as_ref();
-                let mut_ptr: *mut dyn Object = std::mem::transmute(const_ptr);
-                std::mem::transmute(mut_ptr)
-            }
+            // this is still 100% wrong, since we can use this method to mutably alias Objects
+            let header = self.objects.get_unchecked(ptr.0);
+            header.inner.get().as_mut().unwrap().as_mut()
         } else {
-            todo!();
+            panic!("invalid pointer");
         }
     }
 
@@ -123,7 +118,9 @@ impl Heap {
     }
 
     pub fn take(&mut self, ptr: Ptr) -> Option<Box<dyn Object>> {
-        self.objects.remove(ptr.0).map(|header| header.inner)
+        self.objects
+            .remove(ptr.0)
+            .map(|header| header.inner.into_inner())
     }
 
     pub fn collect<'iter>(&mut self, roots: impl Iterator<Item = Option<&'iter Ptr>>) {
@@ -147,7 +144,9 @@ impl Heap {
     pub fn trace(&self, ptr: Ptr) {
         if let Some(header) = self.get_header(ptr) {
             header.marked.store(true, Ordering::SeqCst);
-            header.inner.trace(self);
+            unsafe {
+                header.inner.get().as_ref().unwrap().trace(self);
+            }
         }
     }
 
@@ -172,7 +171,7 @@ impl Heap {
 
     pub fn clone(&mut self, ptr: Ptr) -> Ptr {
         Ptr(self.objects.insert(ObjectHeader {
-            inner: self.get(ptr).unwrap().clone_object(),
+            inner: UnsafeCell::new(self.get(ptr).unwrap().clone_object()),
             marked: AtomicBool::new(false),
         }))
     }
