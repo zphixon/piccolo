@@ -235,8 +235,8 @@ fn check_expr<'src>(
         //    => check_variable(type_kb, *variable),
         //Expr::Unary { op, rhs }
         //    => check_unary(type_kb, *op, rhs),
-        //Expr::Binary { lhs, op, rhs }
-        //    => check_binary(type_kb, lhs, *op, rhs),
+        Expr::Binary { lhs, op, rhs }
+            => check_binary(type_kb, lhs, *op, rhs),
         //Expr::Logical { lhs, op, rhs }
         //    => check_logical(type_kb, lhs, *op, rhs),
         //Expr::Call { callee, paren, arity, args }
