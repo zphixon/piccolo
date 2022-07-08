@@ -19,7 +19,6 @@ pub type Ast<'a> = [Stmt<'a>];
 /// Piccolo expression AST node.
 ///
 /// This enum contains every expression variant available in Piccolo.
-#[cfg_attr(fuzzing, derive(arbitrary::Arbitrary))]
 #[derive(Debug, PartialEq)]
 pub enum Expr<'a> {
     Literal {
@@ -105,7 +104,6 @@ impl Expr<'_> {
 ///
 /// This enum contains every statement variant available in Piccolo.
 #[allow(clippy::large_enum_variant)]
-#[cfg_attr(fuzzing, derive(arbitrary::Arbitrary))]
 #[derive(Debug, PartialEq)]
 pub enum Stmt<'a> {
     Expr {
