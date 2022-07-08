@@ -81,6 +81,26 @@ pub enum Expr<'a> {
     },
 }
 
+impl Expr<'_> {
+    pub(crate) fn token(&self) -> Token {
+        match self {
+            Expr::Literal { literal, .. } => *literal,
+            Expr::ArrayLiteral { right_bracket, .. } => *right_bracket,
+            Expr::Paren { right_paren, .. } => *right_paren,
+            Expr::Path { names, .. } => names[0],
+            Expr::Variable { variable, .. } => *variable,
+            Expr::Unary { op, .. } => *op,
+            Expr::Binary { op, .. } => *op,
+            Expr::Logical { op, .. } => *op,
+            Expr::Call { paren, .. } => *paren,
+            Expr::New { name, .. } => *name,
+            Expr::Get { name, .. } => *name,
+            Expr::Index { right_bracket, .. } => *right_bracket,
+            Expr::Fn { fn_, .. } => *fn_,
+        }
+    }
+}
+
 /// Piccolo statement AST node.
 ///
 /// This enum contains every statement variant available in Piccolo.
@@ -159,6 +179,26 @@ pub enum Stmt<'a> {
         methods: Vec<Stmt<'a>>,
         fields: Vec<Stmt<'a>>,
     },
+}
+
+impl Stmt<'_> {
+    pub(crate) fn token(&self) -> Token {
+        match self {
+            Stmt::Expr { token, .. } => *token,
+            Stmt::Block { end, .. } => *end,
+            Stmt::Assignment { op, .. } => *op,
+            Stmt::Declaration { op, .. } => *op,
+            Stmt::If { if_, .. } => *if_,
+            Stmt::While { while_, .. } => *while_,
+            Stmt::For { for_, .. } => *for_,
+            Stmt::Fn { name, .. } => *name,
+            Stmt::Break { break_, .. } => *break_,
+            Stmt::Continue { continue_, .. } => *continue_,
+            Stmt::Retn { retn, .. } => *retn,
+            Stmt::Assert { assert, .. } => *assert,
+            Stmt::Data { name, .. } => *name,
+        }
+    }
 }
 
 /// Print an abstract syntax tree.
