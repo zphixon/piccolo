@@ -75,17 +75,17 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
     }
 
     fn get(&self, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
-        Err(PiccoloError::new(ErrorKind::OutOfBounds {
-            object: self.format(heap),
-            with: index_value.format(heap),
+        Err(PiccoloError::new(ErrorKind::CannotGet {
+            object: self.type_name(heap).to_string(),
+            index: index_value.format(heap),
         }))
     }
 
     fn set(&mut self, heap: &Heap, index_value: Value, value: Value) -> Result<(), PiccoloError> {
         let _ = value;
-        Err(PiccoloError::new(ErrorKind::OutOfBounds {
-            object: self.format(heap),
-            with: index_value.format(heap),
+        Err(PiccoloError::new(ErrorKind::CannotGet {
+            object: self.type_name(heap).to_string(),
+            index: index_value.format(heap),
         }))
     }
 

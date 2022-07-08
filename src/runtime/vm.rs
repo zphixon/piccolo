@@ -664,9 +664,9 @@ impl Machine {
                     let ptr = self.pop().as_ptr();
                     self.push(heap.get(ptr).get(heap, index)?);
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::CannotIndex {
-                        object: self.peek().format(heap),
-                        with: index.format(heap),
+                    return Err(PiccoloError::new(ErrorKind::CannotGet {
+                        object: self.peek().type_name(heap).to_string(),
+                        index: index.format(heap),
                     }));
                 }
             }
@@ -678,9 +678,9 @@ impl Machine {
                     let value = self.pop();
                     unsafe { heap.get_mut(ptr).set(heap, index, value)? };
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::CannotIndex {
-                        object: self.peek().format(heap),
-                        with: index.format(heap),
+                    return Err(PiccoloError::new(ErrorKind::CannotGet {
+                        object: self.peek().type_name(heap).to_string(),
+                        index: index.format(heap),
                     }));
                 }
             }

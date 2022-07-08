@@ -464,17 +464,19 @@ impl Object for Array {
     fn get(&self, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
         if let Value::Integer(index) = index_value {
             let index: usize = index.try_into().map_err(|_| {
-                PiccoloError::new(ErrorKind::CannotIndex {
-                    object: self.format(heap),
-                    with: index_value.format(heap),
+                PiccoloError::new(ErrorKind::CannotGet {
+                    object: String::from("array"),
+                    index: index_value.format(heap),
                 })
+                .msg_string(format!("Cannot index with {}", index_value.format(heap)))
             })?;
 
             if index >= self.values.len() {
-                return Err(PiccoloError::new(ErrorKind::OutOfBounds {
-                    object: self.format(heap),
-                    with: format!("{index}"),
-                }));
+                return Err(PiccoloError::new(ErrorKind::CannotGet {
+                    object: String::from("array"),
+                    index: format!("{index}"),
+                })
+                .msg_string(format!("Out of bounds of length {}", self.values.len())));
             }
 
             return Ok(self.values[index]);
@@ -485,40 +487,52 @@ impl Object for Array {
             let len = heap.interner().get_string_ptr("len").unwrap();
             if string == len {
                 return Ok(Value::Integer(self.values.len() as i64));
+            } else {
+                return Err(PiccoloError::new(ErrorKind::CannotGet {
+                    object: String::from("array"),
+                    index: index_value.format(heap),
+                }));
             }
         }
 
-        Err(PiccoloError::new(ErrorKind::CannotIndex {
-            object: self.format(heap),
-            with: index_value.format(heap),
-        }))
+        Err(PiccoloError::new(ErrorKind::CannotGet {
+            object: String::from("array"),
+            index: index_value.format(heap),
+        })
+        .msg_string(format!(
+            "Cannot index with type {}",
+            index_value.type_name(heap)
+        )))
     }
 
     fn set(&mut self, heap: &Heap, index_value: Value, value: Value) -> Result<(), PiccoloError> {
-        if index_value.is_integer() {
-            let index = index_value.into::<i64>();
+        if let Value::Integer(index) = index_value {
             let index: usize = index.try_into().map_err(|_| {
-                PiccoloError::new(ErrorKind::CannotIndex {
-                    object: self.format(heap),
-                    with: value.format(heap),
+                PiccoloError::new(ErrorKind::CannotGet {
+                    object: String::from("array"),
+                    index: value.format(heap),
                 })
+                .msg_string(format!("Cannot index with {}", index_value.format(heap)))
             })?;
 
             if index >= self.values.len() {
-                return Err(PiccoloError::new(ErrorKind::OutOfBounds {
-                    object: self.format(heap),
-                    with: format!("{index}"),
-                }));
+                return Err(PiccoloError::new(ErrorKind::CannotGet {
+                    object: String::from("array"),
+                    index: format!("{index}"),
+                })
+                .msg_string(format!("Out of bounds of length {}", self.values.len())));
             }
 
             self.values[index] = value;
             return Ok(());
         }
 
-        Err(PiccoloError::new(ErrorKind::CannotIndex {
-            object: self.format(heap),
-            with: value.format(heap),
-        }))
+        Err(PiccoloError::new(ErrorKind::CannotSet {
+            object: String::from("array"),
+            property: index_value.format(heap),
+            value: value.format(heap),
+        })
+        .msg("Only integer properties may be modified"))
     }
 
     fn eq(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
