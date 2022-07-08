@@ -1,4 +1,5 @@
 //! Bytecode compiler.
+#![allow(clippy::too_many_arguments)]
 
 use crate::{
     compiler::{

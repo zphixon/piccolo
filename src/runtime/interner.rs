@@ -52,7 +52,7 @@ impl Interner {
     }
 
     pub fn get_string_ptr(&self, string: &str) -> Option<StringPtr> {
-        self.table.get(string).cloned().map(|key| StringPtr(key))
+        self.table.get(string).cloned().map(StringPtr)
     }
 }
 

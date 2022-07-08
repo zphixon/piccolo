@@ -53,9 +53,13 @@ impl Heap {
             .expect("invalid pointer")
     }
 
-    pub unsafe fn get_mut<'this>(&'this self, ptr: Ptr) -> &'this mut dyn Object {
+    /// # Safety
+    ///
+    /// This function can be used to mutably alias `Object`s. Do not do this.
+    #[allow(clippy::mut_from_ref)] // shhhhh bby is ok
+    pub unsafe fn get_mut(&self, ptr: Ptr) -> &mut dyn Object {
         if self.objects.contains_key(ptr.0) {
-            // this is still 100% wrong, since we can use this method to mutably alias Objects
+            // this is still 100% wrong
             let header = self.objects.get_unchecked(ptr.0);
             header
                 .inner

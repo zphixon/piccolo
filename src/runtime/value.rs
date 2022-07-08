@@ -162,38 +162,40 @@ impl Value {
     }
 
     pub fn eq(&self, heap: &Heap, other: &Value) -> Result<bool, PiccoloError> {
-        match self {
-            Value::Bool(l) => match other {
-                Value::Bool(r) => return Ok(l == r),
-                _ => {}
-            },
-            Value::Integer(l) => match other {
-                Value::Integer(r) => return Ok(l == r),
-                Value::Double(r) => return Ok(*l as f64 == *r),
-                _ => {}
-            },
-            Value::Double(l) => match other {
-                Value::Integer(r) => return Ok(*l == *r as f64),
-                Value::Double(r) => return Ok(l == r),
-                _ => {}
-            },
-            Value::String(l) => match other {
-                Value::String(r) => return Ok(l == r),
-                _ => {}
-            },
-            Value::Function(l) => match other {
-                Value::Function(r) => return Ok(l == r),
-                _ => {}
-            },
-            Value::NativeFunction(l) => match other {
-                Value::NativeFunction(r) => return Ok(*l == *r),
-                _ => {}
-            },
-            Value::Object(l) => return heap.get(*l).eq(heap, *other),
-            Value::Nil => match other {
-                Value::Nil => return Ok(true),
-                _ => {}
-            },
+        if let Value::Bool(l) = *self {
+            if let Value::Bool(r) = *other {
+                return Ok(l == r);
+            }
+        } else if let Value::Integer(l) = *self {
+            if let Value::Integer(r) = *other {
+                return Ok(l == r);
+            } else if let Value::Double(r) = *other {
+                return Ok(l as f64 == r);
+            }
+        } else if let Value::Double(l) = *self {
+            if let Value::Integer(r) = *other {
+                return Ok(l == r as f64);
+            } else if let Value::Double(r) = *other {
+                return Ok(l == r);
+            }
+        } else if let Value::String(l) = *self {
+            if let Value::String(r) = *other {
+                return Ok(l == r);
+            }
+        } else if let Value::Function(l) = *self {
+            if let Value::Function(r) = *other {
+                return Ok(l == r);
+            }
+        } else if let Value::NativeFunction(l) = *self {
+            if let Value::NativeFunction(r) = *other {
+                return Ok(l == r);
+            }
+        } else if let Value::Object(l) = *self {
+            return heap.get(l).eq(heap, *other);
+        } else if let Value::Nil = *self {
+            if let Value::Nil = *other {
+                return Ok(true);
+            }
         }
 
         Err(PiccoloError::new(ErrorKind::CannotCompare {
