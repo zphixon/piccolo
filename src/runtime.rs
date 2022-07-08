@@ -96,6 +96,8 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
             exp: self.type_name().to_string(),
         }))
     }
+
+    // TODO lt/gt
 }
 
 downcast_rs::impl_downcast!(Object);

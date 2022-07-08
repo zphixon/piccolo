@@ -199,8 +199,8 @@ impl Value {
         }
 
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            got: other.type_name().to_string(),
-            exp: self.type_name().to_string(),
+            got: other.get_type_name(heap).to_string(),
+            exp: self.get_type_name(heap).to_string(),
         }))
     }
 
@@ -220,6 +220,7 @@ impl Value {
         }
 
         Err(PiccoloError::new(ErrorKind::CannotCompare {
+            // TODO
             got: other.type_name().to_string(),
             exp: self.type_name().to_string(),
         }))
@@ -241,6 +242,7 @@ impl Value {
         }
 
         Err(PiccoloError::new(ErrorKind::CannotCompare {
+            // TODO
             got: other.type_name().to_string(),
             exp: self.type_name().to_string(),
         }))
@@ -251,6 +253,19 @@ impl Value {
         T: From<Value>,
     {
         T::from(self)
+    }
+
+    pub fn get_type_name(&self, heap: &Heap) -> &'static str {
+        match self {
+            Value::Bool(_) => "bool",
+            Value::Integer(_) => "int",
+            Value::Double(_) => "float",
+            Value::String(_) => "string",
+            Value::Function(_) => "function",
+            Value::NativeFunction(_) => "function",
+            Value::Object(ptr) => heap.get(*ptr).type_name(),
+            Value::Nil => "nil",
+        }
     }
 }
 
@@ -295,16 +310,7 @@ impl Object for Value {
     }
 
     fn type_name(&self) -> &'static str {
-        match self {
-            Value::Bool(_) => "bool",
-            Value::Integer(_) => "int",
-            Value::Double(_) => "float",
-            Value::String(_) => "string",
-            Value::Function(_) => "function",
-            Value::NativeFunction(_) => "function",
-            Value::Object(_) => "object",
-            Value::Nil => "nil",
-        }
+        "value"
     }
 
     fn format(&self, heap: &Heap) -> String {
