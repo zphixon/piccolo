@@ -144,6 +144,14 @@ impl Machine {
                 builtin::type_,
             )),
         );
+        globals.insert(
+            String::from("clock"),
+            Value::NativeFunction(NativeFunction::new(
+                heap.interner_mut().allocate_string(String::from("clock")),
+                Arity::Exact(0),
+                builtin::clock,
+            )),
+        );
 
         Machine {
             stack: Vec::new(),

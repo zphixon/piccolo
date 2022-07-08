@@ -9,7 +9,7 @@ a8 =: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa8"
 
 i =: 0
 
-#var loopStart = clock();
+loopStart =: clock()
 
 while i < 100000 do
   i = i + 1
@@ -109,9 +109,9 @@ while i < 100000 do
 end
 print("part 1 done")
 
-#var loopTime = clock() - loopStart;
+loopTime =: clock() - loopStart
 
-#var start = clock();
+start =: clock()
 
 i = 0
 while i < 100000 do
@@ -217,10 +217,10 @@ while i < 100000 do
 
 end
 
-#var elapsed = clock() - start;
-#print "loop";
-#print loopTime;
-#print "elapsed";
-#print elapsed;
-#print "equals";
-#print elapsed - loopTime;
+elapsed =: clock() - start
+print("loop")
+print(loopTime)
+print("elapsed")
+print(elapsed)
+print("equals")
+print(elapsed - loopTime)

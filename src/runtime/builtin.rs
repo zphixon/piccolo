@@ -2,7 +2,11 @@ use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{interner::StringPtr, memory::Heap, Arity, Object, Value},
 };
-use std::fmt::{Debug, Write};
+use once_cell::sync::Lazy;
+use std::{
+    fmt::{Debug, Write},
+    time::Instant,
+};
 
 pub fn to_string(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
     let mut s = String::new();
@@ -50,6 +54,12 @@ pub fn type_(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     let arg = args[0];
     let name = arg.type_name(heap);
     Ok(Value::String(heap.interner_mut().allocate_str(name)))
+}
+
+static START: Lazy<Instant> = Lazy::new(Instant::now);
+pub fn clock(_: &mut Heap, _: &[Value]) -> Result<Value, PiccoloError> {
+    let duration = Instant::now() - *START;
+    Ok(Value::Double(duration.as_secs_f64()))
 }
 
 pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError>;

@@ -863,6 +863,7 @@ impl Emitter {
         let _ = r.make_global_ident(Token::identifier("toString"));
         let _ = r.make_global_ident(Token::identifier("clone"));
         let _ = r.make_global_ident(Token::identifier("type"));
+        let _ = r.make_global_ident(Token::identifier("clock"));
         r
     }
 
