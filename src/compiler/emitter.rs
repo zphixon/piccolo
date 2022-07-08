@@ -15,6 +15,16 @@ use crate::{
 };
 use fnv::FnvHashMap;
 
+macro_rules! check_depth {
+    ($depth:tt, $pos_haver:expr) => {
+        if $depth > MAX_DEPTH {
+            return Err(PiccoloError::new(ErrorKind::SyntaxError)
+                .msg("Maximum recursion depth reached")
+                .pos($pos_haver.pos));
+        }
+    };
+}
+
 // top level compile into chunk index 0
 // encounter a function, start compiling into a new chunk index
 // after we end the function collect upvalues
@@ -41,11 +51,7 @@ pub fn compile_with(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloE
 
 #[rustfmt::skip]
 fn compile_stmt(emitter: &mut Emitter, depth: usize, stmt: &Stmt) -> Result<(), PiccoloError> {
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(stmt.token().pos));
-    }
+    check_depth!(depth, stmt.token());
 
     match stmt {
         Stmt::Expr { token, expr }
@@ -79,11 +85,7 @@ fn compile_stmt(emitter: &mut Emitter, depth: usize, stmt: &Stmt) -> Result<(), 
 
 #[rustfmt::skip]
 fn compile_expr(emitter: &mut Emitter, depth: usize, expr: &Expr) -> Result<(), PiccoloError> {
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(expr.token().pos));
-    }
+    check_depth!(depth, expr.token());
 
     match expr {
         Expr::Literal { literal }
@@ -123,11 +125,7 @@ fn compile_expr_stmt(
     expr: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} expr stmt", token.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(token.pos));
-    }
+    check_depth!(depth, token);
 
     compile_expr(emitter, depth + 1, expr)?;
     emitter.add_instruction(Opcode::Pop, token.pos);
@@ -141,11 +139,7 @@ fn compile_block(
     body: &[Stmt],
 ) -> Result<(), PiccoloError> {
     trace!("{} block", end.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(end.pos));
-    }
+    check_depth!(depth, end);
 
     emitter.begin_scope();
     for stmt in body {
@@ -162,11 +156,7 @@ fn compile_declaration(
     value: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} decl {}", name.pos, name.lexeme);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(name.pos));
-    }
+    check_depth!(depth, name);
 
     compile_expr(emitter, depth + 1, value)?;
     emitter.make_variable(name)
@@ -180,11 +170,7 @@ fn compile_assignment(
     rval: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} assign {lval:?} {}, {rval:?}", op.pos, op.lexeme);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(lval.token().pos));
-    }
+    check_depth!(depth, lval.token());
 
     if let Expr::Variable { variable: name } = lval {
         let name = *name;
@@ -247,11 +233,7 @@ fn compile_if(
     end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} if", if_.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(if_.pos));
-    }
+    check_depth!(depth, if_);
 
     // compile the condition
     compile_expr(emitter, depth + 1, cond)?;
@@ -302,11 +284,7 @@ fn compile_while(
     end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} while", while_.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(while_.pos));
-    }
+    check_depth!(depth, while_);
 
     // loop condition
     let loop_start = emitter.start_loop_jumps();
@@ -348,11 +326,7 @@ fn compile_for(
     end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} for", for_.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(for_.pos));
-    }
+    check_depth!(depth, for_);
 
     // initializer
     emitter.begin_scope();
@@ -408,11 +382,7 @@ fn compile_fn(
     end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} fn {}", name.pos, name.lexeme);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(name.pos));
-    }
+    check_depth!(depth, name);
 
     //if let Some(_) = emitter.current_context().get_local_slot(name) {
     //    return Err(PiccoloError::new(ErrorKind::SyntaxError)
@@ -465,11 +435,7 @@ fn compile_fn(
 
 fn compile_break(emitter: &mut Emitter, depth: usize, break_: Token) -> Result<(), PiccoloError> {
     trace!("{} break", break_.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(break_.pos));
-    }
+    check_depth!(depth, break_);
 
     let offset = emitter.start_jump(Opcode::JumpForward(0), break_.pos);
     emitter.add_break(offset, break_)?;
@@ -483,11 +449,7 @@ fn compile_continue(
     continue_: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} continue", continue_.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(continue_.pos));
-    }
+    check_depth!(depth, continue_);
 
     let offset = emitter.start_jump(Opcode::JumpForward(0), continue_.pos);
     emitter.add_continue(offset, continue_)?;
@@ -502,11 +464,7 @@ fn compile_retn(
     expr: Option<&Expr>,
 ) -> Result<(), PiccoloError> {
     trace!("{} retn", retn.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(retn.pos));
-    }
+    check_depth!(depth, retn);
 
     if let Some(expr) = expr {
         compile_expr(emitter, depth + 1, expr)?;
@@ -526,11 +484,7 @@ fn compile_assert(
     value: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} assert", assert.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(assert.pos));
-    }
+    check_depth!(depth, assert);
 
     compile_expr(emitter, depth + 1, value)?;
 
@@ -547,11 +501,7 @@ fn compile_data(
     _methods: &[Stmt],
     _fields: &[Stmt],
 ) -> Result<(), PiccoloError> {
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(name.pos));
-    }
+    check_depth!(depth, name);
 
     Err(PiccoloError::todo(format!("compile_data {}", name.lexeme)))
 }
@@ -562,11 +512,7 @@ fn compile_literal(
     literal: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} literal", literal.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(literal.pos));
-    }
+    check_depth!(depth, literal);
 
     // TODO: use constant ops instead of Constant ops
     emitter.add_constant(Constant::try_from(literal)?, literal.pos);
@@ -579,11 +525,7 @@ fn compile_array_literal(
     right_bracket: Token,
     values: &[Expr],
 ) -> Result<(), PiccoloError> {
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(right_bracket.pos));
-    }
+    check_depth!(depth, right_bracket);
 
     for value in values.iter() {
         compile_expr(emitter, depth + 1, value)?;
@@ -604,11 +546,7 @@ fn compile_paren(
     expr: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} paren", right_paren.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(right_paren.pos));
-    }
+    check_depth!(depth, right_paren);
 
     compile_expr(emitter, depth + 1, expr)
         .map_err(|e| e.msg_string(format!("in expression starting on pos {}", right_paren.pos)))
@@ -620,11 +558,7 @@ fn compile_variable(
     variable: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} variable {}", variable.pos, variable.lexeme);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(variable.pos));
-    }
+    check_depth!(depth, variable);
 
     if let Some(local) = emitter.current_context().get_local_slot(variable) {
         emitter.add_instruction(Opcode::GetLocal(local), variable.pos);
@@ -642,11 +576,7 @@ fn compile_unary(
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} unary {}", op.pos, op.lexeme);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(op.pos));
-    }
+    check_depth!(depth, op);
 
     compile_expr(emitter, depth + 1, rhs)?;
 
@@ -667,11 +597,7 @@ fn compile_binary(
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} binary {}", op.pos, op.lexeme);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(lhs.token().pos));
-    }
+    check_depth!(depth, lhs.token());
 
     compile_expr(emitter, depth + 1, lhs)?;
     compile_expr(emitter, depth + 1, rhs)?;
@@ -712,11 +638,7 @@ fn compile_logical(
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} logical {}", op.pos, op.lexeme);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(lhs.token().pos));
-    }
+    check_depth!(depth, lhs.token());
 
     let jump_op = match op.kind {
         TokenKind::LogicalAnd => Opcode::JumpFalse(0),
@@ -745,11 +667,7 @@ fn compile_call(
     args: &[Expr],
 ) -> Result<(), PiccoloError> {
     trace!("{} call", paren.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(callee.token().pos));
-    }
+    check_depth!(depth, callee.token());
 
     compile_expr(emitter, depth + 1, callee)?;
     for arg in args {
@@ -765,11 +683,7 @@ fn compile_get(
     object: &Expr,
     name: Token,
 ) -> Result<(), PiccoloError> {
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(object.token().pos));
-    }
+    check_depth!(depth, object.token());
 
     compile_expr(emitter, depth + 1, object)?;
     emitter.add_constant(Constant::String(name.lexeme.to_string()), name.pos);
@@ -785,11 +699,7 @@ fn compile_index(
     index: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} index", right_bracket.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(right_bracket.pos));
-    }
+    check_depth!(depth, right_bracket);
 
     compile_expr(emitter, depth + 1, object)?;
     compile_expr(emitter, depth + 1, index)?;
@@ -807,11 +717,7 @@ fn compile_lambda(
     end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} lambda", fn_.pos);
-    if depth > MAX_DEPTH {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
-            .msg("Maximum recursion depth reached")
-            .pos(fn_.pos));
-    }
+    check_depth!(depth, fn_);
 
     emitter.begin_context();
     emitter.begin_scope();
