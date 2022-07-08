@@ -15,26 +15,29 @@ fn main() -> Result<(), PiccoloError> {
 
     println!("found {} tests", files.len());
 
+    let mut ok_results = 0;
     let mut ignored = 0;
     let mut test_errors = Vec::new();
     for item in files.iter() {
         let name = item.display().to_string();
-        if name.ends_with("ignore") || name.ends_with("out") {
+        if name.ends_with("ignore") {
             ignored += 1;
         } else if !name.ends_with("_fail.pc") && name.ends_with(".pc") {
             println!(" -- '{name}'");
-            let _ = piccolo::do_file(item).map_err(|errors| {
-                test_errors.push(errors);
-            });
+            match piccolo::do_file(item) {
+                Ok(_) => ok_results += 1,
+                Err(errors) => test_errors.push(errors),
+            }
         } else if name.ends_with("_fail.pc") {
             println!(" xx '{name}'");
-            let _ = piccolo::do_file(item).map(|v| {
-                test_errors.push(vec![PiccoloError::new(ErrorKind::AssertFailed {
+            match piccolo::do_file(item) {
+                Ok(v) => test_errors.push(vec![PiccoloError::new(ErrorKind::AssertFailed {
                     assertion: String::from("test file would fail"),
                 })
                 .file(name)
-                .msg_string(format!("resulted in {v}"))])
-            });
+                .msg_string(format!("resulted in {v}"))]),
+                Err(_) => ok_results += 1,
+            }
         }
     }
 
@@ -54,7 +57,7 @@ fn main() -> Result<(), PiccoloError> {
 
     println!(
         "\nreported {} successful, {} failures, {ignored} ignored",
-        files.len() - test_errors.len() - ignored,
+        ok_results - test_errors.len(),
         test_errors.len(),
     );
 
