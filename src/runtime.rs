@@ -19,20 +19,18 @@ pub enum Arity {
     Exact(usize),
 }
 
+impl Default for Arity {
+    fn default() -> Self {
+        Arity::Exact(0)
+    }
+}
+
 impl Arity {
     pub fn is_compatible(&self, with: usize) -> bool {
         if let Arity::Exact(arity) = self {
             *arity == with
         } else {
             true
-        }
-    }
-
-    pub fn number(&self) -> usize {
-        if let Arity::Exact(arity) = self {
-            *arity
-        } else {
-            unreachable!()
         }
     }
 }

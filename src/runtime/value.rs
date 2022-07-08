@@ -51,7 +51,7 @@ impl Value {
             Constant::Double(d) => Value::Double(d),
             Constant::String(s) => Value::String(heap.allocate_string(s)),
             Constant::Function(f) => Value::Function(Function {
-                arity: Arity::Exact(f.arity),
+                arity: f.arity,
                 chunk: f.chunk,
                 name: heap.allocate_string(f.name),
             }),
@@ -76,12 +76,12 @@ impl Value {
             Value::String(ptr) => Constant::String(heap.get_string(ptr).unwrap().to_string()),
             Value::Nil => Constant::Nil,
             Value::Function(f) => Constant::Function(ConstantFunction {
-                arity: f.arity.number(),
+                arity: f.arity,
                 name: heap.get_string(f.name).unwrap().to_string(),
                 chunk: f.chunk,
             }),
             Value::NativeFunction(f) => Constant::Function(ConstantFunction {
-                arity: f.arity.number(),
+                arity: f.arity,
                 name: heap.get_string(f.name).unwrap().to_string(),
                 chunk: 0,
             }),
@@ -336,7 +336,7 @@ impl Object for Value {
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct ConstantFunction {
-    pub arity: usize,
+    pub arity: Arity,
     pub name: String,
     pub chunk: usize,
 }

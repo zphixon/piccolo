@@ -10,6 +10,7 @@ use crate::{
         chunk::{Chunk, Module},
         op::Opcode,
         value::{Constant, ConstantFunction},
+        Arity,
     },
     trace,
 };
@@ -417,7 +418,7 @@ fn compile_fn(
     let chunk_index = emitter.end_context();
 
     let function = ConstantFunction {
-        arity,
+        arity: Arity::Exact(arity),
         name: name.lexeme.to_string(),
         chunk: chunk_index,
     };
@@ -741,7 +742,7 @@ fn compile_lambda(
     let chunk_index = emitter.end_context();
 
     let function = ConstantFunction {
-        arity,
+        arity: Arity::Exact(arity),
         name: String::from("<anon>"),
         chunk: chunk_index,
     };
