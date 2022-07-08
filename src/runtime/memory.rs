@@ -1,18 +1,11 @@
-use crate::{
-    error::PiccoloError,
-    runtime::{
-        builtin::{self, NativeFunction},
-        interner::{Interner, StringPtr},
-        value::Value,
-        Arity, Object,
-    },
+use crate::runtime::{
+    interner::{Interner, StringPtr},
+    Object,
 };
-use fnv::FnvHashMap;
 use slotmap::{DefaultKey, SlotMap};
 use std::{
     cell::UnsafeCell,
     fmt::Debug,
-    hash::BuildHasherDefault,
     sync::atomic::{AtomicBool, Ordering},
 };
 
@@ -31,59 +24,15 @@ impl Ptr {
     }
 }
 
+#[derive(Default)]
 pub struct Heap {
     objects: SlotMap<DefaultKey, ObjectHeader>,
-    native_functions: FnvHashMap<&'static str, NativeFunction>,
     interner: Interner,
-}
-
-impl Default for Heap {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl Heap {
     pub fn new() -> Heap {
-        let mut heap = Heap {
-            objects: Default::default(),
-            native_functions: FnvHashMap::with_capacity_and_hasher(
-                0,
-                BuildHasherDefault::default(),
-            ),
-            interner: Default::default(),
-        };
-        let mut native_functions = FnvHashMap::default();
-
-        native_functions.insert(
-            "print",
-            NativeFunction::new(
-                heap.allocate_string(String::from("print")),
-                Arity::Any,
-                builtin::print,
-            ),
-        );
-
-        native_functions.insert(
-            "rand",
-            NativeFunction::new(
-                heap.allocate_string(String::from("rand")),
-                Arity::Exact(0),
-                builtin::rand,
-            ),
-        );
-
-        native_functions.insert(
-            "toString",
-            NativeFunction::new(
-                heap.allocate_string(String::from("toString")),
-                Arity::Any,
-                builtin::to_string,
-            ),
-        );
-
-        heap.native_functions = native_functions;
-        heap
+        Self::default()
     }
 
     pub fn null_ptr() -> Ptr {
@@ -142,11 +91,6 @@ impl Heap {
             .retain(|_, header| header.marked.load(Ordering::SeqCst));
     }
 
-    pub fn call_native(&mut self, name: &str, args: &[Value]) -> Result<Value, PiccoloError> {
-        let f = self.native_functions[name];
-        f.call(self, args)
-    }
-
     pub fn trace(&self, ptr: Ptr) {
         if let Some(header) = self.get_header(ptr) {
             header.marked.store(true, Ordering::SeqCst);
@@ -175,10 +119,6 @@ impl Heap {
         self.interner.get_string_ptr(string)
     }
 
-    pub fn get_native(&self, name: &str) -> Option<NativeFunction> {
-        self.native_functions.get(name).copied()
-    }
-
     pub fn clone(&mut self, ptr: Ptr) -> Ptr {
         Ptr(self.objects.insert(ObjectHeader {
             inner: UnsafeCell::new(self.get(ptr).clone_object()),
@@ -190,6 +130,7 @@ impl Heap {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::runtime::Value;
 
     #[test]
     fn simple_collect() {
@@ -306,15 +247,5 @@ mod test {
 
         heap.collect([].into_iter());
         assert!(heap.get_header(inner1).is_none());
-    }
-
-    #[test]
-    fn arity() {
-        let mut heap = Heap::new();
-        assert!(heap.call_native("print", &[]).is_ok());
-        assert!(heap.call_native("print", &[Value::Nil]).is_ok());
-
-        assert!(heap.call_native("rand", &[]).is_ok());
-        assert!(heap.call_native("rand", &[Value::Nil]).is_err());
     }
 }

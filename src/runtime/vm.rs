@@ -3,11 +3,12 @@ use crate::{
     debug,
     error::{ErrorKind, PiccoloError},
     runtime::{
+        builtin::{self, NativeFunction},
         chunk::{Chunk, Module},
         memory::Heap,
         op::Opcode,
         value::{Array, Value},
-        Object,
+        Arity, Object,
     },
     trace, warn,
 };
@@ -104,15 +105,27 @@ impl Machine {
         // TODO make this nicer
         globals.insert(
             String::from("print"),
-            Value::NativeFunction(heap.get_native("print").unwrap()),
+            Value::NativeFunction(NativeFunction::new(
+                heap.allocate_string(String::from("print")),
+                Arity::Any,
+                builtin::print,
+            )),
         );
         globals.insert(
             String::from("rand"),
-            Value::NativeFunction(heap.get_native("rand").unwrap()),
+            Value::NativeFunction(NativeFunction::new(
+                heap.allocate_string(String::from("rand")),
+                Arity::Exact(0),
+                builtin::rand,
+            )),
         );
         globals.insert(
             String::from("toString"),
-            Value::NativeFunction(heap.get_native("toString").unwrap()),
+            Value::NativeFunction(NativeFunction::new(
+                heap.allocate_string(String::from("toString")),
+                Arity::Any,
+                builtin::to_string,
+            )),
         );
 
         Machine {
@@ -794,8 +807,7 @@ impl Machine {
                         args.insert(0, self.pop());
                     }
                     let f = self.pop().as_native_function();
-                    let name = heap.get_string(f.name()).to_string();
-                    self.push(heap.call_native(&name, &args)?);
+                    self.push((f.ptr)(heap, &args)?);
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "fn".to_owned(),
