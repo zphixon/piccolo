@@ -270,7 +270,7 @@ impl fmt::Display for ErrorKind {
             ErrorKind::CannotIndex { object, with }
                 => write!(f, "Cannot index value {object} with {with}"),
             ErrorKind::OutOfBounds { object, with }
-                => write!(f, "Cannot index {with} out of bounds of {object}"),
+                => write!(f, "Cannot index {object} with out of bounds {with}"),
             ErrorKind::FormatError
                 => write!(f, "The value could not be formatted"),
             ErrorKind::Todo { why }
