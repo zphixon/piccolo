@@ -1,7 +1,4 @@
-use crate::runtime::{
-    interner::{Interner, StringPtr},
-    Object,
-};
+use crate::runtime::{interner::Interner, Object};
 use slotmap::{DefaultKey, SlotMap};
 use std::{
     cell::UnsafeCell,
@@ -111,16 +108,12 @@ impl Heap {
         self.get(ptr).downcast_ref::<T>()
     }
 
-    pub fn allocate_string(&mut self, string: String) -> StringPtr {
-        self.interner.allocate_string(string)
+    pub fn interner(&self) -> &Interner {
+        &self.interner
     }
 
-    pub fn get_string(&self, ptr: StringPtr) -> &str {
-        self.interner.get_string(ptr)
-    }
-
-    pub fn get_string_ptr(&self, string: &str) -> Option<StringPtr> {
-        self.interner.get_string_ptr(string)
+    pub fn interner_mut(&mut self) -> &mut Interner {
+        &mut self.interner
     }
 
     pub fn clone(&mut self, ptr: Ptr) -> Ptr {

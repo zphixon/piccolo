@@ -106,7 +106,7 @@ impl Machine {
         globals.insert(
             String::from("print"),
             Value::NativeFunction(NativeFunction::new(
-                heap.allocate_string(String::from("print")),
+                heap.interner_mut().allocate_string(String::from("print")),
                 Arity::Any,
                 builtin::print,
             )),
@@ -114,7 +114,7 @@ impl Machine {
         globals.insert(
             String::from("rand"),
             Value::NativeFunction(NativeFunction::new(
-                heap.allocate_string(String::from("rand")),
+                heap.interner_mut().allocate_string(String::from("rand")),
                 Arity::Exact(0),
                 builtin::rand,
             )),
@@ -122,7 +122,8 @@ impl Machine {
         globals.insert(
             String::from("toString"),
             Value::NativeFunction(NativeFunction::new(
-                heap.allocate_string(String::from("toString")),
+                heap.interner_mut()
+                    .allocate_string(String::from("toString")),
                 Arity::Any,
                 builtin::to_string,
             )),
@@ -130,7 +131,7 @@ impl Machine {
         globals.insert(
             String::from("clone"),
             Value::NativeFunction(NativeFunction::new(
-                heap.allocate_string(String::from("clone")),
+                heap.interner_mut().allocate_string(String::from("clone")),
                 Arity::Exact(1),
                 builtin::clone,
             )),
@@ -160,7 +161,7 @@ impl Machine {
     }
 
     fn push_string(&mut self, heap: &mut Heap, string: String) {
-        self.push(Value::String(heap.allocate_string(string)));
+        self.push(Value::String(heap.interner_mut().allocate_string(string)));
     }
 
     pub fn clear_stack_and_move_to_end_of_module(&mut self, module: &Module) {
@@ -790,7 +791,7 @@ impl Machine {
 
                     if !f.arity.is_compatible(arity) {
                         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                            name: heap.get_string(f.name).to_string(),
+                            name: heap.interner().get_string(f.name).to_string(),
                             exp: f.arity,
                             got: arity,
                         }));
@@ -803,7 +804,7 @@ impl Machine {
                     );
 
                     frames.push(Frame {
-                        name: heap.get_string(f.name).to_string(),
+                        name: heap.interner().get_string(f.name).to_string(),
                         ip: 0,
                         base: self.stack.len() - arity - 1,
                         chunk: module.chunk(f.chunk),
@@ -819,7 +820,7 @@ impl Machine {
                         self.push((f.ptr)(heap, &args)?);
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                            name: heap.get_string(f.name()).to_string(),
+                            name: heap.interner().get_string(f.name()).to_string(),
                             exp: f.arity,
                             got: arity,
                         }));

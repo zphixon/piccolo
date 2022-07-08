@@ -30,10 +30,22 @@ impl Interner {
     }
 
     pub fn allocate_string(&mut self, string: String) -> StringPtr {
-        if let Some(ptr) = self.table.get(string.as_str()) {
-            return StringPtr(*ptr);
+        if let Some(ptr) = self.get_string_ptr(&string) {
+            return ptr;
         }
 
+        self.insert(string)
+    }
+
+    pub fn allocate_str(&mut self, string: &str) -> StringPtr {
+        if let Some(ptr) = self.get_string_ptr(string) {
+            return ptr;
+        }
+
+        self.insert(string.to_string())
+    }
+
+    fn insert(&mut self, string: String) -> StringPtr {
         let ptr = self.strings.insert(string);
         self.table.insert(
             // SAFETY: References handed out by get_string() only last as long as the Interner.

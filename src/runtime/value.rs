@@ -49,11 +49,11 @@ impl Value {
             Constant::Bool(b) => Value::Bool(b),
             Constant::Integer(i) => Value::Integer(i),
             Constant::Double(d) => Value::Double(d),
-            Constant::String(s) => Value::String(heap.allocate_string(s)),
+            Constant::String(s) => Value::String(heap.interner_mut().allocate_string(s)),
             Constant::Function(f) => Value::Function(Function {
                 arity: f.arity,
                 chunk: f.chunk,
-                name: heap.allocate_string(f.name),
+                name: heap.interner_mut().allocate_string(f.name),
             }),
             //Constant::NativeFunction(f) => Value::NativeFunction(f),
             //Constant::Object(Box<dyn Object>) => {} // TODO?
@@ -73,16 +73,16 @@ impl Value {
             Value::Bool(b) => Constant::Bool(b),
             Value::Integer(i) => Constant::Integer(i),
             Value::Double(d) => Constant::Double(d),
-            Value::String(ptr) => Constant::String(heap.get_string(ptr).to_string()),
+            Value::String(ptr) => Constant::String(heap.interner().get_string(ptr).to_string()),
             Value::Nil => Constant::Nil,
             Value::Function(f) => Constant::Function(ConstantFunction {
                 arity: f.arity,
-                name: heap.get_string(f.name).to_string(),
+                name: heap.interner().get_string(f.name).to_string(),
                 chunk: f.chunk,
             }),
             Value::NativeFunction(f) => Constant::Function(ConstantFunction {
                 arity: f.arity,
-                name: heap.get_string(f.name).to_string(),
+                name: heap.interner().get_string(f.name).to_string(),
                 chunk: 0,
             }),
             Value::Object(ptr) => {
@@ -312,9 +312,9 @@ impl Object for Value {
             Value::Bool(b) => format!("{b}"),
             Value::Integer(i) => format!("{i}"),
             Value::Double(d) => format!("{d}"),
-            Value::String(p) => heap.get_string(*p).to_string(),
-            Value::Function(f) => heap.get_string(f.name).to_string(),
-            Value::NativeFunction(f) => heap.get_string(f.name()).to_string(),
+            Value::String(p) => heap.interner().get_string(*p).to_string(),
+            Value::Function(f) => heap.interner().get_string(f.name).to_string(),
+            Value::NativeFunction(f) => heap.interner().get_string(f.name()).to_string(),
             Value::Object(p) => heap.get(*p).format(heap),
             Value::Nil => String::from("nil"),
         }
@@ -325,10 +325,10 @@ impl Object for Value {
             Value::Bool(v) => format!("Bool({v})"),
             Value::Integer(v) => format!("Integer({v})"),
             Value::Double(v) => format!("Double({v})"),
-            Value::String(v) => format!("String({:?})", heap.get_string(*v)),
-            Value::Function(f) => format!("Function({:?})", heap.get_string(f.name)),
+            Value::String(v) => format!("String({:?})", heap.interner().get_string(*v)),
+            Value::Function(f) => format!("Function({:?})", heap.interner().get_string(f.name)),
             Value::NativeFunction(f) => {
-                format!("NativeFunction({:?})", heap.get_string(f.name()))
+                format!("NativeFunction({:?})", heap.interner().get_string(f.name()))
             }
             Value::Object(p) => heap.get(*p).debug_format(heap),
             Value::Nil => String::from("nil"),
@@ -477,9 +477,9 @@ impl Object for Array {
             return Ok(self.values[index]);
         } else if let Value::String(string) = index_value {
             // slow?
-            // if heap.get_string(string) == "len" {}
+            // if heap.interner().get_string(string) == "len" {}
 
-            let len = heap.get_string_ptr("len").unwrap();
+            let len = heap.interner().get_string_ptr("len").unwrap();
             if string == len {
                 return Ok(Value::Integer(self.values.len() as i64));
             }
