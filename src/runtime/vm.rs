@@ -769,7 +769,7 @@ impl Machine {
                         chunk: module.chunk(f.chunk),
                         //function: heap.allocate(f),
                     });
-                } else if let Value::NativeFunction(_) = self.peek_back(arity) {
+                } else if let Value::BuiltinFunction(_) = self.peek_back(arity) {
                     let mut args = vec![];
                     for _ in 0..arity {
                         args.insert(0, self.pop());

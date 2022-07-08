@@ -5,7 +5,7 @@ use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{
         builtin,
-        builtin::NativeFunction,
+        builtin::BuiltinFunction,
         interner::StringPtr,
         memory::{Heap, Ptr},
         Arity, Object,
@@ -26,7 +26,7 @@ pub enum Value {
     Double(f64),
     String(StringPtr),
     Function(Function),
-    NativeFunction(builtin::NativeFunction),
+    BuiltinFunction(builtin::BuiltinFunction),
     Object(Ptr),
     Nil,
 }
@@ -55,7 +55,7 @@ impl Value {
                 chunk: f.chunk,
                 name: heap.interner_mut().allocate_string(f.name),
             }),
-            //Constant::NativeFunction(f) => Value::NativeFunction(f),
+            //Constant::BuiltinFunction(f) => Value::BuiltinFunction(f),
             //Constant::Object(Box<dyn Object>) => {} // TODO?
             Constant::Array(v) => {
                 let values = v
@@ -80,7 +80,7 @@ impl Value {
                 name: heap.interner().get_string(f.name).to_string(),
                 chunk: f.chunk,
             }),
-            Value::NativeFunction(f) => Constant::Function(ConstantFunction {
+            Value::BuiltinFunction(f) => Constant::Function(ConstantFunction {
                 arity: f.arity,
                 name: heap.interner().get_string(f.name).to_string(),
                 chunk: 0,
@@ -146,13 +146,13 @@ impl Value {
     }
 
     pub fn is_native_function(&self) -> bool {
-        matches!(self, Value::NativeFunction(_))
+        matches!(self, Value::BuiltinFunction(_))
     }
 
-    pub fn as_native_function(&self) -> NativeFunction {
+    pub fn as_native_function(&self) -> BuiltinFunction {
         assert!(self.is_native_function());
         match self {
-            Value::NativeFunction(f) => *f,
+            Value::BuiltinFunction(f) => *f,
             _ => panic!(),
         }
     }
@@ -177,7 +177,7 @@ impl std::fmt::Debug for Value {
             Value::Double(v) => write!(f, "Double({v})"),
             Value::String(_) => write!(f, "String(?)"),
             Value::Function(_) => write!(f, "Function(?)"),
-            Value::NativeFunction(_) => write!(f, "NativeFunction(?)"),
+            Value::BuiltinFunction(_) => write!(f, "BuiltinFunction(?)"),
             Value::Object(_) => write!(f, "Object(?)"),
             Value::Nil => write!(f, "Nil"),
         }
@@ -216,7 +216,7 @@ impl Object for Value {
             Value::Double(_) => "float",
             Value::String(_) => "string",
             Value::Function(_) => "function",
-            Value::NativeFunction(_) => "function",
+            Value::BuiltinFunction(_) => "function",
             Value::Object(ptr) => heap.get(*ptr).type_name(heap),
             Value::Nil => "nil",
         }
@@ -229,7 +229,7 @@ impl Object for Value {
             Value::Double(d) => format!("{d}"),
             Value::String(p) => heap.interner().get_string(*p).to_string(),
             Value::Function(f) => heap.interner().get_string(f.name).to_string(),
-            Value::NativeFunction(f) => heap.interner().get_string(f.name()).to_string(),
+            Value::BuiltinFunction(f) => heap.interner().get_string(f.name()).to_string(),
             Value::Object(p) => heap.get(*p).format(heap),
             Value::Nil => String::from("nil"),
         }
@@ -242,8 +242,11 @@ impl Object for Value {
             Value::Double(v) => format!("Double({v})"),
             Value::String(v) => format!("String({:?})", heap.interner().get_string(*v)),
             Value::Function(f) => format!("Function({:?})", heap.interner().get_string(f.name)),
-            Value::NativeFunction(f) => {
-                format!("NativeFunction({:?})", heap.interner().get_string(f.name()))
+            Value::BuiltinFunction(f) => {
+                format!(
+                    "BuiltinFunction({:?})",
+                    heap.interner().get_string(f.name())
+                )
             }
             Value::Object(p) => heap.get(*p).debug_format(heap),
             Value::Nil => String::from("nil"),
@@ -275,8 +278,8 @@ impl Object for Value {
             if let Value::Function(r) = other {
                 return Ok(l == r);
             }
-        } else if let Value::NativeFunction(l) = *self {
-            if let Value::NativeFunction(r) = other {
+        } else if let Value::BuiltinFunction(l) = *self {
+            if let Value::BuiltinFunction(r) = other {
                 return Ok(l == r);
             }
         } else if let Value::Object(l) = *self {

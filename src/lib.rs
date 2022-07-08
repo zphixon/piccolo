@@ -85,7 +85,7 @@ pub fn make_environment() -> (
 ) {
     use compiler::{emitter::Emitter, Token};
     use runtime::{
-        builtin::{self, NativeFunction},
+        builtin::{self, BuiltinFunction},
         memory::Heap,
         value::Value,
         vm::Machine,
@@ -105,7 +105,7 @@ pub fn make_environment() -> (
             emitter.make_global_ident(Token::identifier(stringify!($name)));
             vm.globals.insert(
                 String::from(stringify!($name)),
-                Value::NativeFunction(NativeFunction::new(
+                Value::BuiltinFunction(BuiltinFunction::new(
                     heap.interner_mut()
                         .allocate_string(String::from(stringify!($name))),
                     $arity,

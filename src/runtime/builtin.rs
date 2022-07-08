@@ -65,21 +65,21 @@ pub fn clock(_: &mut Heap, _: &[Value]) -> Result<Value, PiccoloError> {
 pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError>;
 
 #[derive(Clone, Copy)]
-pub struct NativeFunction {
+pub struct BuiltinFunction {
     pub name: StringPtr,
     pub arity: Arity,
     pub ptr: PiccoloFunction,
 }
 
-impl PartialEq for NativeFunction {
+impl PartialEq for BuiltinFunction {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name && self.arity == other.arity
     }
 }
 
-impl NativeFunction {
+impl BuiltinFunction {
     pub fn new(name: StringPtr, arity: Arity, ptr: PiccoloFunction) -> Self {
-        NativeFunction { name, arity, ptr }
+        BuiltinFunction { name, arity, ptr }
     }
 
     pub fn name(&self) -> StringPtr {
@@ -99,9 +99,9 @@ impl NativeFunction {
     }
 }
 
-impl Debug for NativeFunction {
+impl Debug for BuiltinFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("NativeFunction")
+        f.debug_struct("BuiltinFunction")
             .field("arity", &self.arity)
             .field("ptr", &(self.ptr as *const fn() as usize))
             .finish()
