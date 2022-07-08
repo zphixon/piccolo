@@ -46,6 +46,12 @@ pub fn clone(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     Ok(arg)
 }
 
+pub fn type_(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    let arg = args[0];
+    let name = arg.get_type_name(heap);
+    Ok(Value::String(heap.interner_mut().allocate_str(name)))
+}
+
 pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError>;
 
 #[derive(Clone, Copy)]
