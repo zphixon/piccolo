@@ -3,7 +3,7 @@
 use crate::{
     compiler::{
         ast::{Expr, Stmt},
-        Scanner, Token, TokenKind,
+        Scanner, Token, TokenKind, MAX_DEPTH,
     },
     error::{ErrorKind, PiccoloError},
     trace,
@@ -310,7 +310,7 @@ fn consume<'a>(
     kind: TokenKind,
     depth: usize,
 ) -> Result<Token<'a>, PiccoloError> {
-    if depth + 1 > 64 {
+    if depth + 1 > MAX_DEPTH {
         return Err(PiccoloError::new(ErrorKind::SyntaxError)
             .msg("Maximum recursion depth reached")
             .pos(scanner.peek_token(0)?.pos));

@@ -17,6 +17,8 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+pub const MAX_DEPTH: usize = 64;
+
 #[derive(PartialEq, Eq, Hash, Default, Debug)]
 pub(crate) struct Local {
     pub(crate) name: String,
