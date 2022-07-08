@@ -73,20 +73,20 @@ impl Value {
             Value::Bool(b) => Constant::Bool(b),
             Value::Integer(i) => Constant::Integer(i),
             Value::Double(d) => Constant::Double(d),
-            Value::String(ptr) => Constant::String(heap.get_string(ptr).unwrap().to_string()),
+            Value::String(ptr) => Constant::String(heap.get_string(ptr).to_string()),
             Value::Nil => Constant::Nil,
             Value::Function(f) => Constant::Function(ConstantFunction {
                 arity: f.arity,
-                name: heap.get_string(f.name).unwrap().to_string(),
+                name: heap.get_string(f.name).to_string(),
                 chunk: f.chunk,
             }),
             Value::NativeFunction(f) => Constant::Function(ConstantFunction {
                 arity: f.arity,
-                name: heap.get_string(f.name).unwrap().to_string(),
+                name: heap.get_string(f.name).to_string(),
                 chunk: 0,
             }),
             Value::Object(ptr) => {
-                let object = heap.get(ptr).unwrap().clone_object();
+                let object = heap.get(ptr).clone_object();
                 if let Ok(array) = object.downcast::<Array>() {
                     Constant::Array(
                         array
@@ -98,7 +98,7 @@ impl Value {
                 } else {
                     panic!(
                         "cannot convert object {} to constant",
-                        heap.get(ptr).unwrap().debug_format(heap)
+                        heap.get(ptr).debug_format(heap)
                     );
                 }
             }
@@ -189,7 +189,7 @@ impl Value {
                 Value::NativeFunction(r) => return Ok(*l == *r),
                 _ => {}
             },
-            Value::Object(l) => return heap.get(*l).unwrap().eq(heap, *other),
+            Value::Object(l) => return heap.get(*l).eq(heap, *other),
             Value::Nil => match other {
                 Value::Nil => return Ok(true),
                 _ => {}
@@ -310,10 +310,10 @@ impl Object for Value {
             Value::Bool(b) => format!("{b}"),
             Value::Integer(i) => format!("{i}"),
             Value::Double(d) => format!("{d}"),
-            Value::String(p) => heap.get_string(*p).unwrap().to_string(),
-            Value::Function(f) => heap.get_string(f.name).unwrap().to_string(),
-            Value::NativeFunction(f) => heap.get_string(f.name()).unwrap().to_string(),
-            Value::Object(p) => heap.get(*p).unwrap().format(heap),
+            Value::String(p) => heap.get_string(*p).to_string(),
+            Value::Function(f) => heap.get_string(f.name).to_string(),
+            Value::NativeFunction(f) => heap.get_string(f.name()).to_string(),
+            Value::Object(p) => heap.get(*p).format(heap),
             Value::Nil => String::from("nil"),
         }
     }
@@ -323,12 +323,12 @@ impl Object for Value {
             Value::Bool(v) => format!("Bool({v})"),
             Value::Integer(v) => format!("Integer({v})"),
             Value::Double(v) => format!("Double({v})"),
-            Value::String(v) => format!("String({:?})", heap.get_string(*v).unwrap()),
-            Value::Function(f) => format!("Function({:?})", heap.get_string(f.name).unwrap()),
+            Value::String(v) => format!("String({:?})", heap.get_string(*v)),
+            Value::Function(f) => format!("Function({:?})", heap.get_string(f.name)),
             Value::NativeFunction(f) => {
-                format!("NativeFunction({:?})", heap.get_string(f.name()).unwrap())
+                format!("NativeFunction({:?})", heap.get_string(f.name()))
             }
-            Value::Object(p) => heap.get(*p).unwrap().debug_format(heap),
+            Value::Object(p) => heap.get(*p).debug_format(heap),
             Value::Nil => String::from("nil"),
         }
     }
@@ -475,7 +475,7 @@ impl Object for Array {
             return Ok(self.values[index]);
         } else if let Value::String(string) = index_value {
             // slow?
-            // if heap.get_string(string).unwrap() == "len" {}
+            // if heap.get_string(string) == "len" {}
 
             let len = heap.get_string_ptr("len").unwrap();
             if string == len {
@@ -518,7 +518,7 @@ impl Object for Array {
 
     fn eq(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
         if let Value::Object(ptr) = other {
-            if let Some(other) = heap.get(ptr).unwrap().downcast_ref::<Array>() {
+            if let Some(other) = heap.get(ptr).downcast_ref::<Array>() {
                 if self.values.len() != other.values.len() {
                     return Ok(false);
                 }

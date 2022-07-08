@@ -23,7 +23,7 @@ pub fn to_string(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloErro
 pub fn print(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
     match to_string(heap, values)? {
         Value::String(ptr) => {
-            println!("{}", heap.get_string(ptr).unwrap());
+            println!("{}", heap.get_string(ptr));
         }
         _ => unreachable!(),
     }
@@ -62,7 +62,7 @@ impl NativeFunction {
     pub fn call(&self, heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
         if !self.arity.is_compatible(args.len()) {
             return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                name: heap.get_string(self.name).unwrap().to_string(),
+                name: heap.get_string(self.name).to_string(),
                 exp: self.arity,
                 got: args.len(),
             }));

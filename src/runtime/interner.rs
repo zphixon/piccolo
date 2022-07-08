@@ -44,8 +44,11 @@ impl Interner {
         StringPtr(ptr)
     }
 
-    pub fn get_string(&self, ptr: StringPtr) -> Option<&str> {
-        self.strings.get(ptr.0).map(|string| string.as_str())
+    pub fn get_string(&self, ptr: StringPtr) -> &str {
+        self.strings
+            .get(ptr.0)
+            .map(|string| string.as_str())
+            .expect("invalid string pointer")
     }
 
     pub fn get_string_ptr(&self, string: &str) -> Option<StringPtr> {
@@ -61,7 +64,7 @@ mod test {
     fn intern() {
         let mut interner = Interner::default();
         let wow = interner.allocate_string(String::from("wow!"));
-        assert_eq!("wow!", interner.get_string(wow).unwrap());
+        assert_eq!("wow!", interner.get_string(wow));
     }
 
     #[test]

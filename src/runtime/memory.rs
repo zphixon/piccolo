@@ -21,7 +21,7 @@ pub struct ObjectHeader {
     marked: AtomicBool,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Ptr(DefaultKey);
 
 impl Ptr {
@@ -97,17 +97,23 @@ impl Heap {
         }))
     }
 
-    pub fn get(&self, ptr: Ptr) -> Option<&dyn Object> {
+    pub fn get(&self, ptr: Ptr) -> &dyn Object {
         self.get_header(ptr)
             .and_then(|header| unsafe { header.inner.get().as_ref() })
             .map(|inner| inner.as_ref())
+            .expect("invalid pointer")
     }
 
     pub unsafe fn get_mut<'this>(&'this self, ptr: Ptr) -> &'this mut dyn Object {
         if self.objects.contains_key(ptr.0) {
             // this is still 100% wrong, since we can use this method to mutably alias Objects
             let header = self.objects.get_unchecked(ptr.0);
-            header.inner.get().as_mut().unwrap().as_mut()
+            header
+                .inner
+                .get()
+                .as_mut()
+                .expect("invalid pointer")
+                .as_mut()
         } else {
             panic!("invalid pointer");
         }
@@ -154,14 +160,14 @@ impl Heap {
     where
         T: Object,
     {
-        self.get(ptr)?.downcast_ref::<T>()
+        self.get(ptr).downcast_ref::<T>()
     }
 
     pub fn allocate_string(&mut self, string: String) -> StringPtr {
         self.interner.allocate_string(string)
     }
 
-    pub fn get_string(&self, ptr: StringPtr) -> Option<&str> {
+    pub fn get_string(&self, ptr: StringPtr) -> &str {
         self.interner.get_string(ptr)
     }
 
@@ -175,7 +181,7 @@ impl Heap {
 
     pub fn clone(&mut self, ptr: Ptr) -> Ptr {
         Ptr(self.objects.insert(ObjectHeader {
-            inner: UnsafeCell::new(self.get(ptr).unwrap().clone_object()),
+            inner: UnsafeCell::new(self.get(ptr).clone_object()),
             marked: AtomicBool::new(false),
         }))
     }
@@ -233,7 +239,7 @@ mod test {
 
         heap.collect(stack.as_collectable());
 
-        assert!(heap.get(stack[0].as_ptr()).is_some());
+        assert!(heap.get_header(stack[0].as_ptr()).is_some());
         assert!(heap
             .get_header(stack[0].as_ptr())
             .unwrap()
@@ -265,13 +271,11 @@ mod test {
             }
 
             fn format(&self, heap: &Heap) -> String {
-                format!(
-                    "(cons {} {})",
-                    self.car,
-                    heap.get(self.cdr)
-                        .map(|object| object.format(heap))
-                        .unwrap_or_else(|| String::from("nil"))
-                )
+                if self.cdr != Heap::null_ptr() {
+                    format!("(cons {} {})", self.car, heap.get(self.cdr).format(heap))
+                } else {
+                    format!("(cons {} nil)", self.car)
+                }
             }
         }
 
@@ -291,20 +295,17 @@ mod test {
 
         assert_eq!(
             "(cons 3 (cons 2 (cons 1 nil)))",
-            heap.get(root).unwrap().format(&heap)
+            heap.get(root).format(&heap)
         );
 
         heap.collect([Some(&inner2)].into_iter());
-        assert_eq!(
-            "(cons 2 (cons 1 nil))",
-            heap.get(inner2).unwrap().format(&heap)
-        );
+        assert_eq!("(cons 2 (cons 1 nil))", heap.get(inner2).format(&heap));
 
         heap.collect([Some(&inner1)].into_iter());
-        assert_eq!("(cons 1 nil)", heap.get(inner1).unwrap().format(&heap));
+        assert_eq!("(cons 1 nil)", heap.get(inner1).format(&heap));
 
         heap.collect([].into_iter());
-        assert!(heap.get(inner1).is_none());
+        assert!(heap.get_header(inner1).is_none());
     }
 
     #[test]

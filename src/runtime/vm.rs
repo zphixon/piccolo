@@ -632,7 +632,7 @@ impl Machine {
                 let index = self.pop();
                 if self.peek().is_object() {
                     let ptr = self.pop().as_ptr();
-                    self.push(heap.get(ptr).unwrap().get(heap, index)?);
+                    self.push(heap.get(ptr).get(heap, index)?);
                 } else {
                     return Err(PiccoloError::new(ErrorKind::CannotIndex {
                         object: self.peek().format(heap),
@@ -769,7 +769,7 @@ impl Machine {
 
                     if !f.arity.is_compatible(arity) {
                         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                            name: heap.get_string(f.name).unwrap().to_string(),
+                            name: heap.get_string(f.name).to_string(),
                             exp: f.arity,
                             got: arity,
                         }));
@@ -782,7 +782,7 @@ impl Machine {
                     );
 
                     frames.push(Frame {
-                        name: heap.get_string(f.name).unwrap().to_string(),
+                        name: heap.get_string(f.name).to_string(),
                         ip: 0,
                         base: self.stack.len() - arity - 1,
                         chunk: module.chunk(f.chunk),
@@ -794,7 +794,7 @@ impl Machine {
                         args.insert(0, self.pop());
                     }
                     let f = self.pop().as_native_function();
-                    let name = heap.get_string(f.name()).unwrap().to_string();
+                    let name = heap.get_string(f.name()).to_string();
                     self.push(heap.call_native(&name, &args)?);
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
