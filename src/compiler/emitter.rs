@@ -3,7 +3,7 @@
 use crate::{
     compiler::{
         ast::{Ast, Expr, Stmt},
-        Local, SourcePos, Token, TokenKind,
+        Local, SourcePos, Token, TokenKind, MAX_DEPTH,
     },
     error::{ErrorKind, PiccoloError},
     runtime::{
@@ -28,7 +28,7 @@ pub fn compile(ast: &Ast) -> Result<Module, Vec<PiccoloError>> {
 pub fn compile_with(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloError>> {
     let errors: Vec<_> = ast
         .iter()
-        .map(|stmt| compile_stmt(emitter, stmt))
+        .map(|stmt| compile_stmt(emitter, 0, stmt))
         .filter_map(Result::err)
         .collect();
 
@@ -40,82 +40,116 @@ pub fn compile_with(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloE
 }
 
 #[rustfmt::skip]
-fn compile_stmt(emitter: &mut Emitter, stmt: &Stmt) -> Result<(), PiccoloError> {
+fn compile_stmt(emitter: &mut Emitter, depth: usize, stmt: &Stmt) -> Result<(), PiccoloError> {
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(stmt.token().pos));
+    }
+
     match stmt {
         Stmt::Expr { token, expr }
-            => compile_expr_stmt(emitter, *token, expr),
+            => compile_expr_stmt(emitter, depth + 1, *token, expr),
         Stmt::Block { end, body }
-            => compile_block(emitter, *end, body),
+            => compile_block(emitter, depth + 1, *end, body),
         Stmt::Declaration { name, value, .. }
-            => compile_declaration(emitter, *name, value),
+            => compile_declaration(emitter, depth + 1, *name, value),
         Stmt::Assignment { lval, op, rval }
-            => compile_assignment(emitter, lval, *op, rval),
+            => compile_assignment(emitter, depth + 1, lval, *op, rval),
         Stmt::If { if_, cond, then_block, else_, else_block, end }
-            => compile_if(emitter, *if_, cond, then_block, else_.as_ref(), else_block.as_ref(), *end),
+            => compile_if(emitter, depth + 1, *if_, cond, then_block, else_.as_ref(), else_block.as_ref(), *end),
         Stmt::While { while_, cond, body, end }
-            => compile_while(emitter, *while_, cond, body, *end),
+            => compile_while(emitter, depth + 1, *while_, cond, body, *end),
         Stmt::For { for_, init, cond, name, inc_op, inc_expr, body, end }
-            => compile_for(emitter, *for_, init.as_ref(), cond, *name, *inc_op, inc_expr, body, *end),
+            => compile_for(emitter, depth + 1, *for_, init.as_ref(), cond, *name, *inc_op, inc_expr, body, *end),
         Stmt::Fn { name, args, arity, body, method, end }
-            => compile_fn(emitter, *name, args, *arity, body, *method, *end),
+            => compile_fn(emitter, depth + 1, *name, args, *arity, body, *method, *end),
         Stmt::Break { break_ }
-            => compile_break(emitter, *break_),
+            => compile_break(emitter, depth + 1, *break_),
         Stmt::Continue { continue_ }
-            => compile_continue(emitter, *continue_),
+            => compile_continue(emitter, depth + 1, *continue_),
         Stmt::Retn { retn, value }
-            => compile_retn(emitter, *retn, value.as_ref()),
+            => compile_retn(emitter, depth + 1, *retn, value.as_ref()),
         Stmt::Assert { assert, value }
-            => compile_assert(emitter, *assert, value),
+            => compile_assert(emitter, depth + 1, *assert, value),
         Stmt::Data { name, methods, fields }
-            => compile_data(emitter, *name, methods, fields),
+            => compile_data(emitter, depth + 1, *name, methods, fields),
     }
 }
 
 #[rustfmt::skip]
-fn compile_expr(emitter: &mut Emitter, expr: &Expr) -> Result<(), PiccoloError> {
+fn compile_expr(emitter: &mut Emitter, depth: usize, expr: &Expr) -> Result<(), PiccoloError> {
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(expr.token().pos));
+    }
+
     match expr {
         Expr::Literal { literal }
-            => compile_literal(emitter, *literal),
+            => compile_literal(emitter, depth + 1, *literal),
         Expr::ArrayLiteral { right_bracket, values }
-            => compile_array_literal(emitter, *right_bracket, values),
+            => compile_array_literal(emitter, depth + 1, *right_bracket, values),
         Expr::Paren { right_paren, expr }
-            => compile_paren(emitter, *right_paren, expr),
+            => compile_paren(emitter, depth + 1, *right_paren, expr),
         Expr::Variable { variable }
-            => compile_variable(emitter, *variable),
+            => compile_variable(emitter, depth + 1, *variable),
         Expr::Unary { op, rhs }
-            => compile_unary(emitter, *op, rhs),
+            => compile_unary(emitter, depth + 1, *op, rhs),
         Expr::Binary { lhs, op, rhs }
-            => compile_binary(emitter, lhs, *op, rhs),
+            => compile_binary(emitter, depth + 1, lhs, *op, rhs),
         Expr::Logical { lhs, op, rhs }
-            => compile_logical(emitter, lhs, *op, rhs),
+            => compile_logical(emitter, depth + 1, lhs, *op, rhs),
         Expr::Call { callee, paren, arity, args }
-            => compile_call(emitter, callee, *paren, *arity, args),
+            => compile_call(emitter, depth + 1, callee, *paren, *arity, args),
         // Expr::New { name, args }
-        //     => compile_new(emitter, name, args),
+        //     => compile_new(emitter, depth + 1, name, args),
         Expr::Get { object, name }
-            => compile_get(emitter, object, *name),
+            => compile_get(emitter, depth + 1, object, *name),
         // Expr::Set { object, name, value }
-        //     => compile_set(emitter, object, name, value),
+        //     => compile_set(emitter, depth + 1, object, name, value),
         Expr::Index { right_bracket, object, index }
-            => compile_index(emitter, *right_bracket, object, index),
+            => compile_index(emitter, depth + 1, *right_bracket, object, index),
         Expr::Fn { fn_, args, arity, body, end }
-            => compile_lambda(emitter, *fn_, args, *arity, body, *end),
+            => compile_lambda(emitter, depth + 1, *fn_, args, *arity, body, *end),
         _ => Err(PiccoloError::todo(format!("compile_expr: {expr:#?}"))),
     }
 }
 
-fn compile_expr_stmt(emitter: &mut Emitter, token: Token, expr: &Expr) -> Result<(), PiccoloError> {
+fn compile_expr_stmt(
+    emitter: &mut Emitter,
+    depth: usize,
+    token: Token,
+    expr: &Expr,
+) -> Result<(), PiccoloError> {
     trace!("{} expr stmt", token.pos);
-    compile_expr(emitter, expr)?;
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(token.pos));
+    }
+
+    compile_expr(emitter, depth + 1, expr)?;
     emitter.add_instruction(Opcode::Pop, token.pos);
     Ok(())
 }
 
-fn compile_block(emitter: &mut Emitter, end: Token, body: &[Stmt]) -> Result<(), PiccoloError> {
+fn compile_block(
+    emitter: &mut Emitter,
+    depth: usize,
+    end: Token,
+    body: &[Stmt],
+) -> Result<(), PiccoloError> {
     trace!("{} block", end.pos);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(end.pos));
+    }
+
     emitter.begin_scope();
     for stmt in body {
-        compile_stmt(emitter, stmt)?;
+        compile_stmt(emitter, depth + 1, stmt)?;
     }
     emitter.end_scope(end.pos);
     Ok(())
@@ -123,22 +157,34 @@ fn compile_block(emitter: &mut Emitter, end: Token, body: &[Stmt]) -> Result<(),
 
 fn compile_declaration(
     emitter: &mut Emitter,
+    depth: usize,
     name: Token,
     value: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} decl {}", name.pos, name.lexeme);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(name.pos));
+    }
 
-    compile_expr(emitter, value)?;
+    compile_expr(emitter, depth + 1, value)?;
     emitter.make_variable(name)
 }
 
 fn compile_assignment(
     emitter: &mut Emitter,
+    depth: usize,
     lval: &Expr,
     op: Token,
     rval: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} assign {lval:?} {}, {rval:?}", op.pos, op.lexeme);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(lval.token().pos));
+    }
 
     if let Expr::Variable { variable: name } = lval {
         let name = *name;
@@ -152,13 +198,13 @@ fn compile_assignment(
             }
 
             // calculate the value to mutate with
-            compile_expr(emitter, rval)?;
+            compile_expr(emitter, depth + 1, rval)?;
 
             // then mutate
             emitter.add_instruction(opcode, op.pos);
         } else {
             // otherwise just calculate the value
-            compile_expr(emitter, rval)?;
+            compile_expr(emitter, depth + 1, rval)?;
         }
 
         // then assign
@@ -174,14 +220,14 @@ fn compile_assignment(
             emitter.add_instruction(Opcode::SetGlobal(index), op.pos);
         }
     } else if let Expr::Get { object, name } = lval {
-        compile_expr(emitter, rval)?;
-        compile_expr(emitter, object)?;
+        compile_expr(emitter, depth + 1, rval)?;
+        compile_expr(emitter, depth + 1, object)?;
         emitter.add_constant(Constant::String(name.lexeme.to_string()), name.pos);
         emitter.add_instruction(Opcode::Set, op.pos);
     } else if let Expr::Index { object, index, .. } = lval {
-        compile_expr(emitter, rval)?;
-        compile_expr(emitter, object)?;
-        compile_expr(emitter, index)?;
+        compile_expr(emitter, depth + 1, rval)?;
+        compile_expr(emitter, depth + 1, object)?;
+        compile_expr(emitter, depth + 1, index)?;
         emitter.add_instruction(Opcode::Set, op.pos);
     } else {
         return Err(PiccoloError::todo(format!("{lval:#?} {op:?} {rval:#?}")));
@@ -192,6 +238,7 @@ fn compile_assignment(
 
 fn compile_if(
     emitter: &mut Emitter,
+    depth: usize,
     if_: Token,
     cond: &Expr,
     then_block: &[Stmt],
@@ -200,9 +247,14 @@ fn compile_if(
     end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} if", if_.pos);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(if_.pos));
+    }
 
     // compile the condition
-    compile_expr(emitter, cond)?;
+    compile_expr(emitter, depth + 1, cond)?;
 
     if let (Some(else_), Some(else_block)) = (else_, else_block) {
         // if the condition is false, jump to patch_jump(jump_else)
@@ -210,7 +262,7 @@ fn compile_if(
         // pop the condition after skipping the jump instruction
         emitter.add_instruction(Opcode::Pop, if_.pos);
         // compile the then block
-        compile_block(emitter, end, then_block)?;
+        compile_block(emitter, depth + 1, end, then_block)?;
         // jump unconditionally past the else block to patch_jump(end_jump)
         let end_jump = emitter.start_jump(Opcode::JumpForward(0), else_.pos);
 
@@ -219,7 +271,7 @@ fn compile_if(
         // pop the condition
         emitter.add_instruction(Opcode::Pop, else_.pos);
         // compile the else block
-        compile_block(emitter, *else_, else_block)?;
+        compile_block(emitter, depth + 1, *else_, else_block)?;
 
         emitter.patch_jump(end_jump);
     } else {
@@ -229,7 +281,7 @@ fn compile_if(
         emitter.add_instruction(Opcode::Pop, if_.pos);
 
         // compile then block
-        compile_block(emitter, end, then_block)?;
+        compile_block(emitter, depth + 1, end, then_block)?;
 
         // jump over the condition pop if we jumped over the else block
         let jump_pop = emitter.start_jump(Opcode::JumpForward(0), end.pos);
@@ -243,23 +295,29 @@ fn compile_if(
 
 fn compile_while(
     emitter: &mut Emitter,
+    depth: usize,
     while_: Token,
     cond: &Expr,
     body: &[Stmt],
     end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} while", while_.pos);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(while_.pos));
+    }
 
     // loop condition
     let loop_start = emitter.start_loop_jumps();
-    compile_expr(emitter, cond)?;
+    compile_expr(emitter, depth + 1, cond)?;
 
     // jump to the end if the condition was false, pop if true
     let exit_jump = emitter.start_jump(Opcode::JumpFalse(0), while_.pos);
     emitter.add_instruction(Opcode::Pop, while_.pos);
 
     // loop body
-    compile_block(emitter, end, body)?;
+    compile_block(emitter, depth + 1, end, body)?;
 
     // here after the body if we encounter a continue
     emitter.patch_continue_jumps();
@@ -279,6 +337,7 @@ fn compile_while(
 
 fn compile_for(
     emitter: &mut Emitter,
+    depth: usize,
     for_: Token,
     init: &Stmt,
     cond: &Expr,
@@ -289,21 +348,26 @@ fn compile_for(
     end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} for", for_.pos);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(for_.pos));
+    }
 
     // initializer
     emitter.begin_scope();
-    compile_stmt(emitter, init)?;
+    compile_stmt(emitter, depth + 1, init)?;
 
     // condition
     let start_offset = emitter.start_loop_jumps();
-    compile_expr(emitter, cond)?;
+    compile_expr(emitter, depth + 1, cond)?;
 
     // if false jump to the end
     let end_jump = emitter.start_jump(Opcode::JumpFalse(0), for_.pos);
     emitter.add_instruction(Opcode::Pop, for_.pos);
 
     // loop body
-    compile_block(emitter, end, body)?;
+    compile_block(emitter, depth + 1, end, body)?;
 
     // here if we encounter a continue
     emitter.patch_continue_jumps();
@@ -311,6 +375,7 @@ fn compile_for(
     // increment
     compile_assignment(
         emitter,
+        depth + 1,
         &Expr::Variable { variable: name },
         inc_op,
         inc_expr,
@@ -334,6 +399,7 @@ fn compile_for(
 
 fn compile_fn(
     emitter: &mut Emitter,
+    depth: usize,
     name: Token,
     args: &[Token],
     arity: usize,
@@ -342,6 +408,11 @@ fn compile_fn(
     end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} fn {}", name.pos, name.lexeme);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(name.pos));
+    }
 
     //if let Some(_) = emitter.current_context().get_local_slot(name) {
     //    return Err(PiccoloError::new(ErrorKind::SyntaxError)
@@ -367,7 +438,7 @@ fn compile_fn(
 
     // don't use compile_block because we've already started a new scope
     for stmt in body {
-        compile_stmt(emitter, stmt)?;
+        compile_stmt(emitter, depth + 1, stmt)?;
     }
 
     emitter.add_instruction(Opcode::Nil, end.pos);
@@ -392,8 +463,13 @@ fn compile_fn(
     Ok(())
 }
 
-fn compile_break(emitter: &mut Emitter, break_: Token) -> Result<(), PiccoloError> {
+fn compile_break(emitter: &mut Emitter, depth: usize, break_: Token) -> Result<(), PiccoloError> {
     trace!("{} break", break_.pos);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(break_.pos));
+    }
 
     let offset = emitter.start_jump(Opcode::JumpForward(0), break_.pos);
     emitter.add_break(offset, break_)?;
@@ -401,8 +477,17 @@ fn compile_break(emitter: &mut Emitter, break_: Token) -> Result<(), PiccoloErro
     Ok(())
 }
 
-fn compile_continue(emitter: &mut Emitter, continue_: Token) -> Result<(), PiccoloError> {
+fn compile_continue(
+    emitter: &mut Emitter,
+    depth: usize,
+    continue_: Token,
+) -> Result<(), PiccoloError> {
     trace!("{} continue", continue_.pos);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(continue_.pos));
+    }
 
     let offset = emitter.start_jump(Opcode::JumpForward(0), continue_.pos);
     emitter.add_continue(offset, continue_)?;
@@ -412,13 +497,19 @@ fn compile_continue(emitter: &mut Emitter, continue_: Token) -> Result<(), Picco
 
 fn compile_retn(
     emitter: &mut Emitter,
+    depth: usize,
     retn: Token,
     expr: Option<&Expr>,
 ) -> Result<(), PiccoloError> {
     trace!("{} retn", retn.pos);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(retn.pos));
+    }
 
     if let Some(expr) = expr {
-        compile_expr(emitter, expr)?;
+        compile_expr(emitter, depth + 1, expr)?;
     } else {
         emitter.add_instruction(Opcode::Nil, retn.pos);
     }
@@ -428,10 +519,20 @@ fn compile_retn(
     Ok(())
 }
 
-fn compile_assert(emitter: &mut Emitter, assert: Token, value: &Expr) -> Result<(), PiccoloError> {
+fn compile_assert(
+    emitter: &mut Emitter,
+    depth: usize,
+    assert: Token,
+    value: &Expr,
+) -> Result<(), PiccoloError> {
     trace!("{} assert", assert.pos);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(assert.pos));
+    }
 
-    compile_expr(emitter, value)?;
+    compile_expr(emitter, depth + 1, value)?;
 
     let c = emitter.make_constant(Constant::String(super::ast::print_expression(value)));
     emitter.add_instruction(Opcode::Assert(c), assert.pos);
@@ -441,15 +542,31 @@ fn compile_assert(emitter: &mut Emitter, assert: Token, value: &Expr) -> Result<
 
 fn compile_data(
     _emitter: &mut Emitter,
+    depth: usize,
     name: Token,
     _methods: &[Stmt],
     _fields: &[Stmt],
 ) -> Result<(), PiccoloError> {
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(name.pos));
+    }
+
     Err(PiccoloError::todo(format!("compile_data {}", name.lexeme)))
 }
 
-fn compile_literal(emitter: &mut Emitter, literal: Token) -> Result<(), PiccoloError> {
+fn compile_literal(
+    emitter: &mut Emitter,
+    depth: usize,
+    literal: Token,
+) -> Result<(), PiccoloError> {
     trace!("{} literal", literal.pos);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(literal.pos));
+    }
 
     // TODO: use constant ops instead of Constant ops
     emitter.add_constant(Constant::try_from(literal)?, literal.pos);
@@ -458,11 +575,18 @@ fn compile_literal(emitter: &mut Emitter, literal: Token) -> Result<(), PiccoloE
 
 fn compile_array_literal(
     emitter: &mut Emitter,
+    depth: usize,
     right_bracket: Token,
     values: &[Expr],
 ) -> Result<(), PiccoloError> {
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(right_bracket.pos));
+    }
+
     for value in values.iter() {
-        compile_expr(emitter, value)?;
+        compile_expr(emitter, depth + 1, value)?;
     }
 
     emitter.add_instruction(
@@ -475,17 +599,32 @@ fn compile_array_literal(
 
 fn compile_paren(
     emitter: &mut Emitter,
+    depth: usize,
     right_paren: Token,
     expr: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} paren", right_paren.pos);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(right_paren.pos));
+    }
 
-    compile_expr(emitter, expr)
+    compile_expr(emitter, depth + 1, expr)
         .map_err(|e| e.msg_string(format!("in expression starting on pos {}", right_paren.pos)))
 }
 
-fn compile_variable(emitter: &mut Emitter, variable: Token) -> Result<(), PiccoloError> {
+fn compile_variable(
+    emitter: &mut Emitter,
+    depth: usize,
+    variable: Token,
+) -> Result<(), PiccoloError> {
     trace!("{} variable {}", variable.pos, variable.lexeme);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(variable.pos));
+    }
 
     if let Some(local) = emitter.current_context().get_local_slot(variable) {
         emitter.add_instruction(Opcode::GetLocal(local), variable.pos);
@@ -496,10 +635,20 @@ fn compile_variable(emitter: &mut Emitter, variable: Token) -> Result<(), Piccol
     Ok(())
 }
 
-fn compile_unary(emitter: &mut Emitter, op: Token, rhs: &Expr) -> Result<(), PiccoloError> {
+fn compile_unary(
+    emitter: &mut Emitter,
+    depth: usize,
+    op: Token,
+    rhs: &Expr,
+) -> Result<(), PiccoloError> {
     trace!("{} unary {}", op.pos, op.lexeme);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(op.pos));
+    }
 
-    compile_expr(emitter, rhs)?;
+    compile_expr(emitter, depth + 1, rhs)?;
 
     match op.kind {
         TokenKind::Minus => emitter.add_instruction(Opcode::Negate, op.pos),
@@ -512,14 +661,20 @@ fn compile_unary(emitter: &mut Emitter, op: Token, rhs: &Expr) -> Result<(), Pic
 
 fn compile_binary(
     emitter: &mut Emitter,
+    depth: usize,
     lhs: &Expr,
     op: Token,
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} binary {}", op.pos, op.lexeme);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(lhs.token().pos));
+    }
 
-    compile_expr(emitter, lhs)?;
-    compile_expr(emitter, rhs)?;
+    compile_expr(emitter, depth + 1, lhs)?;
+    compile_expr(emitter, depth + 1, rhs)?;
 
     match op.kind {
         TokenKind::Plus => emitter.add_instruction(Opcode::Add, op.pos),
@@ -551,11 +706,17 @@ fn compile_binary(
 
 fn compile_logical(
     emitter: &mut Emitter,
+    depth: usize,
     lhs: &Expr,
     op: Token,
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} logical {}", op.pos, op.lexeme);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(lhs.token().pos));
+    }
 
     let jump_op = match op.kind {
         TokenKind::LogicalAnd => Opcode::JumpFalse(0),
@@ -563,12 +724,12 @@ fn compile_logical(
         _ => unreachable!("op {:?} for logical", op),
     };
 
-    compile_expr(emitter, lhs)?;
+    compile_expr(emitter, depth + 1, lhs)?;
 
     let short = emitter.start_jump(jump_op, op.pos);
     emitter.add_instruction(Opcode::Pop, op.pos);
 
-    compile_expr(emitter, rhs)?;
+    compile_expr(emitter, depth + 1, rhs)?;
 
     emitter.patch_jump(short);
 
@@ -577,22 +738,40 @@ fn compile_logical(
 
 fn compile_call(
     emitter: &mut Emitter,
+    depth: usize,
     callee: &Expr,
     paren: Token,
     arity: usize,
     args: &[Expr],
 ) -> Result<(), PiccoloError> {
     trace!("{} call", paren.pos);
-    compile_expr(emitter, callee)?;
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(callee.token().pos));
+    }
+
+    compile_expr(emitter, depth + 1, callee)?;
     for arg in args {
-        compile_expr(emitter, arg)?;
+        compile_expr(emitter, depth + 1, arg)?;
     }
     emitter.add_instruction(Opcode::Call(arity as u16), paren.pos);
     Ok(())
 }
 
-fn compile_get(emitter: &mut Emitter, object: &Expr, name: Token) -> Result<(), PiccoloError> {
-    compile_expr(emitter, object)?;
+fn compile_get(
+    emitter: &mut Emitter,
+    depth: usize,
+    object: &Expr,
+    name: Token,
+) -> Result<(), PiccoloError> {
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(object.token().pos));
+    }
+
+    compile_expr(emitter, depth + 1, object)?;
     emitter.add_constant(Constant::String(name.lexeme.to_string()), name.pos);
     emitter.add_instruction(Opcode::Get, name.pos);
     Ok(())
@@ -600,19 +779,27 @@ fn compile_get(emitter: &mut Emitter, object: &Expr, name: Token) -> Result<(), 
 
 fn compile_index(
     emitter: &mut Emitter,
+    depth: usize,
     right_bracket: Token,
     object: &Expr,
     index: &Expr,
 ) -> Result<(), PiccoloError> {
     trace!("{} index", right_bracket.pos);
-    compile_expr(emitter, object)?;
-    compile_expr(emitter, index)?;
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(right_bracket.pos));
+    }
+
+    compile_expr(emitter, depth + 1, object)?;
+    compile_expr(emitter, depth + 1, index)?;
     emitter.add_instruction(Opcode::Get, right_bracket.pos);
     Ok(())
 }
 
 fn compile_lambda(
     emitter: &mut Emitter,
+    depth: usize,
     fn_: Token,
     args: &[Token],
     arity: usize,
@@ -620,6 +807,12 @@ fn compile_lambda(
     end: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} lambda", fn_.pos);
+    if depth > MAX_DEPTH {
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg("Maximum recursion depth reached")
+            .pos(fn_.pos));
+    }
+
     emitter.begin_context();
     emitter.begin_scope();
 
@@ -633,7 +826,7 @@ fn compile_lambda(
 
     for stmt in body {
         // don't use compile_block because we've already started a new scope
-        compile_stmt(emitter, stmt)?;
+        compile_stmt(emitter, depth + 1, stmt)?;
     }
 
     emitter.add_instruction(Opcode::Nil, end.pos);
