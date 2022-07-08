@@ -143,9 +143,7 @@ fn run() -> Result<(), Vec<PiccoloError>> {
             filename: None,
             ..
         } => {
-            let emitter = Emitter::new();
-            let mut heap = Heap::new();
-            let machine = Machine::new(&mut heap);
+            let (emitter, heap, machine) = piccolo::make_environment();
             repl(
                 emitter,
                 heap,
@@ -180,7 +178,7 @@ fn maybe_exec_then_repl(
         println!("=== ast ===\n{}", compiler::ast::print_ast(&ast));
     }
 
-    let mut emitter = Emitter::new();
+    let (mut emitter, mut heap, mut machine) = piccolo::make_environment();
     emitter::compile_with(&mut emitter, &ast)?;
 
     if print_compiled {
@@ -191,9 +189,6 @@ fn maybe_exec_then_repl(
     }
 
     if !verify_syntax {
-        let mut heap = Heap::new();
-        let mut machine = Machine::new(&mut heap);
-
         machine.interpret(&mut heap, emitter.module())?;
 
         if interactive {

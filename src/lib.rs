@@ -51,24 +51,21 @@ macro_rules! error {
 use {error::PiccoloError, runtime::value::Constant, std::path::Path};
 
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
-    use {
-        compiler::{emitter, parser},
-        runtime::{memory::Heap, vm::Machine},
-    };
+    use compiler::{emitter, parser};
+
+    let (mut emitter, mut heap, mut vm) = make_environment();
 
     debug!("parse");
     let ast = parser::parse(src)?;
     debug!("ast\n{}", compiler::ast::print_ast(&ast));
 
     debug!("compile");
-    let module = emitter::compile(&ast)?;
-    debug!("{}", runtime::chunk::disassemble(&module, ""));
-
-    let mut heap = Heap::new();
+    emitter::compile_with(&mut emitter, &ast)?;
+    let module = emitter.module();
+    debug!("{}", runtime::chunk::disassemble(module, ""));
 
     debug!("interpret");
-    let mut vm = Machine::new(&mut heap);
-    Ok(vm.interpret(&mut heap, &module)?.into_constant(&heap))
+    Ok(vm.interpret(&mut heap, module)?.into_constant(&heap))
 }
 
 /// Reads a file and interprets its contents.
@@ -79,6 +76,53 @@ pub fn do_file(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
             .map(|e| e.file(file.to_str().unwrap().to_owned()))
             .collect()
     })
+}
+
+pub fn make_environment() -> (
+    compiler::emitter::Emitter,
+    runtime::memory::Heap,
+    runtime::vm::Machine,
+) {
+    use compiler::{emitter::Emitter, Token};
+    use runtime::{
+        builtin::{self, NativeFunction},
+        memory::Heap,
+        value::Value,
+        vm::Machine,
+        Arity,
+    };
+
+    let mut emitter = Emitter::new();
+    let mut heap = Heap::new();
+    let mut vm = Machine::new();
+
+    macro_rules! add_native_function {
+        ($name:ident, $arity:expr) => {
+            add_native_function!($name, $name, $arity);
+        };
+
+        ($name:ident, $funcname:ident, $arity:expr) => {
+            emitter.make_global_ident(Token::identifier(stringify!($name)));
+            vm.globals.insert(
+                String::from(stringify!($name)),
+                Value::NativeFunction(NativeFunction::new(
+                    heap.interner_mut()
+                        .allocate_string(String::from(stringify!($name))),
+                    $arity,
+                    builtin::$funcname,
+                )),
+            );
+        };
+    }
+
+    add_native_function!(print, Arity::Any);
+    add_native_function!(rand, Arity::Exact(0));
+    add_native_function!(toString, to_string, Arity::Any);
+    add_native_function!(clone, Arity::Exact(1));
+    add_native_function!(type, type_, Arity::Exact(1));
+    add_native_function!(clock, Arity::Exact(0));
+
+    (emitter, heap, vm)
 }
 
 #[cfg(test)]
@@ -105,7 +149,7 @@ mod integration {
         let module = emitter::compile(&ast).unwrap();
         println!("{}", chunk::disassemble(&module, "idklol"));
         let mut heap = Heap::new();
-        let mut vm = Machine::new(&mut heap);
+        let mut vm = Machine::new();
         println!("{:?}", vm.interpret(&mut heap, &module).unwrap());
     }
 
@@ -150,7 +194,7 @@ mod integration {
             println!("{}", chunk::disassemble(&module, "idklol"));
 
             let mut heap = Heap::new();
-            let mut vm = Machine::new(&mut heap);
+            let mut vm = Machine::new();
             // TODO
             assert_eq!(
                 vm.interpret(&mut heap, &module)

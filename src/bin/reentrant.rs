@@ -1,10 +1,4 @@
-use piccolo::{
-    compiler::{
-        emitter::{compile_with, Emitter},
-        parser::parse,
-    },
-    runtime::{memory::Heap, vm::Machine},
-};
+use piccolo::compiler::{emitter::compile_with, parser::parse};
 
 #[allow(unused_assignments)]
 fn main() {
@@ -20,12 +14,10 @@ fn main() {
             .unwrap();
     let ast6 = parse("assert b(3)").unwrap();
     let ast7 = parse("print(b(4))").unwrap();
-    let mut emitter = Emitter::new();
+    let (mut emitter, mut heap, mut vm) = piccolo::make_environment();
 
     compile_with(&mut emitter, &ast1).unwrap();
 
-    let mut heap = Heap::new();
-    let mut vm = Machine::new(&mut heap);
     println!("run 1");
     vm.interpret_continue(&mut heap, emitter.module()).unwrap();
 

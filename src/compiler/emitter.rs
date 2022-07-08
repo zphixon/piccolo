@@ -849,22 +849,13 @@ pub struct Emitter {
 
 impl Emitter {
     pub fn new() -> Self {
-        let mut r = Self {
+        Emitter {
             module: Module::new(),
             children: vec![EmitterContext::default()],
             global_identifiers: FnvHashMap::default(),
             continue_offsets: vec![],
             break_offsets: vec![],
-        };
-        // make_variable doesn't check if a global exists before declaring it, allowing us to hack
-        // this in. later we should have something like a PiccoloState which manages everything.
-        let _ = r.make_global_ident(Token::identifier("print"));
-        let _ = r.make_global_ident(Token::identifier("rand"));
-        let _ = r.make_global_ident(Token::identifier("toString"));
-        let _ = r.make_global_ident(Token::identifier("clone"));
-        let _ = r.make_global_ident(Token::identifier("type"));
-        let _ = r.make_global_ident(Token::identifier("clock"));
-        r
+        }
     }
 
     fn current_context(&self) -> &EmitterContext {
@@ -930,7 +921,7 @@ impl Emitter {
         }
     }
 
-    fn make_global_ident(&mut self, name: Token) -> u16 {
+    pub(crate) fn make_global_ident(&mut self, name: Token) -> u16 {
         trace!("{} make global {}", name.pos, name.lexeme);
 
         if self.global_identifiers.contains_key(name.lexeme) {
@@ -1092,9 +1083,7 @@ mod test {
         let module = emitter::compile(&ast).unwrap();
         println!("{}", chunk::disassemble(&module, "jioew"));
         let mut heap = Heap::new();
-        Machine::new(&mut heap)
-            .interpret(&mut heap, &module)
-            .unwrap();
+        Machine::new().interpret(&mut heap, &module).unwrap();
     }
 
     #[test]
@@ -1109,7 +1098,7 @@ mod test {
         let ast3 = parser::parse("fn z(a) do\n  print(\"a is\", a)\n  end\n").unwrap();
         let ast4 = parser::parse("z(x)").unwrap();
 
-        let mut emitter = emitter::Emitter::new();
+        let (mut emitter, _, _) = crate::make_environment();
         emitter::compile_with(&mut emitter, &ast1).unwrap();
         println!("{}", chunk::disassemble(emitter.module(), ""));
         emitter::compile_with(&mut emitter, &ast2).unwrap();

@@ -3,12 +3,11 @@ use crate::{
     debug,
     error::{ErrorKind, PiccoloError},
     runtime::{
-        builtin::{self, NativeFunction},
         chunk::{Chunk, Module},
         memory::Heap,
         op::Opcode,
         value::{Array, Value},
-        Arity, Object,
+        Object,
     },
     trace, warn,
 };
@@ -85,9 +84,10 @@ impl<'chunk> FrameStack<'chunk> {
     }
 }
 
+#[derive(Default)]
 pub struct Machine {
     stack: Vec<Value>,
-    globals: FnvHashMap<String, Value>,
+    pub(crate) globals: FnvHashMap<String, Value>,
     ip: usize,
 }
 
@@ -99,65 +99,8 @@ enum VmState {
 }
 
 impl Machine {
-    pub fn new(heap: &mut Heap) -> Self {
-        let mut globals = FnvHashMap::default();
-
-        // TODO make this nicer
-        globals.insert(
-            String::from("print"),
-            Value::NativeFunction(NativeFunction::new(
-                heap.interner_mut().allocate_string(String::from("print")),
-                Arity::Any,
-                builtin::print,
-            )),
-        );
-        globals.insert(
-            String::from("rand"),
-            Value::NativeFunction(NativeFunction::new(
-                heap.interner_mut().allocate_string(String::from("rand")),
-                Arity::Exact(0),
-                builtin::rand,
-            )),
-        );
-        globals.insert(
-            String::from("toString"),
-            Value::NativeFunction(NativeFunction::new(
-                heap.interner_mut()
-                    .allocate_string(String::from("toString")),
-                Arity::Any,
-                builtin::to_string,
-            )),
-        );
-        globals.insert(
-            String::from("clone"),
-            Value::NativeFunction(NativeFunction::new(
-                heap.interner_mut().allocate_string(String::from("clone")),
-                Arity::Exact(1),
-                builtin::clone,
-            )),
-        );
-        globals.insert(
-            String::from("type"),
-            Value::NativeFunction(NativeFunction::new(
-                heap.interner_mut().allocate_string(String::from("type")),
-                Arity::Exact(1),
-                builtin::type_,
-            )),
-        );
-        globals.insert(
-            String::from("clock"),
-            Value::NativeFunction(NativeFunction::new(
-                heap.interner_mut().allocate_string(String::from("clock")),
-                Arity::Exact(0),
-                builtin::clock,
-            )),
-        );
-
-        Machine {
-            stack: Vec::new(),
-            globals,
-            ip: 0,
-        }
+    pub fn new() -> Self {
+        Machine::default()
     }
 
     fn push(&mut self, value: Value) {
@@ -881,7 +824,7 @@ mod test {
 
         let mut heap = Heap::new();
 
-        let mut vm = Machine::new(&mut heap);
+        let mut vm = Machine::new();
         vm.interpret(&mut heap, &module).unwrap();
     }
 }
