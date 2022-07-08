@@ -807,7 +807,15 @@ impl Machine {
                         args.insert(0, self.pop());
                     }
                     let f = self.pop().as_native_function();
-                    self.push((f.ptr)(heap, &args)?);
+                    if f.arity.is_compatible(arity) {
+                        self.push((f.ptr)(heap, &args)?);
+                    } else {
+                        return Err(PiccoloError::new(ErrorKind::IncorrectArity {
+                            name: heap.get_string(f.name()).to_string(),
+                            exp: f.arity,
+                            got: arity,
+                        }));
+                    }
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "fn".to_owned(),
