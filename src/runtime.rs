@@ -52,18 +52,19 @@ where
 pub trait Object: downcast_rs::Downcast + ObjectClone {
     fn trace(&self, heap: &Heap);
 
-    fn type_name(&self) -> &'static str {
+    fn type_name(&self, heap: &Heap) -> &'static str {
+        let _ = heap;
         "object"
     }
 
     fn format(&self, heap: &Heap) -> String {
         let _ = heap;
-        self.type_name().to_string()
+        self.type_name(heap).to_string()
     }
 
     fn debug_format(&self, heap: &Heap) -> String {
         let _ = heap;
-        format!("{}(?)", self.type_name())
+        format!("{}(?)", self.type_name(heap))
     }
 
     fn call(&self, heap: &Heap, values: &[Value]) -> Result<Value, PiccoloError> {
@@ -89,15 +90,28 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
     }
 
     fn eq(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
-        let _ = heap;
         let _ = other;
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            got: other.type_name().to_string(),
-            exp: self.type_name().to_string(),
+            got: other.type_name(heap).to_string(),
+            exp: self.type_name(heap).to_string(),
         }))
     }
 
-    // TODO lt/gt
+    fn lt(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+        let _ = other;
+        Err(PiccoloError::new(ErrorKind::CannotCompare {
+            got: other.type_name(heap).to_string(),
+            exp: self.type_name(heap).to_string(),
+        }))
+    }
+
+    fn gt(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+        let _ = other;
+        Err(PiccoloError::new(ErrorKind::CannotCompare {
+            got: other.type_name(heap).to_string(),
+            exp: self.type_name(heap).to_string(),
+        }))
+    }
 }
 
 downcast_rs::impl_downcast!(Object);

@@ -204,10 +204,6 @@ mod test {
                 heap.trace(self.cdr);
             }
 
-            fn type_name(&self) -> &'static str {
-                "cons"
-            }
-
             fn format(&self, heap: &Heap) -> String {
                 if self.cdr != Heap::null_ptr() {
                     format!("(cons {} {})", self.car, heap.get(self.cdr).format(heap))

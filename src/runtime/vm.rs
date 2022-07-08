@@ -294,9 +294,9 @@ impl Machine {
                         exp: "integer".into(),
                         got: format!(
                             "{} {} {}",
-                            lhs.get_type_name(heap),
+                            lhs.type_name(heap),
                             stringify!($op),
-                            rhs.get_type_name(heap),
+                            rhs.type_name(heap),
                         ),
                         op: $opcode,
                     }));
@@ -354,7 +354,7 @@ impl Machine {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: v.get_type_name(heap).to_owned(),
+                        got: v.type_name(heap).to_owned(),
                         op: Opcode::Negate,
                     }));
                 }
@@ -384,7 +384,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("double + {}", rhs.get_type_name(heap)),
+                            got: format!("double + {}", rhs.type_name(heap)),
                             op,
                         }));
                     }
@@ -399,7 +399,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("integer + {}", rhs.get_type_name(heap)),
+                            got: format!("integer + {}", rhs.type_name(heap)),
                             op,
                         }));
                     }
@@ -409,7 +409,7 @@ impl Machine {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: format!("{} + {}", lhs.get_type_name(heap), rhs.get_type_name(heap)),
+                        got: format!("{} + {}", lhs.type_name(heap), rhs.type_name(heap)),
                         op,
                     }));
                 }
@@ -429,7 +429,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("double - {}", rhs.get_type_name(heap)),
+                            got: format!("double - {}", rhs.type_name(heap)),
                             op,
                         }));
                     }
@@ -444,14 +444,14 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("integer - {}", rhs.get_type_name(heap)),
+                            got: format!("integer - {}", rhs.type_name(heap)),
                             op,
                         }));
                     }
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: format!("{} - {}", lhs.get_type_name(heap), rhs.get_type_name(heap)),
+                        got: format!("{} - {}", lhs.type_name(heap), rhs.type_name(heap)),
                         op,
                     }));
                 }
@@ -471,7 +471,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("double * {}", rhs.get_type_name(heap)),
+                            got: format!("double * {}", rhs.type_name(heap)),
                             op,
                         }));
                     }
@@ -486,14 +486,14 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("integer * {}", rhs.get_type_name(heap)),
+                            got: format!("integer * {}", rhs.type_name(heap)),
                             op,
                         }));
                     }
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: format!("{} * {}", lhs.get_type_name(heap), rhs.get_type_name(heap)),
+                        got: format!("{} * {}", lhs.type_name(heap), rhs.type_name(heap)),
                         op,
                     }));
                 }
@@ -513,7 +513,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("double / {}", rhs.get_type_name(heap)),
+                            got: format!("double / {}", rhs.type_name(heap)),
                             op,
                         }));
                     }
@@ -531,14 +531,14 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("integer / {}", rhs.get_type_name(heap)),
+                            got: format!("integer / {}", rhs.type_name(heap)),
                             op,
                         }));
                     }
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: format!("{} / {}", lhs.get_type_name(heap), rhs.get_type_name(heap)),
+                        got: format!("{} / {}", lhs.type_name(heap), rhs.type_name(heap)),
                         op,
                     }));
                 }
@@ -558,7 +558,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("double % {}", rhs.get_type_name(heap)),
+                            got: format!("double % {}", rhs.type_name(heap)),
                             op,
                         }));
                     }
@@ -576,14 +576,14 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("integer % {}", rhs.get_type_name(heap)),
+                            got: format!("integer % {}", rhs.type_name(heap)),
                             op,
                         }));
                     }
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: format!("{} % {}", lhs.get_type_name(heap), rhs.get_type_name(heap)),
+                        got: format!("{} % {}", lhs.type_name(heap), rhs.type_name(heap)),
                         op,
                     }));
                 }
@@ -594,27 +594,27 @@ impl Machine {
             Opcode::Equal => {
                 let a = self.pop();
                 let b = self.pop();
-                self.push(Value::Bool(a.eq(heap, &b)?));
+                self.push(Value::Bool(a.eq(heap, b)?));
             }
             Opcode::Greater => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(lhs.gt(&rhs)?));
+                self.push(Value::Bool(lhs.gt(heap, rhs)?));
             }
             Opcode::Less => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(lhs.lt(&rhs)?));
+                self.push(Value::Bool(lhs.lt(heap, rhs)?));
             }
             Opcode::GreaterEqual => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(!lhs.lt(&rhs)?));
+                self.push(Value::Bool(!lhs.lt(heap, rhs)?));
             }
             Opcode::LessEqual => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(!lhs.gt(&rhs)?));
+                self.push(Value::Bool(!lhs.gt(heap, rhs)?));
             } // }}}
 
             Opcode::GetLocal(slot) => {
@@ -761,7 +761,7 @@ impl Machine {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer".into(),
-                        got: format!("{} << {}", lhs.get_type_name(heap), rhs.get_type_name(heap),),
+                        got: format!("{} << {}", lhs.type_name(heap), rhs.type_name(heap),),
                         op,
                     }));
                 }
@@ -786,7 +786,7 @@ impl Machine {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer".into(),
-                        got: format!("{} << {}", lhs.get_type_name(heap), rhs.get_type_name(heap)),
+                        got: format!("{} << {}", lhs.type_name(heap), rhs.type_name(heap)),
                         op,
                     }));
                 }
@@ -836,7 +836,7 @@ impl Machine {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "fn".to_owned(),
-                        got: self.peek_back(arity).get_type_name(heap).to_owned(),
+                        got: self.peek_back(arity).type_name(heap).to_owned(),
                         op,
                     }));
                 }

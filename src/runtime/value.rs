@@ -161,111 +161,11 @@ impl Value {
         matches!(self, Value::Nil)
     }
 
-    pub fn eq(&self, heap: &Heap, other: &Value) -> Result<bool, PiccoloError> {
-        if let Value::Bool(l) = *self {
-            if let Value::Bool(r) = *other {
-                return Ok(l == r);
-            }
-        } else if let Value::Integer(l) = *self {
-            if let Value::Integer(r) = *other {
-                return Ok(l == r);
-            } else if let Value::Double(r) = *other {
-                return Ok(l as f64 == r);
-            }
-        } else if let Value::Double(l) = *self {
-            if let Value::Integer(r) = *other {
-                return Ok(l == r as f64);
-            } else if let Value::Double(r) = *other {
-                return Ok(l == r);
-            }
-        } else if let Value::String(l) = *self {
-            if let Value::String(r) = *other {
-                return Ok(l == r);
-            }
-        } else if let Value::Function(l) = *self {
-            if let Value::Function(r) = *other {
-                return Ok(l == r);
-            }
-        } else if let Value::NativeFunction(l) = *self {
-            if let Value::NativeFunction(r) = *other {
-                return Ok(l == r);
-            }
-        } else if let Value::Object(l) = *self {
-            return heap.get(l).eq(heap, *other);
-        } else if let Value::Nil = *self {
-            if let Value::Nil = *other {
-                return Ok(true);
-            }
-        }
-
-        Err(PiccoloError::new(ErrorKind::CannotCompare {
-            got: other.get_type_name(heap).to_string(),
-            exp: self.get_type_name(heap).to_string(),
-        }))
-    }
-
-    pub fn gt(&self, other: &Value) -> Result<bool, PiccoloError> {
-        match self {
-            Value::Integer(l) => match other {
-                Value::Integer(r) => return Ok(l > r),
-                Value::Double(r) => return Ok(*l as f64 > *r),
-                _ => {}
-            },
-            Value::Double(l) => match other {
-                Value::Integer(r) => return Ok(*l > *r as f64),
-                Value::Double(r) => return Ok(l > r),
-                _ => {}
-            },
-            _ => {}
-        }
-
-        Err(PiccoloError::new(ErrorKind::CannotCompare {
-            // TODO
-            got: other.type_name().to_string(),
-            exp: self.type_name().to_string(),
-        }))
-    }
-
-    pub fn lt(&self, other: &Value) -> Result<bool, PiccoloError> {
-        match self {
-            Value::Integer(l) => match other {
-                Value::Integer(r) => return Ok(l < r),
-                Value::Double(r) => return Ok((*l as f64) < (*r)),
-                _ => {}
-            },
-            Value::Double(l) => match other {
-                Value::Integer(r) => return Ok(*l < *r as f64),
-                Value::Double(r) => return Ok(l < r),
-                _ => {}
-            },
-            _ => {}
-        }
-
-        Err(PiccoloError::new(ErrorKind::CannotCompare {
-            // TODO
-            got: other.type_name().to_string(),
-            exp: self.type_name().to_string(),
-        }))
-    }
-
     pub fn into<T>(self) -> T
     where
         T: From<Value>,
     {
         T::from(self)
-    }
-
-    pub fn get_type_name(&self, heap: &Heap) -> &'static str {
-        match self {
-            Value::Bool(_) => "bool",
-            Value::Integer(_) => "int",
-            Value::Double(_) => "float",
-            Value::String(_) => "string",
-            Value::Function(_) => "function",
-            Value::NativeFunction(_) => "function",
-            Value::Object(ptr) => heap.get(*ptr).type_name(),
-            Value::Nil => "nil",
-        }
     }
 }
 
@@ -309,8 +209,17 @@ impl Object for Value {
         }
     }
 
-    fn type_name(&self) -> &'static str {
-        "value"
+    fn type_name(&self, heap: &Heap) -> &'static str {
+        match self {
+            Value::Bool(_) => "bool",
+            Value::Integer(_) => "int",
+            Value::Double(_) => "float",
+            Value::String(_) => "string",
+            Value::Function(_) => "function",
+            Value::NativeFunction(_) => "function",
+            Value::Object(ptr) => heap.get(*ptr).type_name(heap),
+            Value::Nil => "nil",
+        }
     }
 
     fn format(&self, heap: &Heap) -> String {
@@ -339,6 +248,94 @@ impl Object for Value {
             Value::Object(p) => heap.get(*p).debug_format(heap),
             Value::Nil => String::from("nil"),
         }
+    }
+
+    fn eq(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+        if let Value::Bool(l) = *self {
+            if let Value::Bool(r) = other {
+                return Ok(l == r);
+            }
+        } else if let Value::Integer(l) = *self {
+            if let Value::Integer(r) = other {
+                return Ok(l == r);
+            } else if let Value::Double(r) = other {
+                return Ok(l as f64 == r);
+            }
+        } else if let Value::Double(l) = *self {
+            if let Value::Integer(r) = other {
+                return Ok(l == r as f64);
+            } else if let Value::Double(r) = other {
+                return Ok(l == r);
+            }
+        } else if let Value::String(l) = *self {
+            if let Value::String(r) = other {
+                return Ok(l == r);
+            }
+        } else if let Value::Function(l) = *self {
+            if let Value::Function(r) = other {
+                return Ok(l == r);
+            }
+        } else if let Value::NativeFunction(l) = *self {
+            if let Value::NativeFunction(r) = other {
+                return Ok(l == r);
+            }
+        } else if let Value::Object(l) = *self {
+            return heap.get(l).eq(heap, other);
+        } else if let Value::Nil = *self {
+            if let Value::Nil = other {
+                return Ok(true);
+            }
+        }
+
+        Err(PiccoloError::new(ErrorKind::CannotCompare {
+            got: other.type_name(heap).to_string(),
+            exp: self.type_name(heap).to_string(),
+        }))
+    }
+
+    fn gt(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+        match *self {
+            Value::Integer(l) => match other {
+                Value::Integer(r) => return Ok(l > r),
+                Value::Double(r) => return Ok(l as f64 > r),
+                _ => {}
+            },
+            Value::Double(l) => match other {
+                Value::Integer(r) => return Ok(l > r as f64),
+                Value::Double(r) => return Ok(l > r),
+                _ => {}
+            },
+            Value::Object(ptr) => return heap.get(ptr).gt(heap, other),
+            _ => {}
+        }
+
+        Err(PiccoloError::new(ErrorKind::CannotCompare {
+            // TODO
+            got: other.type_name(heap).to_string(),
+            exp: self.type_name(heap).to_string(),
+        }))
+    }
+
+    fn lt(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+        match *self {
+            Value::Integer(l) => match other {
+                Value::Integer(r) => return Ok(l < r),
+                Value::Double(r) => return Ok((l as f64) < r),
+                _ => {}
+            },
+            Value::Double(l) => match other {
+                Value::Integer(r) => return Ok(l < r as f64),
+                Value::Double(r) => return Ok(l < r),
+                _ => {}
+            },
+            _ => {}
+        }
+
+        Err(PiccoloError::new(ErrorKind::CannotCompare {
+            // TODO
+            got: other.type_name(heap).to_string(),
+            exp: self.type_name(heap).to_string(),
+        }))
     }
 }
 
@@ -436,7 +433,7 @@ impl Object for Array {
         }
     }
 
-    fn type_name(&self) -> &'static str {
+    fn type_name(&self, _: &Heap) -> &'static str {
         "array"
     }
 
@@ -532,7 +529,7 @@ impl Object for Array {
                 }
 
                 for (l, r) in self.values.iter().zip(other.values.iter()) {
-                    if !l.eq(heap, r)? {
+                    if !l.eq(heap, *r)? {
                         return Ok(false);
                     }
                 }
@@ -542,8 +539,8 @@ impl Object for Array {
         }
 
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            got: other.type_name().to_string(),
-            exp: self.type_name().to_string(),
+            got: other.type_name(heap).to_string(),
+            exp: self.type_name(heap).to_string(),
         }))
     }
 }
