@@ -19,14 +19,14 @@ fn main() -> Result<(), PiccoloError> {
     let mut test_errors = Vec::new();
     for item in files.iter() {
         let name = item.display().to_string();
-        if name.ends_with("ignore") {
+        if name.ends_with("ignore") || name.ends_with("out") {
             ignored += 1;
-        } else if !name.ends_with("_fail.pc") {
+        } else if !name.ends_with("_fail.pc") && name.ends_with(".pc") {
             println!(" -- '{name}'");
             let _ = piccolo::do_file(item).map_err(|errors| {
                 test_errors.push(errors);
             });
-        } else {
+        } else if name.ends_with("_fail.pc") {
             println!(" xx '{name}'");
             let _ = piccolo::do_file(item).map(|v| {
                 test_errors.push(vec![PiccoloError::new(ErrorKind::AssertFailed {
