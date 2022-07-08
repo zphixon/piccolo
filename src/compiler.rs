@@ -2,6 +2,7 @@
 
 pub mod ast;
 pub mod emitter;
+pub mod ns;
 pub mod parser;
 pub mod scanner;
 pub mod typeck;

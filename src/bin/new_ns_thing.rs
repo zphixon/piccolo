@@ -29,14 +29,14 @@ fn main() {
             println!(" -- {name}");
             let src = fs::read_to_string(&name).unwrap();
             let ast = piccolo::compiler::parser::parse(&src).unwrap();
-            if let Err(e) = piccolo::compiler::emitter::analyze_ns(&ast) {
+            if let Err(e) = piccolo::compiler::ns::analyze_ns(&ast) {
                 println!("{e}");
             }
         } else if name.ends_with("_fail.pc") {
             let src = fs::read_to_string(&name).unwrap();
             if let Ok(ast) = piccolo::compiler::parser::parse(&src) {
                 println!(" xx {name}");
-                if let Ok(()) = piccolo::compiler::emitter::analyze_ns(&ast) {
+                if let Ok(()) = piccolo::compiler::ns::analyze_ns(&ast) {
                     println!("    did not fail!");
                 }
             } else {
