@@ -1,0 +1,2 @@
+Error:  1:5 - Incorrect type: expected integer or double, got integer * string for op Multiply
+

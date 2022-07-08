@@ -1,0 +1,29 @@
+Error:  TODO: Unary {
+    op: Token {
+        kind: Not,
+        lexeme: "!",
+        pos: SourcePos {
+            line: 2,
+            col: 1,
+        },
+    },
+    rhs: Variable {
+        variable: Token {
+            kind: Identifier,
+            lexeme: "a",
+            pos: SourcePos {
+                line: 2,
+                col: 2,
+            },
+        },
+    },
+} Token { kind: Assign, lexeme: "=", pos: SourcePos { line: 2, col: 4 } } Literal {
+    literal: Token {
+        kind: String,
+        lexeme: "\"value\"",
+        pos: SourcePos {
+            line: 2,
+            col: 6,
+        },
+    },
+}

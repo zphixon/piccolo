@@ -1,0 +1,5 @@
+Error:  1:8 - Expected expression, got ;
+Error:  1:10 - Expected expression, got /
+Error:  1:11 - Expected expression, got /
+Error:  1:33 - Expected expression, got :
+Error:  1:59 - Unexpected token: expected Identifier, got Eof

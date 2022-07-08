@@ -1,0 +1,5 @@
+Error:  5:9 - Undefined variable 'local'
+Error:  11:6 - Undefined variable 'makeClosure'
+Error:  12:8 - Undefined variable 'c'
+Error:  13:8 - Undefined variable 'c'
+Error:  14:8 - Undefined variable 'c'

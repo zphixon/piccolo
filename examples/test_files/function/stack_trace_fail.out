@@ -1,0 +1,5 @@
+Error:  3:12 - Assertion failed: False  top level called from line 22:1
+  a called from line 19:5
+  b called from line 15:5
+  c called from line 11:5
+  d called from line 7:5

@@ -1,0 +1,4 @@
+Error:  3:5 - Unexpected token: expected Identifier, got Do
+Error:  3:8 - Expected expression, got end
+Error:  3:11 - Expected expression, got ,
+Error:  3:18 - Expected expression, got ,

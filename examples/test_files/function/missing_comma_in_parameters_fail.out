@@ -1,0 +1,5 @@
+Error:  3:13 - Unexpected token: expected RightParen, got Identifier
+Error:  3:14 - Expected expression, got ,
+Error:  3:17 - Expected expression, got ,
+Error:  3:20 - Expected expression, got ,
+Error:  3:23 - Expected expression, got )
