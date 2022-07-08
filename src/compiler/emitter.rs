@@ -861,6 +861,7 @@ impl Emitter {
         let _ = r.make_global_ident(Token::identifier("print"));
         let _ = r.make_global_ident(Token::identifier("rand"));
         let _ = r.make_global_ident(Token::identifier("toString"));
+        let _ = r.make_global_ident(Token::identifier("clone"));
         r
     }
 

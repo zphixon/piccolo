@@ -35,6 +35,17 @@ pub fn rand(_: &mut Heap, _: &[Value]) -> Result<Value, PiccoloError> {
     Ok(Value::Double(rand::random()))
 }
 
+pub fn clone(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    let arg = args[0];
+    match arg {
+        // TODO when we have closures
+        // Value::Function(f) => {}
+        Value::Object(ptr) => return Ok(Value::Object(heap.clone(ptr))),
+        _ => {}
+    }
+    Ok(arg)
+}
+
 pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError>;
 
 #[derive(Clone, Copy)]

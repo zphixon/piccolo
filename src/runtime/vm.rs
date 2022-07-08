@@ -127,6 +127,14 @@ impl Machine {
                 builtin::to_string,
             )),
         );
+        globals.insert(
+            String::from("clone"),
+            Value::NativeFunction(NativeFunction::new(
+                heap.allocate_string(String::from("clone")),
+                Arity::Exact(1),
+                builtin::clone,
+            )),
+        );
 
         Machine {
             stack: Vec::new(),
