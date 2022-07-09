@@ -17,7 +17,11 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-pub const MAX_DEPTH: usize = 64;
+#[cfg(fuzzing)]
+pub const MAX_DEPTH: usize = 32;
+
+#[cfg(not(fuzzing))]
+pub const MAX_DEPTH: usize = 120;
 
 #[derive(PartialEq, Eq, Hash, Default, Debug)]
 pub(crate) struct Local {
