@@ -429,6 +429,18 @@ impl Array {
     }
 }
 
+fn array_push(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
+    let this = values[0].as_ptr();
+
+    if let Some(array) = unsafe { heap.get_mut(this) }.downcast_mut::<Array>() {
+        array.values.push(values[1]);
+    } else {
+        panic!("called array_push with non-Array");
+    }
+
+    Ok(Value::Nil)
+}
+
 impl Object for Array {
     fn trace(&self, heap: &Heap) {
         for value in self.values.iter() {
@@ -464,7 +476,7 @@ impl Object for Array {
         s
     }
 
-    fn get(&self, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
+    fn get(&self, this: Ptr, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
         if let Value::Integer(index) = index_value {
             let index: usize = index.try_into().map_err(|_| {
                 PiccoloError::new(ErrorKind::CannotGet {
@@ -490,6 +502,13 @@ impl Object for Array {
             let len = heap.interner().get_string_ptr("len").unwrap();
             if string == len {
                 return Ok(Value::Integer(self.values.len() as i64));
+            } else if heap.interner().get_string(string) == "push" {
+                return Ok(Value::BuiltinFunction(BuiltinFunction {
+                    name: heap.interner().get_string_ptr("push").unwrap(),
+                    arity: Arity::Exact(2),
+                    ptr: array_push,
+                    this: Some(this),
+                }));
             } else {
                 return Err(PiccoloError::new(ErrorKind::CannotGet {
                     object: String::from("array"),

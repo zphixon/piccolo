@@ -1,6 +1,10 @@
 use crate::{
     error::{ErrorKind, PiccoloError},
-    runtime::{interner::StringPtr, memory::Heap, Arity, Object, Value},
+    runtime::{
+        interner::StringPtr,
+        memory::{Heap, Ptr},
+        Arity, Object, Value,
+    },
 };
 use once_cell::sync::Lazy;
 use std::{
@@ -69,6 +73,7 @@ pub struct BuiltinFunction {
     pub name: StringPtr,
     pub arity: Arity,
     pub ptr: PiccoloFunction,
+    pub this: Option<Ptr>,
 }
 
 impl PartialEq for BuiltinFunction {
@@ -79,7 +84,12 @@ impl PartialEq for BuiltinFunction {
 
 impl BuiltinFunction {
     pub fn new(name: StringPtr, arity: Arity, ptr: PiccoloFunction) -> Self {
-        BuiltinFunction { name, arity, ptr }
+        BuiltinFunction {
+            name,
+            arity,
+            ptr,
+            this: None,
+        }
     }
 
     pub fn name(&self) -> StringPtr {

@@ -74,7 +74,13 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
         }))
     }
 
-    fn get(&self, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
+    fn get(
+        &self,
+        this: memory::Ptr,
+        heap: &Heap,
+        index_value: Value,
+    ) -> Result<Value, PiccoloError> {
+        let _ = this;
         Err(PiccoloError::new(ErrorKind::CannotGet {
             object: self.type_name(heap).to_string(),
             index: index_value.format(heap),

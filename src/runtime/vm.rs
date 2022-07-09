@@ -613,7 +613,7 @@ impl Machine {
                 let index = self.pop();
                 if self.peek().is_object() {
                     let ptr = self.pop().as_ptr();
-                    self.push(heap.get(ptr).get(heap, index)?);
+                    self.push(heap.get(ptr).get(ptr, heap, index)?);
                 } else {
                     return Err(PiccoloError::new(ErrorKind::CannotGet {
                         object: self.peek().type_name(heap).to_string(),
@@ -775,7 +775,12 @@ impl Machine {
                         args.insert(0, self.pop());
                     }
                     let f = self.pop().as_native_function();
-                    if f.arity.is_compatible(arity) {
+
+                    if let Some(this) = f.this {
+                        args.insert(0, Value::Object(this));
+                    }
+
+                    if f.arity.is_compatible(args.len()) {
                         self.push((f.ptr)(heap, &args)?);
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
