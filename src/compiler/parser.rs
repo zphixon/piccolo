@@ -211,6 +211,11 @@ fn parse_for<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pi
     trace!("for {:?}", scanner.peek_token(0)?);
 
     let for_ = scanner.next_token()?;
+
+    if scanner.peek_token(1)?.kind == TokenKind::In {
+        return parse_for_each(scanner, depth + 1, for_);
+    }
+
     let init = Box::new(parse_declaration(scanner, depth + 1)?);
 
     consume(scanner, TokenKind::Comma)?;
@@ -240,6 +245,26 @@ fn parse_for<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pi
         name,
         inc_op,
         inc_expr,
+        body,
+        end,
+    })
+}
+
+fn parse_for_each<'a>(
+    scanner: &mut Scanner<'a>,
+    depth: usize,
+    for_: Token<'a>,
+) -> Result<Stmt<'a>, PiccoloError> {
+    let item = consume(scanner, TokenKind::Identifier)?;
+    consume(scanner, TokenKind::In)?;
+    let iter = consume(scanner, TokenKind::Identifier)?;
+    consume(scanner, TokenKind::Do)?;
+    let body = parse_block(scanner, depth + 1)?;
+    let end = consume(scanner, TokenKind::End)?;
+    Ok(Stmt::ForEach {
+        for_,
+        item,
+        iter,
         body,
         end,
     })

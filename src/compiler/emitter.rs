@@ -70,6 +70,8 @@ fn compile_stmt(emitter: &mut Emitter, depth: usize, stmt: &Stmt) -> Result<(), 
             => compile_while(emitter, depth + 1, *while_, cond, body, *end),
         Stmt::For { for_, init, cond, name, inc_op, inc_expr, body, end }
             => compile_for(emitter, depth + 1, *for_, init.as_ref(), cond, *name, *inc_op, inc_expr, body, *end),
+        Stmt::ForEach { for_, item, iter, body, end }
+            => compile_for_each(emitter, depth + 1, *for_, *item, *iter, body, *end),
         Stmt::Fn { name, args, arity, body, method, end }
             => compile_fn(emitter, depth + 1, *name, args, *arity, body, *method, *end),
         Stmt::Break { break_ }
@@ -368,6 +370,67 @@ fn compile_for(
     emitter.patch_break_jumps();
 
     // pop loop variable (local variable)
+    emitter.end_scope(end.pos);
+
+    Ok(())
+}
+
+fn compile_for_each(
+    emitter: &mut Emitter,
+    depth: usize,
+    for_: Token,
+    item: Token,
+    iter: Token,
+    body: &[Stmt],
+    end: Token,
+) -> Result<(), PiccoloError> {
+    trace!("{} for_each", for_.pos);
+    check_depth!(depth, for_);
+
+    let index_name = format!("idx_of_{}_in_{}", item.lexeme, iter.lexeme);
+    let index = Token::new(TokenKind::Identifier, &index_name, item.pos);
+
+    emitter.begin_scope();
+    emitter.add_constant(Constant::Integer(0), for_.pos);
+    emitter.make_variable(index)?;
+
+    let start = emitter.start_loop_jumps();
+
+    emitter.add_instruction(
+        Opcode::GetLocal(emitter.current_context().get_local_slot(index).unwrap()),
+        for_.pos,
+    );
+    compile_variable(emitter, depth, iter)?;
+    emitter.add_constant(Constant::String(String::from("len")), iter.pos);
+    emitter.add_instruction(Opcode::Get, for_.pos);
+    emitter.add_instruction(Opcode::Less, for_.pos);
+
+    let end_jump = emitter.start_jump(Opcode::JumpFalse(0), for_.pos);
+    emitter.add_instruction(Opcode::Pop, for_.pos);
+
+    emitter.begin_scope();
+    compile_declaration(
+        emitter,
+        depth + 1,
+        item,
+        &Expr::Index {
+            right_bracket: Token::new(TokenKind::RightBracket, "[", item.pos),
+            object: Box::new(Expr::Variable { variable: iter }),
+            index: Box::new(Expr::Variable { variable: index }),
+        },
+    )?;
+    compile_block(emitter, depth + 1, end, body)?;
+    emitter.end_scope(end.pos);
+
+    emitter.patch_continue_jumps();
+
+    emitter.add_constant(Constant::Integer(1), end.pos);
+    emitter.add_instruction(Opcode::Add, end.pos);
+
+    emitter.add_jump_back(start, end.pos);
+    emitter.patch_jump(end_jump);
+    emitter.add_instruction(Opcode::Pop, end.pos);
+    emitter.patch_break_jumps();
     emitter.end_scope(end.pos);
 
     Ok(())

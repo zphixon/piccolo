@@ -248,6 +248,8 @@ fn analyze_ns_stmt<'src>(
             }
         }
 
+        Stmt::ForEach { .. } => todo!(),
+
         Stmt::Fn {
             name, args, body, ..
         } => {

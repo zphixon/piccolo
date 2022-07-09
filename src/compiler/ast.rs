@@ -148,6 +148,13 @@ pub enum Stmt<'a> {
         body: Vec<Stmt<'a>>,
         end: Token<'a>,
     },
+    ForEach {
+        for_: Token<'a>,
+        item: Token<'a>,
+        iter: Token<'a>,
+        body: Vec<Stmt<'a>>,
+        end: Token<'a>,
+    },
     Fn {
         name: Token<'a>,
         args: Vec<Token<'a>>,
@@ -189,6 +196,7 @@ impl Stmt<'_> {
             Stmt::If { if_, .. } => *if_,
             Stmt::While { while_, .. } => *while_,
             Stmt::For { for_, .. } => *for_,
+            Stmt::ForEach { for_, .. } => *for_,
             Stmt::Fn { name, .. } => *name,
             Stmt::Break { break_, .. } => *break_,
             Stmt::Continue { continue_, .. } => *continue_,
@@ -264,6 +272,8 @@ fn print_stmt(indent: usize, stmt: &Stmt) -> String {
             => print_while(indent, cond, body),
         Stmt::For { init, cond, name, inc_op, inc_expr, body, .. }
             => print_for(indent, init.as_ref(), cond, *name, *inc_op, inc_expr, body),
+        Stmt::ForEach { item, iter, body, .. }
+            => print_for_each(indent, *item, *iter, body),
         Stmt::Fn { name, args, body, .. }
             => print_fn(indent, *name, args, body),
         Stmt::Break { .. }
@@ -361,6 +371,11 @@ fn print_for(
         inc_op.lexeme,
         print_expr(indent, inc_expr),
     );
+    parenthesize_list(indent, &s, None, body)
+}
+
+fn print_for_each(indent: usize, item: Token, iter: Token, body: &[Stmt]) -> String {
+    let s = format!("for {} in {}", item.lexeme, iter.lexeme,);
     parenthesize_list(indent, &s, None, body)
 }
 
