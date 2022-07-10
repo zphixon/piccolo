@@ -584,8 +584,16 @@ fn compile_literal(
     trace!("{} literal", literal.pos);
     check_depth!(depth, literal);
 
-    // TODO: use constant ops instead of Constant ops
-    emitter.add_constant(Constant::try_from(literal)?, literal.pos);
+    match literal.kind {
+        TokenKind::True => emitter.add_instruction(Opcode::Bool(true), literal.pos),
+        TokenKind::False => emitter.add_instruction(Opcode::Bool(false), literal.pos),
+        TokenKind::Integer(v) if u16::try_from(v).is_ok() => {
+            emitter.add_instruction(Opcode::Integer(v.try_into().unwrap()), literal.pos)
+        }
+        TokenKind::Nil => emitter.add_instruction(Opcode::Nil, literal.pos),
+        _ => emitter.add_constant(Constant::try_from(literal)?, literal.pos),
+    }
+
     Ok(())
 }
 

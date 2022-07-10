@@ -282,8 +282,8 @@ impl Machine {
                 self.push(Value::from_constant(c.clone(), heap));
             }
             Opcode::Nil => self.push(Value::Nil),
-            Opcode::True => self.push(Value::Bool(true)),
-            Opcode::False => self.push(Value::Bool(false)),
+            Opcode::Bool(b) => self.push(Value::Bool(b)),
+            Opcode::Integer(u) => self.push(Value::Integer(u as i64)),
 
             Opcode::Array(len) => {
                 let len = len as usize;

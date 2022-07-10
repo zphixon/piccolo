@@ -12,8 +12,8 @@
 //! | <b>Constants</b>  |                           |
 //! | `Constant`        | index into constant table |
 //! | `Nil`             |                           |
-//! | `True`            |                           |
-//! | `False`           |                           |
+//! | `Bool`            | boolean value             |
+//! | `Integer`         | integer value             |
 //! | <b>Math</b>       |                           |
 //! | `Negate`          |                           |
 //! | `Not`             |                           |
@@ -51,6 +51,7 @@
 //!
 //! [`Machine`]: ../vm/struct.Machine.html
 
+#[repr(u16)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Opcode {
     Pop,
@@ -58,8 +59,8 @@ pub enum Opcode {
 
     Constant(u16),
     Nil,
-    True,
-    False,
+    Bool(bool),
+    Integer(u16),
     Array(u16),
 
     Negate,
