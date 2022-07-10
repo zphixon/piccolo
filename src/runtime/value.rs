@@ -332,6 +332,7 @@ impl Object for Value {
                 Value::Double(r) => return Ok(l < r),
                 _ => {}
             },
+            Value::Object(l) => return heap.get(l).lt(heap, other),
             _ => {}
         }
 
