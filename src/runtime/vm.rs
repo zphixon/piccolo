@@ -4,6 +4,7 @@ use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{
         chunk::{Chunk, Module},
+        interner::StringPtr,
         memory::Heap,
         op::Opcode,
         value::{Array, Value},
@@ -14,8 +15,7 @@ use crate::{
 use fnv::FnvHashMap;
 
 pub struct Frame<'chunk> {
-    // TODO probably make this a StringPtr
-    name: String,
+    name: StringPtr,
     ip: usize,
     base: usize,
     chunk: &'chunk Chunk,
@@ -70,13 +70,13 @@ impl<'chunk> FrameStack<'chunk> {
         self.current_frame().chunk
     }
 
-    fn unwind(&self) -> Vec<crate::error::Callsite> {
+    fn unwind(&self, heap: &Heap) -> Vec<crate::error::Callsite> {
         warn!("unwinding stack");
         let mut calls = Vec::new();
         for frame in self.frames.iter().take(self.frames.len() - 1) {
             warn!("-- {}", frame.name);
             calls.push(crate::error::Callsite {
-                name: frame.name.clone(),
+                name: heap.interner().get_string(frame.name).to_string(),
                 pos: frame.chunk.get_pos_from_index(frame.ip),
             })
         }
@@ -152,7 +152,7 @@ impl Machine {
 
         let mut frames = FrameStack {
             frames: vec![Frame {
-                name: String::from("top level"),
+                name: heap.interner_mut().allocate_str("top level"),
                 base: 0,
                 ip,
                 chunk: module.chunk(0),
@@ -178,8 +178,10 @@ impl Machine {
                 }
             } else if result.is_err() {
                 self.ip = frames.current_ip();
-                result
-                    .map_err(|err| err.pos(frames.current_line()).stack_trace(frames.unwind()))?;
+                result.map_err(|err| {
+                    err.pos(frames.current_line())
+                        .stack_trace(frames.unwind(heap))
+                })?;
             }
         }
     }
@@ -763,7 +765,7 @@ impl Machine {
                     );
 
                     frames.push(Frame {
-                        name: heap.interner().get_string(f.name).to_string(),
+                        name: f.name,
                         ip: 0,
                         base: self.stack.len() - arity - 1,
                         chunk: module.chunk(f.chunk),
