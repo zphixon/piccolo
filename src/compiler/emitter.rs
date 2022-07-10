@@ -220,7 +220,12 @@ fn compile_assignment(
         compile_expr(emitter, depth + 1, index)?;
         emitter.add_instruction(Opcode::Set, op.pos);
     } else {
-        return Err(PiccoloError::todo(format!("{lval:#?} {op:?} {rval:#?}")));
+        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            .msg_string(format!(
+                "Cannot use {} expression as left-hand of assignment",
+                lval.token().lexeme
+            ))
+            .pos(lval.token().pos));
     }
 
     Ok(())

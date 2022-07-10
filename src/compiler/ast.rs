@@ -414,9 +414,9 @@ fn print_assert(indent: usize, value: &Expr) -> String {
     parenthesize(indent, "assert", &[value])
 }
 
-fn print_data(indent: usize, _name: Token, _methods: &[Stmt], _fields: &[Stmt]) -> String {
-    // TODO
-    parenthesize(indent, "data", &[])
+fn print_data(indent: usize, name: Token, methods: &[Stmt], fields: &[Stmt]) -> String {
+    let name = format!("data {}", name.lexeme);
+    parenthesize_lists(indent, &name, None, &[fields, methods])
 }
 
 fn print_literal(literal: Token) -> String {

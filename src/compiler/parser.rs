@@ -652,8 +652,8 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>
         let fn_ = consume(scanner, TokenKind::Fn)?;
 
         consume(scanner, TokenKind::LeftParen)?;
-        let params = parse_parameters(scanner, depth + 1)?;
-        let arity = params.len();
+        let args = parse_parameters(scanner, depth + 1)?;
+        let arity = args.len();
         consume(scanner, TokenKind::RightParen)?;
 
         consume(scanner, TokenKind::Do)?;
@@ -662,7 +662,7 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>
 
         Ok(Expr::Fn {
             fn_,
-            args: params, // TODO
+            args,
             arity,
             body,
             end,

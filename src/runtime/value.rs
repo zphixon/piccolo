@@ -84,6 +84,11 @@ impl Value {
             Value::BuiltinFunction(f) => Constant::Function(ConstantFunction {
                 arity: f.arity,
                 name: heap.interner().get_string(f.name).to_string(),
+                // TODO this may be a problem if we:
+                // 1. move a Value::BuiltinFunction out of the vm, making it a Constant::Function
+                // 2. make that Constant::Function into a Value::Function
+                // 3. attempt to execute that function on the vm
+                // we should probably have a Constant::BuiltinFunction but meehhhhh
                 chunk: 0,
             }),
             Value::Object(ptr) => {
@@ -314,7 +319,6 @@ impl Object for Value {
         }
 
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            // TODO
             got: other.type_name(heap).to_string(),
             exp: self.type_name(heap).to_string(),
         }))
@@ -337,7 +341,6 @@ impl Object for Value {
         }
 
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            // TODO
             got: other.type_name(heap).to_string(),
             exp: self.type_name(heap).to_string(),
         }))
