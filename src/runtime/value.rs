@@ -11,6 +11,7 @@ use crate::{
         Arity, Object,
     },
 };
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Function {
@@ -56,7 +57,7 @@ impl Value {
                 name: heap.interner_mut().allocate_string(f.name),
             }),
             //Constant::BuiltinFunction(f) => Value::BuiltinFunction(f),
-            //Constant::Object(Box<dyn Object>) => {} // TODO?
+            Constant::Object(v) => Value::Object(heap.allocate_boxed(v)),
             Constant::Array(v) => {
                 let values = v
                     .into_iter()
@@ -169,8 +170,8 @@ impl Value {
     }
 }
 
-impl std::fmt::Debug for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Debug for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::Bool(v) => write!(f, "Bool({v})"),
             Value::Integer(v) => write!(f, "Integer({v})"),
@@ -354,7 +355,6 @@ pub struct ConstantFunction {
 /// Similar to [`Value`]. `Constant` is also used to return from Piccolo execution.
 ///
 /// [`Value`]: ../value/enum.Value.html
-#[derive(Clone, Debug, PartialEq)]
 pub enum Constant {
     String(String),
     Bool(bool),
@@ -362,8 +362,7 @@ pub enum Constant {
     Double(f64),
     Function(ConstantFunction),
     Array(Vec<Constant>),
-    // TODO: implement Clone, Debug, PartialEq manually
-    // Object(Box<dyn Object>),
+    Object(Box<dyn Object>),
     Nil,
 }
 
@@ -388,8 +387,8 @@ impl Constant {
     }
 }
 
-impl std::fmt::Display for Constant {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl Debug for Constant {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Constant::String(v) => write!(f, "{}", v),
             Constant::Bool(v) => write!(f, "{}", v),
@@ -407,7 +406,65 @@ impl std::fmt::Display for Constant {
                 s.push(']');
                 write!(f, "{s}")
             }
+            Constant::Object(object) => write!(f, "Object{:p}", object.as_ref()),
             Constant::Nil => write!(f, "nil"),
+        }
+    }
+}
+
+impl Display for Constant {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Constant::String(v) => write!(f, "{}", v),
+            Constant::Bool(v) => write!(f, "{}", v),
+            Constant::Integer(v) => write!(f, "{}", v),
+            Constant::Double(v) => write!(f, "{}", v),
+            Constant::Function(v) => write!(f, "{}", v.name),
+            Constant::Array(v) => {
+                let mut s = String::from("[");
+                for (i, value) in v.iter().enumerate() {
+                    s.push_str(&value.to_string());
+                    if i + 1 != v.len() {
+                        s.push_str(", ");
+                    }
+                }
+                s.push(']');
+                write!(f, "{s}")
+            }
+            Constant::Object(_) => write!(f, "object"),
+            Constant::Nil => write!(f, "nil"),
+        }
+    }
+}
+
+impl Clone for Constant {
+    fn clone(&self) -> Self {
+        match self {
+            Constant::String(v) => Constant::String(v.clone()),
+            Constant::Bool(v) => Constant::Bool(v.clone()),
+            Constant::Integer(v) => Constant::Integer(v.clone()),
+            Constant::Double(v) => Constant::Double(v.clone()),
+            Constant::Function(v) => Constant::Function(v.clone()),
+            Constant::Array(v) => Constant::Array(v.clone()),
+            Constant::Object(v) => Constant::Object(v.clone_object()),
+            Constant::Nil => Constant::Nil,
+        }
+    }
+}
+
+impl PartialEq for Constant {
+    fn eq(&self, other: &Self) -> bool {
+        use Constant::*;
+        match (self, other) {
+            (String(l), String(r)) => l == r,
+            (Bool(l), Bool(r)) => l == r,
+            (Integer(l), Integer(r)) => l == r,
+            (Double(l), Double(r)) => l == r,
+            (Function(l), Function(r)) => l == r,
+            (Array(l), Array(r)) => l == r,
+            (Object(l), Object(r)) => std::ptr::eq(l, r),
+            (Nil, Nil) => true,
+            _ => false,
         }
     }
 }

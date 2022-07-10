@@ -37,8 +37,12 @@ impl Heap {
     }
 
     pub fn allocate(&mut self, object: impl Object) -> Ptr {
+        self.allocate_boxed(Box::new(object))
+    }
+
+    pub fn allocate_boxed(&mut self, object: Box<dyn Object>) -> Ptr {
         Ptr(self.objects.insert(ObjectHeader {
-            inner: UnsafeCell::new(Box::new(object)),
+            inner: UnsafeCell::new(object),
             marked: AtomicBool::new(false),
         }))
     }
