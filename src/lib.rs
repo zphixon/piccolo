@@ -195,7 +195,6 @@ mod integration {
 
             let mut heap = Heap::new();
             let mut vm = Machine::new();
-            // TODO
             assert_eq!(
                 vm.interpret(&mut heap, &module)
                     .unwrap()

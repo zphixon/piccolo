@@ -112,8 +112,6 @@ fn compile_expr(emitter: &mut Emitter, depth: usize, expr: &Expr) -> Result<(), 
         //     => compile_new(emitter, depth + 1, name, args),
         Expr::Get { object, name }
             => compile_get(emitter, depth + 1, object, *name),
-        // Expr::Set { object, name, value }
-        //     => compile_set(emitter, depth + 1, object, name, value),
         Expr::Index { right_bracket, object, index }
             => compile_index(emitter, depth + 1, *right_bracket, object, index),
         Expr::Fn { fn_, args, arity, body, end }
