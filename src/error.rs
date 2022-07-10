@@ -1,8 +1,9 @@
 //! Types for dealing with errors in scanning, parsing, compiling, or executing Piccolo.
 
 use crate::{compiler::SourcePos, runtime::op::Opcode};
-use std::fmt;
-use std::fmt::Write;
+use std::{
+    error::Error, fmt, fmt::Write, io::Error as IoError, str::Utf8Error, string::FromUtf8Error,
+};
 
 #[derive(Debug)]
 pub struct Callsite {
@@ -10,7 +11,6 @@ pub struct Callsite {
     pub pos: SourcePos,
 }
 
-// TODO: impl Error for PiccoloError
 /// The main error-reporting struct.
 #[derive(Debug)]
 pub struct PiccoloError {
@@ -42,7 +42,7 @@ impl PiccoloError {
         }
     }
 
-    pub fn unknown(err: impl Into<Box<dyn std::error::Error>>) -> Self {
+    pub fn unknown(err: impl Into<Box<dyn Error>>) -> Self {
         PiccoloError {
             kind: ErrorKind::Unknown { err: err.into() },
             pos: None,
@@ -148,13 +148,22 @@ impl fmt::Display for PiccoloError {
     }
 }
 
-// TODO: split into scan, parse, compile, runtime errors
+impl Error for PiccoloError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match &self.kind {
+            ErrorKind::InvalidUTF8(err) => Some(err),
+            ErrorKind::IOError(err) => Some(err),
+            ErrorKind::Unknown { err } => Some(err.as_ref()),
+            _ => None,
+        }
+    }
+}
+
 /// Types of errors possible in Piccolo.
 #[derive(Debug)]
 pub enum ErrorKind {
-    InvalidUTF8,
-    FileNotFound,
-    IOError,
+    InvalidUTF8(Utf8Error),
+    IOError(IoError),
     UnterminatedString,
     UnknownFormatCode {
         code: char,
@@ -220,7 +229,7 @@ pub enum ErrorKind {
         why: String,
     },
     Unknown {
-        err: Box<dyn std::error::Error>,
+        err: Box<dyn Error>,
     },
 }
 
@@ -230,12 +239,10 @@ pub struct ParseError {}
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ErrorKind::InvalidUTF8
+            ErrorKind::InvalidUTF8(_)
                 => write!(f, "Invalid UTF-8 sequence"),
-            ErrorKind::FileNotFound
-                => write!(f, "File not found"),
-            ErrorKind::IOError
-                => write!(f, "Unknown IO error occurred"),
+            ErrorKind::IOError(e)
+                => write!(f, "IO error: {e}"),
             ErrorKind::UnterminatedString
                 => write!(f, "Unterminated string"),
             ErrorKind::UnknownFormatCode { code }
@@ -282,26 +289,22 @@ impl fmt::Display for ErrorKind {
     }
 }
 
-impl From<std::str::Utf8Error> for PiccoloError {
-    fn from(e: std::str::Utf8Error) -> PiccoloError {
-        PiccoloError::new(ErrorKind::InvalidUTF8)
+impl From<Utf8Error> for PiccoloError {
+    fn from(e: Utf8Error) -> PiccoloError {
+        PiccoloError::new(ErrorKind::InvalidUTF8(e))
             .msg_string(format!("valid up to {}", e.valid_up_to()))
     }
 }
 
-impl From<std::string::FromUtf8Error> for PiccoloError {
-    fn from(e: std::string::FromUtf8Error) -> PiccoloError {
+impl From<FromUtf8Error> for PiccoloError {
+    fn from(e: FromUtf8Error) -> PiccoloError {
         PiccoloError::from(e.utf8_error())
     }
 }
 
-impl From<std::io::Error> for PiccoloError {
-    fn from(e: std::io::Error) -> PiccoloError {
-        match e.kind() {
-            std::io::ErrorKind::InvalidData => PiccoloError::new(ErrorKind::InvalidUTF8),
-            std::io::ErrorKind::NotFound => PiccoloError::new(ErrorKind::FileNotFound),
-            _ => PiccoloError::new(ErrorKind::IOError),
-        }
+impl From<IoError> for PiccoloError {
+    fn from(e: IoError) -> PiccoloError {
+        PiccoloError::new(ErrorKind::IOError(e))
     }
 }
 
