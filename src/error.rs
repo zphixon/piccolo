@@ -278,7 +278,7 @@ impl fmt::Display for ErrorKind {
             ErrorKind::SyntaxError
                 => write!(f, "Syntax error"),
             ErrorKind::IncorrectArity { name, exp, got }
-                => write!(f, "Incorrect arity: function {name} expected {exp:?} arguments, got {got}"),
+                => write!(f, "Incorrect arity: function {name} expected {exp} argument(s), got {got}"),
             ErrorKind::CannotCall { callee }
                 => write!(f, "Cannot call value {callee}"),
             ErrorKind::CannotSet { object, property, value }

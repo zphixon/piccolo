@@ -1,2 +1,2 @@
-Error:  1:6 - Incorrect arity: function rand expected Exact(0) arguments, got 1
+Error:  1:6 - Incorrect arity: function rand expected 0 argument(s), got 1
 

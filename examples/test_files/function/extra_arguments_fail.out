@@ -1,2 +1,2 @@
-Error:  6:3 - Incorrect arity: function f expected Exact(2) arguments, got 4
+Error:  6:3 - Incorrect arity: function f expected 2 argument(s), got 4
 

@@ -1,2 +1,2 @@
-Error:  259:6 - Incorrect arity: function foo expected Exact(0) arguments, got 256
+Error:  259:6 - Incorrect arity: function foo expected 0 argument(s), got 256
 

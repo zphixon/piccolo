@@ -17,6 +17,7 @@ use crate::{
 pub enum Arity {
     Any,
     Exact(usize),
+    AtLeast(usize),
 }
 
 impl Default for Arity {
@@ -29,8 +30,20 @@ impl Arity {
     pub fn is_compatible(&self, with: usize) -> bool {
         if let Arity::Exact(arity) = self {
             *arity == with
+        } else if let Arity::AtLeast(arity) = self {
+            *arity <= with
         } else {
             true
+        }
+    }
+}
+
+impl std::fmt::Display for Arity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Arity::Any => write!(f, "any"),
+            Arity::Exact(n) => write!(f, "{}", n),
+            Arity::AtLeast(n) => write!(f, "at least {}", n),
         }
     }
 }
