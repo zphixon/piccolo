@@ -8,7 +8,8 @@ use crate::{
 };
 use once_cell::sync::Lazy;
 use std::{
-    fmt::{Debug, Write},
+    fmt::{Debug, Write as FmtWrite},
+    io::Write as IoWrite,
     time::{Duration, Instant},
 };
 
@@ -28,13 +29,18 @@ pub fn to_string(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloErro
     Ok(Value::String(ptr))
 }
 
-pub fn print(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
-    match to_string(heap, values)? {
-        Value::String(ptr) => {
-            println!("{}", heap.interner().get_string(ptr));
-        }
-        _ => unreachable!(),
+pub fn write(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
+    if let Value::String(ptr) = to_string(heap, values)? {
+        print!("{}", heap.interner().get_string(ptr));
+        std::io::stdout().flush().unwrap();
     }
+
+    Ok(Value::Nil)
+}
+
+pub fn print(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
+    write(heap, values)?;
+    println!();
 
     Ok(Value::Nil)
 }
@@ -119,6 +125,116 @@ pub fn sleep(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 
     Ok(Value::Nil)
+}
+
+pub fn truncate(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    match args[0] {
+        Value::Double(num) => Ok(Value::Integer(num.trunc() as i64)),
+        Value::Integer(num) => Ok(Value::Integer(num)),
+        val => Err(PiccoloError::new(ErrorKind::IncorrectType {
+            exp: "double or integer".to_string(),
+            got: val.type_name(heap).to_string(),
+        })),
+    }
+}
+
+pub fn floor(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    match args[0] {
+        Value::Double(num) => Ok(Value::Double(num.floor())),
+        Value::Integer(num) => Ok(Value::Integer(num)),
+        val => Err(PiccoloError::new(ErrorKind::IncorrectType {
+            exp: "double or integer".to_string(),
+            got: val.type_name(heap).to_string(),
+        })),
+    }
+}
+
+pub fn ceil(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    match args[0] {
+        Value::Double(num) => Ok(Value::Double(num.ceil())),
+        Value::Integer(num) => Ok(Value::Integer(num)),
+        val => Err(PiccoloError::new(ErrorKind::IncorrectType {
+            exp: "double or integer".to_string(),
+            got: val.type_name(heap).to_string(),
+        })),
+    }
+}
+
+pub fn round(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    match args[0] {
+        Value::Double(num) => Ok(Value::Double(num.round())),
+        Value::Integer(num) => Ok(Value::Integer(num)),
+        val => Err(PiccoloError::new(ErrorKind::IncorrectType {
+            exp: "double or integer".to_string(),
+            got: val.type_name(heap).to_string(),
+        })),
+    }
+}
+
+pub fn abs(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    match args[0] {
+        Value::Double(num) => Ok(Value::Double(num.abs())),
+        Value::Integer(num) => Ok(Value::Integer(num.abs())),
+        val => Err(PiccoloError::new(ErrorKind::IncorrectType {
+            exp: "double or integer".to_string(),
+            got: val.type_name(heap).to_string(),
+        })),
+    }
+}
+
+pub fn sign(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    match args[0] {
+        Value::Double(num) => Ok(Value::Double(num.signum())),
+        Value::Integer(num) => Ok(Value::Integer(num.signum())),
+        val => Err(PiccoloError::new(ErrorKind::IncorrectType {
+            exp: "double or integer".to_string(),
+            got: val.type_name(heap).to_string(),
+        })),
+    }
+}
+
+pub fn cos(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    if let Value::Double(num) = args[0] {
+        Ok(Value::Double(num.cos()))
+    } else {
+        Err(PiccoloError::new(ErrorKind::IncorrectType {
+            exp: "double".to_string(),
+            got: args[0].type_name(heap).to_string(),
+        }))
+    }
+}
+
+pub fn sin(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    if let Value::Double(num) = args[0] {
+        Ok(Value::Double(num.sin()))
+    } else {
+        Err(PiccoloError::new(ErrorKind::IncorrectType {
+            exp: "double".to_string(),
+            got: args[0].type_name(heap).to_string(),
+        }))
+    }
+}
+
+pub fn tan(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    if let Value::Double(num) = args[0] {
+        Ok(Value::Double(num.tan()))
+    } else {
+        Err(PiccoloError::new(ErrorKind::IncorrectType {
+            exp: "double".to_string(),
+            got: args[0].type_name(heap).to_string(),
+        }))
+    }
+}
+
+pub fn input(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    if !args.is_empty() {
+        write(heap, args)?;
+    }
+
+    let mut buf = String::new();
+    std::io::stdin().read_line(&mut buf)?;
+
+    Ok(Value::String(heap.interner_mut().allocate_string(buf)))
 }
 
 pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError>;
