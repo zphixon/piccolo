@@ -38,7 +38,7 @@ mod not_log {
         for file in source_files {
             let source_modified = std::fs::metadata(&file).unwrap().modified().unwrap();
             if source_modified > binary_modified {
-                panic!("release rebuild required");
+                panic!("release rebuild required (with no log feature)");
             }
         }
     }

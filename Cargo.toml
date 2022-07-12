@@ -24,6 +24,13 @@ rustyline = { version = '9.1.2', optional = true }
 
 [profile.release]
 debug = true
+incremental = true
+
+[profile.dev]
+incremental = true
+
+[profile.test]
+incremental = true
 
 [target.'cfg(fuzzing)'.dependencies]
 arbitrary = { version = '*', features = ['derive'] }
