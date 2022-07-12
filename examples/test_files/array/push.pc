@@ -1,0 +1,4 @@
+array =: [1, 2, 3]
+assert array.len == 3
+array.push(4)
+assert array.len == 4

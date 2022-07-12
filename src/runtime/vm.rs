@@ -596,15 +596,8 @@ impl Machine {
 
             Opcode::Get => {
                 let index = self.pop();
-                if self.peek().is_object() {
-                    let ptr = self.pop().as_ptr();
-                    self.push(heap.get(ptr).get(ptr, heap, index)?);
-                } else {
-                    return Err(PiccoloError::new(ErrorKind::CannotGet {
-                        object: self.peek().type_name(heap).to_string(),
-                        index: index.format(heap),
-                    }));
-                }
+                let ptr = self.pop();
+                self.push(ptr.get(Heap::null_ptr(), heap, index)?);
             }
 
             Opcode::Set => {

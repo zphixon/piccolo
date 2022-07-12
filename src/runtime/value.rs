@@ -345,6 +345,16 @@ impl Object for Value {
             exp: self.type_name(heap).to_string(),
         }))
     }
+
+    fn get(&self, _: Ptr, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
+        match self {
+            Value::Object(ptr) => heap.get(*ptr).get(*ptr, heap, index_value),
+            _ => Err(PiccoloError::new(ErrorKind::CannotGet {
+                object: self.type_name(heap).to_string(),
+                index: index_value.format(heap),
+            })),
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
