@@ -250,6 +250,25 @@ pub fn trim(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 }
 
+pub fn exit(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    if args.len() > 1 {
+        return Err(PiccoloError::new(ErrorKind::IncorrectArity {
+            name: "exit".to_string(),
+            exp: Arity::AtLeast(0),
+            got: args.len(),
+        }));
+    }
+
+    match args.get(0) {
+        Some(Value::Integer(code)) => std::process::exit(*code as i32),
+        None => std::process::exit(0),
+        _ => Err(PiccoloError::new(ErrorKind::IncorrectType {
+            exp: "integer".to_string(),
+            got: args[0].type_name(heap).to_string(),
+        })),
+    }
+}
+
 pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError>;
 
 #[derive(Clone, Copy)]
