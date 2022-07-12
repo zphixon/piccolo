@@ -29,6 +29,7 @@ fn do_one(name: &str, file: &path::PathBuf) {
         .arg(name)
         .output()
         .unwrap();
+    println!("{name}");
     std::fs::write(file.with_extension("out"), output.stdout).unwrap();
 }
 
@@ -63,7 +64,6 @@ fn main() {
         }
 
         if name.ends_with(".pc") {
-            println!("{name}");
             do_one(&name, &file);
         }
     }

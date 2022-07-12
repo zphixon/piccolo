@@ -116,7 +116,6 @@ pub fn sleep(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
             return Err(PiccoloError::new(ErrorKind::IncorrectType {
                 exp: "integer and optional string unit".to_string(),
                 got: args[0].type_name(heap).to_string(),
-                op: super::op::Opcode::Call(0),
             }))
         }
     }
