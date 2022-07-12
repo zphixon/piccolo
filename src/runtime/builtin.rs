@@ -76,14 +76,12 @@ pub fn sleep(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 
     let non_negative = |secs: i64| -> Result<u64, PiccoloError> {
-        if let Ok(secs) = secs.try_into() {
-            Ok(secs)
-        } else {
-            return Err(PiccoloError::new(ErrorKind::InvalidArgument {
+        secs.try_into().map_err(|_| {
+            PiccoloError::new(ErrorKind::InvalidArgument {
                 exp: "non-negative integer".to_string(),
                 got: args[0].format(heap),
-            }));
-        }
+            })
+        })
     };
 
     use std::thread::sleep;

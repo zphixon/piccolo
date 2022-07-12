@@ -445,9 +445,9 @@ impl Clone for Constant {
     fn clone(&self) -> Self {
         match self {
             Constant::String(v) => Constant::String(v.clone()),
-            Constant::Bool(v) => Constant::Bool(v.clone()),
-            Constant::Integer(v) => Constant::Integer(v.clone()),
-            Constant::Double(v) => Constant::Double(v.clone()),
+            Constant::Bool(v) => Constant::Bool(*v),
+            Constant::Integer(v) => Constant::Integer(*v),
+            Constant::Double(v) => Constant::Double(*v),
             Constant::Function(v) => Constant::Function(v.clone()),
             Constant::Array(v) => Constant::Array(v.clone()),
             Constant::Object(v) => Constant::Object(v.clone_object()),
