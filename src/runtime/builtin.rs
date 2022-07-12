@@ -237,6 +237,19 @@ pub fn input(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     Ok(Value::String(heap.interner_mut().allocate_string(buf)))
 }
 
+pub fn trim(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    if let Value::String(string) = args[0] {
+        // TODO investigate adding a byte length field to StringPtr
+        let trimmed = heap.interner().get_string(string).trim().to_string();
+        Ok(Value::String(heap.interner_mut().allocate_string(trimmed)))
+    } else {
+        Err(PiccoloError::new(ErrorKind::InvalidArgument {
+            exp: "string".to_string(),
+            got: args[0].format(heap),
+        }))
+    }
+}
+
 pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError>;
 
 #[derive(Clone, Copy)]

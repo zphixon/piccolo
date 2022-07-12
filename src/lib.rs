@@ -133,6 +133,7 @@ pub fn make_environment() -> (
     add_builtin_function!(sin, Arity::Exact(1));
     add_builtin_function!(tan, Arity::Exact(1));
     add_builtin_function!(input, Arity::Any);
+    add_builtin_function!(trim, Arity::Exact(1));
 
     (emitter, heap, vm)
 }
