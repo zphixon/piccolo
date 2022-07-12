@@ -36,9 +36,14 @@ mod not_log {
         let mut source_files = Vec::new();
         collect_files_recursively("src", &mut source_files).unwrap();
         for file in source_files {
+            if file.ends_with("interface_test.rs") {
+                continue;
+            }
+
             let source_modified = std::fs::metadata(&file).unwrap().modified().unwrap();
             if source_modified > binary_modified {
-                panic!("release rebuild required (with no log feature)");
+                let name = file.display().to_string();
+                panic!("{name} was modified: release rebuild required (with no log feature)");
             }
         }
     }
@@ -48,7 +53,10 @@ mod not_log {
             .arg(name)
             .output()
             .unwrap();
-        println!("writing {name}");
+
+        let contents = std::str::from_utf8(&output.stdout).unwrap();
+        println!("writing {name}\n{}", contents);
+
         std::fs::write(file.with_extension("out"), output.stdout).unwrap();
     }
 
@@ -82,21 +90,44 @@ mod not_log {
     fn check_all(dir: &str) {
         let mut test_files = Vec::new();
         collect_files_recursively(dir, &mut test_files).unwrap();
+        let mut skipped = Vec::new();
+        let mut failed = Vec::new();
 
         for file in test_files {
             let name = file.display().to_string();
+
+            if !name.ends_with("ignore") && !file.with_extension("out").exists() {
+                skipped.push(name);
+                continue;
+            }
+
             if name.ends_with(".pc") {
                 println!("checking {name}");
                 let output = Command::new("target/release/simple")
-                    .arg(name)
+                    .arg(&name)
                     .output()
                     .unwrap();
                 let result = std::str::from_utf8(&output.stdout).unwrap();
                 let result_should_be = std::fs::read_to_string(file.with_extension("out")).unwrap();
                 if result != result_should_be {
-                    println!("failed: {result:?}");
-                    println!("        {result_should_be:?}");
+                    failed.push((name, result.to_string(), result_should_be))
                 }
+            }
+        }
+
+        if !skipped.is_empty() {
+            println!();
+            for skipped in skipped {
+                println!("skipped {skipped}");
+            }
+        }
+
+        if !failed.is_empty() {
+            println!();
+            for (name, result, rsb) in failed {
+                println!("failed {name}");
+                println!("expected {rsb:?}");
+                println!("got      {result:?}");
             }
         }
     }
