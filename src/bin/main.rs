@@ -13,6 +13,7 @@ use rustyline::{
     error::ReadlineError, Cmd, ConditionalEventHandler, Editor, Event, EventContext, EventHandler,
     KeyEvent, Movement, RepeatCount,
 };
+use std::io::Write;
 
 #[derive(Options, Debug)]
 struct Args {
@@ -257,6 +258,52 @@ fn repl(
                 rl.add_history_entry(&line);
                 rl.save_history(".piccolo_history")
                     .expect("cannot open .piccolo_history");
+
+                if line.starts_with(")") {
+                    let builtin = line
+                        .split(")")
+                        .filter(|s| !s.is_empty())
+                        .flat_map(|s| s.trim().split_whitespace())
+                        .collect::<Vec<_>>();
+
+                    match builtin.get(0) {
+                        Some(&"help") => {
+                            println!("Call exit() or use the keyboard shortcut Ctrl+D to exit");
+                            println!("Ctrl+C will clear the line, and exit if the line is empty");
+                        }
+
+                        Some(&"dump") => {
+                            println!("=== strings ===");
+                            for (i, string) in heap.interner().strings().enumerate() {
+                                print!("{string}");
+                                std::io::stdout().flush().unwrap();
+                                if i + 1 < heap.interner().num_strings() {
+                                    print!(", ");
+                                    std::io::stdout().flush().unwrap();
+                                }
+                            }
+                            println!();
+                            println!("=== objects ===");
+                            for (i, object) in heap.objects().enumerate() {
+                                print!("{}", object.debug_format(&heap));
+                                std::io::stdout().flush().unwrap();
+                                if i + 1 < heap.num_objects() {
+                                    print!(", ");
+                                    std::io::stdout().flush().unwrap();
+                                }
+                            }
+                            println!();
+                        }
+
+                        Some(cmd) => {
+                            println!("Unknown builtin command '{cmd}'");
+                        }
+
+                        None => {}
+                    }
+
+                    continue;
+                }
 
                 input.push_str(&line);
                 input.push('\n');

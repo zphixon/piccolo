@@ -79,6 +79,14 @@ impl Interner {
             .cloned()
             .map(|key| StringPtr { key, len })
     }
+
+    pub fn strings(&self) -> impl Iterator<Item = &str> {
+        self.table.keys().cloned()
+    }
+
+    pub fn num_strings(&self) -> usize {
+        self.strings.len()
+    }
 }
 
 #[cfg(test)]

@@ -126,6 +126,14 @@ impl Heap {
             marked: AtomicBool::new(false),
         }))
     }
+
+    pub fn objects(&self) -> impl Iterator<Item = &dyn Object> {
+        self.objects.keys().map(|key| self.get(Ptr(key)))
+    }
+
+    pub fn num_objects(&self) -> usize {
+        self.objects.len()
+    }
 }
 
 #[cfg(test)]
