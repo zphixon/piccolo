@@ -151,12 +151,12 @@ impl Value {
         }
     }
 
-    pub fn is_native_function(&self) -> bool {
+    pub fn is_builtin_function(&self) -> bool {
         matches!(self, Value::BuiltinFunction(_))
     }
 
-    pub fn as_native_function(&self) -> BuiltinFunction {
-        assert!(self.is_native_function());
+    pub fn as_builtin_function(&self) -> BuiltinFunction {
+        assert!(self.is_builtin_function());
         match self {
             Value::BuiltinFunction(f) => *f,
             _ => panic!(),

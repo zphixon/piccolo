@@ -96,9 +96,9 @@ pub fn make_environment() -> (
     let mut heap = Heap::new();
     let mut vm = Machine::new();
 
-    macro_rules! add_native_function {
+    macro_rules! add_builtin_function {
         ($name:ident, $arity:expr) => {
-            add_native_function!($name, $name, $arity);
+            add_builtin_function!($name, $name, $arity);
         };
 
         ($name:ident, $funcname:ident, $arity:expr) => {
@@ -115,24 +115,24 @@ pub fn make_environment() -> (
         };
     }
 
-    add_native_function!(write, Arity::Any);
-    add_native_function!(print, Arity::Any);
-    add_native_function!(rand, Arity::Exact(0));
-    add_native_function!(toString, to_string, Arity::Any);
-    add_native_function!(clone, Arity::Exact(1));
-    add_native_function!(type, type_, Arity::Exact(1));
-    add_native_function!(clock, Arity::Exact(0));
-    add_native_function!(sleep, Arity::AtLeast(1));
-    add_native_function!(truncate, Arity::Exact(1));
-    add_native_function!(floor, Arity::Exact(1));
-    add_native_function!(ceil, Arity::Exact(1));
-    add_native_function!(round, Arity::Exact(1));
-    add_native_function!(abs, Arity::Exact(1));
-    add_native_function!(sign, Arity::Exact(1));
-    add_native_function!(cos, Arity::Exact(1));
-    add_native_function!(sin, Arity::Exact(1));
-    add_native_function!(tan, Arity::Exact(1));
-    add_native_function!(input, Arity::Any);
+    add_builtin_function!(write, Arity::Any);
+    add_builtin_function!(print, Arity::Any);
+    add_builtin_function!(rand, Arity::Exact(0));
+    add_builtin_function!(toString, to_string, Arity::Any);
+    add_builtin_function!(clone, Arity::Exact(1));
+    add_builtin_function!(type, type_, Arity::Exact(1));
+    add_builtin_function!(clock, Arity::Exact(0));
+    add_builtin_function!(sleep, Arity::AtLeast(1));
+    add_builtin_function!(truncate, Arity::Exact(1));
+    add_builtin_function!(floor, Arity::Exact(1));
+    add_builtin_function!(ceil, Arity::Exact(1));
+    add_builtin_function!(round, Arity::Exact(1));
+    add_builtin_function!(abs, Arity::Exact(1));
+    add_builtin_function!(sign, Arity::Exact(1));
+    add_builtin_function!(cos, Arity::Exact(1));
+    add_builtin_function!(sin, Arity::Exact(1));
+    add_builtin_function!(tan, Arity::Exact(1));
+    add_builtin_function!(input, Arity::Any);
 
     (emitter, heap, vm)
 }

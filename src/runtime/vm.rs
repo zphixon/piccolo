@@ -750,7 +750,7 @@ impl Machine {
                     for _ in 0..arity {
                         args.insert(0, self.pop());
                     }
-                    let f = self.pop().as_native_function();
+                    let f = self.pop().as_builtin_function();
 
                     if let Some(this) = f.this {
                         args.insert(0, Value::Object(this));
