@@ -295,6 +295,8 @@ fn repl(
                             println!();
                         }
 
+                        Some(&"collect") => heap.collect(machine.roots()),
+
                         Some(cmd) => {
                             println!("Unknown builtin command '{cmd}'");
                         }

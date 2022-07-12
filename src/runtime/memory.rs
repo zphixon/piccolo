@@ -83,12 +83,12 @@ impl Heap {
             .map(|header| header.inner.into_inner())
     }
 
-    pub fn collect<'iter>(&mut self, roots: impl Iterator<Item = Option<&'iter Ptr>>) {
+    pub fn collect<'iter>(&mut self, roots: impl Iterator<Item = &'iter Ptr>) {
         self.objects
             .iter_mut()
             .for_each(|(_, header)| header.marked.store(false, Ordering::SeqCst));
 
-        for root in roots.flatten() {
+        for root in roots {
             self.trace(*root);
         }
 
@@ -148,8 +148,8 @@ mod test {
             values: Vec<Value>,
         }
         impl Stack {
-            pub fn as_collectable(&self) -> impl Iterator<Item = Option<&Ptr>> {
-                self.values.iter().map(|value| {
+            pub fn as_collectable(&self) -> impl Iterator<Item = &Ptr> {
+                self.values.iter().flat_map(|value| {
                     if let Value::Object(ptr) = value {
                         Some(ptr)
                     } else {
@@ -244,10 +244,10 @@ mod test {
             heap.get(root).format(&heap)
         );
 
-        heap.collect([Some(&inner2)].into_iter());
+        heap.collect([&inner2].into_iter());
         assert_eq!("(cons 2 (cons 1 nil))", heap.get(inner2).format(&heap));
 
-        heap.collect([Some(&inner1)].into_iter());
+        heap.collect([&inner1].into_iter());
         assert_eq!("(cons 1 nil)", heap.get(inner1).format(&heap));
 
         heap.collect([].into_iter());

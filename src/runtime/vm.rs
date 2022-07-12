@@ -103,6 +103,25 @@ impl Machine {
         Machine::default()
     }
 
+    pub fn roots(&self) -> impl Iterator<Item = &crate::runtime::memory::Ptr> {
+        self.stack
+            .iter()
+            .flat_map(|value| {
+                if let Value::Object(ptr) = value {
+                    Some(ptr)
+                } else {
+                    None
+                }
+            })
+            .chain(self.globals.values().flat_map(|value| {
+                if let Value::Object(ptr) = value {
+                    Some(ptr)
+                } else {
+                    None
+                }
+            }))
+    }
+
     fn push(&mut self, value: Value) {
         self.stack.push(value);
     }
