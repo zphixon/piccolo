@@ -1,0 +1,2 @@
+str =: "hello"
+assert str.len == 5

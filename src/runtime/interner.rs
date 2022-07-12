@@ -2,7 +2,10 @@ use fnv::FnvHashMap;
 use slotmap::{DefaultKey, SlotMap};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct StringPtr(DefaultKey);
+pub struct StringPtr {
+    key: DefaultKey,
+    pub len: usize,
+}
 
 #[derive(Debug)]
 pub struct Interner {
@@ -46,6 +49,9 @@ impl Interner {
     }
 
     fn insert(&mut self, string: String) -> StringPtr {
+        use unicode_segmentation::UnicodeSegmentation;
+        let len = string.graphemes(true).count();
+
         let ptr = self.strings.insert(string);
         self.table.insert(
             // SAFETY: References handed out by get_string() only last as long as the Interner.
@@ -53,18 +59,25 @@ impl Interner {
             unsafe { std::mem::transmute(self.strings[ptr].as_str()) },
             ptr,
         );
-        StringPtr(ptr)
+
+        StringPtr { key: ptr, len }
     }
 
     pub fn get_string(&self, ptr: StringPtr) -> &str {
         self.strings
-            .get(ptr.0)
+            .get(ptr.key)
             .map(|string| string.as_str())
             .expect("invalid string pointer")
     }
 
     pub fn get_string_ptr(&self, string: &str) -> Option<StringPtr> {
-        self.table.get(string).cloned().map(StringPtr)
+        use unicode_segmentation::UnicodeSegmentation;
+        let len = string.graphemes(true).count();
+
+        self.table
+            .get(string)
+            .cloned()
+            .map(|key| StringPtr { key, len })
     }
 }
 

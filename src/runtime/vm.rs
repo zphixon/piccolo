@@ -596,8 +596,8 @@ impl Machine {
 
             Opcode::Get => {
                 let index = self.pop();
-                let ptr = self.pop();
-                self.push(ptr.get(Heap::null_ptr(), heap, index)?);
+                let value = self.pop();
+                self.push(value.get(Heap::null_ptr(), heap, index)?);
             }
 
             Opcode::Set => {

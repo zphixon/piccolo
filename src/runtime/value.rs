@@ -347,8 +347,15 @@ impl Object for Value {
     }
 
     fn get(&self, _: Ptr, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
-        match self {
-            Value::Object(ptr) => heap.get(*ptr).get(*ptr, heap, index_value),
+        match (self, index_value) {
+            (Value::String(this), Value::String(property))
+                if heap.interner().get_string(property) == "len" =>
+            {
+                Ok(Value::Integer(this.len as i64))
+            }
+
+            (Value::Object(ptr), index) => heap.get(*ptr).get(*ptr, heap, index),
+
             _ => Err(PiccoloError::new(ErrorKind::CannotGet {
                 object: self.type_name(heap).to_string(),
                 index: index_value.format(heap),
