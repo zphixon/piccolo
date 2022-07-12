@@ -74,7 +74,7 @@ impl<'chunk> FrameStack<'chunk> {
         warn!("unwinding stack");
         let mut calls = Vec::new();
         for frame in self.frames.iter().take(self.frames.len() - 1) {
-            warn!("-- {}", frame.name);
+            warn!("-- {}", heap.interner().get_string(frame.name));
             calls.push(crate::error::Callsite {
                 name: heap.interner().get_string(frame.name).to_string(),
                 pos: frame.chunk.get_pos_from_index(frame.ip),
