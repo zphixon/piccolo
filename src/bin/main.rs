@@ -230,6 +230,13 @@ impl ConditionalEventHandler for MyCtrlCHandler {
     }
 }
 
+struct MyCtrlDHandler;
+impl ConditionalEventHandler for MyCtrlDHandler {
+    fn handle(&self, _: &Event, _: RepeatCount, _: bool, _: &EventContext) -> Option<Cmd> {
+        Some(Cmd::Interrupt)
+    }
+}
+
 fn repl(
     mut emitter: Emitter,
     mut heap: Heap,
@@ -247,6 +254,11 @@ fn repl(
     rl.bind_sequence(
         KeyEvent::ctrl('c'),
         EventHandler::Conditional(Box::new(MyCtrlCHandler)),
+    );
+
+    rl.bind_sequence(
+        KeyEvent::ctrl('d'),
+        EventHandler::Conditional(Box::new(MyCtrlDHandler)),
     );
 
     let mut input = String::new();
