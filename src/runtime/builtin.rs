@@ -67,23 +67,61 @@ pub fn clock(_: &mut Heap, _: &[Value]) -> Result<Value, PiccoloError> {
 }
 
 pub fn sleep(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
-    if let Value::Integer(seconds) = args[0] {
-        if let Ok(seconds) = seconds.try_into() {
-            std::thread::sleep(Duration::from_secs(seconds));
-            return Ok(Value::Nil);
-        }
-
-        return Err(PiccoloError::new(ErrorKind::InvalidArgument {
-            exp: "non-negative integer".to_string(),
-            got: args[0].format(heap),
+    if args.len() != 1 && args.len() != 2 {
+        return Err(PiccoloError::new(ErrorKind::IncorrectArity {
+            name: "sleep".to_string(),
+            exp: Arity::AtLeast(1),
+            got: args.len(),
         }));
     }
 
-    Err(PiccoloError::new(ErrorKind::IncorrectType {
-        exp: "integer".to_string(),
-        got: args[0].type_name(heap).to_string(),
-        op: super::op::Opcode::Call(0),
-    }))
+    let non_negative = |secs: i64| -> Result<u64, PiccoloError> {
+        if let Ok(secs) = secs.try_into() {
+            Ok(secs)
+        } else {
+            return Err(PiccoloError::new(ErrorKind::InvalidArgument {
+                exp: "non-negative integer".to_string(),
+                got: args[0].format(heap),
+            }));
+        }
+    };
+
+    use std::thread::sleep;
+    match (args[0], args.get(1)) {
+        (Value::Integer(secs), None) => {
+            sleep(Duration::from_secs(non_negative(secs)?));
+        }
+
+        (Value::Integer(length), Some(Value::String(unit))) => {
+            let length = non_negative(length)?;
+            match heap.interner().get_string(*unit) {
+                "ns" | "nanosecond" | "nanoseconds" => sleep(Duration::from_nanos(length)),
+                "us" | "microsecond" | "microseconds" => sleep(Duration::from_micros(length)),
+                "ms" | "millisecond" | "milliseconds" => sleep(Duration::from_millis(length)),
+                "s" | "sec" | "second" | "seconds" => sleep(Duration::from_secs(length)),
+                "m" | "min" | "minute" | "minutes" => sleep(60 * Duration::from_secs(length)),
+                "h" | "hr" | "hour" | "hours" => sleep(60 * 60 * Duration::from_secs(length)),
+
+                _ => {
+                    return Err(PiccoloError::new(ErrorKind::InvalidArgument {
+                        exp: "nanoseconds, microseconds, milliseconds, seconds, minutes, or hours"
+                            .to_string(),
+                        got: heap.interner().get_string(*unit).to_string(),
+                    }))
+                }
+            }
+        }
+
+        _ => {
+            return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                exp: "integer and optional string unit".to_string(),
+                got: args[0].type_name(heap).to_string(),
+                op: super::op::Opcode::Call(0),
+            }))
+        }
+    }
+
+    Ok(Value::Nil)
 }
 
 pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError>;

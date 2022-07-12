@@ -121,7 +121,7 @@ pub fn make_environment() -> (
     add_native_function!(clone, Arity::Exact(1));
     add_native_function!(type, type_, Arity::Exact(1));
     add_native_function!(clock, Arity::Exact(0));
-    add_native_function!(sleep, Arity::Exact(1));
+    add_native_function!(sleep, Arity::AtLeast(1));
 
     (emitter, heap, vm)
 }
