@@ -9,7 +9,7 @@ use crate::{
 use once_cell::sync::Lazy;
 use std::{
     fmt::{Debug, Write},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 pub fn to_string(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
@@ -64,6 +64,26 @@ static START: Lazy<Instant> = Lazy::new(Instant::now);
 pub fn clock(_: &mut Heap, _: &[Value]) -> Result<Value, PiccoloError> {
     let duration = Instant::now() - *START;
     Ok(Value::Double(duration.as_secs_f64()))
+}
+
+pub fn sleep(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    if let Value::Integer(seconds) = args[0] {
+        if let Ok(seconds) = seconds.try_into() {
+            std::thread::sleep(Duration::from_secs(seconds));
+            return Ok(Value::Nil);
+        }
+
+        return Err(PiccoloError::new(ErrorKind::InvalidArgument {
+            exp: "non-negative integer".to_string(),
+            got: args[0].format(heap),
+        }));
+    }
+
+    Err(PiccoloError::new(ErrorKind::IncorrectType {
+        exp: "integer".to_string(),
+        got: args[0].type_name(heap).to_string(),
+        op: super::op::Opcode::Call(0),
+    }))
 }
 
 pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError>;

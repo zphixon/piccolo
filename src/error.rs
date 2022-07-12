@@ -181,6 +181,10 @@ pub enum ErrorKind {
         got: String,
         op: Opcode,
     },
+    InvalidArgument {
+        exp: String,
+        got: String,
+    },
     CannotCompare {
         got: String,
         exp: String,
@@ -253,6 +257,8 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Unexpected token: expected {exp}, got {got}"),
             ErrorKind::IncorrectType { exp, got, op }
                 => write!(f, "Incorrect type: expected {exp}, got {got} for op {op:?}"),
+            ErrorKind::InvalidArgument { exp, got }
+                => write!(f, "Invalid argument: got {got}, expected {exp}"),
             ErrorKind::CannotCompare { exp, got }
                 => write!(f, "Cannot compare {exp} and {got}"),
             ErrorKind::DivideByZero
