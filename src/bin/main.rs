@@ -271,12 +271,8 @@ fn repl(
                 rl.save_history(".piccolo_history")
                     .expect("cannot open .piccolo_history");
 
-                if line.starts_with(")") {
-                    let builtin = line
-                        .split(")")
-                        .filter(|s| !s.is_empty())
-                        .flat_map(|s| s.trim().split_whitespace())
-                        .collect::<Vec<_>>();
+                if let Some(line) = line.strip_prefix(')') {
+                    let builtin = line.split_whitespace().collect::<Vec<_>>();
 
                     match builtin.get(0) {
                         Some(&"help") => {
