@@ -30,6 +30,15 @@ to the object.
    to uphold the safety invariants of `SlotMap` and potentially guarantee
    implementors of `Object` would also do so.
 
+Closures. Fun stuff that we probably want to have, but they present a few
+interesting implementation challenges. A closure needs to:
+
+1. Understand that local variables it refers to actually exist. The compiler
+   needs to check the previous `EmitterContext`s for local variables that it
+   captures, and also make sure it's not picking up the dummy variable so that
+   functions can be recursive.
+2. Put captured variables in the correct place on the stack.
+
 ## Todo
 
 - Type system? Would be fun

@@ -1,0 +1,22 @@
+f =: nil
+
+fn f1() do
+  a =: "a"
+  fn f2() do
+    b =: "b"
+    fn f3() do
+      c =: "c"
+      fn f4() do
+        print(a)
+        print(b)
+        print(c)
+      end
+      f = f4
+    end
+    f3()
+  end
+  f2()
+end
+f1()
+
+f()

@@ -4,7 +4,7 @@
 use crate::{
     compiler::{
         ast::{Ast, Expr, Stmt},
-        Local, Pos, Token, TokenKind, MAX_DEPTH,
+        Pos, Token, TokenKind, Variable, MAX_DEPTH,
     },
     error::{ErrorKind, PiccoloError},
     runtime::{
@@ -197,17 +197,7 @@ fn compile_assignment(
         }
 
         // then assign
-        if emitter.current_context().is_local() {
-            if let Some(index) = emitter.current_context().get_local_slot(name) {
-                emitter.add_instruction(Opcode::SetLocal(index), op.pos);
-            } else {
-                let index = emitter.get_global_ident(name)?;
-                emitter.add_instruction(Opcode::SetGlobal(index), op.pos);
-            }
-        } else {
-            let index = emitter.get_global_ident(name)?;
-            emitter.add_instruction(Opcode::SetGlobal(index), op.pos);
-        }
+        emitter.add_set_variable(name)?;
     } else if let Expr::Get { object, name } = lval {
         compile_expr(emitter, depth + 1, rval)?;
         compile_expr(emitter, depth + 1, object)?;
@@ -400,10 +390,7 @@ fn compile_for_each(
 
     let start = emitter.start_loop_jumps();
 
-    emitter.add_instruction(
-        Opcode::GetLocal(emitter.current_context().get_local_slot(index).unwrap()),
-        for_.pos,
-    );
+    emitter.add_get_variable(index)?;
     compile_variable(emitter, depth, iter)?;
     emitter.add_constant(Constant::String(String::from("len")), iter.pos);
     emitter.add_instruction(Opcode::Get, for_.pos);
@@ -484,8 +471,7 @@ fn compile_fn(
         chunk: chunk_index,
     };
 
-    let constant = emitter.make_constant(Constant::Function(function));
-    emitter.add_instruction(Opcode::Constant(constant), name.pos);
+    emitter.add_constant(Constant::Function(function), name.pos);
 
     emitter.make_variable(name)?;
 
@@ -627,13 +613,7 @@ fn compile_variable(
     trace!("{} compile variable {}", variable.pos, variable.lexeme);
     check_depth!(depth, variable);
 
-    if let Some(local) = emitter.current_context().get_local_slot(variable) {
-        emitter.add_instruction(Opcode::GetLocal(local), variable.pos);
-    } else {
-        let global = emitter.get_global_ident(variable)?;
-        emitter.add_instruction(Opcode::GetGlobal(global), variable.pos);
-    }
-    Ok(())
+    emitter.add_get_variable(variable)
 }
 
 fn compile_unary(
@@ -825,7 +805,7 @@ fn compile_lambda(
 struct EmitterContext {
     //context_type: ContextType,
     chunk_index: usize,
-    locals: Vec<Local>,
+    locals: Vec<Variable>,
     depth: u16,
     //upvalues: Vec<Upvalue>,
 }
@@ -839,14 +819,16 @@ impl EmitterContext {
         }
     }
 
-    #[allow(dead_code)]
-    fn get_local(&self, index: u16) -> &Local {
-        &self.locals[index as usize]
-    }
-
     fn add_local(&mut self, name: Token) {
-        self.locals
-            .push(Local::new(name.lexeme.to_owned(), self.scope_depth()));
+        self.locals.push(Variable::Local {
+            name: name.lexeme.to_string(),
+            depth: self.scope_depth(),
+            slot: self
+                .locals
+                .len()
+                .try_into()
+                .expect("too many local variables"),
+        });
     }
 
     fn is_local(&self) -> bool {
@@ -861,24 +843,25 @@ impl EmitterContext {
         self.depth += 1;
     }
 
-    fn end_scope(&mut self) -> Vec<Local> {
+    fn end_scope(&mut self) -> Vec<Variable> {
         self.depth -= 1;
         let index = self
             .locals
             .iter()
             .enumerate()
-            .find_map(|(i, l)| if l.depth > self.depth { Some(i) } else { None })
+            .find_map(|(i, l)| match l {
+                Variable::Local { depth, .. } if *depth > self.depth => Some(i),
+                _ => None,
+            })
             .unwrap_or(self.locals.len());
         self.locals.split_off(index)
     }
 
-    fn get_local_slot(&self, name: Token) -> Option<u16> {
-        // IF SCOPE IS FUNCTION AND SCOPE DEPTH DOESN'T MATCH THIS IS A CAPTURE
-        // mark as captured
-        trace!("{} get local slot {}", name.pos, name.lexeme);
-        for (i, local) in self.locals.iter().enumerate().rev() {
-            if local.name == name.lexeme {
-                return Some(i as u16);
+    fn get_variable(&self, name: Token) -> Option<Variable> {
+        trace!("{} get variable {}", name.pos, name.lexeme);
+        for local in self.locals.iter().rev() {
+            if local.name() == name.lexeme {
+                return Some(local.clone());
             }
         }
 
@@ -888,8 +871,11 @@ impl EmitterContext {
     fn get_local_depth(&self, name: Token) -> Option<u16> {
         trace!("{} get local depth {}", name.pos, name.lexeme);
         for local in self.locals.iter().rev() {
-            if local.name == name.lexeme {
-                return Some(local.depth);
+            if local.name() == name.lexeme {
+                match local {
+                    Variable::Local { depth, .. } => return Some(*depth),
+                    _ => {}
+                }
             }
         }
 
@@ -907,7 +893,7 @@ pub struct Emitter {
     module: Module,
     children: Vec<EmitterContext>,
     //errors: Vec<PiccoloError>,
-    global_identifiers: FnvHashMap<String, u16>,
+    global_identifiers: FnvHashMap<String, Variable>,
     continue_offsets: Vec<Vec<usize>>,
     break_offsets: Vec<Vec<usize>>,
 }
@@ -962,6 +948,94 @@ impl Emitter {
         self.current_chunk_mut().write(op, pos);
     }
 
+    // skibop
+    fn find_variable(&self, name: Token) -> Option<Variable> {
+        // IF SCOPE IS FUNCTION AND SCOPE DEPTH DOESN'T MATCH THIS IS A CAPTURE
+        trace!("{} find variable {}", name.pos, name.lexeme);
+
+        for (i, ctx) in self.children.iter().rev().enumerate() {
+            if let Some(local) = ctx.get_variable(name) {
+                if i == 0 {
+                    trace!("found in current context");
+                    return Some(local);
+                }
+
+                // TODO problem: we declare a dummy variable with the name of a function inside its
+                // body so we can access it for recursion, but when we call get_variable we end up
+                // finding that dummy variable when we shouldn't. this litle hack isn't really
+                // correct anyway, since the variable should be inserted into the context as a
+                // Capture from the beginning.
+                if ctx.is_local() && !matches!(local, Variable::Global { .. }) {
+                    trace!("found in context {i}");
+                    return Some(Variable::Capture {
+                        name: name.lexeme.to_string(),
+                        depth: 0,
+                        slot: 0,
+                    });
+                }
+            }
+            trace!("not in {i}");
+        }
+
+        self.global_identifiers.get(name.lexeme).cloned()
+    }
+
+    fn add_get_variable(&mut self, variable: Token) -> Result<(), PiccoloError> {
+        match self.find_variable(variable) {
+            Some(Variable::Local { slot, .. }) => {
+                self.add_instruction(Opcode::GetLocal(slot), variable.pos);
+            }
+
+            Some(Variable::Global { .. }) => {
+                let global = self.get_global_ident(variable)?;
+                self.add_instruction(Opcode::GetGlobal(global), variable.pos);
+            }
+
+            Some(Variable::Capture { .. }) => {
+                return Err(
+                    PiccoloError::todo(format!("get closed over {}", variable.lexeme))
+                        .pos(variable.pos),
+                )
+            }
+
+            None => {
+                return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                    name: variable.lexeme.to_string(),
+                }))
+            }
+        }
+
+        Ok(())
+    }
+
+    fn add_set_variable(&mut self, variable: Token) -> Result<(), PiccoloError> {
+        match self.find_variable(variable) {
+            Some(Variable::Local { slot, .. }) => {
+                self.add_instruction(Opcode::SetLocal(slot), variable.pos);
+            }
+
+            Some(Variable::Global { .. }) => {
+                let global = self.get_global_ident(variable)?;
+                self.add_instruction(Opcode::SetGlobal(global), variable.pos);
+            }
+
+            Some(Variable::Capture { .. }) => {
+                return Err(
+                    PiccoloError::todo(format!("set closed over {}", variable.lexeme))
+                        .pos(variable.pos),
+                )
+            }
+
+            None => {
+                return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                    name: variable.lexeme.to_string(),
+                }))
+            }
+        }
+
+        Ok(())
+    }
+
     fn add_jump_back(&mut self, offset: usize, pos: Pos) {
         self.current_chunk_mut().write_jump_back(offset, pos);
     }
@@ -990,11 +1064,19 @@ impl Emitter {
         trace!("{} make global {}", name.pos, name.lexeme);
 
         if self.global_identifiers.contains_key(name.lexeme) {
-            self.global_identifiers[name.lexeme]
+            match self.global_identifiers[name.lexeme] {
+                Variable::Global { index, .. } => index,
+                _ => unreachable!(),
+            }
         } else {
             let index = self.make_constant(Constant::String(name.lexeme.to_owned()));
-            self.global_identifiers
-                .insert(name.lexeme.to_owned(), index);
+            self.global_identifiers.insert(
+                name.lexeme.to_owned(),
+                Variable::Global {
+                    name: name.lexeme.to_string(),
+                    index,
+                },
+            );
             index
         }
     }
@@ -1002,15 +1084,15 @@ impl Emitter {
     fn get_global_ident(&self, name: Token) -> Result<u16, PiccoloError> {
         trace!("{} get global {}", name.pos, name.lexeme);
 
-        self.global_identifiers
-            .get(name.lexeme)
-            .copied()
-            .ok_or_else(|| {
-                PiccoloError::new(ErrorKind::UndefinedVariable {
-                    name: name.lexeme.to_owned(),
-                })
-                .pos(name.pos)
+        match self.global_identifiers.get(name.lexeme).ok_or_else(|| {
+            PiccoloError::new(ErrorKind::UndefinedVariable {
+                name: name.lexeme.to_owned(),
             })
+            .pos(name.pos)
+        })? {
+            Variable::Global { index, .. } => Ok(*index),
+            _ => unreachable!(),
+        }
     }
 
     fn make_variable(&mut self, name: Token) -> Result<(), PiccoloError> {
@@ -1065,7 +1147,7 @@ impl Emitter {
         self.current_context_mut().begin_scope();
     }
 
-    fn end_scope(&mut self, pos: Pos) -> Vec<Local> {
+    fn end_scope(&mut self, pos: Pos) -> Vec<Variable> {
         let locals = self.current_context_mut().end_scope();
         for _ in locals.iter() {
             self.add_instruction(Opcode::Pop, pos);

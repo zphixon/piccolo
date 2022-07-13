@@ -23,20 +23,19 @@ pub const MAX_DEPTH: usize = 32;
 #[cfg(not(fuzzing))]
 pub const MAX_DEPTH: usize = 120;
 
-#[derive(PartialEq, Eq, Hash, Default, Debug)]
-pub(crate) struct Local {
-    pub(crate) name: String,
-    pub(crate) depth: u16,
-    slot: u16,
-    is_upvalue: bool,
+#[derive(Debug, Clone)]
+pub(crate) enum Variable {
+    Local { name: String, depth: u16, slot: u16 },
+    Capture { name: String, depth: u16, slot: u16 },
+    Global { name: String, index: u16 },
 }
 
-impl Local {
-    pub(crate) fn new(name: String, depth: u16) -> Self {
-        Self {
-            name,
-            depth,
-            ..Self::default()
+impl Variable {
+    pub fn name(&self) -> &str {
+        match self {
+            Variable::Local { name, .. } => name,
+            Variable::Capture { name, .. } => name,
+            Variable::Global { name, .. } => name,
         }
     }
 }
