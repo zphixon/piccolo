@@ -1,13 +1,9 @@
 use gumdrop::Options;
 use piccolo::{
-    compiler::{
-        self,
-        emitter::{self, Emitter},
-        parser,
-        scanner::Scanner,
-    },
+    compiler::{self, emitter, parser, scanner::Scanner},
     error::PiccoloError,
-    runtime::{chunk, memory::Heap, vm::Machine, Object},
+    runtime::{chunk, Object},
+    Environment,
 };
 use rustyline::{
     error::ReadlineError, Cmd, ConditionalEventHandler, Editor, Event, EventContext, EventHandler,
@@ -143,17 +139,7 @@ fn run() -> Result<(), Vec<PiccoloError>> {
             eval: None,
             filename: None,
             ..
-        } => {
-            let (emitter, heap, machine) = piccolo::make_environment();
-            repl(
-                emitter,
-                heap,
-                machine,
-                print_tokens,
-                print_ast,
-                print_compiled,
-            )
-        }
+        } => repl(Default::default(), print_tokens, print_ast, print_compiled),
     }
 }
 
@@ -179,28 +165,21 @@ fn maybe_exec_then_repl(
         println!("=== ast ===\n{}", compiler::ast::print_ast(&ast));
     }
 
-    let (mut emitter, mut heap, mut machine) = piccolo::make_environment();
-    emitter::compile_with(&mut emitter, &ast)?;
+    let mut env = Environment::new();
+    emitter::compile_with(&mut env.emitter, &ast)?;
 
     if print_compiled {
         println!(
             "=== module ===\n{}",
-            chunk::disassemble(emitter.module(), name_for_module)
+            chunk::disassemble(env.emitter.module(), name_for_module)
         );
     }
 
     if !verify_syntax {
-        machine.interpret(&mut heap, emitter.module())?;
+        env.vm.interpret(&mut env.heap, env.emitter.module())?;
 
         if interactive {
-            repl(
-                emitter,
-                heap,
-                machine,
-                print_tokens,
-                print_ast,
-                print_compiled,
-            )?;
+            repl(env, print_tokens, print_ast, print_compiled)?;
         }
     }
 
@@ -238,9 +217,7 @@ impl ConditionalEventHandler for MyCtrlDHandler {
 }
 
 fn repl(
-    mut emitter: Emitter,
-    mut heap: Heap,
-    mut machine: Machine,
+    mut env: Environment,
     print_tokens: bool,
     print_ast: bool,
     print_compiled: bool,
@@ -282,20 +259,20 @@ fn repl(
 
                         Some(&"dump") => {
                             println!("=== strings ===");
-                            for (i, string) in heap.interner().strings().enumerate() {
+                            for (i, string) in env.heap.interner().strings().enumerate() {
                                 print!("{string}");
                                 std::io::stdout().flush().unwrap();
-                                if i + 1 < heap.interner().num_strings() {
+                                if i + 1 < env.heap.interner().num_strings() {
                                     print!(", ");
                                     std::io::stdout().flush().unwrap();
                                 }
                             }
                             println!();
                             println!("=== objects ===");
-                            for (i, object) in heap.objects().enumerate() {
-                                print!("{}", object.debug_format(&heap));
+                            for (i, object) in env.heap.objects().enumerate() {
+                                print!("{}", object.debug_format(&env.heap));
                                 std::io::stdout().flush().unwrap();
-                                if i + 1 < heap.num_objects() {
+                                if i + 1 < env.heap.num_objects() {
                                     print!(", ");
                                     std::io::stdout().flush().unwrap();
                                 }
@@ -303,7 +280,7 @@ fn repl(
                             println!();
                         }
 
-                        Some(&"collect") => heap.collect(machine.roots()),
+                        Some(&"collect") => env.heap.collect(env.vm.roots()),
 
                         Some(cmd) => {
                             println!("Unknown builtin command '{cmd}'");
@@ -334,24 +311,25 @@ fn repl(
                             println!("=== ast ===\n{}", compiler::ast::print_ast(&ast));
                         }
 
-                        let _: Result<(), ()> = emitter::compile_with(&mut emitter, &ast)
+                        let _: Result<(), ()> = emitter::compile_with(&mut env.emitter, &ast)
                             .and_then(|_| {
                                 if print_compiled {
                                     println!(
                                         "=== module ===\n{}",
-                                        chunk::disassemble(emitter.module(), "")
+                                        chunk::disassemble(env.emitter.module(), "")
                                     );
                                 }
-                                machine
-                                    .interpret_continue(&mut heap, emitter.module())
+                                env.vm
+                                    .interpret_continue(&mut env.heap, env.emitter.module())
                                     .map_err(|e| vec![e])
                             })
                             .map_err(|errs| {
                                 print_errors(errs);
-                                machine.clear_stack_and_move_to_end_of_module(emitter.module());
-                                emitter.reset_after_errors();
+                                env.vm
+                                    .clear_stack_and_move_to_end_of_module(env.emitter.module());
+                                env.emitter.reset_after_errors();
                             })
-                            .map(|value| println!("{}", value.debug_format(&heap)));
+                            .map(|value| println!("{}", value.debug_format(&env.heap)));
 
                         prompt = "-- ";
                         input = String::new();

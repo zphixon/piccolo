@@ -1141,6 +1141,8 @@ impl Default for Emitter {
 
 #[cfg(test)]
 mod test {
+    use crate::Environment;
+
     #[test]
     fn emitter() {
         use crate::{
@@ -1172,7 +1174,7 @@ mod test {
         let ast3 = parser::parse("fn z(a) do\n  print(\"a is\", a)\n  end\n").unwrap();
         let ast4 = parser::parse("z(x)").unwrap();
 
-        let (mut emitter, _, _) = crate::make_environment();
+        let Environment { mut emitter, .. } = Default::default();
         emitter::compile_with(&mut emitter, &ast1).unwrap();
         println!("{}", chunk::disassemble(emitter.module(), ""));
         emitter::compile_with(&mut emitter, &ast2).unwrap();

@@ -53,19 +53,22 @@ use {error::PiccoloError, runtime::value::Constant, std::path::Path};
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     use compiler::{emitter, parser};
 
-    let (mut emitter, mut heap, mut vm) = make_environment();
+    let mut env = Environment::new();
 
     debug!("parse");
     let ast = parser::parse(src)?;
     debug!("ast\n{}", compiler::ast::print_ast(&ast));
 
     debug!("compile");
-    emitter::compile_with(&mut emitter, &ast)?;
-    let module = emitter.module();
+    emitter::compile_with(&mut env.emitter, &ast)?;
+    let module = env.emitter.module();
     debug!("{}", runtime::chunk::disassemble(module, ""));
 
     debug!("interpret");
-    Ok(vm.interpret(&mut heap, module)?.into_constant(&heap))
+    Ok(env
+        .vm
+        .interpret(&mut env.heap, module)?
+        .into_constant(&env.heap))
 }
 
 /// Reads a file and interprets its contents.
@@ -78,64 +81,81 @@ pub fn do_file(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
     })
 }
 
-pub fn make_environment() -> (
-    compiler::emitter::Emitter,
-    runtime::memory::Heap,
-    runtime::vm::Machine,
-) {
-    use compiler::{emitter::Emitter, Token};
-    use runtime::{
-        builtin::{self, BuiltinFunction},
-        memory::Heap,
-        value::Value,
-        vm::Machine,
-        Arity,
-    };
+use compiler::emitter::Emitter;
+use runtime::{memory::Heap, value::Value, vm::Machine};
 
-    let mut emitter = Emitter::new();
-    let mut heap = Heap::new();
-    let mut vm = Machine::new();
+use crate::runtime::Object;
 
-    macro_rules! add_builtin_function {
-        ($name:ident, $arity:expr) => {
-            add_builtin_function!($name, $name, $arity);
+pub struct Environment {
+    pub emitter: Emitter,
+    pub heap: Heap,
+    pub vm: Machine,
+}
+
+impl Default for Environment {
+    fn default() -> Self {
+        Environment::new()
+    }
+}
+
+impl Environment {
+    pub fn new() -> Environment {
+        use runtime::{
+            builtin::{self, BuiltinFunction},
+            Arity,
         };
 
-        ($name:ident, $funcname:ident, $arity:expr) => {
-            emitter.make_global_ident(Token::identifier(stringify!($name)));
-            vm.globals.insert(
-                String::from(stringify!($name)),
-                Value::BuiltinFunction(BuiltinFunction::new(
-                    heap.interner_mut()
-                        .allocate_string(String::from(stringify!($name))),
-                    $arity,
-                    builtin::$funcname,
-                )),
-            );
-        };
+        let emitter = Emitter::new();
+        let heap = Heap::new();
+        let vm = Machine::new();
+
+        let mut env = Environment { emitter, heap, vm };
+
+        macro_rules! add_builtin_function {
+            ($name:ident, $arity:expr) => {
+                add_builtin_function!($name, $name, $arity);
+            };
+
+            ($name:ident, $funcname:ident, $arity:expr) => {
+                let name = env
+                    .heap
+                    .interner_mut()
+                    .allocate_string(String::from(stringify!($name)));
+                env.add_global_variable(
+                    stringify!($name),
+                    Value::BuiltinFunction(BuiltinFunction::new(name, $arity, builtin::$funcname)),
+                );
+            };
+        }
+
+        add_builtin_function!(write, Arity::Any);
+        add_builtin_function!(print, Arity::Any);
+        add_builtin_function!(rand, Arity::Exact(0));
+        add_builtin_function!(toString, to_string, Arity::Any);
+        add_builtin_function!(clone, Arity::Exact(1));
+        add_builtin_function!(type, type_, Arity::Exact(1));
+        add_builtin_function!(clock, Arity::Exact(0));
+        add_builtin_function!(sleep, Arity::AtLeast(1));
+        add_builtin_function!(truncate, Arity::Exact(1));
+        add_builtin_function!(floor, Arity::Exact(1));
+        add_builtin_function!(ceil, Arity::Exact(1));
+        add_builtin_function!(round, Arity::Exact(1));
+        add_builtin_function!(abs, Arity::Exact(1));
+        add_builtin_function!(sign, Arity::Exact(1));
+        add_builtin_function!(cos, Arity::Exact(1));
+        add_builtin_function!(sin, Arity::Exact(1));
+        add_builtin_function!(tan, Arity::Exact(1));
+        add_builtin_function!(input, Arity::Any);
+        add_builtin_function!(exit, Arity::Any);
+
+        env
     }
 
-    add_builtin_function!(write, Arity::Any);
-    add_builtin_function!(print, Arity::Any);
-    add_builtin_function!(rand, Arity::Exact(0));
-    add_builtin_function!(toString, to_string, Arity::Any);
-    add_builtin_function!(clone, Arity::Exact(1));
-    add_builtin_function!(type, type_, Arity::Exact(1));
-    add_builtin_function!(clock, Arity::Exact(0));
-    add_builtin_function!(sleep, Arity::AtLeast(1));
-    add_builtin_function!(truncate, Arity::Exact(1));
-    add_builtin_function!(floor, Arity::Exact(1));
-    add_builtin_function!(ceil, Arity::Exact(1));
-    add_builtin_function!(round, Arity::Exact(1));
-    add_builtin_function!(abs, Arity::Exact(1));
-    add_builtin_function!(sign, Arity::Exact(1));
-    add_builtin_function!(cos, Arity::Exact(1));
-    add_builtin_function!(sin, Arity::Exact(1));
-    add_builtin_function!(tan, Arity::Exact(1));
-    add_builtin_function!(input, Arity::Any);
-    add_builtin_function!(exit, Arity::Any);
-
-    (emitter, heap, vm)
+    pub fn add_global_variable(&mut self, name: &str, value: Value) {
+        self.emitter
+            .make_global_ident(compiler::Token::identifier(name));
+        self.vm.globals.insert(String::from(name), value);
+    }
 }
 
 #[cfg(test)]

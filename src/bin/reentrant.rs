@@ -1,4 +1,7 @@
-use piccolo::compiler::{emitter::compile_with, parser::parse};
+use piccolo::{
+    compiler::{emitter::compile_with, parser::parse},
+    Environment,
+};
 
 #[allow(unused_assignments)]
 fn main() {
@@ -14,34 +17,48 @@ fn main() {
             .unwrap();
     let ast6 = parse("assert b(3)").unwrap();
     let ast7 = parse("print(b(4))").unwrap();
-    let (mut emitter, mut heap, mut vm) = piccolo::make_environment();
+    let mut env = Environment::new();
 
-    compile_with(&mut emitter, &ast1).unwrap();
+    compile_with(&mut env.emitter, &ast1).unwrap();
 
     println!("run 1");
-    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
+    env.vm
+        .interpret_continue(&mut env.heap, env.emitter.module())
+        .unwrap();
 
-    compile_with(&mut emitter, &ast2).unwrap();
+    compile_with(&mut env.emitter, &ast2).unwrap();
     println!("run 2");
-    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
+    env.vm
+        .interpret_continue(&mut env.heap, env.emitter.module())
+        .unwrap();
 
-    compile_with(&mut emitter, &ast3).unwrap();
+    compile_with(&mut env.emitter, &ast3).unwrap();
     println!("run 3");
-    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
+    env.vm
+        .interpret_continue(&mut env.heap, env.emitter.module())
+        .unwrap();
 
-    compile_with(&mut emitter, &ast4).unwrap();
+    compile_with(&mut env.emitter, &ast4).unwrap();
     println!("run 4");
-    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
+    env.vm
+        .interpret_continue(&mut env.heap, env.emitter.module())
+        .unwrap();
 
-    compile_with(&mut emitter, &ast5).unwrap();
+    compile_with(&mut env.emitter, &ast5).unwrap();
     println!("run 5");
-    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
+    env.vm
+        .interpret_continue(&mut env.heap, env.emitter.module())
+        .unwrap();
 
-    compile_with(&mut emitter, &ast6).unwrap();
+    compile_with(&mut env.emitter, &ast6).unwrap();
     println!("run 6");
-    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
+    env.vm
+        .interpret_continue(&mut env.heap, env.emitter.module())
+        .unwrap();
 
-    compile_with(&mut emitter, &ast7).unwrap();
+    compile_with(&mut env.emitter, &ast7).unwrap();
     println!("run 7");
-    vm.interpret_continue(&mut heap, emitter.module()).unwrap();
+    env.vm
+        .interpret_continue(&mut env.heap, env.emitter.module())
+        .unwrap();
 }
