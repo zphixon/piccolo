@@ -1,5 +1,5 @@
 use crate::{
-    compiler::SourcePos,
+    compiler::Pos,
     debug,
     error::{ErrorKind, PiccoloError},
     runtime::{
@@ -49,7 +49,7 @@ impl<'chunk> FrameStack<'chunk> {
         self.frames.pop().unwrap()
     }
 
-    fn current_line(&self) -> SourcePos {
+    fn current_pos(&self) -> Pos {
         self.current_chunk()
             .get_pos_from_index(self.current_ip() - 1)
     }
@@ -198,7 +198,7 @@ impl Machine {
             } else if result.is_err() {
                 self.ip = frames.current_ip();
                 result.map_err(|err| {
-                    err.pos(frames.current_line())
+                    err.pos(frames.current_pos())
                         .stack_trace(frames.unwind(heap))
                 })?;
             }

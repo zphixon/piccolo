@@ -1,6 +1,6 @@
 //! Types for dealing with errors in scanning, parsing, compiling, or executing Piccolo.
 
-use crate::compiler::SourcePos;
+use crate::compiler::Pos;
 use std::{
     error::Error, fmt, fmt::Write, io::Error as IoError, str::Utf8Error, string::FromUtf8Error,
 };
@@ -8,14 +8,14 @@ use std::{
 #[derive(Debug)]
 pub struct Callsite {
     pub name: String,
-    pub pos: SourcePos,
+    pub pos: Pos,
 }
 
 /// The main error-reporting struct.
 #[derive(Debug)]
 pub struct PiccoloError {
     kind: ErrorKind,
-    pos: Option<SourcePos>,
+    pos: Option<Pos>,
     file: Option<String>,
     msg: Option<String>,
     stack: Option<Vec<Callsite>>,
@@ -52,7 +52,7 @@ impl PiccoloError {
         }
     }
 
-    pub fn pos(self, pos: SourcePos) -> Self {
+    pub fn pos(self, pos: Pos) -> Self {
         PiccoloError {
             pos: Some(pos),
             ..self

@@ -1,7 +1,7 @@
 //! Types for working with compiled Piccolo bytecode.
 
 use crate::{
-    compiler::SourcePos,
+    compiler::Pos,
     runtime::{op::Opcode, value::Constant},
     trace,
 };
@@ -68,7 +68,7 @@ impl Module {
 pub struct Chunk {
     pub(crate) ops: Vec<Opcode>,
     // each SourcePos represents one instruction
-    pub(crate) lines: Vec<Vec<SourcePos>>,
+    pub(crate) lines: Vec<Vec<Pos>>,
 }
 
 impl Chunk {
@@ -76,14 +76,14 @@ impl Chunk {
         self.ops.len()
     }
 
-    pub(crate) fn write(&mut self, op: Opcode, pos: SourcePos) {
+    pub(crate) fn write(&mut self, op: Opcode, pos: Pos) {
         trace!("write {:04x}={op:?}", self.ops.len());
 
         self.ops.push(op);
         self.add_to_line(pos);
     }
 
-    pub(crate) fn start_jump(&mut self, op: Opcode, pos: SourcePos) -> usize {
+    pub(crate) fn start_jump(&mut self, op: Opcode, pos: Pos) -> usize {
         trace!("write jump to index {:x}", self.ops.len());
         self.write(op, pos);
         self.ops.len() - 1
@@ -112,20 +112,20 @@ impl Chunk {
         }
     }
 
-    pub(crate) fn write_jump_back(&mut self, offset: usize, pos: SourcePos) {
+    pub(crate) fn write_jump_back(&mut self, offset: usize, pos: Pos) {
         // we haven't written the JumpBack instruction yet, so we need to add it
         // in order to calculate the actual offset when we write the jump instruction
         let offset = self.ops.len() - offset;
         self.write(Opcode::JumpBack(offset as u16), pos);
     }
 
-    pub(crate) fn get_pos_from_index(&self, index: usize) -> SourcePos {
+    pub(crate) fn get_pos_from_index(&self, index: usize) -> Pos {
         let mut total_ops = 0;
         for (offset_line, line) in self.lines.iter().enumerate() {
             total_ops += line.len();
             if total_ops > index {
                 let pos = line[total_ops - index - 1];
-                debug_assert_eq!(pos.line, offset_line + 1);
+                debug_assert_eq!(pos.line(), offset_line + 1);
                 return pos;
             }
         }
@@ -135,11 +135,11 @@ impl Chunk {
         );
     }
 
-    fn add_to_line(&mut self, pos: SourcePos) {
-        while self.lines.len() < pos.line {
+    fn add_to_line(&mut self, pos: Pos) {
+        while self.lines.len() < pos.line() {
             self.lines.push(Vec::with_capacity(1));
         }
-        self.lines[pos.line - 1].push(pos);
+        self.lines[pos.line() - 1].push(pos);
     }
 }
 
@@ -203,32 +203,32 @@ mod test {
         use crate::runtime::op::Opcode;
 
         let mut c = Chunk::default();
-        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 0
-        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 1
-        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 2
-        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 3
-        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 4
-        c.write(Opcode::Return, SourcePos { line: 1, col: 1 }); // 5
-        c.write(Opcode::Return, SourcePos { line: 2, col: 1 }); // 6
-        c.write(Opcode::Return, SourcePos { line: 2, col: 1 }); // 7
-        c.write(Opcode::Return, SourcePos { line: 2, col: 1 }); // 8
-        c.write(Opcode::Return, SourcePos { line: 2, col: 1 }); // 9
-        c.write(Opcode::Return, SourcePos { line: 2, col: 1 }); // 10
-        c.write(Opcode::Return, SourcePos { line: 3, col: 1 }); // 11
-        c.write(Opcode::Return, SourcePos { line: 3, col: 1 }); // 12
-        c.write(Opcode::Return, SourcePos { line: 3, col: 1 }); // 13
-        c.write(Opcode::Return, SourcePos { line: 3, col: 1 }); // 14
-        c.write(Opcode::Return, SourcePos { line: 4, col: 1 }); // 15
-        c.write(Opcode::Return, SourcePos { line: 4, col: 1 }); // 16
-        c.write(Opcode::Return, SourcePos { line: 4, col: 1 }); // 17
-        c.write(Opcode::Return, SourcePos { line: 4, col: 1 }); // 18
-        c.write(Opcode::Return, SourcePos { line: 5, col: 1 }); // 19
+        c.write(Opcode::Return, Pos::Source { line: 1, col: 1 }); // 0
+        c.write(Opcode::Return, Pos::Source { line: 1, col: 1 }); // 1
+        c.write(Opcode::Return, Pos::Source { line: 1, col: 1 }); // 2
+        c.write(Opcode::Return, Pos::Source { line: 1, col: 1 }); // 3
+        c.write(Opcode::Return, Pos::Source { line: 1, col: 1 }); // 4
+        c.write(Opcode::Return, Pos::Source { line: 1, col: 1 }); // 5
+        c.write(Opcode::Return, Pos::Source { line: 2, col: 1 }); // 6
+        c.write(Opcode::Return, Pos::Source { line: 2, col: 1 }); // 7
+        c.write(Opcode::Return, Pos::Source { line: 2, col: 1 }); // 8
+        c.write(Opcode::Return, Pos::Source { line: 2, col: 1 }); // 9
+        c.write(Opcode::Return, Pos::Source { line: 2, col: 1 }); // 10
+        c.write(Opcode::Return, Pos::Source { line: 3, col: 1 }); // 11
+        c.write(Opcode::Return, Pos::Source { line: 3, col: 1 }); // 12
+        c.write(Opcode::Return, Pos::Source { line: 3, col: 1 }); // 13
+        c.write(Opcode::Return, Pos::Source { line: 3, col: 1 }); // 14
+        c.write(Opcode::Return, Pos::Source { line: 4, col: 1 }); // 15
+        c.write(Opcode::Return, Pos::Source { line: 4, col: 1 }); // 16
+        c.write(Opcode::Return, Pos::Source { line: 4, col: 1 }); // 17
+        c.write(Opcode::Return, Pos::Source { line: 4, col: 1 }); // 18
+        c.write(Opcode::Return, Pos::Source { line: 5, col: 1 }); // 19
 
-        assert_eq!(c.get_pos_from_index(0).line, 1);
-        assert_eq!(c.get_pos_from_index(5).line, 1);
-        assert_eq!(c.get_pos_from_index(6).line, 2);
-        assert_eq!(c.get_pos_from_index(10).line, 2);
-        assert_eq!(c.get_pos_from_index(11).line, 3);
-        assert_eq!(c.get_pos_from_index(14).line, 3);
+        assert_eq!(c.get_pos_from_index(0).line(), 1);
+        assert_eq!(c.get_pos_from_index(5).line(), 1);
+        assert_eq!(c.get_pos_from_index(6).line(), 2);
+        assert_eq!(c.get_pos_from_index(10).line(), 2);
+        assert_eq!(c.get_pos_from_index(11).line(), 3);
+        assert_eq!(c.get_pos_from_index(14).line(), 3);
     }
 }

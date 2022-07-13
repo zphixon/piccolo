@@ -302,7 +302,7 @@ fn check_binary<'src>(
 
 #[cfg(test)]
 mod test {
-    use crate::compiler::{parser::parse, SourcePos};
+    use crate::compiler::{parser::parse, Pos};
 
     use super::*;
 
@@ -315,19 +315,19 @@ mod test {
         assert_eq!(
             checked,
             vec![CheckedStmt::Expr {
-                token: Token::new(TokenKind::String, "\"hello!\"", SourcePos::one()),
+                token: Token::new(TokenKind::String, "\"hello!\"", Pos::Builtin),
                 expr: CheckedExpr::Binary {
                     lhs: Box::new(CheckedExpr::Literal {
-                        literal: Token::new(TokenKind::String, "\"hello!\"", SourcePos::one()),
+                        literal: Token::new(TokenKind::String, "\"hello!\"", Pos::Builtin),
                         type_: TypeId {
                             name: TYPE_NAME_STRING,
                             id: 0,
                             args: vec![],
                         }
                     }),
-                    op: Token::new(TokenKind::Plus, "+", SourcePos::one()),
+                    op: Token::new(TokenKind::Plus, "+", Pos::Builtin),
                     rhs: Box::new(CheckedExpr::Literal {
-                        literal: Token::new(TokenKind::Integer(32), "32", SourcePos::one()),
+                        literal: Token::new(TokenKind::Integer(32), "32", Pos::Builtin),
                         type_: TypeId {
                             name: TYPE_NAME_INT64,
                             id: 0,

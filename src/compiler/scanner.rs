@@ -1,7 +1,7 @@
 //! Contains `Scanner`, an on-demand producer of tokens.
 
 use crate::{
-    compiler::{SourcePos, Token, TokenKind},
+    compiler::{Pos, Token, TokenKind},
     error::{ErrorKind, PiccoloError},
 };
 use std::collections::VecDeque;
@@ -28,8 +28,8 @@ pub struct Scanner<'a> {
     tokens: VecDeque<Token<'a>>,
     start: usize,
     current: usize,
-    start_pos: SourcePos,
-    current_pos: SourcePos,
+    start_pos: Pos,
+    current_pos: Pos,
 }
 
 impl<'a> Scanner<'a> {
@@ -40,8 +40,8 @@ impl<'a> Scanner<'a> {
             tokens: VecDeque::new(),
             start: 0,
             current: 0,
-            start_pos: SourcePos::one(),
-            current_pos: SourcePos::one(),
+            start_pos: Pos::Source { line: 1, col: 1 },
+            current_pos: Pos::Source { line: 1, col: 1 },
         }
     }
 
@@ -384,12 +384,12 @@ impl<'a> Scanner<'a> {
     }
 
     fn advance_line(&mut self) {
-        self.current_pos.line += 1;
-        self.current_pos.col = 1;
+        self.current_pos.inc_line();
+        self.current_pos.reset_col();
     }
 
     fn advance_char(&mut self) -> u8 {
-        self.current_pos.col += 1;
+        self.current_pos.inc_col();
         self.current += 1;
         self.source[self.current - 1]
     }
@@ -561,26 +561,26 @@ mod test {
         assert_eq!(scanner.peek_token(0).unwrap(), &Token::identifier("a"));
         assert_eq!(
             scanner.peek_token(1).unwrap(),
-            &Token::new(TokenKind::Assign, "=", SourcePos::empty())
+            &Token::new(TokenKind::Assign, "=", Pos::Builtin)
         );
         assert_eq!(scanner.next_token().unwrap(), Token::identifier("a"));
 
         assert_eq!(
             scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Assign, "=", SourcePos::empty())
+            &Token::new(TokenKind::Assign, "=", Pos::Builtin)
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Assign, "=", SourcePos::empty())
+            Token::new(TokenKind::Assign, "=", Pos::Builtin)
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Integer(3), "3", SourcePos::empty())
+            Token::new(TokenKind::Integer(3), "3", Pos::Builtin)
         );
         assert_eq!(scanner.next_token().unwrap(), Token::identifier("io"));
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Period, ".", SourcePos::empty())
+            Token::new(TokenKind::Period, ".", Pos::Builtin)
         );
         assert_eq!(scanner.next_token().unwrap(), Token::identifier("prln"));
     }
@@ -594,26 +594,26 @@ mod test {
         assert_eq!(scanner.peek_token(0).unwrap(), &Token::identifier("a"));
         assert_eq!(
             scanner.peek_token(1).unwrap(),
-            &Token::new(TokenKind::Assign, "=", SourcePos::empty())
+            &Token::new(TokenKind::Assign, "=", Pos::Builtin)
         );
         assert_eq!(scanner.peek_token(0).unwrap(), &Token::identifier("a"));
         assert_eq!(
             scanner.peek_token(6).unwrap(),
-            &Token::new(TokenKind::LeftParen, "(", SourcePos::empty())
+            &Token::new(TokenKind::LeftParen, "(", Pos::Builtin)
         );
         assert_eq!(
             scanner.peek_token(8).unwrap(),
-            &Token::new(TokenKind::RightParen, ")", SourcePos::empty())
+            &Token::new(TokenKind::RightParen, ")", Pos::Builtin)
         );
 
         assert_eq!(scanner.next_token().unwrap(), Token::identifier("a"));
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Assign, "=", SourcePos::empty())
+            Token::new(TokenKind::Assign, "=", Pos::Builtin)
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Integer(3), "3", SourcePos::empty())
+            Token::new(TokenKind::Integer(3), "3", Pos::Builtin)
         );
         assert_eq!(scanner.next_token().unwrap(), Token::identifier("io"));
     }

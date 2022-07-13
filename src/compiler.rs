@@ -62,7 +62,7 @@ pub(crate) fn escape_string(t: Token) -> Result<String, PiccoloError> {
             while i < s.as_bytes().len() - 1 {
                 let byte = s.as_bytes()[i];
                 if byte == b'\n' {
-                    pos.line += 1;
+                    pos.inc_line();
                 }
 
                 if byte == b'\\' {
@@ -209,24 +209,47 @@ pub enum TokenKind {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct SourcePos {
-    pub line: usize,
-    pub col: usize,
+pub enum Pos {
+    Source { line: usize, col: usize },
+    Builtin,
 }
 
-impl SourcePos {
-    pub(crate) fn empty() -> Self {
-        SourcePos { line: 0, col: 0 }
+impl Pos {
+    pub(crate) fn line(&self) -> usize {
+        match self {
+            Pos::Source { line, .. } => *line,
+            _ => panic!("called line on builtin pos"),
+        }
     }
 
-    pub(crate) fn one() -> Self {
-        SourcePos { line: 1, col: 1 }
+    pub(crate) fn inc_line(&mut self) {
+        match self {
+            Pos::Source { line, .. } => *line += 1,
+            _ => panic!("called inc_line on builtin pos"),
+        }
+    }
+
+    pub(crate) fn inc_col(&mut self) {
+        match self {
+            Pos::Source { col, .. } => *col += 1,
+            _ => panic!("called inc_col on builtin pos"),
+        }
+    }
+
+    pub(crate) fn reset_col(&mut self) {
+        match self {
+            Pos::Source { col, .. } => *col = 1,
+            _ => panic!("called inc_col on builtin pos"),
+        }
     }
 }
 
-impl fmt::Display for SourcePos {
+impl fmt::Display for Pos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.line, self.col)
+        match self {
+            Pos::Source { line, col } => write!(f, "{line}:{col}"),
+            Pos::Builtin => write!(f, "builtin"),
+        }
     }
 }
 
@@ -237,7 +260,7 @@ impl fmt::Display for SourcePos {
 pub struct Token<'a> {
     pub(crate) kind: TokenKind,
     pub(crate) lexeme: &'a str,
-    pub(crate) pos: SourcePos,
+    pub(crate) pos: Pos,
 }
 
 impl Hash for Token<'_> {
@@ -256,10 +279,10 @@ impl PartialEq for Token<'_> {
 
 impl<'a> Token<'a> {
     pub(crate) fn identifier(lexeme: &'a str) -> Self {
-        Token::new(TokenKind::Identifier, lexeme, SourcePos::empty())
+        Token::new(TokenKind::Identifier, lexeme, Pos::Builtin)
     }
 
-    pub fn new(kind: TokenKind, lexeme: &'a str, pos: SourcePos) -> Self {
+    pub fn new(kind: TokenKind, lexeme: &'a str, pos: Pos) -> Self {
         Token { kind, lexeme, pos }
     }
 
@@ -327,9 +350,9 @@ pub fn print_tokens(tokens: &[Token]) {
     for token in tokens.iter() {
         println!(
             "{} {:?}{}",
-            if token.pos.line != previous_line {
-                previous_line = token.pos.line;
-                format!("{:>4}", token.pos.line)
+            if token.pos.line() != previous_line {
+                previous_line = token.pos.line();
+                format!("{:>4}", token.pos.line())
             } else {
                 "   |".into()
             },

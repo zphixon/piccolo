@@ -721,7 +721,7 @@ fn parse_arguments<'a>(
 mod test {
     use super::*;
 
-    use crate::compiler::SourcePos;
+    use crate::compiler::Pos;
 
     #[test]
     fn assign() {
@@ -733,9 +733,9 @@ mod test {
                 lval: Expr::Variable {
                     variable: Token::identifier("a")
                 },
-                op: Token::new(TokenKind::PlusAssign, "+=", SourcePos::empty()),
+                op: Token::new(TokenKind::PlusAssign, "+=", Pos::Builtin),
                 rval: Expr::Literal {
-                    literal: Token::new(TokenKind::Integer(3), "3", SourcePos::empty()),
+                    literal: Token::new(TokenKind::Integer(3), "3", Pos::Builtin),
                 }
             }]
         );

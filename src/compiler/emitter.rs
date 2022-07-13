@@ -4,7 +4,7 @@
 use crate::{
     compiler::{
         ast::{Ast, Expr, Stmt},
-        Local, SourcePos, Token, TokenKind, MAX_DEPTH,
+        Local, Pos, Token, TokenKind, MAX_DEPTH,
     },
     error::{ErrorKind, PiccoloError},
     runtime::{
@@ -967,15 +967,15 @@ impl Emitter {
         self.module
     }
 
-    fn add_instruction(&mut self, op: Opcode, pos: SourcePos) {
+    fn add_instruction(&mut self, op: Opcode, pos: Pos) {
         self.current_chunk_mut().write(op, pos);
     }
 
-    fn add_jump_back(&mut self, offset: usize, pos: SourcePos) {
+    fn add_jump_back(&mut self, offset: usize, pos: Pos) {
         self.current_chunk_mut().write_jump_back(offset, pos);
     }
 
-    fn add_constant(&mut self, value: Constant, pos: SourcePos) {
+    fn add_constant(&mut self, value: Constant, pos: Pos) {
         let index = self.make_constant(value);
         self.current_chunk_mut().write(Opcode::Constant(index), pos);
     }
@@ -1074,13 +1074,13 @@ impl Emitter {
         self.current_context_mut().begin_scope();
     }
 
-    fn end_scope(&mut self, pos: SourcePos) {
+    fn end_scope(&mut self, pos: Pos) {
         for _ in self.current_context_mut().end_scope() {
             self.add_instruction(Opcode::Pop, pos);
         }
     }
 
-    fn start_jump(&mut self, op: Opcode, pos: SourcePos) -> usize {
+    fn start_jump(&mut self, op: Opcode, pos: Pos) -> usize {
         self.current_chunk_mut().start_jump(op, pos)
     }
 
