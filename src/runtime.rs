@@ -10,8 +10,19 @@ pub mod vm;
 
 use crate::{
     error::{ErrorKind, PiccoloError},
-    runtime::{memory::Heap, value::Value},
+    runtime::{
+        interner::StringPtr,
+        memory::{Heap, Ptr},
+        value::Value,
+    },
 };
+
+#[derive(Clone, Copy)]
+pub enum This {
+    None,
+    Ptr(Ptr),
+    String(StringPtr),
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Arity {
@@ -87,12 +98,7 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
         }))
     }
 
-    fn get(
-        &self,
-        this: memory::Ptr,
-        heap: &Heap,
-        index_value: Value,
-    ) -> Result<Value, PiccoloError> {
+    fn get(&self, this: This, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
         let _ = this;
         Err(PiccoloError::new(ErrorKind::CannotGet {
             object: self.type_name(heap).to_string(),

@@ -8,7 +8,7 @@ use crate::{
         memory::Heap,
         op::Opcode,
         value::{Array, Value},
-        Object,
+        Object, This,
     },
     trace, warn,
 };
@@ -616,7 +616,7 @@ impl Machine {
             Opcode::Get => {
                 let index = self.pop();
                 let value = self.pop();
-                self.push(value.get(Heap::null_ptr(), heap, index)?);
+                self.push(value.get(This::None, heap, index)?);
             }
 
             Opcode::Set => {
@@ -771,8 +771,10 @@ impl Machine {
                     }
                     let f = self.pop().as_builtin_function();
 
-                    if let Some(this) = f.this {
-                        args.insert(0, Value::Object(this));
+                    match f.this {
+                        This::Ptr(ptr) => args.insert(0, Value::Object(ptr)),
+                        This::String(ptr) => args.insert(0, Value::String(ptr)),
+                        _ => {}
                     }
 
                     if f.arity.is_compatible(args.len()) {

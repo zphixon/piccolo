@@ -8,7 +8,7 @@ use crate::{
         builtin::BuiltinFunction,
         interner::StringPtr,
         memory::{Heap, Ptr},
-        Arity, Object,
+        Arity, Object, This,
     },
 };
 use std::fmt::{Debug, Display, Formatter};
@@ -346,7 +346,7 @@ impl Object for Value {
         }))
     }
 
-    fn get(&self, _: Ptr, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
+    fn get(&self, _: This, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
         match (self, index_value) {
             (Value::String(this), Value::String(property))
                 if heap.interner().get_string(property) == "len" =>
@@ -354,13 +354,38 @@ impl Object for Value {
                 Ok(Value::Integer(this.len as i64))
             }
 
-            (Value::Object(ptr), index) => heap.get(*ptr).get(*ptr, heap, index),
+            (Value::String(this), Value::String(property))
+                if heap.interner().get_string(property) == "trim" =>
+            {
+                Ok(Value::BuiltinFunction(BuiltinFunction {
+                    arity: Arity::Exact(1),
+                    name: heap.interner().get_string_ptr("trim").unwrap(),
+                    ptr: string_trim,
+                    this: This::String(*this),
+                }))
+            }
+
+            (Value::Object(ptr), index) => heap.get(*ptr).get(This::Ptr(*ptr), heap, index),
 
             _ => Err(PiccoloError::new(ErrorKind::CannotGet {
                 object: self.type_name(heap).to_string(),
                 index: index_value.format(heap),
             })),
         }
+    }
+}
+
+fn string_trim(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    let this = args[0];
+    if let Value::String(string) = this {
+        // TODO investigate adding a byte length field to StringPtr
+        let string = heap.interner().get_string(string).trim().to_string();
+        Ok(Value::String(heap.interner_mut().allocate_string(string)))
+    } else {
+        Err(PiccoloError::new(ErrorKind::InvalidArgument {
+            exp: "string".to_string(),
+            got: this.type_name(heap).to_string(),
+        }))
     }
 }
 
@@ -554,7 +579,7 @@ impl Object for Array {
         s
     }
 
-    fn get(&self, this: Ptr, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
+    fn get(&self, this: This, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
         if let Value::Integer(index) = index_value {
             let index: usize = index.try_into().map_err(|_| {
                 PiccoloError::new(ErrorKind::CannotGet {
@@ -585,7 +610,7 @@ impl Object for Array {
                     name: heap.interner().get_string_ptr("push").unwrap(),
                     arity: Arity::Exact(2),
                     ptr: array_push,
-                    this: Some(this),
+                    this,
                 }));
             } else {
                 return Err(PiccoloError::new(ErrorKind::CannotGet {

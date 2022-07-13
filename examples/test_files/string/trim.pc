@@ -1,0 +1,2 @@
+str =: "  geedis  "
+assert str.trim() == "geedis"

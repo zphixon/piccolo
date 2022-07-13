@@ -1,10 +1,6 @@
 use crate::{
     error::{ErrorKind, PiccoloError},
-    runtime::{
-        interner::StringPtr,
-        memory::{Heap, Ptr},
-        Arity, Object, Value,
-    },
+    runtime::{interner::StringPtr, memory::Heap, Arity, Object, This, Value},
 };
 use once_cell::sync::Lazy;
 use std::{
@@ -237,19 +233,6 @@ pub fn input(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     Ok(Value::String(heap.interner_mut().allocate_string(buf)))
 }
 
-pub fn trim(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
-    if let Value::String(string) = args[0] {
-        // TODO investigate adding a byte length field to StringPtr
-        let trimmed = heap.interner().get_string(string).trim().to_string();
-        Ok(Value::String(heap.interner_mut().allocate_string(trimmed)))
-    } else {
-        Err(PiccoloError::new(ErrorKind::InvalidArgument {
-            exp: "string".to_string(),
-            got: args[0].format(heap),
-        }))
-    }
-}
-
 pub fn exit(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     if args.len() > 1 {
         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
@@ -276,7 +259,7 @@ pub struct BuiltinFunction {
     pub name: StringPtr,
     pub arity: Arity,
     pub ptr: PiccoloFunction,
-    pub this: Option<Ptr>,
+    pub this: This,
 }
 
 impl PartialEq for BuiltinFunction {
@@ -291,7 +274,7 @@ impl BuiltinFunction {
             name,
             arity,
             ptr,
-            this: None,
+            this: This::None,
         }
     }
 
