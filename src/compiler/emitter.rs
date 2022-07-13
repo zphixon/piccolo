@@ -126,7 +126,7 @@ fn compile_expr_stmt(
     token: Token,
     expr: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} expr stmt", token.pos);
+    trace!("{} compile expr stmt", token.pos);
     check_depth!(depth, token);
 
     compile_expr(emitter, depth + 1, expr)?;
@@ -140,7 +140,7 @@ fn compile_block(
     end: Token,
     body: &[Stmt],
 ) -> Result<(), PiccoloError> {
-    trace!("{} block", end.pos);
+    trace!("{} compile block", end.pos);
     check_depth!(depth, end);
 
     emitter.begin_scope();
@@ -157,7 +157,7 @@ fn compile_declaration(
     name: Token,
     value: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} decl {}", name.pos, name.lexeme);
+    trace!("{} compile decl {}", name.pos, name.lexeme);
     check_depth!(depth, name);
 
     compile_expr(emitter, depth + 1, value)?;
@@ -171,7 +171,13 @@ fn compile_assignment(
     op: Token,
     rval: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} assign {lval:?} {}, {rval:?}", op.pos, op.lexeme);
+    trace!(
+        "{} compile assign {} {} {}",
+        op.pos,
+        lval.token().lexeme,
+        op.lexeme,
+        rval.token().lexeme
+    );
     check_depth!(depth, lval.token());
 
     if let Expr::Variable { variable: name } = lval {
@@ -239,7 +245,7 @@ fn compile_if(
     else_block: Option<&Vec<Stmt>>,
     end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} if", if_.pos);
+    trace!("{} compile if", if_.pos);
     check_depth!(depth, if_);
 
     // compile the condition
@@ -290,7 +296,7 @@ fn compile_while(
     body: &[Stmt],
     end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} while", while_.pos);
+    trace!("{} compile while", while_.pos);
     check_depth!(depth, while_);
 
     // loop condition
@@ -332,7 +338,7 @@ fn compile_for(
     body: &[Stmt],
     end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} for", for_.pos);
+    trace!("{} compile for", for_.pos);
     check_depth!(depth, for_);
 
     // initializer
@@ -387,7 +393,7 @@ fn compile_for_each(
     body: &[Stmt],
     end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} for_each", for_.pos);
+    trace!("{} compile for_each", for_.pos);
     check_depth!(depth, for_);
 
     let index_name = format!("idx_of_{}_in_{}", item.lexeme, iter.lexeme);
@@ -449,7 +455,7 @@ fn compile_fn(
     _method: bool,
     end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} fn {}", name.pos, name.lexeme);
+    trace!("{} compile fn {}", name.pos, name.lexeme);
     check_depth!(depth, name);
 
     //if let Some(_) = emitter.current_context().get_local_slot(name) {
@@ -502,7 +508,7 @@ fn compile_fn(
 }
 
 fn compile_break(emitter: &mut Emitter, depth: usize, break_: Token) -> Result<(), PiccoloError> {
-    trace!("{} break", break_.pos);
+    trace!("{} compile break", break_.pos);
     check_depth!(depth, break_);
 
     let offset = emitter.start_jump(Opcode::JumpForward(0), break_.pos);
@@ -516,7 +522,7 @@ fn compile_continue(
     depth: usize,
     continue_: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} continue", continue_.pos);
+    trace!("{} compile continue", continue_.pos);
     check_depth!(depth, continue_);
 
     let offset = emitter.start_jump(Opcode::JumpForward(0), continue_.pos);
@@ -531,7 +537,7 @@ fn compile_retn(
     retn: Token,
     expr: Option<&Expr>,
 ) -> Result<(), PiccoloError> {
-    trace!("{} retn", retn.pos);
+    trace!("{} compile retn", retn.pos);
     check_depth!(depth, retn);
 
     if let Some(expr) = expr {
@@ -551,7 +557,7 @@ fn compile_assert(
     assert: Token,
     value: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} assert", assert.pos);
+    trace!("{} compile assert", assert.pos);
     check_depth!(depth, assert);
 
     compile_expr(emitter, depth + 1, value)?;
@@ -579,7 +585,7 @@ fn compile_literal(
     depth: usize,
     literal: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} literal", literal.pos);
+    trace!("{} compile literal", literal.pos);
     check_depth!(depth, literal);
 
     match literal.kind {
@@ -621,7 +627,7 @@ fn compile_paren(
     right_paren: Token,
     expr: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} paren", right_paren.pos);
+    trace!("{} compile paren", right_paren.pos);
     check_depth!(depth, right_paren);
 
     compile_expr(emitter, depth + 1, expr)
@@ -633,7 +639,7 @@ fn compile_variable(
     depth: usize,
     variable: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} variable {}", variable.pos, variable.lexeme);
+    trace!("{} compile variable {}", variable.pos, variable.lexeme);
     check_depth!(depth, variable);
 
     if let Some(local) = emitter.current_context().get_local_slot(variable) {
@@ -651,7 +657,7 @@ fn compile_unary(
     op: Token,
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} unary {}", op.pos, op.lexeme);
+    trace!("{} compile unary {}", op.pos, op.lexeme);
     check_depth!(depth, op);
 
     compile_expr(emitter, depth + 1, rhs)?;
@@ -672,7 +678,7 @@ fn compile_binary(
     op: Token,
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} binary {}", op.pos, op.lexeme);
+    trace!("{} compile binary {}", op.pos, op.lexeme);
     check_depth!(depth, lhs.token());
 
     compile_expr(emitter, depth + 1, lhs)?;
@@ -713,7 +719,7 @@ fn compile_logical(
     op: Token,
     rhs: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} logical {}", op.pos, op.lexeme);
+    trace!("{} compile logical {}", op.pos, op.lexeme);
     check_depth!(depth, lhs.token());
 
     let jump_op = match op.kind {
@@ -742,7 +748,7 @@ fn compile_call(
     arity: usize,
     args: &[Expr],
 ) -> Result<(), PiccoloError> {
-    trace!("{} call", paren.pos);
+    trace!("{} compile call", paren.pos);
     check_depth!(depth, callee.token());
 
     compile_expr(emitter, depth + 1, callee)?;
@@ -774,7 +780,7 @@ fn compile_index(
     object: &Expr,
     index: &Expr,
 ) -> Result<(), PiccoloError> {
-    trace!("{} index", right_bracket.pos);
+    trace!("{} compile index", right_bracket.pos);
     check_depth!(depth, right_bracket);
 
     compile_expr(emitter, depth + 1, object)?;
@@ -792,7 +798,7 @@ fn compile_lambda(
     body: &[Stmt],
     end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} lambda", fn_.pos);
+    trace!("{} compile lambda", fn_.pos);
     check_depth!(depth, fn_);
 
     emitter.begin_context();
