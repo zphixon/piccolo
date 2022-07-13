@@ -765,17 +765,17 @@ impl Machine {
                         //function: heap.allocate(f),
                     });
                 } else if let Value::BuiltinFunction(_) = self.peek_back(arity) {
-                    let mut args = vec![];
+                    let mut args = Vec::with_capacity(arity);
                     for _ in 0..arity {
-                        args.insert(0, self.pop());
+                        args.push(self.pop());
                     }
                     let f = self.pop().as_builtin_function();
-
                     match f.this {
-                        This::Ptr(ptr) => args.insert(0, Value::Object(ptr)),
-                        This::String(ptr) => args.insert(0, Value::String(ptr)),
+                        This::Ptr(ptr) => args.push(Value::Object(ptr)),
+                        This::String(ptr) => args.push(Value::String(ptr)),
                         _ => {}
                     }
+                    args.reverse();
 
                     if f.arity.is_compatible(args.len()) {
                         self.push((f.ptr)(heap, &args)?);
