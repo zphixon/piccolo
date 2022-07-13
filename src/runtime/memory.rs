@@ -6,6 +6,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
+#[derive(Debug)]
 pub struct ObjectHeader {
     inner: UnsafeCell<Box<dyn Object>>,
     marked: AtomicBool,
@@ -21,7 +22,7 @@ impl Ptr {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Heap {
     objects: SlotMap<DefaultKey, ObjectHeader>,
     interner: Interner,

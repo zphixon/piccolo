@@ -253,27 +253,45 @@ fn repl(
                             println!("Ctrl+C will clear the line, and exit if the line is empty");
                         }
 
-                        Some(&"dump") => {
-                            println!("=== strings ===");
-                            for (i, string) in env.strings().enumerate() {
-                                print!("{string}");
-                                std::io::stdout().flush().unwrap();
-                                if i + 1 < env.heap.interner().num_strings() {
-                                    print!(", ");
+                        Some(&"dump") | Some(&"d") => {
+                            let dump_strings = || {
+                                println!("=== strings ===");
+                                for (i, string) in env.strings().enumerate() {
+                                    print!("{string}");
                                     std::io::stdout().flush().unwrap();
+                                    if i + 1 < env.heap.interner().num_strings() {
+                                        print!(", ");
+                                        std::io::stdout().flush().unwrap();
+                                    }
                                 }
-                            }
-                            println!();
-                            println!("=== objects ===");
-                            for (i, object) in env.objects().enumerate() {
-                                print!("{}", object.debug_format(&env.heap));
-                                std::io::stdout().flush().unwrap();
-                                if i + 1 < env.heap.num_objects() {
-                                    print!(", ");
+                                println!();
+                            };
+
+                            let dump_objects = || {
+                                println!("=== objects ===");
+                                for (i, object) in env.objects().enumerate() {
+                                    print!("{}", object.debug_format(&env.heap));
                                     std::io::stdout().flush().unwrap();
+                                    if i + 1 < env.heap.num_objects() {
+                                        print!(", ");
+                                        std::io::stdout().flush().unwrap();
+                                    }
                                 }
+                                println!();
+                            };
+
+                            match builtin.get(1) {
+                                Some(&"strings") => dump_strings(),
+                                Some(&"objects") => dump_objects(),
+                                Some(&"all") | None => {
+                                    dump_strings();
+                                    dump_objects();
+                                }
+                                Some(&"debug") | Some(&"d") => {
+                                    println!("{env:#?}");
+                                }
+                                Some(subject) => println!("Unknown dump subject '{subject}'"),
                             }
-                            println!();
                         }
 
                         Some(&"collect") => env.collect(),

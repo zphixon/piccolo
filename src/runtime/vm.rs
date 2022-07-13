@@ -84,7 +84,7 @@ impl<'chunk> FrameStack<'chunk> {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Machine {
     stack: Vec<Value>,
     pub(crate) globals: FnvHashMap<String, Value>,

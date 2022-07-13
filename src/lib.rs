@@ -86,6 +86,7 @@ use runtime::{memory::Heap, value::Value, vm::Machine};
 
 use crate::runtime::Object;
 
+#[derive(Debug)]
 pub struct Environment {
     pub emitter: Emitter,
     pub heap: Heap,
