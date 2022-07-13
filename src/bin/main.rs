@@ -1,8 +1,7 @@
 use gumdrop::Options;
 use piccolo::{
-    compiler::{self, emitter, parser, scanner::Scanner},
+    compiler::{self, parser, scanner::Scanner},
     error::PiccoloError,
-    runtime::{chunk, Object},
     Environment,
 };
 use rustyline::{
@@ -166,17 +165,14 @@ fn maybe_exec_then_repl(
     }
 
     let mut env = Environment::new();
-    emitter::compile_with(&mut env.emitter, &ast)?;
+    env.compile(&ast)?;
 
     if print_compiled {
-        println!(
-            "=== module ===\n{}",
-            chunk::disassemble(env.emitter.module(), name_for_module)
-        );
+        println!("=== module ===\n{}", env.disassemble(name_for_module));
     }
 
     if !verify_syntax {
-        env.vm.interpret(&mut env.heap, env.emitter.module())?;
+        env.interpret_compiled()?;
 
         if interactive {
             repl(env, print_tokens, print_ast, print_compiled)?;
@@ -259,7 +255,7 @@ fn repl(
 
                         Some(&"dump") => {
                             println!("=== strings ===");
-                            for (i, string) in env.heap.interner().strings().enumerate() {
+                            for (i, string) in env.strings().enumerate() {
                                 print!("{string}");
                                 std::io::stdout().flush().unwrap();
                                 if i + 1 < env.heap.interner().num_strings() {
@@ -269,7 +265,7 @@ fn repl(
                             }
                             println!();
                             println!("=== objects ===");
-                            for (i, object) in env.heap.objects().enumerate() {
+                            for (i, object) in env.objects().enumerate() {
                                 print!("{}", object.debug_format(&env.heap));
                                 std::io::stdout().flush().unwrap();
                                 if i + 1 < env.heap.num_objects() {
@@ -280,7 +276,7 @@ fn repl(
                             println!();
                         }
 
-                        Some(&"collect") => env.heap.collect(env.vm.roots()),
+                        Some(&"collect") => env.collect(),
 
                         Some(cmd) => {
                             println!("Unknown builtin command '{cmd}'");
@@ -311,25 +307,19 @@ fn repl(
                             println!("=== ast ===\n{}", compiler::ast::print_ast(&ast));
                         }
 
-                        let _: Result<(), ()> = emitter::compile_with(&mut env.emitter, &ast)
+                        let _: Result<(), ()> = env
+                            .compile(&ast)
                             .and_then(|_| {
                                 if print_compiled {
-                                    println!(
-                                        "=== module ===\n{}",
-                                        chunk::disassemble(env.emitter.module(), "")
-                                    );
+                                    println!("=== module ===\n{}", env.disassemble("repl"));
                                 }
-                                env.vm
-                                    .interpret_continue(&mut env.heap, env.emitter.module())
-                                    .map_err(|e| vec![e])
+                                env.interpret_continue().map_err(|e| vec![e])
                             })
                             .map_err(|errs| {
                                 print_errors(errs);
-                                env.vm
-                                    .clear_stack_and_move_to_end_of_module(env.emitter.module());
-                                env.emitter.reset_after_errors();
+                                env.clear_errors();
                             })
-                            .map(|value| println!("{}", value.debug_format(&env.heap)));
+                            .map(|value| println!("{}", env.debug(value)));
 
                         prompt = "-- ";
                         input = String::new();

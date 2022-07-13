@@ -1164,26 +1164,21 @@ mod test {
 
     #[test]
     fn reentrant() {
-        use crate::{
-            compiler::{emitter, parser},
-            runtime::chunk,
-        };
+        use crate::compiler::parser::parse;
 
-        let ast1 = parser::parse("x=:3").unwrap();
-        let ast2 = parser::parse("assert x == 3").unwrap();
-        let ast3 = parser::parse("fn z(a) do\n  print(\"a is\", a)\n  end\n").unwrap();
-        let ast4 = parser::parse("z(x)").unwrap();
+        let ast1 = parse("x=:3").unwrap();
+        let ast2 = parse("assert x == 3").unwrap();
+        let ast3 = parse("fn z(a) do\n  print(\"a is\", a)\n  end\n").unwrap();
+        let ast4 = parse("z(x)").unwrap();
 
-        let Environment { mut emitter, .. } = Default::default();
-        emitter::compile_with(&mut emitter, &ast1).unwrap();
-        println!("{}", chunk::disassemble(emitter.module(), ""));
-        emitter::compile_with(&mut emitter, &ast2).unwrap();
-        println!("{}", chunk::disassemble(emitter.module(), ""));
-        emitter::compile_with(&mut emitter, &ast3).unwrap();
-        println!("{}", chunk::disassemble(emitter.module(), ""));
-        emitter::compile_with(&mut emitter, &ast4).unwrap();
-        println!("{}", chunk::disassemble(emitter.module(), ""));
-
-        println!("{:?}", emitter);
+        let mut env = Environment::new();
+        env.compile(&ast1).unwrap();
+        println!("{}", env.disassemble(""));
+        env.compile(&ast2).unwrap();
+        println!("{}", env.disassemble(""));
+        env.compile(&ast3).unwrap();
+        println!("{}", env.disassemble(""));
+        env.compile(&ast4).unwrap();
+        println!("{}", env.disassemble(""));
     }
 }

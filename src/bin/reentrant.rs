@@ -1,7 +1,4 @@
-use piccolo::{
-    compiler::{emitter::compile_with, parser::parse},
-    Environment,
-};
+use piccolo::{compiler::parser::parse, Environment};
 
 #[allow(unused_assignments)]
 fn main() {
@@ -17,48 +14,35 @@ fn main() {
             .unwrap();
     let ast6 = parse("assert b(3)").unwrap();
     let ast7 = parse("print(b(4))").unwrap();
+
     let mut env = Environment::new();
 
-    compile_with(&mut env.emitter, &ast1).unwrap();
+    env.compile(&ast1).unwrap();
 
     println!("run 1");
-    env.vm
-        .interpret_continue(&mut env.heap, env.emitter.module())
-        .unwrap();
+    env.interpret_compiled().unwrap();
 
-    compile_with(&mut env.emitter, &ast2).unwrap();
+    env.compile(&ast2).unwrap();
     println!("run 2");
-    env.vm
-        .interpret_continue(&mut env.heap, env.emitter.module())
-        .unwrap();
+    env.interpret_compiled().unwrap();
 
-    compile_with(&mut env.emitter, &ast3).unwrap();
+    env.compile(&ast3).unwrap();
     println!("run 3");
-    env.vm
-        .interpret_continue(&mut env.heap, env.emitter.module())
-        .unwrap();
+    env.interpret_compiled().unwrap();
 
-    compile_with(&mut env.emitter, &ast4).unwrap();
+    env.compile(&ast4).unwrap();
     println!("run 4");
-    env.vm
-        .interpret_continue(&mut env.heap, env.emitter.module())
-        .unwrap();
+    env.interpret_compiled().unwrap();
 
-    compile_with(&mut env.emitter, &ast5).unwrap();
+    env.compile(&ast5).unwrap();
     println!("run 5");
-    env.vm
-        .interpret_continue(&mut env.heap, env.emitter.module())
-        .unwrap();
+    env.interpret_compiled().unwrap();
 
-    compile_with(&mut env.emitter, &ast6).unwrap();
+    env.compile(&ast6).unwrap();
     println!("run 6");
-    env.vm
-        .interpret_continue(&mut env.heap, env.emitter.module())
-        .unwrap();
+    env.interpret_compiled().unwrap();
 
-    compile_with(&mut env.emitter, &ast7).unwrap();
+    env.compile(&ast7).unwrap();
     println!("run 7");
-    env.vm
-        .interpret_continue(&mut env.heap, env.emitter.module())
-        .unwrap();
+    env.interpret_compiled().unwrap();
 }

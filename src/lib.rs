@@ -99,6 +99,14 @@ impl Default for Environment {
 }
 
 impl Environment {
+    pub fn empty() -> Environment {
+        Environment {
+            emitter: Emitter::new(),
+            heap: Heap::new(),
+            vm: Machine::new(),
+        }
+    }
+
     pub fn new() -> Environment {
         use runtime::{
             builtin::{self, BuiltinFunction},
@@ -155,6 +163,56 @@ impl Environment {
         self.emitter
             .make_global_ident(compiler::Token::identifier(name));
         self.vm.globals.insert(String::from(name), value);
+    }
+
+    pub fn compile(&mut self, ast: &compiler::ast::Ast) -> Result<(), Vec<PiccoloError>> {
+        compiler::emitter::compile_with(&mut self.emitter, ast)
+    }
+
+    #[must_use]
+    pub fn disassemble(&self, name_of_module: &str) -> String {
+        runtime::chunk::disassemble(self.emitter.module(), name_of_module)
+    }
+
+    pub fn interpret(&mut self, src: &str) -> Result<Value, Vec<PiccoloError>> {
+        let ast = compiler::parser::parse(src)?;
+        self.compile(&ast)?;
+        self.interpret_compiled().map_err(|e| vec![e])
+    }
+
+    pub fn interpret_compiled(&mut self) -> Result<Value, PiccoloError> {
+        self.vm.interpret(&mut self.heap, self.emitter.module())
+    }
+
+    pub fn interpret_continue(&mut self) -> Result<Value, PiccoloError> {
+        self.vm
+            .interpret_continue(&mut self.heap, self.emitter.module())
+    }
+
+    pub fn clear_errors(&mut self) {
+        self.vm
+            .clear_stack_and_move_to_end_of_module(self.emitter.module());
+        self.emitter.reset_after_errors();
+    }
+
+    pub fn strings(&self) -> impl Iterator<Item = &str> {
+        self.heap.interner().strings()
+    }
+
+    pub fn objects(&self) -> impl Iterator<Item = &dyn Object> {
+        self.heap.objects()
+    }
+
+    pub fn collect(&mut self) {
+        self.heap.collect(self.vm.roots())
+    }
+
+    pub fn format(&self, value: Value) -> String {
+        value.format(&self.heap)
+    }
+
+    pub fn debug(&self, value: Value) -> String {
+        value.debug_format(&self.heap)
     }
 }
 
