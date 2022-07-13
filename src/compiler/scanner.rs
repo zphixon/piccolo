@@ -561,26 +561,26 @@ mod test {
         assert_eq!(scanner.peek_token(0).unwrap(), &Token::identifier("a"));
         assert_eq!(
             scanner.peek_token(1).unwrap(),
-            &Token::new(TokenKind::Assign, "=", Pos::Builtin)
+            &Token::test(TokenKind::Assign)
         );
         assert_eq!(scanner.next_token().unwrap(), Token::identifier("a"));
 
         assert_eq!(
             scanner.peek_token(0).unwrap(),
-            &Token::new(TokenKind::Assign, "=", Pos::Builtin)
+            &Token::test(TokenKind::Assign)
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Assign, "=", Pos::Builtin)
+            Token::test(TokenKind::Assign)
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Integer(3), "3", Pos::Builtin)
+            Token::test(TokenKind::Integer(3))
         );
         assert_eq!(scanner.next_token().unwrap(), Token::identifier("io"));
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Period, ".", Pos::Builtin)
+            Token::test(TokenKind::Period)
         );
         assert_eq!(scanner.next_token().unwrap(), Token::identifier("prln"));
     }
@@ -594,26 +594,26 @@ mod test {
         assert_eq!(scanner.peek_token(0).unwrap(), &Token::identifier("a"));
         assert_eq!(
             scanner.peek_token(1).unwrap(),
-            &Token::new(TokenKind::Assign, "=", Pos::Builtin)
+            &Token::test(TokenKind::Assign)
         );
         assert_eq!(scanner.peek_token(0).unwrap(), &Token::identifier("a"));
         assert_eq!(
             scanner.peek_token(6).unwrap(),
-            &Token::new(TokenKind::LeftParen, "(", Pos::Builtin)
+            &Token::test(TokenKind::LeftParen)
         );
         assert_eq!(
             scanner.peek_token(8).unwrap(),
-            &Token::new(TokenKind::RightParen, ")", Pos::Builtin)
+            &Token::test(TokenKind::RightParen)
         );
 
         assert_eq!(scanner.next_token().unwrap(), Token::identifier("a"));
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Assign, "=", Pos::Builtin)
+            Token::test(TokenKind::Assign)
         );
         assert_eq!(
             scanner.next_token().unwrap(),
-            Token::new(TokenKind::Integer(3), "3", Pos::Builtin)
+            Token::test(TokenKind::Integer(3))
         );
         assert_eq!(scanner.next_token().unwrap(), Token::identifier("io"));
     }

@@ -273,13 +273,22 @@ impl Eq for Token<'_> {}
 
 impl PartialEq for Token<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.kind == other.kind
+        match (self.kind, other.kind) {
+            (TokenKind::Identifier, TokenKind::Identifier) => self.lexeme == other.lexeme,
+            (TokenKind::String, TokenKind::String) => self.lexeme == other.lexeme,
+            _ => self.kind == other.kind,
+        }
     }
 }
 
 impl<'a> Token<'a> {
     pub(crate) fn identifier(lexeme: &'a str) -> Self {
         Token::new(TokenKind::Identifier, lexeme, Pos::Builtin)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test(kind: TokenKind) -> Self {
+        Token::new(kind, "", Pos::Builtin)
     }
 
     pub fn new(kind: TokenKind, lexeme: &'a str, pos: Pos) -> Self {

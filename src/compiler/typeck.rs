@@ -325,9 +325,9 @@ mod test {
                             args: vec![],
                         }
                     }),
-                    op: Token::new(TokenKind::Plus, "+", Pos::Builtin),
+                    op: Token::test(TokenKind::Plus),
                     rhs: Box::new(CheckedExpr::Literal {
-                        literal: Token::new(TokenKind::Integer(32), "32", Pos::Builtin),
+                        literal: Token::test(TokenKind::Integer(32)),
                         type_: TypeId {
                             name: TYPE_NAME_INT64,
                             id: 0,
