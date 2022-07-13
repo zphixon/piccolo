@@ -58,20 +58,20 @@ fn compile_stmt(emitter: &mut Emitter, depth: usize, stmt: &Stmt) -> Result<(), 
     match stmt {
         Stmt::Expr { token, expr }
             => compile_expr_stmt(emitter, depth + 1, *token, expr),
-        Stmt::Block { end, body }
-            => compile_block(emitter, depth + 1, *end, body),
+        Stmt::Block { do_, body, end }
+            => compile_block(emitter, depth + 1, *do_, body, *end),
         Stmt::Declaration { name, value, .. }
             => compile_declaration(emitter, depth + 1, *name, value),
         Stmt::Assignment { lval, op, rval }
             => compile_assignment(emitter, depth + 1, lval, *op, rval),
-        Stmt::If { if_, cond, then_block, else_, else_block, end }
-            => compile_if(emitter, depth + 1, *if_, cond, then_block, else_.as_ref(), else_block.as_ref(), *end),
-        Stmt::While { while_, cond, body, end }
-            => compile_while(emitter, depth + 1, *while_, cond, body, *end),
-        Stmt::For { for_, init, cond, name, inc_op, inc_expr, body, end }
-            => compile_for(emitter, depth + 1, *for_, init.as_ref(), cond, *name, *inc_op, inc_expr, body, *end),
-        Stmt::ForEach { for_, item, iter, body, end }
-            => compile_for_each(emitter, depth + 1, *for_, *item, *iter, body, *end),
+        Stmt::If { if_, cond, do_, then_block, else_, else_block, end }
+            => compile_if(emitter, depth + 1, *if_, cond, *do_, then_block, else_.as_ref(), else_block.as_ref(), *end),
+        Stmt::While { while_, cond, do_, body, end }
+            => compile_while(emitter, depth + 1, *while_, cond, *do_, body, *end),
+        Stmt::For { for_, init, cond, name, inc_op, inc_expr, do_, body, end }
+            => compile_for(emitter, depth + 1, *for_, init.as_ref(), cond, *name, *inc_op, inc_expr, *do_, body, *end),
+        Stmt::ForEach { for_, item, iter, do_, body, end }
+            => compile_for_each(emitter, depth + 1, *for_, *item, *iter, *do_, body, *end),
         Stmt::Fn { name, args, arity, body, method, end }
             => compile_fn(emitter, depth + 1, *name, args, *arity, body, *method, *end),
         Stmt::Break { break_ }
@@ -137,10 +137,11 @@ fn compile_expr_stmt(
 fn compile_block(
     emitter: &mut Emitter,
     depth: usize,
-    end: Token,
+    _do_: Token,
     body: &[Stmt],
+    end: Token,
 ) -> Result<(), PiccoloError> {
-    trace!("{} compile block", end.pos);
+    trace!("{} compile block", _do_.pos);
     check_depth!(depth, end);
 
     emitter.begin_scope();
@@ -225,6 +226,7 @@ fn compile_if(
     depth: usize,
     if_: Token,
     cond: &Expr,
+    do_: Token,
     then_block: &[Stmt],
     else_: Option<&Token>,
     else_block: Option<&Vec<Stmt>>,
@@ -242,7 +244,7 @@ fn compile_if(
         // pop the condition after skipping the jump instruction
         emitter.add_instruction(Opcode::Pop, if_.pos);
         // compile the then block
-        compile_block(emitter, depth + 1, end, then_block)?;
+        compile_block(emitter, depth + 1, do_, then_block, *else_)?;
         // jump unconditionally past the else block to patch_jump(end_jump)
         let end_jump = emitter.start_jump(Opcode::JumpForward(0), else_.pos);
 
@@ -251,7 +253,7 @@ fn compile_if(
         // pop the condition
         emitter.add_instruction(Opcode::Pop, else_.pos);
         // compile the else block
-        compile_block(emitter, depth + 1, *else_, else_block)?;
+        compile_block(emitter, depth + 1, *else_, else_block, end)?;
 
         emitter.patch_jump(end_jump);
     } else {
@@ -261,7 +263,7 @@ fn compile_if(
         emitter.add_instruction(Opcode::Pop, if_.pos);
 
         // compile then block
-        compile_block(emitter, depth + 1, end, then_block)?;
+        compile_block(emitter, depth + 1, do_, then_block, end)?;
 
         // jump over the condition pop if we jumped over the else block
         let jump_pop = emitter.start_jump(Opcode::JumpForward(0), end.pos);
@@ -278,6 +280,7 @@ fn compile_while(
     depth: usize,
     while_: Token,
     cond: &Expr,
+    do_: Token,
     body: &[Stmt],
     end: Token,
 ) -> Result<(), PiccoloError> {
@@ -293,7 +296,7 @@ fn compile_while(
     emitter.add_instruction(Opcode::Pop, while_.pos);
 
     // loop body
-    compile_block(emitter, depth + 1, end, body)?;
+    compile_block(emitter, depth + 1, do_, body, end)?;
 
     // here after the body if we encounter a continue
     emitter.patch_continue_jumps();
@@ -320,6 +323,7 @@ fn compile_for(
     name: Token,
     inc_op: Token,
     inc_expr: &Expr,
+    do_: Token,
     body: &[Stmt],
     end: Token,
 ) -> Result<(), PiccoloError> {
@@ -339,7 +343,7 @@ fn compile_for(
     emitter.add_instruction(Opcode::Pop, for_.pos);
 
     // loop body
-    compile_block(emitter, depth + 1, end, body)?;
+    compile_block(emitter, depth + 1, do_, body, end)?;
 
     // here if we encounter a continue
     emitter.patch_continue_jumps();
@@ -375,6 +379,7 @@ fn compile_for_each(
     for_: Token,
     item: Token,
     iter: Token,
+    do_: Token,
     body: &[Stmt],
     end: Token,
 ) -> Result<(), PiccoloError> {
@@ -410,7 +415,7 @@ fn compile_for_each(
             index: Box::new(Expr::Variable { variable: index }),
         },
     )?;
-    compile_block(emitter, depth + 1, end, body)?;
+    compile_block(emitter, depth + 1, do_, body, end)?;
     emitter.end_scope(end.pos);
 
     emitter.patch_continue_jumps();

@@ -151,11 +151,11 @@ fn parse_do<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pic
     check_depth!(scanner, depth);
     trace!("do {:?}", scanner.peek_token(0)?);
 
-    scanner.next_token()?;
+    let do_ = consume(scanner, TokenKind::Do)?;
     let body = parse_block(scanner, depth + 1)?;
     let end = consume(scanner, TokenKind::End)?;
 
-    Ok(Stmt::Block { end, body })
+    Ok(Stmt::Block { do_, body, end })
 }
 
 fn parse_if<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, PiccoloError> {
@@ -164,7 +164,7 @@ fn parse_if<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pic
 
     let if_ = scanner.next_token()?;
     let cond = parse_expression(scanner, depth + 1)?;
-    consume(scanner, TokenKind::Do)?;
+    let do_ = consume(scanner, TokenKind::Do)?;
     let then_block = block_until_else_or_end(scanner, depth + 1)?;
 
     let (else_, else_block) = if scanner.peek_token(0)?.kind == TokenKind::Else {
@@ -181,6 +181,7 @@ fn parse_if<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pic
     Ok(Stmt::If {
         if_,
         cond,
+        do_,
         then_block,
         else_,
         else_block,
@@ -194,13 +195,14 @@ fn parse_while<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, 
 
     let while_ = scanner.next_token()?;
     let cond = parse_expression(scanner, depth + 1)?;
-    consume(scanner, TokenKind::Do)?;
+    let do_ = consume(scanner, TokenKind::Do)?;
     let body = parse_block(scanner, depth + 1)?;
     let end = consume(scanner, TokenKind::End)?;
 
     Ok(Stmt::While {
         while_,
         cond,
+        do_,
         body,
         end,
     })
@@ -234,7 +236,7 @@ fn parse_for<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pi
 
     let inc_expr = parse_expression(scanner, depth + 1)?;
 
-    consume(scanner, TokenKind::Do)?;
+    let do_ = consume(scanner, TokenKind::Do)?;
     let body = parse_block(scanner, depth + 1)?;
     let end = consume(scanner, TokenKind::End)?;
 
@@ -245,6 +247,7 @@ fn parse_for<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pi
         name,
         inc_op,
         inc_expr,
+        do_,
         body,
         end,
     })
@@ -258,13 +261,14 @@ fn parse_for_each<'a>(
     let item = consume(scanner, TokenKind::Identifier)?;
     consume(scanner, TokenKind::In)?;
     let iter = consume(scanner, TokenKind::Identifier)?;
-    consume(scanner, TokenKind::Do)?;
+    let do_ = consume(scanner, TokenKind::Do)?;
     let body = parse_block(scanner, depth + 1)?;
     let end = consume(scanner, TokenKind::End)?;
     Ok(Stmt::ForEach {
         for_,
         item,
         iter,
+        do_,
         body,
         end,
     })

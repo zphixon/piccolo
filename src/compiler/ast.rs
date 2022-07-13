@@ -111,8 +111,9 @@ pub enum Stmt<'a> {
         expr: Expr<'a>,
     },
     Block {
-        end: Token<'a>,
+        do_: Token<'a>,
         body: Vec<Stmt<'a>>,
+        end: Token<'a>,
     },
     Assignment {
         lval: Expr<'a>,
@@ -127,6 +128,7 @@ pub enum Stmt<'a> {
     If {
         if_: Token<'a>,
         cond: Expr<'a>,
+        do_: Token<'a>,
         then_block: Vec<Stmt<'a>>,
         else_: Option<Token<'a>>,
         else_block: Option<Vec<Stmt<'a>>>,
@@ -135,6 +137,7 @@ pub enum Stmt<'a> {
     While {
         while_: Token<'a>,
         cond: Expr<'a>,
+        do_: Token<'a>,
         body: Vec<Stmt<'a>>,
         end: Token<'a>,
     },
@@ -145,6 +148,7 @@ pub enum Stmt<'a> {
         name: Token<'a>,
         inc_op: Token<'a>,
         inc_expr: Expr<'a>,
+        do_: Token<'a>,
         body: Vec<Stmt<'a>>,
         end: Token<'a>,
     },
@@ -152,6 +156,7 @@ pub enum Stmt<'a> {
         for_: Token<'a>,
         item: Token<'a>,
         iter: Token<'a>,
+        do_: Token<'a>,
         body: Vec<Stmt<'a>>,
         end: Token<'a>,
     },
@@ -190,7 +195,7 @@ impl Stmt<'_> {
     pub(crate) fn token(&self) -> Token {
         match self {
             Stmt::Expr { token, .. } => *token,
-            Stmt::Block { end, .. } => *end,
+            Stmt::Block { do_, .. } => *do_,
             Stmt::Assignment { op, .. } => *op,
             Stmt::Declaration { op, .. } => *op,
             Stmt::If { if_, .. } => *if_,
