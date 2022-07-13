@@ -36,7 +36,7 @@ mod not_log {
         let mut source_files = Vec::new();
         collect_files_recursively("src", &mut source_files).unwrap();
         for file in source_files {
-            if file.ends_with("interface_test.rs") {
+            if file.parent().unwrap().ends_with("bin") && !file.ends_with("simple.rs") {
                 continue;
             }
 
