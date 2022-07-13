@@ -436,24 +436,24 @@ impl Constant {
 impl Debug for Constant {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Constant::String(v) => write!(f, "{}", v),
-            Constant::Bool(v) => write!(f, "{}", v),
-            Constant::Integer(v) => write!(f, "{}", v),
-            Constant::Double(v) => write!(f, "{}", v),
-            Constant::Function(v) => write!(f, "{}", v.name),
+            Constant::String(v) => write!(f, "String({})", v),
+            Constant::Bool(v) => write!(f, "Bool({})", v),
+            Constant::Integer(v) => write!(f, "Integer({})", v),
+            Constant::Double(v) => write!(f, "Double({})", v),
+            Constant::Function(v) => write!(f, "Function({})", v.name),
             Constant::Array(v) => {
-                let mut s = String::from("[");
+                let mut s = String::from("Array([");
                 for (i, value) in v.iter().enumerate() {
                     s.push_str(&value.to_string());
                     if i + 1 != v.len() {
                         s.push_str(", ");
                     }
                 }
-                s.push(']');
+                s.push_str("])");
                 write!(f, "{s}")
             }
-            Constant::Object(object) => write!(f, "Object{:p}", object.as_ref()),
-            Constant::Nil => write!(f, "nil"),
+            Constant::Object(object) => write!(f, "Object({:p})", object.as_ref()),
+            Constant::Nil => write!(f, "Nil"),
         }
     }
 }
