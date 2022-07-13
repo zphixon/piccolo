@@ -1,0 +1,4 @@
+do
+  fn a() do end
+  fn a() do end
+end

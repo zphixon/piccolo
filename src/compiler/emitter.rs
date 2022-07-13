@@ -184,12 +184,7 @@ fn compile_assignment(
         let name = *name;
         if let Some(opcode) = op.assign_by_mutate_op() {
             // if this is an assignment-by-mutation operator, first get the value of the variable
-            if let Some(index) = emitter.current_context().get_local_slot(name) {
-                emitter.add_instruction(Opcode::GetLocal(index), op.pos);
-            } else {
-                let index = emitter.get_global_ident(name)?;
-                emitter.add_instruction(Opcode::GetGlobal(index), op.pos);
-            }
+            compile_variable(emitter, depth + 1, name)?;
 
             // calculate the value to mutate with
             compile_expr(emitter, depth + 1, rval)?;
@@ -458,18 +453,10 @@ fn compile_fn(
     trace!("{} compile fn {}", name.pos, name.lexeme);
     check_depth!(depth, name);
 
-    //if let Some(_) = emitter.current_context().get_local_slot(name) {
-    //    return Err(PiccoloError::new(ErrorKind::SyntaxError)
-    //        .pos(name.pos)
-    //        .msg_string(format!(
-    //            "Function/variable with name '{}' already exists",
-    //            name.lexeme
-    //        )));
-    //} else if emitter.current_context().is_local() {
-    //    emitter.make_variable(name)?;
-    //} else if !emitter.current_context().is_local() {
-    //    emitter.make_global_ident(name);
-    //}
+    // if the function is global, define a global variable
+    if !emitter.current_context().is_local() {
+        emitter.make_global_ident(name);
+    }
 
     emitter.begin_context();
     emitter.begin_scope();
@@ -488,6 +475,7 @@ fn compile_fn(
     emitter.add_instruction(Opcode::Nil, end.pos);
     emitter.add_instruction(Opcode::Return, end.pos);
 
+    let _locals = emitter.end_scope(end.pos);
     let chunk_index = emitter.end_context();
 
     let function = ConstantFunction {
@@ -499,10 +487,7 @@ fn compile_fn(
     let constant = emitter.make_constant(Constant::Function(function));
     emitter.add_instruction(Opcode::Constant(constant), name.pos);
 
-    //if !emitter.current_context().is_local() {
-    // make_variable doesn't check if a global exists before declaring it
     emitter.make_variable(name)?;
-    //}
 
     Ok(())
 }
@@ -1080,10 +1065,12 @@ impl Emitter {
         self.current_context_mut().begin_scope();
     }
 
-    fn end_scope(&mut self, pos: Pos) {
-        for _ in self.current_context_mut().end_scope() {
+    fn end_scope(&mut self, pos: Pos) -> Vec<Local> {
+        let locals = self.current_context_mut().end_scope();
+        for _ in locals.iter() {
             self.add_instruction(Opcode::Pop, pos);
         }
+        locals
     }
 
     fn start_jump(&mut self, op: Opcode, pos: Pos) -> usize {
