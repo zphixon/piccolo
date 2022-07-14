@@ -1006,7 +1006,8 @@ impl Emitter {
             None => {
                 return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                     name: variable.lexeme.to_string(),
-                }))
+                })
+                .pos(variable.pos))
             }
         }
 
@@ -1034,7 +1035,8 @@ impl Emitter {
             None => {
                 return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                     name: variable.lexeme.to_string(),
-                }))
+                })
+                .pos(variable.pos))
             }
         }
 
