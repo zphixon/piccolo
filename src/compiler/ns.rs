@@ -87,15 +87,24 @@ impl<'src> NamespaceRepository<'src> {
 
     fn find(&mut self, ns: DefaultKey, name: Token<'src>) -> Option<VariableLocation> {
         debug!("find {}", name.lexeme);
-        self.find_rec(ns, name, true)
+        self.get_rec(ns, name, true).map(|(_, loc)| loc)
     }
 
-    fn find_rec(
+    fn get(
+        &mut self,
+        ns: DefaultKey,
+        name: Token<'src>,
+    ) -> Option<(Token<'src>, VariableLocation)> {
+        debug!("find {}", name.lexeme);
+        self.get_rec(ns, name, true)
+    }
+
+    fn get_rec(
         &mut self,
         ns: DefaultKey,
         name: Token<'src>,
         top: bool,
-    ) -> Option<VariableLocation> {
+    ) -> Option<(Token<'src>, VariableLocation)> {
         trace!(
             "{} {:?}",
             self.ns(ns).start,
@@ -107,29 +116,35 @@ impl<'src> NamespaceRepository<'src> {
         );
 
         if self.ns(ns).names.contains_key(&name) {
-            trace!("I have {}", name.lexeme);
-            return Some(self.ns(ns).names[&name]);
+            let (token, _) = self.ns(ns).names.get_key_value(&name).unwrap();
+            trace!("I have {} at {}", token.lexeme, token.pos);
+
+            return Some((*token, self.ns(ns).names[&name]));
         }
 
         if let Some(parent) = self.ns(ns).parent {
             trace!("checking parent for {}", name.lexeme);
-            let loc = self.find_rec(parent, name, false);
+            let def = self.get_rec(parent, name, false);
 
-            match loc {
-                Some(VariableLocation::Local(from, _)) if top && self.ns(ns).captures => {
-                    debug!("capturing {}", name.lexeme);
+            match def {
+                Some((def, VariableLocation::Local(from, _))) if top && self.ns(ns).captures => {
+                    debug!("capturing {}", def.lexeme);
                     self.ns_mut(ns)
                         .names
-                        .insert(name, VariableLocation::Capture(from, 0));
+                        .insert(def, VariableLocation::Capture(from, 0));
                 }
                 _ => {}
             }
 
-            return loc;
+            return def;
         }
 
         trace!("checking global ns for {}", name.lexeme);
-        return self.global_ns().names.get(&name).cloned();
+        return self
+            .global_ns()
+            .names
+            .get_key_value(&name)
+            .map(|(token, loc)| (*token, *loc));
     }
 
     fn new_global(&mut self, name: Token<'src>) -> VariableLocation {
@@ -186,8 +201,8 @@ impl<'src> NamespaceRepository<'src> {
         print!("{:>indent$}[", "");
         for (i, (name, loc)) in self.ns(ns).names.iter().enumerate() {
             print!("{}", name.lexeme);
-            if let VariableLocation::Capture(from, _) = loc {
-                print!(" (from {})", self.ns(*from).start);
+            if let VariableLocation::Capture(_, _) = loc {
+                print!(" (from {})", name.pos);
             }
             if i + 1 != self.ns(ns).names.len() {
                 print!(", ");
