@@ -207,9 +207,13 @@ pub enum TokenKind {
     Eof,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub enum Pos {
-    Source { line: usize, col: usize },
+    Source {
+        line: usize,
+        col: usize,
+    },
+    #[default]
     Builtin,
 }
 

@@ -1,0 +1,7 @@
+fn a() do
+  var =: "hehe"
+end
+
+fn b() do
+  print(var)
+end

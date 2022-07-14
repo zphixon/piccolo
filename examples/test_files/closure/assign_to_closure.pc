@@ -1,0 +1,22 @@
+f =: nil
+g =: nil
+
+do
+  local =: "local"
+  fn f_() do
+    print(local)
+    local = "after f"
+    print(local)
+  end
+  f = f_
+
+  fn g_() do
+    print(local)
+    local = "after g"
+    print(local)
+  end
+  g = g_
+end
+
+f()
+g()
