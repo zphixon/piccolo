@@ -98,13 +98,11 @@ impl<'src> NamespaceRepository<'src> {
             trace!("checking parent for {}", name.lexeme);
             let loc = self.find(parent, name);
 
-            if let Some(VariableLocation::Local(_)) = loc {
-                if self.ns(ns).captures {
-                    debug!("capturing {}", name.lexeme);
-                    self.ns_mut(ns)
-                        .names
-                        .insert(name, VariableLocation::Capture(0));
-                }
+            if self.ns(ns).captures && matches!(loc, Some(VariableLocation::Local(_))) {
+                debug!("capturing {}", name.lexeme);
+                self.ns_mut(ns)
+                    .names
+                    .insert(name, VariableLocation::Capture(0));
             }
 
             return loc;
