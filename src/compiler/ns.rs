@@ -13,8 +13,8 @@ use slotmap::{DefaultKey, SlotMap};
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VariableLocation {
     Global(usize),
-    Local(usize),
-    Capture(usize),
+    Local(DefaultKey, usize),
+    Capture(DefaultKey, usize),
 }
 
 #[derive(Default)]
@@ -115,11 +115,14 @@ impl<'src> NamespaceRepository<'src> {
             trace!("checking parent for {}", name.lexeme);
             let loc = self.find_rec(parent, name, false);
 
-            if top && self.ns(ns).captures && matches!(loc, Some(VariableLocation::Local(_))) {
-                debug!("capturing {}", name.lexeme);
-                self.ns_mut(ns)
-                    .names
-                    .insert(name, VariableLocation::Capture(0));
+            match loc {
+                Some(VariableLocation::Local(from, _)) if top && self.ns(ns).captures => {
+                    debug!("capturing {}", name.lexeme);
+                    self.ns_mut(ns)
+                        .names
+                        .insert(name, VariableLocation::Capture(from, 0));
+                }
+                _ => {}
             }
 
             return loc;
@@ -150,7 +153,7 @@ impl<'src> NamespaceRepository<'src> {
 
         if !self.ns(ns).names.contains_key(&name) {
             // TODO - the variable location should be a reverse index into the stack
-            let location = VariableLocation::Local(0);
+            let location = VariableLocation::Local(ns, 0);
             trace!("insert {} {:?}", name.lexeme, location);
             self.ns_mut(ns).names.insert(name, location);
             return Ok(location);
@@ -183,8 +186,8 @@ impl<'src> NamespaceRepository<'src> {
         print!("{:>indent$}[", "");
         for (i, (name, loc)) in self.ns(ns).names.iter().enumerate() {
             print!("{}", name.lexeme);
-            if let VariableLocation::Capture(_) = loc {
-                print!(" (from {})", name.pos);
+            if let VariableLocation::Capture(from, _) = loc {
+                print!(" (from {})", self.ns(*from).start);
             }
             if i + 1 != self.ns(ns).names.len() {
                 print!(", ");
