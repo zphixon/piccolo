@@ -1,7 +1,7 @@
 use crate::{
     compiler::{
         ast::{Ast, Expr, Stmt},
-        Pos, Token,
+        Token,
     },
     debug,
     error::{ErrorKind, PiccoloError},
@@ -22,7 +22,7 @@ struct Namespace<'src> {
     parent: Option<DefaultKey>,
     names: FnvHashMap<Token<'src>, VariableLocation>,
     children: Vec<DefaultKey>,
-    start: Pos,
+    name: Token<'src>,
     captures: bool,
 }
 
@@ -69,18 +69,18 @@ impl<'src> NamespaceRepository<'src> {
         &mut self.namespaces[ns]
     }
 
-    fn with_parent(&mut self, ns: DefaultKey, start: Pos) -> DefaultKey {
+    fn with_parent(&mut self, ns: DefaultKey, name: Token<'src>) -> DefaultKey {
         let key = self.namespaces.insert(Namespace {
             parent: Some(ns),
-            start,
+            name,
             ..Default::default()
         });
         self.namespaces[ns].children.push(key);
         key
     }
 
-    fn with_parent_captures(&mut self, ns: DefaultKey, start: Pos) -> DefaultKey {
-        let key = self.with_parent(ns, start);
+    fn with_parent_captures(&mut self, ns: DefaultKey, name: Token<'src>) -> DefaultKey {
+        let key = self.with_parent(ns, name);
         self.ns_mut(key).captures = true;
         key
     }
@@ -106,8 +106,9 @@ impl<'src> NamespaceRepository<'src> {
         top: bool,
     ) -> Option<(Token<'src>, VariableLocation)> {
         trace!(
-            "{} {:?}",
-            self.ns(ns).start,
+            "{} {} {:?}",
+            self.ns(ns).name.lexeme,
+            self.ns(ns).name.pos,
             self.ns(ns)
                 .names
                 .keys()
@@ -197,12 +198,15 @@ impl<'src> NamespaceRepository<'src> {
     }
 
     fn hmm_rec(&self, indent: usize, ns: DefaultKey) {
-        print!("{:<10}", format!("{}", self.ns(ns).start));
+        print!(
+            "{:<15}",
+            format!("{} {}", self.ns(ns).name.lexeme, self.ns(ns).name.pos)
+        );
         print!("{:>indent$}[", "");
         for (i, (name, loc)) in self.ns(ns).names.iter().enumerate() {
             print!("{}", name.lexeme);
-            if let VariableLocation::Capture(_, _) = loc {
-                print!(" (from {})", name.pos);
+            if let VariableLocation::Capture(from, _) = loc {
+                print!(" (from {} in {})", name.pos, self.ns(*from).name.lexeme);
             }
             if i + 1 != self.ns(ns).names.len() {
                 print!(", ");
@@ -225,7 +229,7 @@ impl std::fmt::Debug for NamespaceRepository<'_> {
     }
 }
 
-pub fn analyze_ns<'src>(ast: &Ast<'src>) -> Result<NamespaceRepository<'src>, PiccoloError> {
+pub fn analyze_ns<'src>(ast: &'src Ast<'src>) -> Result<NamespaceRepository<'src>, PiccoloError> {
     let mut repo = NamespaceRepository::new();
 
     for stmt in ast {
@@ -245,7 +249,7 @@ fn err(variable: Token) -> Result<(), PiccoloError> {
 fn analyze_ns_stmt<'src>(
     repo: &mut NamespaceRepository<'src>,
     ns: DefaultKey,
-    stmt: &Stmt<'src>,
+    stmt: &'src Stmt<'src>,
 ) -> Result<(), PiccoloError> {
     match stmt {
         Stmt::Expr { expr, .. } => {
@@ -255,7 +259,7 @@ fn analyze_ns_stmt<'src>(
 
         Stmt::Block { do_, body, .. } => {
             trace!("analyze stmt::block");
-            let child = repo.with_parent(ns, do_.pos);
+            let child = repo.with_parent(ns, *do_);
             for stmt in body {
                 analyze_ns_stmt(repo, child, stmt)?;
             }
@@ -291,13 +295,13 @@ fn analyze_ns_stmt<'src>(
             trace!("analyze stmt::if");
             analyze_ns_expr(repo, ns, cond)?;
 
-            let then_child = repo.with_parent(ns, if_.pos);
+            let then_child = repo.with_parent(ns, *if_);
             for stmt in then_block {
                 analyze_ns_stmt(repo, then_child, stmt)?;
             }
 
             if let (Some(else_), Some(else_block)) = (else_, else_block) {
-                let else_child = repo.with_parent(ns, else_.pos);
+                let else_child = repo.with_parent(ns, *else_);
                 for stmt in else_block {
                     analyze_ns_stmt(repo, else_child, stmt)?;
                 }
@@ -310,7 +314,7 @@ fn analyze_ns_stmt<'src>(
             trace!("analyze stmt::while");
             analyze_ns_expr(repo, ns, cond)?;
 
-            let child = repo.with_parent(ns, while_.pos);
+            let child = repo.with_parent(ns, *while_);
             for stmt in body {
                 analyze_ns_stmt(repo, child, stmt)?;
             }
@@ -327,14 +331,14 @@ fn analyze_ns_stmt<'src>(
             ..
         } => {
             trace!("analyze stmt::for");
-            let child = repo.with_parent(ns, for_.pos);
+            let child = repo.with_parent(ns, *for_);
             analyze_ns_stmt(repo, child, init)?;
             analyze_ns_expr(repo, child, cond)?;
             if repo.find(child, *name).is_none() {
                 return err(*name);
             }
             analyze_ns_expr(repo, child, inc_expr)?;
-            let inner = repo.with_parent(child, do_.pos);
+            let inner = repo.with_parent(child, *do_);
             for stmt in body {
                 analyze_ns_stmt(repo, inner, stmt)?;
             }
@@ -352,7 +356,7 @@ fn analyze_ns_stmt<'src>(
                 return err(*iter);
             }
 
-            let child = repo.with_parent(ns, for_.pos);
+            let child = repo.with_parent(ns, *for_);
             repo.new_variable(child, *item)?;
             for stmt in body {
                 analyze_ns_stmt(repo, child, stmt)?;
@@ -363,7 +367,7 @@ fn analyze_ns_stmt<'src>(
             name, args, body, ..
         } => {
             repo.new_variable(ns, *name)?;
-            let body_ns = repo.with_parent_captures(ns, name.pos);
+            let body_ns = repo.with_parent_captures(ns, *name);
             for arg in args {
                 repo.new_variable(body_ns, *arg)?;
             }
@@ -392,12 +396,12 @@ fn analyze_ns_stmt<'src>(
             fields,
         } => {
             repo.new_variable(ns, *name)?;
-            let data_ns = repo.with_parent(ns, name.pos);
+            let data_ns = repo.with_parent(ns, *name);
             for field in fields {
                 analyze_ns_stmt(repo, data_ns, field)?;
             }
             for method in methods {
-                let method_ns = repo.with_parent(data_ns, method.token().pos);
+                let method_ns = repo.with_parent(data_ns, method.token());
                 analyze_ns_stmt(repo, method_ns, method)?;
             }
         }
@@ -409,7 +413,7 @@ fn analyze_ns_stmt<'src>(
 fn analyze_ns_expr<'src>(
     repo: &mut NamespaceRepository<'src>,
     ns: DefaultKey,
-    expr: &Expr<'src>,
+    expr: &'src Expr<'src>,
 ) -> Result<(), PiccoloError> {
     match expr {
         Expr::Literal { .. } => {}
@@ -467,7 +471,7 @@ fn analyze_ns_expr<'src>(
             fn_, args, body, ..
         } => {
             trace!("analyze expr::fn");
-            let child = repo.with_parent_captures(ns, fn_.pos);
+            let child = repo.with_parent_captures(ns, *fn_);
             for arg in args {
                 repo.new_variable(child, *arg)?;
             }
@@ -511,12 +515,12 @@ mod test {
         repo.new_global(Token::identifier("wow"));
 
         {
-            let child = repo.with_parent(repo.global_key(), Default::default());
+            let child = repo.with_parent(repo.global_key(), Token::identifier("top"));
             assert!(repo.find(child, Token::identifier("wow")).is_some());
             let local = repo.new_local(child, Token::identifier("bean")).unwrap();
 
             {
-                let child2 = repo.with_parent(child, Default::default());
+                let child2 = repo.with_parent(child, Token::identifier("top"));
                 assert_eq!(repo.find(child2, Token::identifier("bean")).unwrap(), local);
                 let local_shadow = repo.new_local(child2, Token::identifier("bean")).unwrap();
                 assert_eq!(

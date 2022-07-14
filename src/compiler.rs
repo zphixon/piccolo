@@ -266,6 +266,16 @@ pub struct Token<'a> {
     pub(crate) pos: Pos,
 }
 
+impl Default for Token<'_> {
+    fn default() -> Self {
+        Token {
+            kind: TokenKind::Identifier,
+            lexeme: "anon",
+            pos: Pos::Builtin,
+        }
+    }
+}
+
 impl Hash for Token<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.lexeme.hash(state);
