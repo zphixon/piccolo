@@ -87,8 +87,25 @@ impl<'src> NamespaceRepository<'src> {
 
     fn find(&mut self, ns: DefaultKey, name: Token<'src>) -> Option<VariableLocation> {
         debug!("find {}", name.lexeme);
+        self.find_rec(ns, name, true)
+    }
 
-        trace!("{:?}", self.ns(ns).names.keys().collect::<Vec<_>>());
+    fn find_rec(
+        &mut self,
+        ns: DefaultKey,
+        name: Token<'src>,
+        top: bool,
+    ) -> Option<VariableLocation> {
+        trace!(
+            "{} {:?}",
+            self.ns(ns).start,
+            self.ns(ns)
+                .names
+                .keys()
+                .map(|token| token.lexeme)
+                .collect::<Vec<_>>()
+        );
+
         if self.ns(ns).names.contains_key(&name) {
             trace!("I have {}", name.lexeme);
             return Some(self.ns(ns).names[&name]);
@@ -96,9 +113,9 @@ impl<'src> NamespaceRepository<'src> {
 
         if let Some(parent) = self.ns(ns).parent {
             trace!("checking parent for {}", name.lexeme);
-            let loc = self.find(parent, name);
+            let loc = self.find_rec(parent, name, false);
 
-            if self.ns(ns).captures && matches!(loc, Some(VariableLocation::Local(_))) {
+            if top && self.ns(ns).captures && matches!(loc, Some(VariableLocation::Local(_))) {
                 debug!("capturing {}", name.lexeme);
                 self.ns_mut(ns)
                     .names
