@@ -270,6 +270,7 @@ dependencies = [
  "rand",
  "rustyline",
  "slotmap",
+ "unicode-segmentation",
 ]
 
 [[package]]

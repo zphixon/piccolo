@@ -68,17 +68,14 @@ pub(crate) fn escape_string(t: Token) -> Result<String, PiccoloError> {
                     i += 1;
                     let byte = s.as_bytes()[i];
                     match byte {
+                        c @ (b'\\' | b'"' | b'\'') => {
+                            value.push(c);
+                        }
                         b'n' => {
                             value.push(b'\n');
                         }
                         b'r' => {
                             value.push(b'\r');
-                        }
-                        b'\\' => {
-                            value.push(b'\\');
-                        }
-                        b'"' => {
-                            value.push(b'"');
                         }
                         b't' => {
                             value.push(b'\t');

@@ -156,7 +156,6 @@ impl<'a> Scanner<'a> {
 
             b'@' => TokenKind::At,
             b'$' => TokenKind::Dollar,
-            b'\'' => TokenKind::SingleQuote,
             b'`' => TokenKind::Grave,
             b'{' => TokenKind::LeftBrace,
             b'}' => TokenKind::RightBrace,
@@ -259,7 +258,7 @@ impl<'a> Scanner<'a> {
                 }
             }
 
-            b'"' => self.scan_string()?,
+            c @ (b'"' | b'\'') => self.scan_string(c)?,
 
             c => {
                 if is_digit(c) {
@@ -287,8 +286,8 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn scan_string(&mut self) -> Result<TokenKind, PiccoloError> {
-        while self.peek_char() != b'"' && !self.is_at_end() {
+    fn scan_string(&mut self, quote: u8) -> Result<TokenKind, PiccoloError> {
+        while self.peek_char() != quote && !self.is_at_end() {
             if self.peek_char() == b'\n' {
                 self.advance_line();
             }
