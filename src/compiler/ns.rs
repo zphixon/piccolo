@@ -434,7 +434,7 @@ fn analyze_ns_expr<'src>(
             fn_, args, body, ..
         } => {
             trace!("analyze expr::fn");
-            let child = repo.with_parent(ns, fn_.pos);
+            let child = repo.with_parent_captures(ns, fn_.pos);
             for arg in args {
                 repo.new_variable(child, *arg)?;
             }
