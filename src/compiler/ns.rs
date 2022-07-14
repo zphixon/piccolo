@@ -116,25 +116,26 @@ impl<'src> NamespaceRepository<'src> {
                 .collect::<Vec<_>>()
         );
 
-        if self.ns(ns).names.contains_key(&name) {
-            let (token, _) = self.ns(ns).names.get_key_value(&name).unwrap();
+        // check the current namespace
+        if let Some((token, loc)) = self.ns(ns).names.get_key_value(&name) {
             trace!("I have {} at {}", token.lexeme, token.pos);
-
-            return Some((*token, self.ns(ns).names[&name]));
+            return Some((*token, *loc));
         }
 
+        // check the parent namespace if it exists
         if let Some(parent) = self.ns(ns).parent {
             trace!("checking parent for {}", name.lexeme);
             let def = self.get_rec(parent, name, false);
 
-            match def {
-                Some((def, VariableLocation::Local(from, _))) if top && self.ns(ns).captures => {
+            // if the parent contains the name and it's a local variable, add it is a capture to
+            // the current namespace
+            if let Some((def, VariableLocation::Local(from, _))) = def {
+                if top && self.ns(ns).captures {
                     debug!("capturing {}", def.lexeme);
                     self.ns_mut(ns)
                         .names
                         .insert(def, VariableLocation::Capture(from, 0));
                 }
-                _ => {}
             }
 
             return def;
