@@ -134,9 +134,20 @@ pub fn truncate(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> 
     }
 }
 
+pub fn double(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    match args[0] {
+        Value::Double(num) => Ok(Value::Double(num)),
+        Value::Integer(num) => Ok(Value::Double(num as f64)),
+        val => Err(PiccoloError::new(ErrorKind::IncorrectType {
+            exp: "double or integer".to_string(),
+            got: val.type_name(heap).to_string(),
+        })),
+    }
+}
+
 pub fn floor(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     match args[0] {
-        Value::Double(num) => Ok(Value::Double(num.floor())),
+        Value::Double(num) => Ok(Value::Integer(num.floor() as i64)),
         Value::Integer(num) => Ok(Value::Integer(num)),
         val => Err(PiccoloError::new(ErrorKind::IncorrectType {
             exp: "double or integer".to_string(),
@@ -147,7 +158,7 @@ pub fn floor(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
 
 pub fn ceil(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     match args[0] {
-        Value::Double(num) => Ok(Value::Double(num.ceil())),
+        Value::Double(num) => Ok(Value::Integer(num.ceil() as i64)),
         Value::Integer(num) => Ok(Value::Integer(num)),
         val => Err(PiccoloError::new(ErrorKind::IncorrectType {
             exp: "double or integer".to_string(),
@@ -158,7 +169,7 @@ pub fn ceil(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
 
 pub fn round(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     match args[0] {
-        Value::Double(num) => Ok(Value::Double(num.round())),
+        Value::Double(num) => Ok(Value::Integer(num.round() as i64)),
         Value::Integer(num) => Ok(Value::Integer(num)),
         val => Err(PiccoloError::new(ErrorKind::IncorrectType {
             exp: "double or integer".to_string(),
@@ -180,7 +191,7 @@ pub fn abs(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
 
 pub fn sign(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     match args[0] {
-        Value::Double(num) => Ok(Value::Double(num.signum())),
+        Value::Double(num) => Ok(Value::Integer(num.signum() as i64)),
         Value::Integer(num) => Ok(Value::Integer(num.signum())),
         val => Err(PiccoloError::new(ErrorKind::IncorrectType {
             exp: "double or integer".to_string(),

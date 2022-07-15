@@ -146,6 +146,7 @@ impl Environment {
         add_builtin_function!(clock, Arity::Exact(0));
         add_builtin_function!(sleep, Arity::AtLeast(1));
         add_builtin_function!(truncate, Arity::Exact(1));
+        add_builtin_function!(double, Arity::Exact(1));
         add_builtin_function!(floor, Arity::Exact(1));
         add_builtin_function!(ceil, Arity::Exact(1));
         add_builtin_function!(round, Arity::Exact(1));
