@@ -19,8 +19,8 @@ use crate::{
 
 #[derive(Clone, Copy)]
 pub struct Context<'a, 'b> {
-    pub heap: &'b Heap,
-    pub interner: &'a Interner,
+    pub heap: &'a Heap,
+    pub interner: &'b Interner,
 }
 
 impl Context<'_, '_> {
@@ -34,8 +34,8 @@ impl Context<'_, '_> {
 }
 
 pub struct ContextMut<'a, 'b> {
-    pub heap: &'b mut Heap,
-    pub interner: &'a mut Interner,
+    pub heap: &'a mut Heap,
+    pub interner: &'b mut Interner,
 }
 
 impl<'a, 'b> ContextMut<'a, 'b> {

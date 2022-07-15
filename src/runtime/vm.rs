@@ -4,10 +4,10 @@ use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{
         chunk::{Chunk, Module},
-        interner::{Interner, StringPtr},
+        interner::StringPtr,
         op::Opcode,
         value::{Array, Value},
-        ContextMut, Object, This,
+        Context, ContextMut, Object, This,
     },
     trace, warn,
 };
@@ -69,13 +69,13 @@ impl<'chunk> FrameStack<'chunk> {
         self.current_frame().chunk
     }
 
-    fn unwind(&self, interner: &mut Interner) -> Vec<crate::error::Callsite> {
+    fn unwind(&self, ctx: Context) -> Vec<crate::error::Callsite> {
         warn!("unwinding stack");
         let mut calls = Vec::new();
         for frame in self.frames.iter().take(self.frames.len() - 1) {
-            warn!("-- {}", interner.get_string(frame.name));
+            warn!("-- {}", ctx.interner.get_string(frame.name));
             calls.push(crate::error::Callsite {
-                name: interner.get_string(frame.name).to_string(),
+                name: ctx.interner.get_string(frame.name).to_string(),
                 pos: frame.chunk.get_pos_from_index(frame.ip),
             })
         }
@@ -198,7 +198,7 @@ impl Machine {
                 self.ip = frames.current_ip();
                 result.map_err(|err| {
                     err.pos(frames.current_pos())
-                        .stack_trace(frames.unwind(ctx.interner))
+                        .stack_trace(frames.unwind(ctx.as_ref()))
                 })?;
             }
         }
