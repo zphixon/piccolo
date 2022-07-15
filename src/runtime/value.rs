@@ -45,19 +45,19 @@ impl Value {
         }
     }
 
-    pub fn from_constant(c: Constant, heap: &mut Heap, interner: &mut Interner) -> Value {
+    pub fn from_constant(c: &Constant, heap: &mut Heap, interner: &mut Interner) -> Value {
         match c {
-            Constant::Bool(b) => Value::Bool(b),
-            Constant::Integer(i) => Value::Integer(i),
-            Constant::Double(d) => Value::Double(d),
-            Constant::String(s) => Value::String(interner.allocate_string(s)),
+            Constant::Bool(b) => Value::Bool(*b),
+            Constant::Integer(i) => Value::Integer(*i),
+            Constant::Double(d) => Value::Double(*d),
+            Constant::String(s) => Value::String(interner.allocate_str(s)),
             Constant::Function(f) => Value::Function(Function {
                 arity: f.arity,
                 chunk: f.chunk,
-                name: interner.allocate_string(f.name),
+                name: interner.allocate_str(&f.name),
             }),
             //Constant::BuiltinFunction(f) => Value::BuiltinFunction(f),
-            Constant::Object(v) => Value::Object(heap.allocate_boxed(v)),
+            Constant::Object(v) => Value::Object(heap.allocate_boxed(v.clone_object())),
             Constant::Array(v) => {
                 let values = v
                     .into_iter()

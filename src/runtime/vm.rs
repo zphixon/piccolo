@@ -301,7 +301,7 @@ impl Machine {
             }
             Opcode::Constant(index) => {
                 let c = module.get_constant(index);
-                self.push(Value::from_constant(c.clone(), heap, interner));
+                self.push(Value::from_constant(c, heap, interner));
             }
             Opcode::Nil => self.push(Value::Nil),
             Opcode::Bool(b) => self.push(Value::Bool(b)),
