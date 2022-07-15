@@ -6,7 +6,7 @@
 
 program -> {statement}
 
-statement -> assign | declare | break | continue | retn | assert | block | if
+statement -> assign | declare | break | continue | return | assert | block | if
            | while | for | fn | expression | data
 
 assign -> [call '.'] ident assign_op expression
@@ -14,7 +14,7 @@ declare -> ident '=:' expression
 
 break -> 'break'
 continue -> 'continue'
-retn -> 'retn' [expression]
+return -> 'return' [expression]
 assert -> 'assert' expression
 
 block -> 'do' {statement} 'end'

@@ -202,8 +202,8 @@ fn check_stmt<'src>(type_kb: &mut TypeKb<'src>, stmt: &Stmt<'src>) -> Result<Che
         //    => check_break(type_kb, *break_),
         //Stmt::Continue { continue_ }
         //    => check_continue(type_kb, *continue_),
-        //Stmt::Retn { retn, value }
-        //    => check_retn(type_kb, *retn, value.as_ref()),
+        //Stmt::Return { return, value }
+        //    => check_return(type_kb, *return, value.as_ref()),
         //Stmt::Assert { assert, value }
         //    => check_assert(type_kb, *assert, value),
         //Stmt::Data { name, methods, fields }

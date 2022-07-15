@@ -1,5 +1,5 @@
 fn f() do
-  retn "ok"
+  return "ok"
   assert false
 end
 

@@ -9,9 +9,10 @@ fn main() {
     let ast2 = parse("assert x == 3").unwrap();
     let ast3 = parse("fn z(a) do\n  print(\"a is\", a)\nend\n").unwrap();
     let ast4 = parse("z(x)").unwrap();
-    let ast5 =
-        parse("fn b(a) do\n  if a == x do\n    retn true\n  else\n    retn false\n  end\nend\n")
-            .unwrap();
+    let ast5 = parse(
+        "fn b(a) do\n  if a == x do\n    return true\n  else\n    return false\n  end\nend\n",
+    )
+    .unwrap();
     let ast6 = parse("assert b(3)").unwrap();
     let ast7 = parse("print(b(4))").unwrap();
 

@@ -54,8 +54,8 @@ fn parse_statement<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'
         parse_break(scanner, depth + 1)
     } else if scanner.peek_token(0)?.kind == TokenKind::Continue {
         parse_continue(scanner, depth + 1)
-    } else if scanner.peek_token(0)?.kind == TokenKind::Retn {
-        parse_retn(scanner, depth + 1)
+    } else if scanner.peek_token(0)?.kind == TokenKind::Return {
+        parse_return(scanner, depth + 1)
     } else if scanner.peek_token(0)?.kind == TokenKind::Assert {
         parse_assert(scanner, depth + 1)
     } else if scanner.peek_token(0)?.kind == TokenKind::Do {
@@ -122,11 +122,11 @@ fn parse_continue<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a
     Ok(Stmt::Continue { continue_ })
 }
 
-fn parse_retn<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, PiccoloError> {
+fn parse_return<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("retn {:?}", scanner.peek_token(0)?);
+    trace!("return {:?}", scanner.peek_token(0)?);
 
-    let retn = scanner.next_token()?;
+    let return_ = scanner.next_token()?;
 
     let value = if scanner.peek_token(0)?.kind == TokenKind::End {
         None
@@ -134,7 +134,7 @@ fn parse_retn<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, P
         Some(parse_expression(scanner, depth + 1)?)
     };
 
-    Ok(Stmt::Retn { retn, value })
+    Ok(Stmt::Return { return_, value })
 }
 
 fn parse_assert<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, PiccoloError> {

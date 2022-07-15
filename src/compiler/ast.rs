@@ -176,8 +176,8 @@ pub enum Stmt<'a> {
         continue_: Token<'a>,
         // label: Token<'a>,
     },
-    Retn {
-        retn: Token<'a>,
+    Return {
+        return_: Token<'a>,
         value: Option<Expr<'a>>,
     },
     Assert {
@@ -205,7 +205,7 @@ impl Stmt<'_> {
             Stmt::Fn { name, .. } => *name,
             Stmt::Break { break_, .. } => *break_,
             Stmt::Continue { continue_, .. } => *continue_,
-            Stmt::Retn { retn, .. } => *retn,
+            Stmt::Return { return_, .. } => *return_,
             Stmt::Assert { assert, .. } => *assert,
             Stmt::Data { name, .. } => *name,
         }
@@ -285,8 +285,8 @@ fn print_stmt(indent: usize, stmt: &Stmt) -> String {
             => print_break(),
         Stmt::Continue { .. }
             => print_continue(),
-        Stmt::Retn { retn, value }
-            => print_retn(indent, *retn, value.as_ref()),
+        Stmt::Return { return_, value }
+            => print_return(indent, *return_, value.as_ref()),
         Stmt::Assert { value, .. }
             => print_assert(indent, value),
         Stmt::Data { name, methods, fields }
@@ -405,12 +405,12 @@ fn print_continue() -> String {
     String::from("(continue)")
 }
 
-fn print_retn(indent: usize, retn: Token, expr: Option<&Expr>) -> String {
+fn print_return(indent: usize, return_: Token, expr: Option<&Expr>) -> String {
     parenthesize(
         indent,
-        "retn",
+        "return",
         &[expr.unwrap_or(&Expr::Literal {
-            literal: Token::new(TokenKind::Nil, "nil", retn.pos),
+            literal: Token::new(TokenKind::Nil, "nil", return_.pos),
         })],
     )
 }

@@ -1,7 +1,7 @@
 fn f() do
   for i=:0, i<1, i+=1 do
     i =: "i"
-    retn i
+    return i
   end
 end
 

@@ -1,5 +1,5 @@
 fn f() do
-  while true do retn "ok" end
+  while true do return "ok" end
 end
 
 assert f() == "ok"

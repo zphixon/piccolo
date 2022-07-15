@@ -3,9 +3,9 @@ fn makeClosure() do
     local =: "hi"
     fn closure() do
         local += "!"
-        retn local
+        return local
     end
-    retn closure
+    return closure
 end
 
 c =: makeClosure()

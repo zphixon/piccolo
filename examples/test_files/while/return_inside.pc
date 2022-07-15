@@ -1,7 +1,7 @@
 fn f() do
   while true do
     i =: "i"
-    retn i
+    return i
   end
 end
 

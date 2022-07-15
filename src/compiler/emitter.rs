@@ -78,8 +78,8 @@ fn compile_stmt(emitter: &mut Emitter, depth: usize, stmt: &Stmt) -> Result<(), 
             => compile_break(emitter, depth + 1, *break_),
         Stmt::Continue { continue_ }
             => compile_continue(emitter, depth + 1, *continue_),
-        Stmt::Retn { retn, value }
-            => compile_retn(emitter, depth + 1, *retn, value.as_ref()),
+        Stmt::Return { return_, value }
+            => compile_return(emitter, depth + 1, *return_, value.as_ref()),
         Stmt::Assert { assert, value }
             => compile_assert(emitter, depth + 1, *assert, value),
         Stmt::Data { name, methods, fields }
@@ -507,22 +507,22 @@ fn compile_continue(
     Ok(())
 }
 
-fn compile_retn(
+fn compile_return(
     emitter: &mut Emitter,
     depth: usize,
-    retn: Token,
+    return_: Token,
     expr: Option<&Expr>,
 ) -> Result<(), PiccoloError> {
-    trace!("{} compile retn", retn.pos);
-    check_depth!(depth, retn);
+    trace!("{} compile return", return_.pos);
+    check_depth!(depth, return_);
 
     if let Some(expr) = expr {
         compile_expr(emitter, depth + 1, expr)?;
     } else {
-        emitter.add_instruction(Opcode::Nil, retn.pos);
+        emitter.add_instruction(Opcode::Nil, return_.pos);
     }
 
-    emitter.add_instruction(Opcode::Return, retn.pos);
+    emitter.add_instruction(Opcode::Return, return_.pos);
 
     Ok(())
 }
@@ -1234,7 +1234,7 @@ mod test {
 
         let ast = parser::parse(
             "x =: 32\n\
-            retn x",
+            return x",
         )
         .unwrap();
 

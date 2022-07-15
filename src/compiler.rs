@@ -132,7 +132,7 @@ pub enum TokenKind {
     Err,      // err
     Break,    // break
     Continue, // continue
-    Retn,     // retn
+    Return,   // return
     Assert,   // assert
     Nil,      // nil
 

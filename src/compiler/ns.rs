@@ -381,7 +381,7 @@ fn analyze_ns_stmt<'src>(
 
         Stmt::Continue { .. } => {}
 
-        Stmt::Retn { value, .. } => {
+        Stmt::Return { value, .. } => {
             if let Some(value) = value {
                 analyze_ns_expr(repo, ns, value)?;
             }

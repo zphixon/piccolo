@@ -2,7 +2,7 @@ x =: 0
 
 fn increment() do
     if x == 100 do
-        retn
+        return
     end
     x += 1
     increment()

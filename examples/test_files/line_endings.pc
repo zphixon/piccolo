@@ -19,7 +19,7 @@ assert x == "hello world"
 #         # daniel
 #         sys.panic("stop following me")
 #     else
-#         retn sum
+#         return sum
 #     end
 # end
 #
@@ -35,10 +35,10 @@ assert x == "hello world"
 #         me.set_c(me.c * t)
 #     end
 #     fn compare_c(other) is
-#         retn me.c > other.get_c()
+#         return me.c > other.get_c()
 #     end
 #     fn get_c() is
-#         retn me.c
+#         return me.c
 #     end
 #     fn set_c(c) is
 #         me.c = c
