@@ -51,7 +51,7 @@ macro_rules! error {
 use {error::PiccoloError, runtime::value::Constant, std::path::Path};
 
 pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
-    use compiler::{emitter, parser};
+    use compiler::parser;
 
     let mut env = Environment::new();
 
@@ -60,15 +60,11 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     debug!("ast\n{}", compiler::ast::print_ast(&ast));
 
     debug!("compile");
-    emitter::compile_with(&mut env.emitter, &mut env.interner, &ast)?;
-    let module = env.emitter.module();
-    debug!("{}", runtime::chunk::disassemble(module, ""));
+    env.compile(&ast)?;
+    debug!("{}", runtime::chunk::disassemble(env.emitter.module(), ""));
 
     debug!("interpret");
-    Ok(env
-        .vm
-        .interpret(&mut env.heap, &mut env.interner, module)?
-        .into_constant(&env.heap, &env.interner))
+    Ok(env.interpret_compiled()?.into_constant(env.context()))
 }
 
 /// Reads a file and interprets its contents.
@@ -82,7 +78,7 @@ pub fn do_file(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
 }
 
 use compiler::emitter::Emitter;
-use runtime::{interner::Interner, memory::Heap, value::Value, vm::Machine};
+use runtime::{interner::Interner, memory::Heap, value::Value, vm::Machine, Context, ContextMut};
 
 use crate::runtime::Object;
 
@@ -168,6 +164,20 @@ impl Environment {
         env
     }
 
+    pub fn context(&self) -> Context {
+        Context {
+            heap: &self.heap,
+            interner: &self.interner,
+        }
+    }
+
+    pub fn context_mut(&mut self) -> ContextMut {
+        ContextMut {
+            heap: &mut self.heap,
+            interner: &mut self.interner,
+        }
+    }
+
     pub fn add_global_variable(&mut self, name: &str, value: Value) {
         self.emitter
             .make_global_ident(&mut self.interner, compiler::Token::identifier(name));
@@ -190,13 +200,23 @@ impl Environment {
     }
 
     pub fn interpret_compiled(&mut self) -> Result<Value, PiccoloError> {
-        self.vm
-            .interpret(&mut self.heap, &mut self.interner, self.emitter.module())
+        self.vm.interpret(
+            &mut ContextMut {
+                heap: &mut self.heap,
+                interner: &mut self.interner,
+            },
+            self.emitter.module(),
+        )
     }
 
     pub fn interpret_continue(&mut self) -> Result<Value, PiccoloError> {
-        self.vm
-            .interpret_continue(&mut self.heap, &mut self.interner, self.emitter.module())
+        self.vm.interpret_continue(
+            &mut ContextMut {
+                heap: &mut self.heap,
+                interner: &mut self.interner,
+            },
+            self.emitter.module(),
+        )
     }
 
     pub fn clear_errors(&mut self) {
@@ -226,24 +246,26 @@ impl Environment {
     }
 
     pub fn format(&self, value: Value) -> String {
-        value.format(&self.heap, &self.interner)
+        value.format(self.context())
     }
 
     pub fn debug(&self, value: Value) -> String {
-        value.debug_format(&self.heap, &self.interner)
+        value.debug_format(self.context())
     }
 
-    pub fn format_object(&self, value: Value) -> String {
-        value.format(&self.heap, &self.interner)
+    pub fn format_object(&self, object: &dyn Object) -> String {
+        object.format(self.context())
     }
 
-    pub fn debug_object(&self, value: &dyn Object) -> String {
-        value.debug_format(&self.heap, &self.interner)
+    pub fn debug_object(&self, object: &dyn Object) -> String {
+        object.debug_format(self.context())
     }
 }
 
 #[cfg(test)]
 mod integration {
+    use crate::runtime::ContextMut;
+
     use super::*;
 
     use {
@@ -268,10 +290,11 @@ mod integration {
         let mut heap = Heap::new();
         let mut vm = Machine::new();
         let mut interner = Interner::new();
-        println!(
-            "{:?}",
-            vm.interpret(&mut heap, &mut interner, &module).unwrap()
-        );
+        let mut ctx = ContextMut {
+            heap: &mut heap,
+            interner: &mut interner,
+        };
+        println!("{:?}", vm.interpret(&mut ctx, &module).unwrap());
     }
 
     #[test]
@@ -317,10 +340,14 @@ mod integration {
             let mut heap = Heap::new();
             let mut vm = Machine::new();
             let mut interner = Interner::new();
+            let mut ctx = ContextMut {
+                heap: &mut heap,
+                interner: &mut interner,
+            };
             assert_eq!(
-                vm.interpret(&mut heap, &mut interner, &module)
+                vm.interpret(&mut ctx, &module)
                     .unwrap()
-                    .into_constant(&heap, &interner),
+                    .into_constant(ctx.as_ref()),
                 Constant::Integer(11)
             );
         } else {

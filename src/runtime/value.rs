@@ -6,9 +6,9 @@ use crate::{
     runtime::{
         builtin,
         builtin::BuiltinFunction,
-        interner::{Interner, StringPtr},
+        interner::StringPtr,
         memory::{Heap, Ptr},
-        Arity, Object, This,
+        Arity, Context, ContextMut, Object, This,
     },
 };
 use std::fmt::{Debug, Display, Formatter};
@@ -45,45 +45,45 @@ impl Value {
         }
     }
 
-    pub fn from_constant(c: &Constant, heap: &mut Heap, interner: &mut Interner) -> Value {
+    pub fn from_constant(c: &Constant, ctx: &mut ContextMut) -> Value {
         match c {
             Constant::Bool(b) => Value::Bool(*b),
             Constant::Integer(i) => Value::Integer(*i),
             Constant::Double(d) => Value::Double(*d),
-            Constant::String(s) => Value::String(interner.allocate_str(s)),
+            Constant::String(s) => Value::String(ctx.interner.allocate_str(s)),
             Constant::Function(f) => Value::Function(Function {
                 arity: f.arity,
                 chunk: f.chunk,
-                name: interner.allocate_str(&f.name),
+                name: ctx.interner.allocate_str(&f.name),
             }),
             //Constant::BuiltinFunction(f) => Value::BuiltinFunction(f),
-            Constant::Object(v) => Value::Object(heap.allocate_boxed(v.clone_object())),
+            Constant::Object(v) => Value::Object(ctx.heap.allocate_boxed(v.clone_object())),
             Constant::Array(v) => {
                 let values = v
                     .into_iter()
-                    .map(|constant| Value::from_constant(constant, heap, interner))
+                    .map(|constant| Value::from_constant(constant, ctx))
                     .collect();
-                Value::Object(heap.allocate(Array { values }))
+                Value::Object(ctx.heap.allocate(Array { values }))
             }
             Constant::Nil => Value::Nil,
         }
     }
 
-    pub fn into_constant(self, heap: &Heap, interner: &Interner) -> Constant {
+    pub fn into_constant(self, ctx: Context) -> Constant {
         match self {
             Value::Bool(b) => Constant::Bool(b),
             Value::Integer(i) => Constant::Integer(i),
             Value::Double(d) => Constant::Double(d),
-            Value::String(ptr) => Constant::String(interner.get_string(ptr).to_string()),
+            Value::String(ptr) => Constant::String(ctx.interner.get_string(ptr).to_string()),
             Value::Nil => Constant::Nil,
             Value::Function(f) => Constant::Function(ConstantFunction {
                 arity: f.arity,
-                name: interner.get_string(f.name).to_string(),
+                name: ctx.interner.get_string(f.name).to_string(),
                 chunk: f.chunk,
             }),
             Value::BuiltinFunction(f) => Constant::Function(ConstantFunction {
                 arity: f.arity,
-                name: interner.get_string(f.name).to_string(),
+                name: ctx.interner.get_string(f.name).to_string(),
                 // TODO this may be a problem if we:
                 // 1. move a Value::BuiltinFunction out of the vm, making it a Constant::Function
                 // 2. make that Constant::Function into a Value::Function
@@ -92,27 +92,24 @@ impl Value {
                 chunk: 0,
             }),
             Value::Object(ptr) => {
-                let object = heap.get(ptr).clone_object();
+                let object = ctx.heap.get(ptr).clone_object();
                 if let Ok(array) = object.downcast::<Array>() {
                     Constant::Array(
                         array
                             .values
                             .into_iter()
-                            .map(|value| value.into_constant(heap, interner))
+                            .map(|value| value.into_constant(ctx))
                             .collect(),
                     )
                 } else {
-                    panic!(
-                        "cannot convert object {} to constant",
-                        heap.get(ptr).debug_format(heap, interner)
-                    );
+                    panic!("cannot convert object {} to constant", ctx.debug(ptr));
                 }
             }
         }
     }
 
-    pub fn to_string(&self, heap: &Heap, interner: &Interner) -> String {
-        self.format(heap, interner)
+    pub fn to_string(&self, ctx: Context) -> String {
+        self.format(ctx)
     }
 
     pub fn is_truthy(&self) -> bool {
@@ -215,7 +212,7 @@ impl Object for Value {
         }
     }
 
-    fn type_name(&self, heap: &Heap) -> &'static str {
+    fn type_name(&self, ctx: Context) -> &'static str {
         match self {
             Value::Bool(_) => "bool",
             Value::Integer(_) => "int",
@@ -223,40 +220,40 @@ impl Object for Value {
             Value::String(_) => "string",
             Value::Function(_) => "function",
             Value::BuiltinFunction(_) => "function",
-            Value::Object(ptr) => heap.get(*ptr).type_name(heap),
+            Value::Object(ptr) => ctx.heap.get(*ptr).type_name(ctx),
             Value::Nil => "nil",
         }
     }
 
-    fn format(&self, heap: &Heap, interner: &Interner) -> String {
+    fn format(&self, ctx: Context) -> String {
         match self {
             Value::Bool(b) => format!("{b}"),
             Value::Integer(i) => format!("{i}"),
             Value::Double(d) => format!("{d}"),
-            Value::String(p) => interner.get_string(*p).to_string(),
-            Value::Function(f) => interner.get_string(f.name).to_string(),
-            Value::BuiltinFunction(f) => interner.get_string(f.name()).to_string(),
-            Value::Object(p) => heap.get(*p).format(heap, interner),
+            Value::String(p) => ctx.interner.get_string(*p).to_string(),
+            Value::Function(f) => ctx.interner.get_string(f.name).to_string(),
+            Value::BuiltinFunction(f) => ctx.interner.get_string(f.name()).to_string(),
+            Value::Object(p) => ctx.format(*p),
             Value::Nil => String::from("nil"),
         }
     }
 
-    fn debug_format(&self, heap: &Heap, interner: &Interner) -> String {
+    fn debug_format(&self, ctx: Context) -> String {
         match self {
             Value::Bool(v) => format!("Bool({v})"),
             Value::Integer(v) => format!("Integer({v})"),
             Value::Double(v) => format!("Double({v})"),
-            Value::String(v) => format!("String({:?})", interner.get_string(*v)),
-            Value::Function(f) => format!("Function({:?})", interner.get_string(f.name)),
+            Value::String(v) => format!("String({:?})", ctx.interner.get_string(*v)),
+            Value::Function(f) => format!("Function({:?})", ctx.interner.get_string(f.name)),
             Value::BuiltinFunction(f) => {
-                format!("BuiltinFunction({:?})", interner.get_string(f.name()))
+                format!("BuiltinFunction({:?})", ctx.interner.get_string(f.name()))
             }
-            Value::Object(p) => heap.get(*p).debug_format(heap, interner),
+            Value::Object(p) => ctx.heap.get(*p).debug_format(ctx),
             Value::Nil => String::from("nil"),
         }
     }
 
-    fn eq(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+    fn eq(&self, ctx: Context, other: Value) -> Result<bool, PiccoloError> {
         if let Value::Bool(l) = *self {
             if let Value::Bool(r) = other {
                 return Ok(l == r);
@@ -286,7 +283,7 @@ impl Object for Value {
                 return Ok(l == r);
             }
         } else if let Value::Object(l) = *self {
-            return heap.get(l).eq(heap, other);
+            return ctx.heap.get(l).eq(ctx, other);
         } else if let Value::Nil = *self {
             if let Value::Nil = other {
                 return Ok(true);
@@ -294,12 +291,12 @@ impl Object for Value {
         }
 
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            got: other.type_name(heap).to_string(),
-            exp: self.type_name(heap).to_string(),
+            got: other.type_name(ctx).to_string(),
+            exp: self.type_name(ctx).to_string(),
         }))
     }
 
-    fn gt(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+    fn gt(&self, ctx: Context, other: Value) -> Result<bool, PiccoloError> {
         match *self {
             Value::Integer(l) => match other {
                 Value::Integer(r) => return Ok(l > r),
@@ -311,17 +308,17 @@ impl Object for Value {
                 Value::Double(r) => return Ok(l > r),
                 _ => {}
             },
-            Value::Object(ptr) => return heap.get(ptr).gt(heap, other),
+            Value::Object(ptr) => return ctx.heap.get(ptr).gt(ctx, other),
             _ => {}
         }
 
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            got: other.type_name(heap).to_string(),
-            exp: self.type_name(heap).to_string(),
+            got: other.type_name(ctx).to_string(),
+            exp: self.type_name(ctx).to_string(),
         }))
     }
 
-    fn lt(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+    fn lt(&self, ctx: Context, other: Value) -> Result<bool, PiccoloError> {
         match *self {
             Value::Integer(l) => match other {
                 Value::Integer(r) => return Ok(l < r),
@@ -333,67 +330,55 @@ impl Object for Value {
                 Value::Double(r) => return Ok(l < r),
                 _ => {}
             },
-            Value::Object(l) => return heap.get(l).lt(heap, other),
+            Value::Object(l) => return ctx.heap.get(l).lt(ctx, other),
             _ => {}
         }
 
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            got: other.type_name(heap).to_string(),
-            exp: self.type_name(heap).to_string(),
+            got: other.type_name(ctx).to_string(),
+            exp: self.type_name(ctx).to_string(),
         }))
     }
 
-    fn get(
-        &self,
-        _: This,
-        heap: &Heap,
-        interner: &Interner,
-        index_value: Value,
-    ) -> Result<Value, PiccoloError> {
+    fn get(&self, ctx: Context, _: This, index_value: Value) -> Result<Value, PiccoloError> {
         match (self, index_value) {
             (Value::String(this), Value::String(property))
-                if interner.get_string(property) == "len" =>
+                if ctx.interner.get_string(property) == "len" =>
             {
                 Ok(Value::Integer(this.len as i64))
             }
 
             (Value::String(this), Value::String(property))
-                if interner.get_string(property) == "trim" =>
+                if ctx.interner.get_string(property) == "trim" =>
             {
                 Ok(Value::BuiltinFunction(BuiltinFunction {
                     arity: Arity::Exact(1),
-                    name: interner.get_string_ptr("trim").unwrap(),
+                    name: ctx.interner.get_string_ptr("trim").unwrap(),
                     ptr: string_trim,
                     this: This::String(*this),
                 }))
             }
 
-            (Value::Object(ptr), index) => {
-                heap.get(*ptr).get(This::Ptr(*ptr), heap, interner, index)
-            }
+            (Value::Object(ptr), index) => ctx.heap.get(*ptr).get(ctx, This::Ptr(*ptr), index),
 
             _ => Err(PiccoloError::new(ErrorKind::CannotGet {
-                object: self.type_name(heap).to_string(),
-                index: index_value.format(heap, interner),
+                object: self.type_name(ctx).to_string(),
+                index: index_value.format(ctx),
             })),
         }
     }
 }
 
-fn string_trim(
-    heap: &mut Heap,
-    interner: &mut Interner,
-    args: &[Value],
-) -> Result<Value, PiccoloError> {
+fn string_trim(ctx: &mut ContextMut, args: &[Value]) -> Result<Value, PiccoloError> {
     let this = args[0];
     if let Value::String(string) = this {
         // TODO investigate adding a byte length field to StringPtr
-        let string = interner.get_string(string).trim().to_string();
-        Ok(Value::String(interner.allocate_string(string)))
+        let string = ctx.interner.get_string(string).trim().to_string();
+        Ok(Value::String(ctx.interner.allocate_string(string)))
     } else {
         Err(PiccoloError::new(ErrorKind::InvalidArgument {
             exp: "string".to_string(),
-            got: this.type_name(heap).to_string(),
+            got: this.type_name(ctx.as_ref()).to_string(),
         }))
     }
 }
@@ -541,10 +526,10 @@ impl Array {
     }
 }
 
-fn array_push(heap: &mut Heap, _: &mut Interner, values: &[Value]) -> Result<Value, PiccoloError> {
+fn array_push(ctx: &mut ContextMut, values: &[Value]) -> Result<Value, PiccoloError> {
     let this = values[0].as_ptr();
 
-    if let Some(array) = unsafe { heap.get_mut(this) }.downcast_mut::<Array>() {
+    if let Some(array) = unsafe { ctx.heap.get_mut(this) }.downcast_mut::<Array>() {
         array.values.push(values[1]);
     } else {
         panic!("called array_push with non-Array");
@@ -560,14 +545,14 @@ impl Object for Array {
         }
     }
 
-    fn type_name(&self, _: &Heap) -> &'static str {
+    fn type_name(&self, _: Context) -> &'static str {
         "array"
     }
 
-    fn format(&self, heap: &Heap, interner: &Interner) -> String {
+    fn format(&self, ctx: Context) -> String {
         let mut s = String::from("[");
         for (i, value) in self.values.iter().enumerate() {
-            s.push_str(&value.format(heap, interner));
+            s.push_str(&value.format(ctx));
             if i + 1 != self.values.len() {
                 s.push_str(", ");
             }
@@ -576,10 +561,10 @@ impl Object for Array {
         s
     }
 
-    fn debug_format(&self, heap: &Heap, interner: &Interner) -> String {
+    fn debug_format(&self, ctx: Context) -> String {
         let mut s = String::from("[");
         for (i, value) in self.values.iter().enumerate() {
-            s.push_str(&value.debug_format(heap, interner));
+            s.push_str(&value.debug_format(ctx));
             if i + 1 != self.values.len() {
                 s.push_str(", ");
             }
@@ -588,23 +573,14 @@ impl Object for Array {
         s
     }
 
-    fn get(
-        &self,
-        this: This,
-        heap: &Heap,
-        interner: &Interner,
-        index_value: Value,
-    ) -> Result<Value, PiccoloError> {
+    fn get(&self, ctx: Context, this: This, index_value: Value) -> Result<Value, PiccoloError> {
         if let Value::Integer(index) = index_value {
             let index: usize = index.try_into().map_err(|_| {
                 PiccoloError::new(ErrorKind::CannotGet {
                     object: String::from("array"),
-                    index: index_value.format(heap, interner),
+                    index: index_value.format(ctx),
                 })
-                .msg_string(format!(
-                    "Cannot index with {}",
-                    index_value.format(heap, interner)
-                ))
+                .msg_string(format!("Cannot index with {}", index_value.format(ctx)))
             })?;
 
             if index >= self.values.len() {
@@ -620,12 +596,12 @@ impl Object for Array {
             // slow?
             // if interner.get_string(string) == "len" {}
 
-            let len = interner.get_string_ptr("len").unwrap();
+            let len = ctx.interner.get_string_ptr("len").unwrap();
             if string == len {
                 return Ok(Value::Integer(self.values.len() as i64));
-            } else if interner.get_string(string) == "push" {
+            } else if ctx.interner.get_string(string) == "push" {
                 return Ok(Value::BuiltinFunction(BuiltinFunction {
-                    name: interner.get_string_ptr("push").unwrap(),
+                    name: ctx.interner.get_string_ptr("push").unwrap(),
                     arity: Arity::Exact(2),
                     ptr: array_push,
                     this,
@@ -633,38 +609,29 @@ impl Object for Array {
             } else {
                 return Err(PiccoloError::new(ErrorKind::CannotGet {
                     object: String::from("array"),
-                    index: index_value.format(heap, interner),
+                    index: index_value.format(ctx),
                 }));
             }
         }
 
         Err(PiccoloError::new(ErrorKind::CannotGet {
             object: String::from("array"),
-            index: index_value.format(heap, interner),
+            index: index_value.format(ctx),
         })
         .msg_string(format!(
             "Cannot index with type {}",
-            index_value.type_name(heap)
+            index_value.type_name(ctx)
         )))
     }
 
-    fn set(
-        &mut self,
-        heap: &Heap,
-        interner: &Interner,
-        index_value: Value,
-        value: Value,
-    ) -> Result<(), PiccoloError> {
+    fn set(&mut self, ctx: Context, index_value: Value, value: Value) -> Result<(), PiccoloError> {
         if let Value::Integer(index) = index_value {
             let index: usize = index.try_into().map_err(|_| {
                 PiccoloError::new(ErrorKind::CannotGet {
                     object: String::from("array"),
-                    index: value.format(heap, interner),
+                    index: value.format(ctx),
                 })
-                .msg_string(format!(
-                    "Cannot index with {}",
-                    index_value.format(heap, interner)
-                ))
+                .msg_string(format!("Cannot index with {}", index_value.format(ctx)))
             })?;
 
             if index >= self.values.len() {
@@ -681,21 +648,21 @@ impl Object for Array {
 
         Err(PiccoloError::new(ErrorKind::CannotSet {
             object: String::from("array"),
-            property: index_value.format(heap, interner),
-            value: value.format(heap, interner),
+            property: index_value.format(ctx),
+            value: value.format(ctx),
         })
         .msg("Only integer properties may be modified"))
     }
 
-    fn eq(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+    fn eq(&self, ctx: Context, other: Value) -> Result<bool, PiccoloError> {
         if let Value::Object(ptr) = other {
-            if let Some(other) = heap.get(ptr).downcast_ref::<Array>() {
+            if let Some(other) = ctx.heap.get(ptr).downcast_ref::<Array>() {
                 if self.values.len() != other.values.len() {
                     return Ok(false);
                 }
 
                 for (l, r) in self.values.iter().zip(other.values.iter()) {
-                    if !l.eq(heap, *r)? {
+                    if !l.eq(ctx, *r)? {
                         return Ok(false);
                     }
                 }
@@ -705,8 +672,8 @@ impl Object for Array {
         }
 
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            got: other.type_name(heap).to_string(),
-            exp: self.type_name(heap).to_string(),
+            got: other.type_name(ctx).to_string(),
+            exp: self.type_name(ctx).to_string(),
         }))
     }
 }

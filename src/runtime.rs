@@ -18,6 +18,36 @@ use crate::{
 };
 
 #[derive(Clone, Copy)]
+pub struct Context<'a, 'b> {
+    pub heap: &'b Heap,
+    pub interner: &'a Interner,
+}
+
+impl Context<'_, '_> {
+    pub fn debug(&self, ptr: Ptr) -> String {
+        self.heap.get(ptr).debug_format(*self)
+    }
+
+    fn format(&self, ptr: Ptr) -> String {
+        self.heap.get(ptr).format(*self)
+    }
+}
+
+pub struct ContextMut<'a, 'b> {
+    pub heap: &'b mut Heap,
+    pub interner: &'a mut Interner,
+}
+
+impl<'a, 'b> ContextMut<'a, 'b> {
+    pub fn as_ref<'this>(&'this self) -> Context<'this, 'this> {
+        Context {
+            interner: self.interner,
+            heap: self.heap,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 pub enum This {
     None,
     Ptr(Ptr),
@@ -76,82 +106,63 @@ where
 pub trait Object: downcast_rs::Downcast + ObjectClone {
     fn trace(&self, heap: &Heap);
 
-    fn type_name(&self, heap: &Heap) -> &'static str {
-        let _ = heap;
+    fn type_name(&self, ctx: Context) -> &'static str {
+        let _ = ctx;
         "object"
     }
 
-    fn format(&self, heap: &Heap, interner: &Interner) -> String {
-        let _ = interner;
-        self.type_name(heap).to_string()
+    fn format(&self, ctx: Context) -> String {
+        self.type_name(ctx).to_string()
     }
 
-    fn debug_format(&self, heap: &Heap, interner: &Interner) -> String {
-        let _ = interner;
-        format!("{}(?)", self.type_name(heap))
+    fn debug_format(&self, ctx: Context) -> String {
+        format!("{}(?)", self.type_name(ctx))
     }
 
-    fn call(
-        &self,
-        heap: &Heap,
-        interner: &Interner,
-        values: &[Value],
-    ) -> Result<Value, PiccoloError> {
+    fn call(&self, ctx: Context, values: &[Value]) -> Result<Value, PiccoloError> {
         let _ = values;
         Err(PiccoloError::new(ErrorKind::CannotCall {
-            callee: self.format(heap, interner),
+            callee: self.format(ctx),
         }))
     }
 
-    fn get(
-        &self,
-        this: This,
-        heap: &Heap,
-        interner: &Interner,
-        index_value: Value,
-    ) -> Result<Value, PiccoloError> {
+    fn get(&self, ctx: Context, this: This, index_value: Value) -> Result<Value, PiccoloError> {
         let _ = this;
         Err(PiccoloError::new(ErrorKind::CannotGet {
-            object: self.type_name(heap).to_string(),
-            index: index_value.format(heap, interner),
+            object: self.type_name(ctx).to_string(),
+            index: index_value.format(ctx),
         }))
     }
 
-    fn set(
-        &mut self,
-        heap: &Heap,
-        interner: &Interner,
-        index_value: Value,
-        value: Value,
-    ) -> Result<(), PiccoloError> {
+    fn set(&mut self, ctx: Context, index_value: Value, value: Value) -> Result<(), PiccoloError> {
         let _ = value;
         Err(PiccoloError::new(ErrorKind::CannotGet {
-            object: self.type_name(heap).to_string(),
-            index: index_value.format(heap, interner),
+            object: self.type_name(ctx).to_string(),
+            index: index_value.format(ctx),
         }))
     }
 
-    fn eq(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+    fn eq(&self, ctx: Context, other: Value) -> Result<bool, PiccoloError> {
         let _ = other;
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            got: other.type_name(heap).to_string(),
-            exp: self.type_name(heap).to_string(),
+            got: other.type_name(ctx).to_string(),
+            exp: self.type_name(ctx).to_string(),
         }))
     }
 
-    fn lt(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+    fn lt(&self, ctx: Context, other: Value) -> Result<bool, PiccoloError> {
         let _ = other;
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            got: other.type_name(heap).to_string(),
-            exp: self.type_name(heap).to_string(),
+            got: other.type_name(ctx).to_string(),
+            exp: self.type_name(ctx).to_string(),
         }))
     }
 
-    fn gt(&self, heap: &Heap, other: Value) -> Result<bool, PiccoloError> {
+    fn gt(&self, ctx: Context, other: Value) -> Result<bool, PiccoloError> {
         let _ = other;
         Err(PiccoloError::new(ErrorKind::CannotCompare {
-            got: other.type_name(heap).to_string(),
-            exp: self.type_name(heap).to_string(),
+            got: other.type_name(ctx).to_string(),
+            exp: self.type_name(ctx).to_string(),
         }))
     }
 }

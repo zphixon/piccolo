@@ -5,10 +5,9 @@ use crate::{
     runtime::{
         chunk::{Chunk, Module},
         interner::{Interner, StringPtr},
-        memory::Heap,
         op::Opcode,
         value::{Array, Value},
-        Object, This,
+        ContextMut, Object, This,
     },
     trace, warn,
 };
@@ -145,26 +144,23 @@ impl Machine {
 
     pub fn interpret(
         &mut self,
-        heap: &mut Heap,
-        interner: &mut Interner,
+        ctx: &mut ContextMut,
         module: &Module,
     ) -> Result<Value, PiccoloError> {
-        self.interpret_from(heap, interner, module, 0)
+        self.interpret_from(ctx, module, 0)
     }
 
     pub fn interpret_continue(
         &mut self,
-        heap: &mut Heap,
-        interner: &mut Interner,
+        ctx: &mut ContextMut,
         module: &Module,
     ) -> Result<Value, PiccoloError> {
-        self.interpret_from(heap, interner, module, self.ip)
+        self.interpret_from(ctx, module, self.ip)
     }
 
     fn interpret_from<'chunk>(
         &mut self,
-        heap: &mut Heap,
-        interner: &mut Interner,
+        ctx: &mut ContextMut,
         module: &'chunk Module,
         ip: usize,
     ) -> Result<Value, PiccoloError> {
@@ -174,7 +170,7 @@ impl Machine {
 
         let mut frames = FrameStack {
             frames: vec![Frame {
-                name: interner.allocate_str("top level"),
+                name: ctx.interner.allocate_str("top level"),
                 base: 0,
                 ip,
                 chunk: module.chunk(0),
@@ -185,7 +181,7 @@ impl Machine {
         // loop until stop, return from top, or error
         // TODO refactor to make this not look like hot garbage
         loop {
-            let result = self.interpret_next_instruction(heap, interner, module, &mut frames);
+            let result = self.interpret_next_instruction(ctx, module, &mut frames);
             if let Ok(state) = result {
                 match state {
                     VmState::Continue => {}
@@ -202,7 +198,7 @@ impl Machine {
                 self.ip = frames.current_ip();
                 result.map_err(|err| {
                     err.pos(frames.current_pos())
-                        .stack_trace(frames.unwind(interner))
+                        .stack_trace(frames.unwind(ctx.interner))
                 })?;
             }
         }
@@ -210,8 +206,7 @@ impl Machine {
 
     fn interpret_next_instruction<'chunk>(
         &mut self,
-        heap: &mut Heap,
-        interner: &mut Interner,
+        ctx: &mut ContextMut,
         module: &'chunk Module,
         frames: &mut FrameStack<'chunk>,
     ) -> Result<VmState, PiccoloError> {
@@ -233,7 +228,7 @@ impl Machine {
             {
                 let mut s = String::from("[");
                 for (i, value) in self.stack.iter().enumerate() {
-                    s.push_str(&value.debug_format(heap));
+                    s.push_str(&value.debug_format(ctx.as_ref()));
                     if i + 1 != self.stack.len() {
                         s.push_str(", ");
                     }
@@ -270,9 +265,9 @@ impl Machine {
                         exp: "integer".into(),
                         got: format!(
                             "{} {} {}",
-                            lhs.type_name(heap),
+                            lhs.type_name(ctx.as_ref()),
                             stringify!($op),
-                            rhs.type_name(heap),
+                            rhs.type_name(ctx.as_ref()),
                         ),
                     }));
                 }
@@ -301,7 +296,7 @@ impl Machine {
             }
             Opcode::Constant(index) => {
                 let c = module.get_constant(index);
-                self.push(Value::from_constant(c, heap, interner));
+                self.push(Value::from_constant(c, ctx));
             }
             Opcode::Nil => self.push(Value::Nil),
             Opcode::Bool(b) => self.push(Value::Bool(b)),
@@ -315,7 +310,7 @@ impl Machine {
                 }
                 values.reverse();
 
-                self.push(Value::Object(heap.allocate(Array::new_with(values))));
+                self.push(Value::Object(ctx.heap.allocate(Array::new_with(values))));
             }
 
             Opcode::Negate => {
@@ -329,7 +324,7 @@ impl Machine {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: v.type_name(heap).to_owned(),
+                        got: v.type_name(ctx.as_ref()).to_owned(),
                     }));
                 }
             }
@@ -358,7 +353,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("double + {}", rhs.type_name(heap)),
+                            got: format!("double + {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else if lhs.is_integer() {
@@ -372,20 +367,20 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("integer + {}", rhs.type_name(heap)),
+                            got: format!("integer + {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else if lhs.is_string() {
-                    let value = format!(
-                        "{}{}",
-                        lhs.format(heap, interner),
-                        rhs.format(heap, interner)
-                    );
-                    self.push(Value::String(interner.allocate_string(value)));
+                    let value = format!("{}{}", lhs.format(ctx.as_ref()), rhs.format(ctx.as_ref()));
+                    self.push(Value::String(ctx.interner.allocate_string(value)));
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: format!("{} + {}", lhs.type_name(heap), rhs.type_name(heap)),
+                        got: format!(
+                            "{} + {}",
+                            lhs.type_name(ctx.as_ref()),
+                            rhs.type_name(ctx.as_ref())
+                        ),
                     }));
                 }
             }
@@ -404,7 +399,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("double - {}", rhs.type_name(heap)),
+                            got: format!("double - {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else if lhs.is_integer() {
@@ -418,13 +413,17 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("integer - {}", rhs.type_name(heap)),
+                            got: format!("integer - {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: format!("{} - {}", lhs.type_name(heap), rhs.type_name(heap)),
+                        got: format!(
+                            "{} - {}",
+                            lhs.type_name(ctx.as_ref()),
+                            rhs.type_name(ctx.as_ref())
+                        ),
                     }));
                 }
             }
@@ -443,7 +442,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("double * {}", rhs.type_name(heap)),
+                            got: format!("double * {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else if lhs.is_integer() {
@@ -457,13 +456,17 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("integer * {}", rhs.type_name(heap)),
+                            got: format!("integer * {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: format!("{} * {}", lhs.type_name(heap), rhs.type_name(heap)),
+                        got: format!(
+                            "{} * {}",
+                            lhs.type_name(ctx.as_ref()),
+                            rhs.type_name(ctx.as_ref())
+                        ),
                     }));
                 }
             }
@@ -482,7 +485,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("double / {}", rhs.type_name(heap)),
+                            got: format!("double / {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else if lhs.is_integer() {
@@ -499,13 +502,17 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("integer / {}", rhs.type_name(heap)),
+                            got: format!("integer / {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: format!("{} / {}", lhs.type_name(heap), rhs.type_name(heap)),
+                        got: format!(
+                            "{} / {}",
+                            lhs.type_name(ctx.as_ref()),
+                            rhs.type_name(ctx.as_ref())
+                        ),
                     }));
                 }
             }
@@ -524,7 +531,7 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("double % {}", rhs.type_name(heap)),
+                            got: format!("double % {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else if lhs.is_integer() {
@@ -541,13 +548,17 @@ impl Machine {
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectType {
                             exp: "integer or double".into(),
-                            got: format!("integer % {}", rhs.type_name(heap)),
+                            got: format!("integer % {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
-                        got: format!("{} % {}", lhs.type_name(heap), rhs.type_name(heap)),
+                        got: format!(
+                            "{} % {}",
+                            lhs.type_name(ctx.as_ref()),
+                            rhs.type_name(ctx.as_ref())
+                        ),
                     }));
                 }
             }
@@ -557,27 +568,27 @@ impl Machine {
             Opcode::Equal => {
                 let a = self.pop();
                 let b = self.pop();
-                self.push(Value::Bool(a.eq(heap, b)?));
+                self.push(Value::Bool(a.eq(ctx.as_ref(), b)?));
             }
             Opcode::Greater => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(lhs.gt(heap, rhs)?));
+                self.push(Value::Bool(lhs.gt(ctx.as_ref(), rhs)?));
             }
             Opcode::Less => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(lhs.lt(heap, rhs)?));
+                self.push(Value::Bool(lhs.lt(ctx.as_ref(), rhs)?));
             }
             Opcode::GreaterEqual => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(!lhs.lt(heap, rhs)?));
+                self.push(Value::Bool(!lhs.lt(ctx.as_ref(), rhs)?));
             }
             Opcode::LessEqual => {
                 let rhs = self.pop();
                 let lhs = self.pop();
-                self.push(Value::Bool(!lhs.gt(heap, rhs)?));
+                self.push(Value::Bool(!lhs.gt(ctx.as_ref(), rhs)?));
             } // }}}
 
             Opcode::GetLocal(slot) => {
@@ -624,7 +635,7 @@ impl Machine {
             Opcode::Get => {
                 let index = self.pop();
                 let value = self.pop();
-                self.push(value.get(This::None, heap, interner, index)?);
+                self.push(value.get(ctx.as_ref(), This::None, index)?);
             }
 
             Opcode::Set => {
@@ -632,11 +643,11 @@ impl Machine {
                 if self.peek().is_object() {
                     let ptr = self.pop().as_ptr();
                     let value = self.pop();
-                    unsafe { heap.get_mut(ptr).set(heap, interner, index, value)? };
+                    unsafe { ctx.heap.get_mut(ptr).set(ctx.as_ref(), index, value)? };
                 } else {
                     return Err(PiccoloError::new(ErrorKind::CannotGet {
-                        object: self.peek().type_name(heap).to_string(),
-                        index: index.format(heap, interner),
+                        object: self.peek().type_name(ctx.as_ref()).to_string(),
+                        index: index.format(ctx.as_ref()),
                     }));
                 }
             }
@@ -717,7 +728,11 @@ impl Machine {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer".into(),
-                        got: format!("{} << {}", lhs.type_name(heap), rhs.type_name(heap),),
+                        got: format!(
+                            "{} << {}",
+                            lhs.type_name(ctx.as_ref()),
+                            rhs.type_name(ctx.as_ref()),
+                        ),
                     }));
                 }
             }
@@ -741,7 +756,11 @@ impl Machine {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer".into(),
-                        got: format!("{} << {}", lhs.type_name(heap), rhs.type_name(heap)),
+                        got: format!(
+                            "{} << {}",
+                            lhs.type_name(ctx.as_ref()),
+                            rhs.type_name(ctx.as_ref())
+                        ),
                     }));
                 }
             }
@@ -753,7 +772,7 @@ impl Machine {
 
                     if !f.arity.is_compatible(arity) {
                         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                            name: interner.get_string(f.name).to_string(),
+                            name: ctx.interner.get_string(f.name).to_string(),
                             exp: f.arity,
                             got: arity,
                         }));
@@ -786,10 +805,10 @@ impl Machine {
                     args.reverse();
 
                     if f.arity.is_compatible(args.len()) {
-                        self.push((f.ptr)(heap, interner, &args)?);
+                        self.push((f.ptr)(ctx, &args)?);
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                            name: interner.get_string(f.name()).to_string(),
+                            name: ctx.interner.get_string(f.name()).to_string(),
                             exp: f.arity,
                             got: arity,
                         }));
@@ -797,7 +816,7 @@ impl Machine {
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "fn".to_owned(),
-                        got: self.peek_back(arity).type_name(heap).to_owned(),
+                        got: self.peek_back(arity).type_name(ctx.as_ref()).to_owned(),
                     }));
                 }
             }
@@ -836,6 +855,10 @@ mod test {
         let mut heap = Heap::new();
         let mut interner = Interner::new();
         let mut vm = Machine::new();
-        vm.interpret(&mut heap, &mut interner, &module).unwrap();
+        let mut ctx = ContextMut {
+            heap: &mut heap,
+            interner: &mut interner,
+        };
+        vm.interpret(&mut ctx, &module).unwrap();
     }
 }

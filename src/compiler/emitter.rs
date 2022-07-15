@@ -1275,7 +1275,7 @@ mod test {
     fn emitter() {
         use crate::{
             compiler::{emitter, parser},
-            runtime::{chunk, interner::Interner, memory::Heap, vm::Machine},
+            runtime::{chunk, interner::Interner, memory::Heap, vm::Machine, ContextMut},
         };
 
         let ast = parser::parse(
@@ -1288,9 +1288,11 @@ mod test {
         println!("{}", chunk::disassemble(&module, "jioew"));
         let mut heap = Heap::new();
         let mut interner = Interner::new();
-        Machine::new()
-            .interpret(&mut heap, &mut interner, &module)
-            .unwrap();
+        let mut ctx = ContextMut {
+            heap: &mut heap,
+            interner: &mut interner,
+        };
+        Machine::new().interpret(&mut ctx, &module).unwrap();
     }
 
     #[test]
