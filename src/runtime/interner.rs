@@ -7,29 +7,15 @@ pub struct StringPtr {
     pub len: usize,
 }
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct Interner {
     table: FnvHashMap<&'static str, DefaultKey>,
     strings: SlotMap<DefaultKey, String>,
 }
 
-impl Default for Interner {
-    fn default() -> Self {
-        Interner::new()
-    }
-}
-
 impl Interner {
     pub fn new() -> Self {
-        let mut interner = Interner {
-            table: Default::default(),
-            strings: Default::default(),
-        };
-
-        interner.allocate_string(String::from("print"));
-        interner.allocate_string(String::from("len"));
-
-        interner
+        Default::default()
     }
 
     pub fn allocate_string(&mut self, string: String) -> StringPtr {

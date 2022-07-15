@@ -26,7 +26,7 @@ pub const MAX_DEPTH: usize = 120;
 #[derive(Debug, Clone)]
 pub(crate) enum Variable {
     Local { name: String, depth: u16, slot: u16 },
-    Capture { name: String, depth: u16, slot: u16 },
+    Capture { name: String },
     Global { name: String, index: u16 },
 }
 

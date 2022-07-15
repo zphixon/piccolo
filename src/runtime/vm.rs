@@ -4,7 +4,7 @@ use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{
         chunk::{Chunk, Module},
-        interner::StringPtr,
+        interner::{Interner, StringPtr},
         memory::Heap,
         op::Opcode,
         value::{Array, Value},
@@ -70,13 +70,13 @@ impl<'chunk> FrameStack<'chunk> {
         self.current_frame().chunk
     }
 
-    fn unwind(&self, heap: &Heap) -> Vec<crate::error::Callsite> {
+    fn unwind(&self, interner: &mut Interner) -> Vec<crate::error::Callsite> {
         warn!("unwinding stack");
         let mut calls = Vec::new();
         for frame in self.frames.iter().take(self.frames.len() - 1) {
-            warn!("-- {}", heap.interner().get_string(frame.name));
+            warn!("-- {}", interner.get_string(frame.name));
             calls.push(crate::error::Callsite {
-                name: heap.interner().get_string(frame.name).to_string(),
+                name: interner.get_string(frame.name).to_string(),
                 pos: frame.chunk.get_pos_from_index(frame.ip),
             })
         }
@@ -138,30 +138,33 @@ impl Machine {
         &self.stack[self.stack.len() - 1 - len]
     }
 
-    fn push_string(&mut self, heap: &mut Heap, string: String) {
-        self.push(Value::String(heap.interner_mut().allocate_string(string)));
-    }
-
     pub fn clear_stack_and_move_to_end_of_module(&mut self, module: &Module) {
         self.stack.clear();
         self.ip = module.chunk(0).len();
     }
 
-    pub fn interpret(&mut self, heap: &mut Heap, module: &Module) -> Result<Value, PiccoloError> {
-        self.interpret_from(heap, module, 0)
+    pub fn interpret(
+        &mut self,
+        heap: &mut Heap,
+        interner: &mut Interner,
+        module: &Module,
+    ) -> Result<Value, PiccoloError> {
+        self.interpret_from(heap, interner, module, 0)
     }
 
     pub fn interpret_continue(
         &mut self,
         heap: &mut Heap,
+        interner: &mut Interner,
         module: &Module,
     ) -> Result<Value, PiccoloError> {
-        self.interpret_from(heap, module, self.ip)
+        self.interpret_from(heap, interner, module, self.ip)
     }
 
     fn interpret_from<'chunk>(
         &mut self,
         heap: &mut Heap,
+        interner: &mut Interner,
         module: &'chunk Module,
         ip: usize,
     ) -> Result<Value, PiccoloError> {
@@ -171,7 +174,7 @@ impl Machine {
 
         let mut frames = FrameStack {
             frames: vec![Frame {
-                name: heap.interner_mut().allocate_str("top level"),
+                name: interner.allocate_str("top level"),
                 base: 0,
                 ip,
                 chunk: module.chunk(0),
@@ -182,7 +185,7 @@ impl Machine {
         // loop until stop, return from top, or error
         // TODO refactor to make this not look like hot garbage
         loop {
-            let result = self.interpret_next_instruction(heap, module, &mut frames);
+            let result = self.interpret_next_instruction(heap, interner, module, &mut frames);
             if let Ok(state) = result {
                 match state {
                     VmState::Continue => {}
@@ -199,7 +202,7 @@ impl Machine {
                 self.ip = frames.current_ip();
                 result.map_err(|err| {
                     err.pos(frames.current_pos())
-                        .stack_trace(frames.unwind(heap))
+                        .stack_trace(frames.unwind(interner))
                 })?;
             }
         }
@@ -208,6 +211,7 @@ impl Machine {
     fn interpret_next_instruction<'chunk>(
         &mut self,
         heap: &mut Heap,
+        interner: &mut Interner,
         module: &'chunk Module,
         frames: &mut FrameStack<'chunk>,
     ) -> Result<VmState, PiccoloError> {
@@ -297,7 +301,7 @@ impl Machine {
             }
             Opcode::Constant(index) => {
                 let c = module.get_constant(index);
-                self.push(Value::from_constant(c.clone(), heap));
+                self.push(Value::from_constant(c.clone(), heap, interner));
             }
             Opcode::Nil => self.push(Value::Nil),
             Opcode::Bool(b) => self.push(Value::Bool(b)),
@@ -372,8 +376,12 @@ impl Machine {
                         }));
                     }
                 } else if lhs.is_string() {
-                    let value = format!("{}{}", lhs.format(heap), rhs.format(heap));
-                    self.push_string(heap, value);
+                    let value = format!(
+                        "{}{}",
+                        lhs.format(heap, interner),
+                        rhs.format(heap, interner)
+                    );
+                    self.push(Value::String(interner.allocate_string(value)));
                 } else {
                     return Err(PiccoloError::new(ErrorKind::IncorrectType {
                         exp: "integer or double".into(),
@@ -616,7 +624,7 @@ impl Machine {
             Opcode::Get => {
                 let index = self.pop();
                 let value = self.pop();
-                self.push(value.get(This::None, heap, index)?);
+                self.push(value.get(This::None, heap, interner, index)?);
             }
 
             Opcode::Set => {
@@ -624,11 +632,11 @@ impl Machine {
                 if self.peek().is_object() {
                     let ptr = self.pop().as_ptr();
                     let value = self.pop();
-                    unsafe { heap.get_mut(ptr).set(heap, index, value)? };
+                    unsafe { heap.get_mut(ptr).set(heap, interner, index, value)? };
                 } else {
                     return Err(PiccoloError::new(ErrorKind::CannotGet {
                         object: self.peek().type_name(heap).to_string(),
-                        index: index.format(heap),
+                        index: index.format(heap, interner),
                     }));
                 }
             }
@@ -745,7 +753,7 @@ impl Machine {
 
                     if !f.arity.is_compatible(arity) {
                         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                            name: heap.interner().get_string(f.name).to_string(),
+                            name: interner.get_string(f.name).to_string(),
                             exp: f.arity,
                             got: arity,
                         }));
@@ -778,10 +786,10 @@ impl Machine {
                     args.reverse();
 
                     if f.arity.is_compatible(args.len()) {
-                        self.push((f.ptr)(heap, &args)?);
+                        self.push((f.ptr)(heap, interner, &args)?);
                     } else {
                         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                            name: heap.interner().get_string(f.name()).to_string(),
+                            name: interner.get_string(f.name()).to_string(),
                             exp: f.arity,
                             got: arity,
                         }));
@@ -810,6 +818,8 @@ impl Machine {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+
     #[test]
     fn how_could_this_happen_to_me() {
         use crate::{
@@ -824,8 +834,8 @@ mod test {
         println!("{}", chunk::disassemble(&module, ""));
 
         let mut heap = Heap::new();
-
+        let mut interner = Interner::new();
         let mut vm = Machine::new();
-        vm.interpret(&mut heap, &module).unwrap();
+        vm.interpret(&mut heap, &mut interner, &module).unwrap();
     }
 }

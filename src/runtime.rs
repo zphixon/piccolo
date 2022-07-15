@@ -11,7 +11,7 @@ pub mod vm;
 use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{
-        interner::StringPtr,
+        interner::{Interner, StringPtr},
         memory::{Heap, Ptr},
         value::Value,
     },
@@ -81,36 +81,53 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
         "object"
     }
 
-    fn format(&self, heap: &Heap) -> String {
-        let _ = heap;
+    fn format(&self, heap: &Heap, interner: &Interner) -> String {
+        let _ = interner;
         self.type_name(heap).to_string()
     }
 
-    fn debug_format(&self, heap: &Heap) -> String {
-        let _ = heap;
+    fn debug_format(&self, heap: &Heap, interner: &Interner) -> String {
+        let _ = interner;
         format!("{}(?)", self.type_name(heap))
     }
 
-    fn call(&self, heap: &Heap, values: &[Value]) -> Result<Value, PiccoloError> {
+    fn call(
+        &self,
+        heap: &Heap,
+        interner: &Interner,
+        values: &[Value],
+    ) -> Result<Value, PiccoloError> {
         let _ = values;
         Err(PiccoloError::new(ErrorKind::CannotCall {
-            callee: self.format(heap),
+            callee: self.format(heap, interner),
         }))
     }
 
-    fn get(&self, this: This, heap: &Heap, index_value: Value) -> Result<Value, PiccoloError> {
+    fn get(
+        &self,
+        this: This,
+        heap: &Heap,
+        interner: &Interner,
+        index_value: Value,
+    ) -> Result<Value, PiccoloError> {
         let _ = this;
         Err(PiccoloError::new(ErrorKind::CannotGet {
             object: self.type_name(heap).to_string(),
-            index: index_value.format(heap),
+            index: index_value.format(heap, interner),
         }))
     }
 
-    fn set(&mut self, heap: &Heap, index_value: Value, value: Value) -> Result<(), PiccoloError> {
+    fn set(
+        &mut self,
+        heap: &Heap,
+        interner: &Interner,
+        index_value: Value,
+        value: Value,
+    ) -> Result<(), PiccoloError> {
         let _ = value;
         Err(PiccoloError::new(ErrorKind::CannotGet {
             object: self.type_name(heap).to_string(),
-            index: index_value.format(heap),
+            index: index_value.format(heap, interner),
         }))
     }
 

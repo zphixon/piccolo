@@ -1,6 +1,10 @@
 use crate::{
     error::{ErrorKind, PiccoloError},
-    runtime::{interner::StringPtr, memory::Heap, Arity, Object, This, Value},
+    runtime::{
+        interner::{Interner, StringPtr},
+        memory::Heap,
+        Arity, Object, This, Value,
+    },
 };
 use once_cell::sync::Lazy;
 use std::{
@@ -9,43 +13,55 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub fn to_string(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
+pub fn to_string(
+    heap: &mut Heap,
+    interner: &mut Interner,
+    values: &[Value],
+) -> Result<Value, PiccoloError> {
     let mut s = String::new();
 
     for (i, value) in values.iter().enumerate() {
-        write!(s, "{}", value.format(heap))?;
+        write!(s, "{}", value.format(heap, interner))?;
 
         if i + 1 != values.len() {
             s.push('\t');
         }
     }
 
-    let ptr = heap.interner_mut().allocate_string(s);
+    let ptr = interner.allocate_string(s);
 
     Ok(Value::String(ptr))
 }
 
-pub fn write(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
-    if let Value::String(ptr) = to_string(heap, values)? {
-        print!("{}", heap.interner().get_string(ptr));
+pub fn write(
+    heap: &mut Heap,
+    interner: &mut Interner,
+    values: &[Value],
+) -> Result<Value, PiccoloError> {
+    if let Value::String(ptr) = to_string(heap, interner, values)? {
+        print!("{}", interner.get_string(ptr));
         std::io::stdout().flush().unwrap();
     }
 
     Ok(Value::Nil)
 }
 
-pub fn print(heap: &mut Heap, values: &[Value]) -> Result<Value, PiccoloError> {
-    write(heap, values)?;
+pub fn print(
+    heap: &mut Heap,
+    interner: &mut Interner,
+    values: &[Value],
+) -> Result<Value, PiccoloError> {
+    write(heap, interner, values)?;
     println!();
 
     Ok(Value::Nil)
 }
 
-pub fn rand(_: &mut Heap, _: &[Value]) -> Result<Value, PiccoloError> {
+pub fn rand(_: &mut Heap, _: &mut Interner, _: &[Value]) -> Result<Value, PiccoloError> {
     Ok(Value::Double(rand::random()))
 }
 
-pub fn clone(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn clone(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     let arg = args[0];
     match arg {
         // TODO when we have closures
@@ -56,19 +72,27 @@ pub fn clone(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     Ok(arg)
 }
 
-pub fn type_(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn type_(
+    heap: &mut Heap,
+    interner: &mut Interner,
+    args: &[Value],
+) -> Result<Value, PiccoloError> {
     let arg = args[0];
     let name = arg.type_name(heap);
-    Ok(Value::String(heap.interner_mut().allocate_str(name)))
+    Ok(Value::String(interner.allocate_str(name)))
 }
 
 static START: Lazy<Instant> = Lazy::new(Instant::now);
-pub fn clock(_: &mut Heap, _: &[Value]) -> Result<Value, PiccoloError> {
+pub fn clock(_: &mut Heap, _: &mut Interner, _: &[Value]) -> Result<Value, PiccoloError> {
     let duration = Instant::now() - *START;
     Ok(Value::Double(duration.as_secs_f64()))
 }
 
-pub fn sleep(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn sleep(
+    heap: &mut Heap,
+    interner: &mut Interner,
+    args: &[Value],
+) -> Result<Value, PiccoloError> {
     if args.len() != 1 && args.len() != 2 {
         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
             name: "sleep".to_string(),
@@ -81,7 +105,7 @@ pub fn sleep(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
         secs.try_into().map_err(|_| {
             PiccoloError::new(ErrorKind::InvalidArgument {
                 exp: "non-negative integer".to_string(),
-                got: args[0].format(heap),
+                got: args[0].format(heap, interner),
             })
         })
     };
@@ -94,7 +118,7 @@ pub fn sleep(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
 
         (Value::Integer(length), Some(Value::String(unit))) => {
             let length = non_negative(length)?;
-            match heap.interner().get_string(*unit) {
+            match interner.get_string(*unit) {
                 "ns" | "nanosecond" | "nanoseconds" => sleep(Duration::from_nanos(length)),
                 "us" | "microsecond" | "microseconds" => sleep(Duration::from_micros(length)),
                 "ms" | "millisecond" | "milliseconds" => sleep(Duration::from_millis(length)),
@@ -106,7 +130,7 @@ pub fn sleep(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
                     return Err(PiccoloError::new(ErrorKind::InvalidArgument {
                         exp: "nanoseconds, microseconds, milliseconds, seconds, minutes, or hours"
                             .to_string(),
-                        got: heap.interner().get_string(*unit).to_string(),
+                        got: interner.get_string(*unit).to_string(),
                     }))
                 }
             }
@@ -123,7 +147,7 @@ pub fn sleep(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     Ok(Value::Nil)
 }
 
-pub fn truncate(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn truncate(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     match args[0] {
         Value::Double(num) => Ok(Value::Integer(num.trunc() as i64)),
         Value::Integer(num) => Ok(Value::Integer(num)),
@@ -134,7 +158,7 @@ pub fn truncate(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> 
     }
 }
 
-pub fn double(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn double(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     match args[0] {
         Value::Double(num) => Ok(Value::Double(num)),
         Value::Integer(num) => Ok(Value::Double(num as f64)),
@@ -145,7 +169,7 @@ pub fn double(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 }
 
-pub fn floor(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn floor(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     match args[0] {
         Value::Double(num) => Ok(Value::Integer(num.floor() as i64)),
         Value::Integer(num) => Ok(Value::Integer(num)),
@@ -156,7 +180,7 @@ pub fn floor(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 }
 
-pub fn ceil(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn ceil(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     match args[0] {
         Value::Double(num) => Ok(Value::Integer(num.ceil() as i64)),
         Value::Integer(num) => Ok(Value::Integer(num)),
@@ -167,7 +191,7 @@ pub fn ceil(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 }
 
-pub fn round(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn round(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     match args[0] {
         Value::Double(num) => Ok(Value::Integer(num.round() as i64)),
         Value::Integer(num) => Ok(Value::Integer(num)),
@@ -178,7 +202,7 @@ pub fn round(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 }
 
-pub fn abs(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn abs(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     match args[0] {
         Value::Double(num) => Ok(Value::Double(num.abs())),
         Value::Integer(num) => Ok(Value::Integer(num.abs())),
@@ -189,7 +213,7 @@ pub fn abs(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 }
 
-pub fn sign(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn sign(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     match args[0] {
         Value::Double(num) => Ok(Value::Integer(num.signum() as i64)),
         Value::Integer(num) => Ok(Value::Integer(num.signum())),
@@ -200,7 +224,7 @@ pub fn sign(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 }
 
-pub fn cos(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn cos(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     if let Value::Double(num) = args[0] {
         Ok(Value::Double(num.cos()))
     } else {
@@ -211,7 +235,7 @@ pub fn cos(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 }
 
-pub fn sin(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn sin(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     if let Value::Double(num) = args[0] {
         Ok(Value::Double(num.sin()))
     } else {
@@ -222,7 +246,7 @@ pub fn sin(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 }
 
-pub fn tan(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn tan(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     if let Value::Double(num) = args[0] {
         Ok(Value::Double(num.tan()))
     } else {
@@ -233,18 +257,22 @@ pub fn tan(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 }
 
-pub fn input(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn input(
+    heap: &mut Heap,
+    interner: &mut Interner,
+    args: &[Value],
+) -> Result<Value, PiccoloError> {
     if !args.is_empty() {
-        write(heap, args)?;
+        write(heap, interner, args)?;
     }
 
     let mut buf = String::new();
     std::io::stdin().read_line(&mut buf)?;
 
-    Ok(Value::String(heap.interner_mut().allocate_string(buf)))
+    Ok(Value::String(interner.allocate_string(buf)))
 }
 
-pub fn exit(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+pub fn exit(heap: &mut Heap, _: &mut Interner, args: &[Value]) -> Result<Value, PiccoloError> {
     if args.len() > 1 {
         return Err(PiccoloError::new(ErrorKind::IncorrectArity {
             name: "exit".to_string(),
@@ -263,7 +291,7 @@ pub fn exit(heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
     }
 }
 
-pub type PiccoloFunction = fn(&mut Heap, &[Value]) -> Result<Value, PiccoloError>;
+pub type PiccoloFunction = fn(&mut Heap, &mut Interner, &[Value]) -> Result<Value, PiccoloError>;
 
 #[derive(Clone, Copy)]
 pub struct BuiltinFunction {
@@ -293,16 +321,21 @@ impl BuiltinFunction {
         self.name
     }
 
-    pub fn call(&self, heap: &mut Heap, args: &[Value]) -> Result<Value, PiccoloError> {
+    pub fn call(
+        &self,
+        heap: &mut Heap,
+        interner: &mut Interner,
+        args: &[Value],
+    ) -> Result<Value, PiccoloError> {
         if !self.arity.is_compatible(args.len()) {
             return Err(PiccoloError::new(ErrorKind::IncorrectArity {
-                name: heap.interner().get_string(self.name).to_string(),
+                name: interner.get_string(self.name).to_string(),
                 exp: self.arity,
                 got: args.len(),
             }));
         }
 
-        (self.ptr)(heap, args)
+        (self.ptr)(heap, interner, args)
     }
 }
 

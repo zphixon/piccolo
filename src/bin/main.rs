@@ -259,7 +259,7 @@ fn repl(
                                 for (i, string) in env.strings().enumerate() {
                                     print!("{string}");
                                     std::io::stdout().flush().unwrap();
-                                    if i + 1 < env.heap.interner().num_strings() {
+                                    if i + 1 < env.interner().num_strings() {
                                         print!(", ");
                                         std::io::stdout().flush().unwrap();
                                     }
@@ -270,7 +270,7 @@ fn repl(
                             let dump_objects = || {
                                 println!("=== objects ===");
                                 for (i, object) in env.objects().enumerate() {
-                                    print!("{}", object.debug_format(&env.heap));
+                                    print!("{}", env.debug_object(object));
                                     std::io::stdout().flush().unwrap();
                                     if i + 1 < env.heap.num_objects() {
                                         print!(", ");

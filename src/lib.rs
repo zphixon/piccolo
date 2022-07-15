@@ -60,15 +60,15 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     debug!("ast\n{}", compiler::ast::print_ast(&ast));
 
     debug!("compile");
-    emitter::compile_with(&mut env.emitter, &ast)?;
+    emitter::compile_with(&mut env.emitter, &mut env.interner, &ast)?;
     let module = env.emitter.module();
     debug!("{}", runtime::chunk::disassemble(module, ""));
 
     debug!("interpret");
     Ok(env
         .vm
-        .interpret(&mut env.heap, module)?
-        .into_constant(&env.heap))
+        .interpret(&mut env.heap, &mut env.interner, module)?
+        .into_constant(&env.heap, &env.interner))
 }
 
 /// Reads a file and interprets its contents.
@@ -82,7 +82,7 @@ pub fn do_file(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
 }
 
 use compiler::emitter::Emitter;
-use runtime::{memory::Heap, value::Value, vm::Machine};
+use runtime::{interner::Interner, memory::Heap, value::Value, vm::Machine};
 
 use crate::runtime::Object;
 
@@ -91,6 +91,7 @@ pub struct Environment {
     pub emitter: Emitter,
     pub heap: Heap,
     pub vm: Machine,
+    pub interner: Interner,
 }
 
 impl Default for Environment {
@@ -105,6 +106,7 @@ impl Environment {
             emitter: Emitter::new(),
             heap: Heap::new(),
             vm: Machine::new(),
+            interner: Interner::new(),
         }
     }
 
@@ -117,8 +119,14 @@ impl Environment {
         let emitter = Emitter::new();
         let heap = Heap::new();
         let vm = Machine::new();
+        let interner = Interner::new();
 
-        let mut env = Environment { emitter, heap, vm };
+        let mut env = Environment {
+            emitter,
+            heap,
+            vm,
+            interner,
+        };
 
         macro_rules! add_builtin_function {
             ($name:ident, $arity:expr) => {
@@ -127,7 +135,6 @@ impl Environment {
 
             ($name:ident, $funcname:ident, $arity:expr) => {
                 let name = env
-                    .heap
                     .interner_mut()
                     .allocate_string(String::from(stringify!($name)));
                 env.add_global_variable(
@@ -163,12 +170,12 @@ impl Environment {
 
     pub fn add_global_variable(&mut self, name: &str, value: Value) {
         self.emitter
-            .make_global_ident(compiler::Token::identifier(name));
+            .make_global_ident(&mut self.interner, compiler::Token::identifier(name));
         self.vm.globals.insert(String::from(name), value);
     }
 
     pub fn compile(&mut self, ast: &compiler::ast::Ast) -> Result<(), Vec<PiccoloError>> {
-        compiler::emitter::compile_with(&mut self.emitter, ast)
+        compiler::emitter::compile_with(&mut self.emitter, &mut self.interner, ast)
     }
 
     #[must_use]
@@ -183,12 +190,13 @@ impl Environment {
     }
 
     pub fn interpret_compiled(&mut self) -> Result<Value, PiccoloError> {
-        self.vm.interpret(&mut self.heap, self.emitter.module())
+        self.vm
+            .interpret(&mut self.heap, &mut self.interner, self.emitter.module())
     }
 
     pub fn interpret_continue(&mut self) -> Result<Value, PiccoloError> {
         self.vm
-            .interpret_continue(&mut self.heap, self.emitter.module())
+            .interpret_continue(&mut self.heap, &mut self.interner, self.emitter.module())
     }
 
     pub fn clear_errors(&mut self) {
@@ -197,8 +205,16 @@ impl Environment {
         self.emitter.reset_after_errors();
     }
 
+    pub fn interner(&self) -> &Interner {
+        &self.interner
+    }
+
+    pub fn interner_mut(&mut self) -> &mut Interner {
+        &mut self.interner
+    }
+
     pub fn strings(&self) -> impl Iterator<Item = &str> {
-        self.heap.interner().strings()
+        self.interner().strings()
     }
 
     pub fn objects(&self) -> impl Iterator<Item = &dyn Object> {
@@ -210,11 +226,19 @@ impl Environment {
     }
 
     pub fn format(&self, value: Value) -> String {
-        value.format(&self.heap)
+        value.format(&self.heap, &self.interner)
     }
 
     pub fn debug(&self, value: Value) -> String {
-        value.debug_format(&self.heap)
+        value.debug_format(&self.heap, &self.interner)
+    }
+
+    pub fn format_object(&self, value: Value) -> String {
+        value.format(&self.heap, &self.interner)
+    }
+
+    pub fn debug_object(&self, value: &dyn Object) -> String {
+        value.debug_format(&self.heap, &self.interner)
     }
 }
 
@@ -243,7 +267,11 @@ mod integration {
         println!("{}", chunk::disassemble(&module, "idklol"));
         let mut heap = Heap::new();
         let mut vm = Machine::new();
-        println!("{:?}", vm.interpret(&mut heap, &module).unwrap());
+        let mut interner = Interner::new();
+        println!(
+            "{:?}",
+            vm.interpret(&mut heap, &mut interner, &module).unwrap()
+        );
     }
 
     #[test]
@@ -288,10 +316,11 @@ mod integration {
 
             let mut heap = Heap::new();
             let mut vm = Machine::new();
+            let mut interner = Interner::new();
             assert_eq!(
-                vm.interpret(&mut heap, &module)
+                vm.interpret(&mut heap, &mut interner, &module)
                     .unwrap()
-                    .into_constant(&heap),
+                    .into_constant(&heap, &interner),
                 Constant::Integer(11)
             );
         } else {

@@ -1,4 +1,4 @@
-use crate::runtime::{interner::Interner, Object};
+use crate::runtime::Object;
 use slotmap::{DefaultKey, SlotMap};
 use std::{
     cell::UnsafeCell,
@@ -25,7 +25,6 @@ impl Ptr {
 #[derive(Default, Debug)]
 pub struct Heap {
     objects: SlotMap<DefaultKey, ObjectHeader>,
-    interner: Interner,
 }
 
 impl Heap {
@@ -113,14 +112,6 @@ impl Heap {
         self.get(ptr).downcast_ref::<T>()
     }
 
-    pub fn interner(&self) -> &Interner {
-        &self.interner
-    }
-
-    pub fn interner_mut(&mut self) -> &mut Interner {
-        &mut self.interner
-    }
-
     pub fn clone(&mut self, ptr: Ptr) -> Ptr {
         Ptr(self.objects.insert(ObjectHeader {
             inner: UnsafeCell::new(self.get(ptr).clone_object()),
@@ -140,7 +131,7 @@ impl Heap {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::runtime::Value;
+    use crate::runtime::{interner::Interner, Value};
 
     #[test]
     fn simple_collect() {
@@ -217,15 +208,20 @@ mod test {
                 heap.trace(self.cdr);
             }
 
-            fn format(&self, heap: &Heap) -> String {
+            fn format(&self, heap: &Heap, interner: &Interner) -> String {
                 if self.cdr != Heap::null_ptr() {
-                    format!("(cons {} {})", self.car, heap.get(self.cdr).format(heap))
+                    format!(
+                        "(cons {} {})",
+                        self.car,
+                        heap.get(self.cdr).format(heap, interner)
+                    )
                 } else {
                     format!("(cons {} nil)", self.car)
                 }
             }
         }
 
+        let interner = Interner::new();
         let mut heap = Heap::new();
         let inner1 = heap.allocate(Cons {
             car: 1,
@@ -242,14 +238,17 @@ mod test {
 
         assert_eq!(
             "(cons 3 (cons 2 (cons 1 nil)))",
-            heap.get(root).format(&heap)
+            heap.get(root).format(&heap, &interner)
         );
 
         heap.collect([&inner2].into_iter());
-        assert_eq!("(cons 2 (cons 1 nil))", heap.get(inner2).format(&heap));
+        assert_eq!(
+            "(cons 2 (cons 1 nil))",
+            heap.get(inner2).format(&heap, &interner)
+        );
 
         heap.collect([&inner1].into_iter());
-        assert_eq!("(cons 1 nil)", heap.get(inner1).format(&heap));
+        assert_eq!("(cons 1 nil)", heap.get(inner1).format(&heap, &interner));
 
         heap.collect([].into_iter());
         assert!(heap.get_header(inner1).is_none());

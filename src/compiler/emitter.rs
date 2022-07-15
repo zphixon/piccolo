@@ -9,6 +9,7 @@ use crate::{
     error::{ErrorKind, PiccoloError},
     runtime::{
         chunk::{Chunk, Module},
+        interner::Interner,
         op::Opcode,
         value::{Constant, ConstantFunction},
         Arity,
@@ -33,14 +34,19 @@ macro_rules! check_depth {
 
 pub fn compile(ast: &Ast) -> Result<Module, Vec<PiccoloError>> {
     let mut emitter = Emitter::new();
-    compile_with(&mut emitter, ast)?;
+    let mut interner = Interner::new();
+    compile_with(&mut emitter, &mut interner, ast)?;
     Ok(emitter.into_module())
 }
 
-pub fn compile_with(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloError>> {
+pub fn compile_with(
+    emitter: &mut Emitter,
+    interner: &mut Interner,
+    ast: &Ast,
+) -> Result<(), Vec<PiccoloError>> {
     let errors: Vec<_> = ast
         .iter()
-        .map(|stmt| compile_stmt(emitter, 0, stmt))
+        .map(|stmt| compile_stmt(emitter, interner, 0, stmt))
         .filter_map(Result::err)
         .collect();
 
@@ -52,76 +58,77 @@ pub fn compile_with(emitter: &mut Emitter, ast: &Ast) -> Result<(), Vec<PiccoloE
 }
 
 #[rustfmt::skip]
-fn compile_stmt(emitter: &mut Emitter, depth: usize, stmt: &Stmt) -> Result<(), PiccoloError> {
+fn compile_stmt(emitter: &mut Emitter, interner: &mut Interner, depth: usize, stmt: &Stmt) -> Result<(), PiccoloError> {
     check_depth!(depth, stmt.token());
 
     match stmt {
         Stmt::Expr { token, expr }
-            => compile_expr_stmt(emitter, depth + 1, *token, expr),
+            => compile_expr_stmt(emitter, interner, depth + 1, *token, expr),
         Stmt::Block { do_, body, end }
-            => compile_block(emitter, depth + 1, *do_, body, *end),
+            => compile_block(emitter, interner, depth + 1, *do_, body, *end),
         Stmt::Declaration { name, value, .. }
-            => compile_declaration(emitter, depth + 1, *name, value),
+            => compile_declaration(emitter, interner, depth + 1, *name, value),
         Stmt::Assignment { lval, op, rval }
-            => compile_assignment(emitter, depth + 1, lval, *op, rval),
+            => compile_assignment(emitter, interner, depth + 1, lval, *op, rval),
         Stmt::If { if_, cond, do_, then_block, else_, else_block, end }
-            => compile_if(emitter, depth + 1, *if_, cond, *do_, then_block, else_.as_ref(), else_block.as_ref(), *end),
+            => compile_if(emitter, interner, depth + 1, *if_, cond, *do_, then_block, else_.as_ref(), else_block.as_ref(), *end),
         Stmt::While { while_, cond, do_, body, end }
-            => compile_while(emitter, depth + 1, *while_, cond, *do_, body, *end),
+            => compile_while(emitter, interner, depth + 1, *while_, cond, *do_, body, *end),
         Stmt::For { for_, init, cond, name, inc_op, inc_expr, do_, body, end }
-            => compile_for(emitter, depth + 1, *for_, init.as_ref(), cond, *name, *inc_op, inc_expr, *do_, body, *end),
+            => compile_for(emitter, interner, depth + 1, *for_, init.as_ref(), cond, *name, *inc_op, inc_expr, *do_, body, *end),
         Stmt::ForEach { for_, item, iter, do_, body, end }
-            => compile_for_each(emitter, depth + 1, *for_, *item, *iter, *do_, body, *end),
+            => compile_for_each(emitter, interner, depth + 1, *for_, *item, *iter, *do_, body, *end),
         Stmt::Fn { name, args, arity, body, method, end }
-            => compile_fn(emitter, depth + 1, *name, args, *arity, body, *method, *end),
+            => compile_fn(emitter, interner, depth + 1, *name, args, *arity, body, *method, *end),
         Stmt::Break { break_ }
             => compile_break(emitter, depth + 1, *break_),
         Stmt::Continue { continue_ }
             => compile_continue(emitter, depth + 1, *continue_),
         Stmt::Return { return_, value }
-            => compile_return(emitter, depth + 1, *return_, value.as_ref()),
+            => compile_return(emitter, interner, depth + 1, *return_, value.as_ref()),
         Stmt::Assert { assert, value }
-            => compile_assert(emitter, depth + 1, *assert, value),
+            => compile_assert(emitter, interner, depth + 1, *assert, value),
         Stmt::Data { name, methods, fields }
-            => compile_data(emitter, depth + 1, *name, methods, fields),
+            => compile_data(emitter, interner, depth + 1, *name, methods, fields),
     }
 }
 
 #[rustfmt::skip]
-fn compile_expr(emitter: &mut Emitter, depth: usize, expr: &Expr) -> Result<(), PiccoloError> {
+fn compile_expr(emitter: &mut Emitter, interner: &mut Interner, depth: usize, expr: &Expr) -> Result<(), PiccoloError> {
     check_depth!(depth, expr.token());
 
     match expr {
         Expr::Literal { literal }
-            => compile_literal(emitter, depth + 1, *literal),
+            => compile_literal(emitter, interner, depth + 1, *literal),
         Expr::ArrayLiteral { right_bracket, values }
-            => compile_array_literal(emitter, depth + 1, *right_bracket, values),
+            => compile_array_literal(emitter, interner, depth + 1, *right_bracket, values),
         Expr::Paren { right_paren, expr }
-            => compile_paren(emitter, depth + 1, *right_paren, expr),
+            => compile_paren(emitter, interner, depth + 1, *right_paren, expr),
         Expr::Variable { variable }
-            => compile_variable(emitter, depth + 1, *variable),
+            => compile_variable(emitter, interner, depth + 1, *variable),
         Expr::Unary { op, rhs }
-            => compile_unary(emitter, depth + 1, *op, rhs),
+            => compile_unary(emitter, interner, depth + 1, *op, rhs),
         Expr::Binary { lhs, op, rhs }
-            => compile_binary(emitter, depth + 1, lhs, *op, rhs),
+            => compile_binary(emitter, interner, depth + 1, lhs, *op, rhs),
         Expr::Logical { lhs, op, rhs }
-            => compile_logical(emitter, depth + 1, lhs, *op, rhs),
+            => compile_logical(emitter, interner, depth + 1, lhs, *op, rhs),
         Expr::Call { callee, paren, arity, args }
-            => compile_call(emitter, depth + 1, callee, *paren, *arity, args),
+            => compile_call(emitter, interner, depth + 1, callee, *paren, *arity, args),
         // Expr::New { name, args }
-        //     => compile_new(emitter, depth + 1, name, args),
+        //     => compile_new(emitter, interner, depth + 1, name, args),
         Expr::Get { object, name }
-            => compile_get(emitter, depth + 1, object, *name),
+            => compile_get(emitter, interner, depth + 1, object, *name),
         Expr::Index { right_bracket, object, index }
-            => compile_index(emitter, depth + 1, *right_bracket, object, index),
+            => compile_index(emitter, interner, depth + 1, *right_bracket, object, index),
         Expr::Fn { fn_, args, arity, body, end }
-            => compile_lambda(emitter, depth + 1, *fn_, args, *arity, body, *end),
+            => compile_lambda(emitter, interner, depth + 1, *fn_, args, *arity, body, *end),
         _ => Err(PiccoloError::todo(format!("compile_expr: {expr:#?}"))),
     }
 }
 
 fn compile_expr_stmt(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     token: Token,
     expr: &Expr,
@@ -129,13 +136,14 @@ fn compile_expr_stmt(
     trace!("{} compile expr stmt", token.pos);
     check_depth!(depth, token);
 
-    compile_expr(emitter, depth + 1, expr)?;
+    compile_expr(emitter, interner, depth + 1, expr)?;
     emitter.add_instruction(Opcode::Pop, token.pos);
     Ok(())
 }
 
 fn compile_block(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     _do_: Token,
     body: &[Stmt],
@@ -146,7 +154,7 @@ fn compile_block(
 
     emitter.begin_scope();
     for stmt in body {
-        compile_stmt(emitter, depth + 1, stmt)?;
+        compile_stmt(emitter, interner, depth + 1, stmt)?;
     }
     emitter.end_scope(end.pos);
     Ok(())
@@ -154,6 +162,7 @@ fn compile_block(
 
 fn compile_declaration(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     name: Token,
     value: &Expr,
@@ -161,12 +170,13 @@ fn compile_declaration(
     trace!("{} compile decl {}", name.pos, name.lexeme);
     check_depth!(depth, name);
 
-    compile_expr(emitter, depth + 1, value)?;
-    emitter.make_variable(name)
+    compile_expr(emitter, interner, depth + 1, value)?;
+    emitter.make_variable(interner, name)
 }
 
 fn compile_assignment(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     lval: &Expr,
     op: Token,
@@ -185,29 +195,30 @@ fn compile_assignment(
         let name = *name;
         if let Some(opcode) = op.assign_by_mutate_op() {
             // if this is an assignment-by-mutation operator, first get the value of the variable
-            compile_variable(emitter, depth + 1, name)?;
+            compile_variable(emitter, interner, depth + 1, name)?;
 
             // calculate the value to mutate with
-            compile_expr(emitter, depth + 1, rval)?;
+            compile_expr(emitter, interner, depth + 1, rval)?;
 
             // then mutate
             emitter.add_instruction(opcode, op.pos);
         } else {
             // otherwise just calculate the value
-            compile_expr(emitter, depth + 1, rval)?;
+            compile_expr(emitter, interner, depth + 1, rval)?;
         }
 
         // then assign
         emitter.add_set_variable(name)?;
     } else if let Expr::Get { object, name } = lval {
-        compile_expr(emitter, depth + 1, rval)?;
-        compile_expr(emitter, depth + 1, object)?;
+        compile_expr(emitter, interner, depth + 1, rval)?;
+        compile_expr(emitter, interner, depth + 1, object)?;
+        interner.allocate_str(name.lexeme);
         emitter.add_constant(Constant::String(name.lexeme.to_string()), name.pos);
         emitter.add_instruction(Opcode::Set, op.pos);
     } else if let Expr::Index { object, index, .. } = lval {
-        compile_expr(emitter, depth + 1, rval)?;
-        compile_expr(emitter, depth + 1, object)?;
-        compile_expr(emitter, depth + 1, index)?;
+        compile_expr(emitter, interner, depth + 1, rval)?;
+        compile_expr(emitter, interner, depth + 1, object)?;
+        compile_expr(emitter, interner, depth + 1, index)?;
         emitter.add_instruction(Opcode::Set, op.pos);
     } else {
         return Err(PiccoloError::new(ErrorKind::SyntaxError)
@@ -223,6 +234,7 @@ fn compile_assignment(
 
 fn compile_if(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     if_: Token,
     cond: &Expr,
@@ -236,7 +248,7 @@ fn compile_if(
     check_depth!(depth, if_);
 
     // compile the condition
-    compile_expr(emitter, depth + 1, cond)?;
+    compile_expr(emitter, interner, depth + 1, cond)?;
 
     if let (Some(else_), Some(else_block)) = (else_, else_block) {
         // if the condition is false, jump to patch_jump(jump_else)
@@ -244,7 +256,7 @@ fn compile_if(
         // pop the condition after skipping the jump instruction
         emitter.add_instruction(Opcode::Pop, if_.pos);
         // compile the then block
-        compile_block(emitter, depth + 1, do_, then_block, *else_)?;
+        compile_block(emitter, interner, depth + 1, do_, then_block, *else_)?;
         // jump unconditionally past the else block to patch_jump(end_jump)
         let end_jump = emitter.start_jump(Opcode::JumpForward(0), else_.pos);
 
@@ -253,7 +265,7 @@ fn compile_if(
         // pop the condition
         emitter.add_instruction(Opcode::Pop, else_.pos);
         // compile the else block
-        compile_block(emitter, depth + 1, *else_, else_block, end)?;
+        compile_block(emitter, interner, depth + 1, *else_, else_block, end)?;
 
         emitter.patch_jump(end_jump);
     } else {
@@ -263,7 +275,7 @@ fn compile_if(
         emitter.add_instruction(Opcode::Pop, if_.pos);
 
         // compile then block
-        compile_block(emitter, depth + 1, do_, then_block, end)?;
+        compile_block(emitter, interner, depth + 1, do_, then_block, end)?;
 
         // jump over the condition pop if we jumped over the else block
         let jump_pop = emitter.start_jump(Opcode::JumpForward(0), end.pos);
@@ -277,6 +289,7 @@ fn compile_if(
 
 fn compile_while(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     while_: Token,
     cond: &Expr,
@@ -289,14 +302,14 @@ fn compile_while(
 
     // loop condition
     let loop_start = emitter.start_loop_jumps();
-    compile_expr(emitter, depth + 1, cond)?;
+    compile_expr(emitter, interner, depth + 1, cond)?;
 
     // jump to the end if the condition was false, pop if true
     let exit_jump = emitter.start_jump(Opcode::JumpFalse(0), while_.pos);
     emitter.add_instruction(Opcode::Pop, while_.pos);
 
     // loop body
-    compile_block(emitter, depth + 1, do_, body, end)?;
+    compile_block(emitter, interner, depth + 1, do_, body, end)?;
 
     // here after the body if we encounter a continue
     emitter.patch_continue_jumps();
@@ -316,6 +329,7 @@ fn compile_while(
 
 fn compile_for(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     for_: Token,
     init: &Stmt,
@@ -332,18 +346,18 @@ fn compile_for(
 
     // initializer
     emitter.begin_scope();
-    compile_stmt(emitter, depth + 1, init)?;
+    compile_stmt(emitter, interner, depth + 1, init)?;
 
     // condition
     let start_offset = emitter.start_loop_jumps();
-    compile_expr(emitter, depth + 1, cond)?;
+    compile_expr(emitter, interner, depth + 1, cond)?;
 
     // if false jump to the end
     let end_jump = emitter.start_jump(Opcode::JumpFalse(0), for_.pos);
     emitter.add_instruction(Opcode::Pop, for_.pos);
 
     // loop body
-    compile_block(emitter, depth + 1, do_, body, end)?;
+    compile_block(emitter, interner, depth + 1, do_, body, end)?;
 
     // here if we encounter a continue
     emitter.patch_continue_jumps();
@@ -351,6 +365,7 @@ fn compile_for(
     // increment
     compile_assignment(
         emitter,
+        interner,
         depth + 1,
         &Expr::Variable { variable: name },
         inc_op,
@@ -375,6 +390,7 @@ fn compile_for(
 
 fn compile_for_each(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     for_: Token,
     item: Token,
@@ -391,13 +407,14 @@ fn compile_for_each(
 
     emitter.begin_scope();
     emitter.add_constant(Constant::Integer(0), for_.pos);
-    emitter.make_variable(index)?;
+    emitter.make_variable(interner, index)?;
 
     let start = emitter.start_loop_jumps();
 
-    emitter.add_get_variable(index)?;
-    compile_variable(emitter, depth, iter)?;
-    emitter.add_constant(Constant::String(String::from("len")), iter.pos);
+    emitter.add_get_variable(interner, index)?;
+    compile_variable(emitter, interner, depth, iter)?;
+    interner.allocate_str("len");
+    emitter.add_constant(Constant::String(String::from("len")), for_.pos);
     emitter.add_instruction(Opcode::Get, for_.pos);
     emitter.add_instruction(Opcode::Less, for_.pos);
 
@@ -407,6 +424,7 @@ fn compile_for_each(
     emitter.begin_scope();
     compile_declaration(
         emitter,
+        interner,
         depth + 1,
         item,
         &Expr::Index {
@@ -415,7 +433,7 @@ fn compile_for_each(
             index: Box::new(Expr::Variable { variable: index }),
         },
     )?;
-    compile_block(emitter, depth + 1, do_, body, end)?;
+    compile_block(emitter, interner, depth + 1, do_, body, end)?;
     emitter.end_scope(end.pos);
 
     emitter.patch_continue_jumps();
@@ -434,6 +452,7 @@ fn compile_for_each(
 
 fn compile_fn(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     name: Token,
     args: &[Token],
@@ -447,21 +466,21 @@ fn compile_fn(
 
     // if the function is global, define a global variable
     if !emitter.current_context().is_local() {
-        emitter.make_global_ident(name);
+        emitter.make_global_ident(interner, name);
     }
 
     emitter.begin_context();
     emitter.begin_scope();
 
     // will always be local
-    emitter.make_variable(name)?;
+    emitter.make_variable(interner, name)?;
     for arg in args {
-        emitter.make_variable(*arg)?;
+        emitter.make_variable(interner, *arg)?;
     }
 
     // don't use compile_block because we've already started a new scope
     for stmt in body {
-        compile_stmt(emitter, depth + 1, stmt)?;
+        compile_stmt(emitter, interner, depth + 1, stmt)?;
     }
 
     emitter.add_instruction(Opcode::Nil, end.pos);
@@ -478,7 +497,7 @@ fn compile_fn(
 
     emitter.add_constant(Constant::Function(function), name.pos);
 
-    emitter.make_variable(name)?;
+    emitter.make_variable(interner, name)?;
 
     Ok(())
 }
@@ -509,6 +528,7 @@ fn compile_continue(
 
 fn compile_return(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     return_: Token,
     expr: Option<&Expr>,
@@ -517,7 +537,7 @@ fn compile_return(
     check_depth!(depth, return_);
 
     if let Some(expr) = expr {
-        compile_expr(emitter, depth + 1, expr)?;
+        compile_expr(emitter, interner, depth + 1, expr)?;
     } else {
         emitter.add_instruction(Opcode::Nil, return_.pos);
     }
@@ -529,6 +549,7 @@ fn compile_return(
 
 fn compile_assert(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     assert: Token,
     value: &Expr,
@@ -536,7 +557,7 @@ fn compile_assert(
     trace!("{} compile assert", assert.pos);
     check_depth!(depth, assert);
 
-    compile_expr(emitter, depth + 1, value)?;
+    compile_expr(emitter, interner, depth + 1, value)?;
 
     let c = emitter.make_constant(Constant::String(super::ast::print_expression(value)));
     emitter.add_instruction(Opcode::Assert(c), assert.pos);
@@ -546,6 +567,7 @@ fn compile_assert(
 
 fn compile_data(
     _emitter: &mut Emitter,
+    _interner: &mut Interner,
     depth: usize,
     name: Token,
     _methods: &[Stmt],
@@ -558,6 +580,7 @@ fn compile_data(
 
 fn compile_literal(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     literal: Token,
 ) -> Result<(), PiccoloError> {
@@ -571,6 +594,11 @@ fn compile_literal(
             emitter.add_instruction(Opcode::Integer(v.try_into().unwrap()), literal.pos)
         }
         TokenKind::Nil => emitter.add_instruction(Opcode::Nil, literal.pos),
+        TokenKind::String => {
+            let string = crate::compiler::escape_string(literal)?;
+            interner.allocate_string(string.clone());
+            emitter.add_constant(Constant::String(string), literal.pos);
+        }
         _ => emitter.add_constant(Constant::try_from(literal)?, literal.pos),
     }
 
@@ -579,6 +607,7 @@ fn compile_literal(
 
 fn compile_array_literal(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     right_bracket: Token,
     values: &[Expr],
@@ -586,7 +615,7 @@ fn compile_array_literal(
     check_depth!(depth, right_bracket);
 
     for value in values.iter() {
-        compile_expr(emitter, depth + 1, value)?;
+        compile_expr(emitter, interner, depth + 1, value)?;
     }
 
     emitter.add_instruction(
@@ -599,6 +628,7 @@ fn compile_array_literal(
 
 fn compile_paren(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     right_paren: Token,
     expr: &Expr,
@@ -606,23 +636,25 @@ fn compile_paren(
     trace!("{} compile paren", right_paren.pos);
     check_depth!(depth, right_paren);
 
-    compile_expr(emitter, depth + 1, expr)
+    compile_expr(emitter, interner, depth + 1, expr)
         .map_err(|e| e.msg_string(format!("in expression starting on pos {}", right_paren.pos)))
 }
 
 fn compile_variable(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     variable: Token,
 ) -> Result<(), PiccoloError> {
     trace!("{} compile variable {}", variable.pos, variable.lexeme);
     check_depth!(depth, variable);
 
-    emitter.add_get_variable(variable)
+    emitter.add_get_variable(interner, variable)
 }
 
 fn compile_unary(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     op: Token,
     rhs: &Expr,
@@ -630,7 +662,7 @@ fn compile_unary(
     trace!("{} compile unary {}", op.pos, op.lexeme);
     check_depth!(depth, op);
 
-    compile_expr(emitter, depth + 1, rhs)?;
+    compile_expr(emitter, interner, depth + 1, rhs)?;
 
     match op.kind {
         TokenKind::Minus => emitter.add_instruction(Opcode::Negate, op.pos),
@@ -643,6 +675,7 @@ fn compile_unary(
 
 fn compile_binary(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     lhs: &Expr,
     op: Token,
@@ -651,8 +684,8 @@ fn compile_binary(
     trace!("{} compile binary {}", op.pos, op.lexeme);
     check_depth!(depth, lhs.token());
 
-    compile_expr(emitter, depth + 1, lhs)?;
-    compile_expr(emitter, depth + 1, rhs)?;
+    compile_expr(emitter, interner, depth + 1, lhs)?;
+    compile_expr(emitter, interner, depth + 1, rhs)?;
 
     match op.kind {
         TokenKind::Plus => emitter.add_instruction(Opcode::Add, op.pos),
@@ -684,6 +717,7 @@ fn compile_binary(
 
 fn compile_logical(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     lhs: &Expr,
     op: Token,
@@ -698,12 +732,12 @@ fn compile_logical(
         _ => unreachable!("op {:?} for logical", op),
     };
 
-    compile_expr(emitter, depth + 1, lhs)?;
+    compile_expr(emitter, interner, depth + 1, lhs)?;
 
     let short = emitter.start_jump(jump_op, op.pos);
     emitter.add_instruction(Opcode::Pop, op.pos);
 
-    compile_expr(emitter, depth + 1, rhs)?;
+    compile_expr(emitter, interner, depth + 1, rhs)?;
 
     emitter.patch_jump(short);
 
@@ -712,6 +746,7 @@ fn compile_logical(
 
 fn compile_call(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     callee: &Expr,
     paren: Token,
@@ -721,9 +756,9 @@ fn compile_call(
     trace!("{} compile call", paren.pos);
     check_depth!(depth, callee.token());
 
-    compile_expr(emitter, depth + 1, callee)?;
+    compile_expr(emitter, interner, depth + 1, callee)?;
     for arg in args {
-        compile_expr(emitter, depth + 1, arg)?;
+        compile_expr(emitter, interner, depth + 1, arg)?;
     }
     emitter.add_instruction(Opcode::Call(arity as u16), paren.pos);
     Ok(())
@@ -731,13 +766,15 @@ fn compile_call(
 
 fn compile_get(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     object: &Expr,
     name: Token,
 ) -> Result<(), PiccoloError> {
     check_depth!(depth, object.token());
 
-    compile_expr(emitter, depth + 1, object)?;
+    compile_expr(emitter, interner, depth + 1, object)?;
+    interner.allocate_str(name.lexeme);
     emitter.add_constant(Constant::String(name.lexeme.to_string()), name.pos);
     emitter.add_instruction(Opcode::Get, name.pos);
     Ok(())
@@ -745,6 +782,7 @@ fn compile_get(
 
 fn compile_index(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     right_bracket: Token,
     object: &Expr,
@@ -753,14 +791,15 @@ fn compile_index(
     trace!("{} compile index", right_bracket.pos);
     check_depth!(depth, right_bracket);
 
-    compile_expr(emitter, depth + 1, object)?;
-    compile_expr(emitter, depth + 1, index)?;
+    compile_expr(emitter, interner, depth + 1, object)?;
+    compile_expr(emitter, interner, depth + 1, index)?;
     emitter.add_instruction(Opcode::Get, right_bracket.pos);
     Ok(())
 }
 
 fn compile_lambda(
     emitter: &mut Emitter,
+    interner: &mut Interner,
     depth: usize,
     fn_: Token,
     args: &[Token],
@@ -779,12 +818,12 @@ fn compile_lambda(
         .current_context_mut()
         .add_local(Token::new(TokenKind::Fn, "", fn_.pos));
     for arg in args {
-        emitter.make_variable(*arg)?;
+        emitter.make_variable(interner, *arg)?;
     }
 
     for stmt in body {
         // don't use compile_block because we've already started a new scope
-        compile_stmt(emitter, depth + 1, stmt)?;
+        compile_stmt(emitter, interner, depth + 1, stmt)?;
     }
 
     emitter.add_instruction(Opcode::Nil, end.pos);
@@ -890,7 +929,7 @@ impl EmitterContext {
 
 /// Bytecode compiler object
 ///
-/// Construct an Emitter, and pass a `&mut` reference to `compile_ast` along with
+/// Construct an Emitter, interner: &mut Interner, and pass a `&mut` reference to `compile_ast` along with
 /// the abstract syntax tree. Extract the `Chunk` with `current_chunk{_mut}()` or
 /// `into_chunk()`.
 #[derive(Debug)]
@@ -974,8 +1013,6 @@ impl Emitter {
                     trace!("found in context {i}");
                     return Some(Variable::Capture {
                         name: name.lexeme.to_string(),
-                        depth: 0,
-                        slot: 0,
                     });
                 }
             }
@@ -985,7 +1022,13 @@ impl Emitter {
         self.global_identifiers.get(name.lexeme).cloned()
     }
 
-    fn add_get_variable(&mut self, variable: Token) -> Result<(), PiccoloError> {
+    fn add_get_variable(
+        &mut self,
+        interner: &mut Interner,
+        variable: Token,
+    ) -> Result<(), PiccoloError> {
+        interner.allocate_str(variable.lexeme);
+
         match self.find_variable(variable) {
             Some(Variable::Local { slot, .. }) => {
                 self.add_instruction(Opcode::GetLocal(slot), variable.pos);
@@ -1067,7 +1110,7 @@ impl Emitter {
         }
     }
 
-    pub(crate) fn make_global_ident(&mut self, name: Token) -> u16 {
+    pub(crate) fn make_global_ident(&mut self, interner: &mut Interner, name: Token) -> u16 {
         trace!("{} make global {}", name.pos, name.lexeme);
 
         if self.global_identifiers.contains_key(name.lexeme) {
@@ -1076,6 +1119,7 @@ impl Emitter {
                 _ => unreachable!(),
             }
         } else {
+            interner.allocate_str(name.lexeme);
             let index = self.make_constant(Constant::String(name.lexeme.to_owned()));
             self.global_identifiers.insert(
                 name.lexeme.to_owned(),
@@ -1102,11 +1146,13 @@ impl Emitter {
         }
     }
 
-    fn make_variable(&mut self, name: Token) -> Result<(), PiccoloError> {
+    fn make_variable(&mut self, interner: &mut Interner, name: Token) -> Result<(), PiccoloError> {
         trace!("{} make variable {}", name.pos, name.lexeme);
 
         // are we in global scope?
         if self.current_context().is_local() {
+            interner.allocate_str(name.lexeme);
+
             // check if we have a local with this name
             if let Some(index) = self.current_context().get_local_depth(name) {
                 // if we do,
@@ -1131,7 +1177,7 @@ impl Emitter {
         } else {
             trace!("{} new global {}", name.pos, name.lexeme);
             // yes, make a global
-            let index = self.make_global_ident(name);
+            let index = self.make_global_ident(interner, name);
             self.add_instruction(Opcode::DeclareGlobal(index), name.pos);
         }
 
@@ -1229,7 +1275,7 @@ mod test {
     fn emitter() {
         use crate::{
             compiler::{emitter, parser},
-            runtime::{chunk, memory::Heap, vm::Machine},
+            runtime::{chunk, interner::Interner, memory::Heap, vm::Machine},
         };
 
         let ast = parser::parse(
@@ -1241,7 +1287,10 @@ mod test {
         let module = emitter::compile(&ast).unwrap();
         println!("{}", chunk::disassemble(&module, "jioew"));
         let mut heap = Heap::new();
-        Machine::new().interpret(&mut heap, &module).unwrap();
+        let mut interner = Interner::new();
+        Machine::new()
+            .interpret(&mut heap, &mut interner, &module)
+            .unwrap();
     }
 
     #[test]
