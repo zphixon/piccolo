@@ -1,16 +1,51 @@
-use fnv::FnvHashMap;
-use slotmap::{DefaultKey, SlotMap};
+use std::hash::Hash;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+use crate::{debug, trace};
+use fnv::FnvHashMap;
+use slotmap::{Key, KeyData, SlotMap};
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct StringPtr {
-    key: DefaultKey,
+    data: KeyData,
     pub len: usize,
+}
+
+impl PartialOrd for StringPtr {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.data.partial_cmp(&other.data)
+    }
+}
+
+impl Ord for StringPtr {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.data.cmp(&other.data)
+    }
+}
+
+impl Eq for StringPtr {}
+
+impl Hash for StringPtr {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.data.hash(state)
+    }
+}
+
+unsafe impl Key for StringPtr {
+    fn data(&self) -> slotmap::KeyData {
+        self.data
+    }
+}
+
+impl From<KeyData> for StringPtr {
+    fn from(data: KeyData) -> Self {
+        StringPtr { data, len: 0 }
+    }
 }
 
 #[derive(Default, Debug)]
 pub struct Interner {
-    table: FnvHashMap<&'static str, DefaultKey>,
-    strings: SlotMap<DefaultKey, String>,
+    table: FnvHashMap<&'static str, StringPtr>,
+    strings: SlotMap<StringPtr, String>,
 }
 
 impl Interner {
@@ -19,7 +54,9 @@ impl Interner {
     }
 
     pub fn allocate_string(&mut self, string: String) -> StringPtr {
+        debug!("intern string {string}");
         if let Some(ptr) = self.get_string_ptr(&string) {
+            trace!("already had {string}");
             return ptr;
         }
 
@@ -27,7 +64,9 @@ impl Interner {
     }
 
     pub fn allocate_str(&mut self, string: &str) -> StringPtr {
+        debug!("intern str {string}");
         if let Some(ptr) = self.get_string_ptr(string) {
+            trace!("already had {string}");
             return ptr;
         }
 
@@ -37,33 +76,30 @@ impl Interner {
     fn insert(&mut self, string: String) -> StringPtr {
         use unicode_segmentation::UnicodeSegmentation;
         let len = string.graphemes(true).count();
+        trace!("len is {len}");
 
-        let ptr = self.strings.insert(string);
+        let mut ptr = self.strings.insert(string);
+
+        ptr.len = len;
         self.table.insert(
             // SAFETY: References handed out by get_string() only last as long as the Interner.
             // There's no way to get at the supposedly 'static strs in the public api.
-            unsafe { std::mem::transmute(self.strings[ptr].as_str()) },
+            unsafe { std::mem::transmute::<&str, &'static str>(self.strings[ptr].as_str()) },
             ptr,
         );
 
-        StringPtr { key: ptr, len }
+        ptr
     }
 
     pub fn get_string(&self, ptr: StringPtr) -> &str {
         self.strings
-            .get(ptr.key)
+            .get(ptr)
             .map(|string| string.as_str())
             .expect("invalid string pointer")
     }
 
     pub fn get_string_ptr(&self, string: &str) -> Option<StringPtr> {
-        use unicode_segmentation::UnicodeSegmentation;
-        let len = string.graphemes(true).count();
-
-        self.table
-            .get(string)
-            .cloned()
-            .map(|key| StringPtr { key, len })
+        self.table.get(string).cloned()
     }
 
     pub fn strings(&self) -> impl Iterator<Item = &str> {

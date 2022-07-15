@@ -843,7 +843,7 @@ mod test {
     fn how_could_this_happen_to_me() {
         use crate::{
             compiler::{emitter, parser},
-            runtime::{chunk, memory::Heap, vm::Machine},
+            runtime::{chunk, interner::Interner, memory::Heap, vm::Machine},
         };
 
         let src = r#"""+(11*3)+"heehee""#;
