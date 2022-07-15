@@ -86,7 +86,7 @@ impl<'chunk> FrameStack<'chunk> {
 #[derive(Debug, Default)]
 pub struct Machine {
     stack: Vec<Value>,
-    pub(crate) globals: FnvHashMap<String, Value>,
+    pub(crate) globals: FnvHashMap<StringPtr, Value>,
     ip: usize,
 }
 
@@ -604,9 +604,10 @@ impl Machine {
             Opcode::GetGlobal(index) => {
                 let constant = module.get_constant(index);
                 let name = constant.ref_string();
+                let ptr = ctx.interner.get_string_ptr(name).unwrap();
 
-                if self.globals.contains_key(name) {
-                    self.push(self.globals[name]);
+                if self.globals.contains_key(&ptr) {
+                    self.push(self.globals[&ptr]);
                 } else {
                     return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                         name: name.to_owned(),
@@ -616,9 +617,10 @@ impl Machine {
             Opcode::SetGlobal(index) => {
                 let constant = module.get_constant(index);
                 let name = constant.ref_string();
+                let ptr = ctx.interner.get_string_ptr(name).unwrap();
 
                 let value = self.pop();
-                if self.globals.insert(name.to_string(), value).is_none() {
+                if self.globals.insert(ptr, value).is_none() {
                     return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
                         name: name.to_string(),
                     }));
@@ -627,9 +629,10 @@ impl Machine {
             Opcode::DeclareGlobal(index) => {
                 let constant = module.get_constant(index);
                 let name = constant.ref_string();
+                let ptr = ctx.interner.get_string_ptr(name).unwrap();
 
                 let value = self.pop();
-                self.globals.insert(name.to_string(), value);
+                self.globals.insert(ptr, value);
             }
 
             Opcode::Get => {

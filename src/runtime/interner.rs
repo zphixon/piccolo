@@ -1,51 +1,17 @@
-use std::hash::Hash;
-
 use crate::{debug, trace};
 use fnv::FnvHashMap;
-use slotmap::{Key, KeyData, SlotMap};
+use slotmap::{DefaultKey, SlotMap};
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StringPtr {
-    data: KeyData,
+    key: DefaultKey,
     pub len: usize,
-}
-
-impl PartialOrd for StringPtr {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.data.partial_cmp(&other.data)
-    }
-}
-
-impl Ord for StringPtr {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.data.cmp(&other.data)
-    }
-}
-
-impl Eq for StringPtr {}
-
-impl Hash for StringPtr {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.data.hash(state)
-    }
-}
-
-unsafe impl Key for StringPtr {
-    fn data(&self) -> slotmap::KeyData {
-        self.data
-    }
-}
-
-impl From<KeyData> for StringPtr {
-    fn from(data: KeyData) -> Self {
-        StringPtr { data, len: 0 }
-    }
 }
 
 #[derive(Default, Debug)]
 pub struct Interner {
     table: FnvHashMap<&'static str, StringPtr>,
-    strings: SlotMap<StringPtr, String>,
+    strings: SlotMap<DefaultKey, String>,
 }
 
 impl Interner {
@@ -78,13 +44,13 @@ impl Interner {
         let len = string.graphemes(true).count();
         trace!("len is {len}");
 
-        let mut ptr = self.strings.insert(string);
+        let key = self.strings.insert(string);
+        let ptr = StringPtr { key, len };
 
-        ptr.len = len;
         self.table.insert(
             // SAFETY: References handed out by get_string() only last as long as the Interner.
             // There's no way to get at the supposedly 'static strs in the public api.
-            unsafe { std::mem::transmute::<&str, &'static str>(self.strings[ptr].as_str()) },
+            unsafe { std::mem::transmute::<&str, &'static str>(self.strings[ptr.key].as_str()) },
             ptr,
         );
 
@@ -93,7 +59,7 @@ impl Interner {
 
     pub fn get_string(&self, ptr: StringPtr) -> &str {
         self.strings
-            .get(ptr)
+            .get(ptr.key)
             .map(|string| string.as_str())
             .expect("invalid string pointer")
     }

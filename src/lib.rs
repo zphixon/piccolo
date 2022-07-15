@@ -181,7 +181,9 @@ impl Environment {
     pub fn add_global_variable(&mut self, name: &str, value: Value) {
         self.emitter
             .make_global_ident(&mut self.interner, compiler::Token::identifier(name));
-        self.vm.globals.insert(String::from(name), value);
+        self.vm
+            .globals
+            .insert(self.interner.allocate_str(name), value);
     }
 
     pub fn compile(&mut self, ast: &compiler::ast::Ast) -> Result<(), Vec<PiccoloError>> {
