@@ -1,2 +1,5 @@
 str =: "hello"
 assert str.len == 5
+
+str2 =: '\n'
+assert str2.len == 1
