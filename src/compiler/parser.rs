@@ -385,12 +385,13 @@ fn parse_expression<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<
 
 fn parse_logic_or<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("logic_or {:?}", scanner.peek_token(0)?);
 
     let mut logic_and = parse_logic_and(scanner, depth + 1)?;
     loop {
         let t = scanner.peek_token(0)?;
         if t.kind == TokenKind::LogicalOr {
+            trace!("logic_or {:?}", scanner.peek_token(0)?);
+
             let lhs = Box::new(logic_and);
             let op = scanner.next_token()?;
             let rhs = Box::new(parse_logic_or(scanner, depth + 1)?);
@@ -403,12 +404,13 @@ fn parse_logic_or<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a
 
 fn parse_logic_and<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("logic_and {:?}", scanner.peek_token(0)?);
 
     let mut bit_or = parse_bit_or(scanner, depth + 1)?;
     loop {
         let t = scanner.peek_token(0)?;
         if t.kind == TokenKind::LogicalAnd {
+            trace!("logic_and {:?}", scanner.peek_token(0)?);
+
             let lhs = Box::new(bit_or);
             let op = scanner.next_token()?;
             let rhs = Box::new(parse_logic_and(scanner, depth + 1)?);
@@ -422,12 +424,13 @@ fn parse_logic_and<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'
 // TODO: probably move these below equality
 fn parse_bit_or<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("bit_or {:?}", scanner.peek_token(0)?);
 
     let mut bit_xor = parse_bit_xor(scanner, depth + 1)?;
     loop {
         let t = scanner.peek_token(0)?;
         if t.kind == TokenKind::BitwiseOr {
+            trace!("bit_or {:?}", scanner.peek_token(0)?);
+
             let lhs = Box::new(bit_xor);
             let op = scanner.next_token()?;
             let rhs = Box::new(parse_bit_or(scanner, depth + 1)?);
@@ -440,12 +443,13 @@ fn parse_bit_or<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>,
 
 fn parse_bit_xor<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("bit_xor {:?}", scanner.peek_token(0)?);
 
     let mut bit_and = parse_bit_and(scanner, depth + 1)?;
     loop {
         let t = scanner.peek_token(0)?;
         if t.kind == TokenKind::BitwiseXor {
+            trace!("bit_xor {:?}", scanner.peek_token(0)?);
+
             let lhs = Box::new(bit_and);
             let op = scanner.next_token()?;
             let rhs = Box::new(parse_bit_xor(scanner, depth + 1)?);
@@ -458,12 +462,13 @@ fn parse_bit_xor<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>
 
 fn parse_bit_and<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("bit_and {:?}", scanner.peek_token(0)?);
 
     let mut equality = parse_equality(scanner, depth + 1)?;
     loop {
         let t = scanner.peek_token(0)?;
         if t.kind == TokenKind::BitwiseAnd {
+            trace!("bit_and {:?}", scanner.peek_token(0)?);
+
             let lhs = Box::new(equality);
             let op = scanner.next_token()?;
             let rhs = Box::new(parse_bit_and(scanner, depth + 1)?);
@@ -476,12 +481,13 @@ fn parse_bit_and<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>
 
 fn parse_equality<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("equality {:?}", scanner.peek_token(0)?);
 
     let mut comparison = parse_comparison(scanner, depth + 1)?;
     loop {
         let t = scanner.peek_token(0)?;
         if matches!(t.kind, TokenKind::Equal | TokenKind::NotEqual) {
+            trace!("equality {:?}", scanner.peek_token(0)?);
+
             let lhs = Box::new(comparison);
             let op = scanner.next_token()?;
             let rhs = Box::new(parse_equality(scanner, depth + 1)?);
@@ -494,7 +500,6 @@ fn parse_equality<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a
 
 fn parse_comparison<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("comparison {:?}", scanner.peek_token(0)?);
 
     let mut bit_shift = parse_bit_shift(scanner, depth + 1)?;
     loop {
@@ -503,6 +508,8 @@ fn parse_comparison<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<
             t.kind,
             TokenKind::Less | TokenKind::Greater | TokenKind::LessEqual | TokenKind::GreaterEqual
         ) {
+            trace!("comparison {:?}", scanner.peek_token(0)?);
+
             let lhs = Box::new(bit_shift);
             let op = scanner.next_token()?;
             let rhs = Box::new(parse_comparison(scanner, depth + 1)?);
@@ -515,12 +522,13 @@ fn parse_comparison<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<
 
 fn parse_bit_shift<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("bit_shift {:?}", scanner.peek_token(0)?);
 
     let mut term = parse_term(scanner, depth + 1)?;
     loop {
         let t = scanner.peek_token(0)?;
         if matches!(t.kind, TokenKind::ShiftLeft | TokenKind::ShiftRight) {
+            trace!("bit_shift {:?}", scanner.peek_token(0)?);
+
             let lhs = Box::new(term);
             let op = scanner.next_token()?;
             let rhs = Box::new(parse_bit_shift(scanner, depth + 1)?);
@@ -533,12 +541,13 @@ fn parse_bit_shift<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'
 
 fn parse_term<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("term {:?}", scanner.peek_token(0)?);
 
     let mut factor = parse_factor(scanner, depth + 1)?;
     loop {
         let t = scanner.peek_token(0)?;
         if matches!(t.kind, TokenKind::Plus | TokenKind::Minus) {
+            trace!("term {:?}", scanner.peek_token(0)?);
+
             let lhs = Box::new(factor);
             let op = scanner.next_token()?;
             let rhs = Box::new(parse_factor(scanner, depth + 1)?);
@@ -551,7 +560,6 @@ fn parse_term<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, P
 
 fn parse_factor<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("factor {:?}", scanner.peek_token(0)?);
 
     let mut unary = parse_unary(scanner, depth + 1)?;
     loop {
@@ -560,6 +568,8 @@ fn parse_factor<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>,
             t.kind,
             TokenKind::Multiply | TokenKind::Divide | TokenKind::Modulo
         ) {
+            trace!("factor {:?}", scanner.peek_token(0)?);
+
             let lhs = Box::new(unary);
             let op = scanner.next_token()?;
             let rhs = Box::new(parse_unary(scanner, depth + 1)?);
@@ -572,10 +582,11 @@ fn parse_factor<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>,
 
 fn parse_unary<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("unary {:?}", scanner.peek_token(0)?);
 
     let t = scanner.peek_token(0)?;
     if matches!(t.kind, TokenKind::Not | TokenKind::Minus) {
+        trace!("unary {:?}", scanner.peek_token(0)?);
+
         let op = scanner.next_token()?;
         let rhs = Box::new(parse_unary(scanner, depth + 1)?);
         Ok(Expr::Unary { op, rhs })
@@ -586,12 +597,13 @@ fn parse_unary<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, 
 
 fn parse_call<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("call {:?}", scanner.peek_token(0)?);
 
     let mut primary = parse_primary(scanner, depth + 1)?;
     loop {
         let t = scanner.peek_token(0)?;
         if t.kind == TokenKind::LeftParen {
+            trace!("call {:?}", scanner.peek_token(0)?);
+
             let callee = Box::new(primary);
             let paren = consume(scanner, TokenKind::LeftParen)?;
             let args = parse_arguments(scanner, depth + 1, TokenKind::RightParen)?;
@@ -604,11 +616,15 @@ fn parse_call<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, P
                 args,
             };
         } else if t.kind == TokenKind::Period {
+            trace!("get {:?}", scanner.peek_token(0)?);
+
             consume(scanner, TokenKind::Period)?;
             let object = Box::new(primary);
             let name = consume(scanner, TokenKind::Identifier)?;
             primary = Expr::Get { object, name };
         } else if t.kind == TokenKind::LeftBracket {
+            trace!("index {:?}", scanner.peek_token(0)?);
+
             consume(scanner, TokenKind::LeftBracket)?;
             let object = Box::new(primary);
             let index = Box::new(parse_expression(scanner, depth + 1)?);
@@ -626,10 +642,11 @@ fn parse_call<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, P
 
 fn parse_primary<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>, PiccoloError> {
     check_depth!(scanner, depth);
-    trace!("primary {:?}", scanner.peek_token(0)?);
 
     let t = scanner.peek_token(0)?;
     if t.kind == TokenKind::LeftParen {
+        trace!("parenthetical {:?}", scanner.peek_token(0)?);
+
         consume(scanner, TokenKind::LeftParen)?;
 
         let expr = Box::new(parse_expression(scanner, depth + 1)?);
@@ -637,10 +654,13 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>
 
         Ok(Expr::Paren { right_paren, expr })
     } else if t.is_value() {
+        trace!("literal {:?}", scanner.peek_token(0)?);
         let literal = scanner.next_token()?;
 
         Ok(Expr::Literal { literal })
     } else if t.kind == TokenKind::LeftBracket {
+        trace!("array literal {:?}", scanner.peek_token(0)?);
+
         consume(scanner, TokenKind::LeftBracket)?;
         let values = parse_arguments(scanner, depth + 1, TokenKind::RightBracket)?;
         let right_bracket = consume(scanner, TokenKind::RightBracket)?;
@@ -649,10 +669,13 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>
             values,
         })
     } else if t.kind == TokenKind::Identifier {
-        let variable = scanner.next_token()?;
+        trace!("variable {:?}", scanner.peek_token(0)?);
 
+        let variable = scanner.next_token()?;
         Ok(Expr::Variable { variable })
     } else if t.kind == TokenKind::Fn {
+        trace!("lambda {:?}", scanner.peek_token(0)?);
+
         let fn_ = consume(scanner, TokenKind::Fn)?;
 
         consume(scanner, TokenKind::LeftParen)?;
@@ -672,6 +695,8 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>
             end,
         })
     } else if t.kind == TokenKind::Me {
+        trace!("me {:?}", scanner.peek_token(0)?);
+
         let me = consume(scanner, TokenKind::Me)?;
         Ok(Expr::Variable { variable: me })
     } else {
