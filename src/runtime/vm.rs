@@ -245,6 +245,7 @@ impl Machine {
                 ""
             },
             crate::runtime::chunk::disassemble_instruction(
+                ctx.interner,
                 module,
                 frames.current_chunk(),
                 frames.current_ip()
@@ -849,9 +850,10 @@ mod test {
 
         let src = r#"""+(11*3)+"heehee""#;
         let ast = parser::parse(src).expect("parse");
-        let module = emitter::compile(&ast).expect("emit");
+        let mut interner = Interner::new();
+        let module = emitter::compile(&mut interner, &ast).expect("emit");
 
-        println!("{}", chunk::disassemble(&module, ""));
+        println!("{}", chunk::disassemble(&interner, &module, ""));
 
         let mut heap = Heap::new();
         let mut interner = Interner::new();

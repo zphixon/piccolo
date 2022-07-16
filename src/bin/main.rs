@@ -283,13 +283,13 @@ fn repl(
                             match builtin.get(1) {
                                 Some(&"strings") => dump_strings(),
                                 Some(&"objects") => dump_objects(),
-                                Some(&"all") | None => {
+                                Some(&"env") => env.dump(),
+                                Some(&"module") => println!("{}", env.disassemble("")),
+                                None => {
                                     dump_strings();
                                     dump_objects();
                                 }
-                                Some(&"debug") | Some(&"d") => {
-                                    println!("{env:#?}");
-                                }
+
                                 Some(subject) => println!("Unknown dump subject '{subject}'"),
                             }
                         }

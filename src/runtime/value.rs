@@ -376,17 +376,15 @@ impl Constant {
             _ => panic!("cannot create value from token {:?}", token),
         })
     }
-}
 
-impl Debug for Constant {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    pub(crate) fn debug(&self, interner: &Interner) -> String {
         match self {
-            Constant::StringPtr(_) => write!(f, "String(?)"),
-            Constant::Bool(v) => write!(f, "Bool({})", v),
-            Constant::Integer(v) => write!(f, "Integer({})", v),
-            Constant::Double(v) => write!(f, "Double({})", v),
-            Constant::Function(_) => write!(f, "Function(?)"),
-            Constant::Nil => write!(f, "Nil"),
+            Constant::StringPtr(v) => format!("String({:?})", interner.get_string(*v)),
+            Constant::Bool(v) => format!("Bool({})", v),
+            Constant::Integer(v) => format!("Integer({})", v),
+            Constant::Double(v) => format!("Double({})", v),
+            Constant::Function(v) => format!("Function({})", interner.get_string(v.name)),
+            Constant::Nil => format!("Nil"),
         }
     }
 }
@@ -503,11 +501,7 @@ impl Object for Array {
 
             return Ok(self.values[index]);
         } else if let Value::String(string) = index_value {
-            // slow?
-            // if interner.get_string(string) == "len" {}
-
-            let len = ctx.interner.get_string_ptr("len").unwrap();
-            if string == len {
+            if ctx.interner.get_string(string) == "len" {
                 return Ok(Value::Integer(self.values.len() as i64));
             } else if ctx.interner.get_string(string) == "push" {
                 return Ok(Value::BuiltinFunction(BuiltinFunction {

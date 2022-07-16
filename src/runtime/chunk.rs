@@ -2,12 +2,11 @@
 
 use crate::{
     compiler::Pos,
-    runtime::{op::Opcode, value::Constant},
+    runtime::{interner::Interner, op::Opcode, value::Constant},
     trace,
 };
 use std::fmt::Write;
 
-#[derive(Debug)]
 pub struct Module {
     chunks: Vec<Chunk>,
     constants: Vec<Constant>,
@@ -23,7 +22,7 @@ impl Module {
 
     // allows for duplicate constants, non-duplicates are checked in the compiler
     pub(crate) fn make_constant(&mut self, value: Constant) -> u16 {
-        trace!("make constant {:?}", value);
+        trace!("make constant");
 
         self.constants.push(value);
         let index = self.constants.len() - 1;
@@ -64,7 +63,7 @@ impl Module {
 }
 
 /// Stores a piece of compiled Piccolo bytecode.
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct Chunk {
     pub(crate) ops: Vec<Opcode>,
     // each SourcePos represents one instruction
@@ -143,20 +142,20 @@ impl Chunk {
     }
 }
 
-pub fn disassemble(module: &Module, name: &str) -> String {
+pub fn disassemble(interner: &Interner, module: &Module, name: &str) -> String {
     trace!("disassemble");
 
     let mut s = format!(" -- {name} --\n");
     s.push_str(" ++ constants\n");
     for (index, constant) in module.constants.iter().enumerate() {
-        writeln!(s, "{index:04x} {constant:?}").unwrap();
+        writeln!(s, "{index:04x} {}", constant.debug(interner)).unwrap();
     }
 
     for (i, chunk) in module.chunks.iter().enumerate() {
         writeln!(s, " ++ chunk {i}").unwrap();
         let mut offset = 0;
         while offset < chunk.ops.len() {
-            s.push_str(&disassemble_instruction(module, chunk, offset));
+            s.push_str(&disassemble_instruction(interner, module, chunk, offset));
             s.push('\n');
             offset += 1;
         }
@@ -165,18 +164,29 @@ pub fn disassemble(module: &Module, name: &str) -> String {
     s
 }
 
-pub fn disassemble_instruction(module: &Module, chunk: &Chunk, offset: usize) -> String {
+pub fn disassemble_instruction(
+    interner: &Interner,
+    module: &Module,
+    chunk: &Chunk,
+    offset: usize,
+) -> String {
     let op = chunk.ops[offset];
 
     let arg = match op {
         Opcode::Constant(index) => {
-            format!("@{index:04x} ({:?})", module.constants[index as usize])
+            format!(
+                "@{index:04x} ({})",
+                module.constants[index as usize].debug(interner)
+            )
         }
         Opcode::GetLocal(index) | Opcode::SetLocal(index) => {
             format!("${index}")
         }
         Opcode::GetGlobal(index) | Opcode::SetGlobal(index) | Opcode::DeclareGlobal(index) => {
-            format!("g{index:04x} ({:?})", module.constants[index as usize])
+            format!(
+                "g{index:04x} ({})",
+                module.constants[index as usize].debug(interner)
+            )
         }
         Opcode::JumpForward(jump) | Opcode::JumpFalse(jump) | Opcode::JumpTrue(jump) => {
             format!("+{jump:04x} -> {:04x}", offset + jump as usize)

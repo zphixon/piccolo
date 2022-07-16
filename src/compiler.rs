@@ -42,7 +42,8 @@ impl Variable {
 
 pub fn compile_chunk(src: &str) -> Result<chunk::Module, Vec<PiccoloError>> {
     let ast = parser::parse(src)?;
-    emitter::compile(&ast)
+    let mut interner = crate::runtime::interner::Interner::new();
+    emitter::compile(&mut interner, &ast)
 }
 
 pub fn scan_all(source: &str) -> Result<Vec<Token>, PiccoloError> {

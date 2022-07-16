@@ -32,10 +32,9 @@ macro_rules! check_depth {
 // encounter a function, start compiling into a new chunk index
 // after we end the function collect upvalues
 
-pub fn compile(ast: &Ast) -> Result<Module, Vec<PiccoloError>> {
+pub fn compile(interner: &mut Interner, ast: &Ast) -> Result<Module, Vec<PiccoloError>> {
     let mut emitter = Emitter::new();
-    let mut interner = Interner::new();
-    compile_with(&mut emitter, &mut interner, ast)?;
+    compile_with(&mut emitter, interner, ast)?;
     Ok(emitter.into_module())
 }
 
@@ -937,7 +936,6 @@ impl EmitterContext {
 /// Construct an Emitter, interner: &mut Interner, and pass a `&mut` reference to `compile_ast` along with
 /// the abstract syntax tree. Extract the `Chunk` with `current_chunk{_mut}()` or
 /// `into_chunk()`.
-#[derive(Debug)]
 pub struct Emitter {
     module: Module,
     children: Vec<EmitterContext>,
@@ -1289,8 +1287,9 @@ mod test {
         )
         .unwrap();
 
-        let module = emitter::compile(&ast).unwrap();
-        println!("{}", chunk::disassemble(&module, "jioew"));
+        let mut interner = Interner::new();
+        let module = emitter::compile(&mut interner, &ast).unwrap();
+        println!("{}", chunk::disassemble(&interner, &module, "jioew"));
         let mut heap = Heap::new();
         let mut interner = Interner::new();
         let mut ctx = ContextMut {

@@ -61,7 +61,7 @@ pub fn interpret(src: &str) -> Result<(Environment, Value), Vec<PiccoloError>> {
 
     debug!("compile");
     env.compile(&ast)?;
-    debug!("{}", runtime::chunk::disassemble(env.emitter.module(), ""));
+    debug!("{}", env.disassemble(""));
 
     debug!("interpret");
     let value = env.interpret_compiled()?;
@@ -83,7 +83,6 @@ use runtime::{interner::Interner, memory::Heap, value::Value, vm::Machine, Conte
 
 use crate::runtime::Object;
 
-#[derive(Debug)]
 pub struct Environment {
     pub emitter: Emitter,
     pub heap: Heap,
@@ -165,6 +164,17 @@ impl Environment {
         env
     }
 
+    pub fn dump(&self) {
+        println!("{}", self.disassemble(""));
+        println!("{:#?}", self.vm);
+        println!("{:#?}", self.heap);
+        println!("{:#?}", self.interner);
+        //pub emitter: Emitter,
+        //pub heap: Heap,
+        //pub vm: Machine,
+        //pub interner: Interner,
+    }
+
     pub fn context(&self) -> Context {
         Context {
             heap: &self.heap,
@@ -193,7 +203,7 @@ impl Environment {
 
     #[must_use]
     pub fn disassemble(&self, name_of_module: &str) -> String {
-        runtime::chunk::disassemble(self.emitter.module(), name_of_module)
+        runtime::chunk::disassemble(&self.interner, self.emitter.module(), name_of_module)
     }
 
     pub fn interpret(&mut self, src: &str) -> Result<Value, Vec<PiccoloError>> {
@@ -288,8 +298,9 @@ mod integration {
         let src = "a=:1+2";
         let ast = parser::parse(src).unwrap();
         println!("{}", ast::print_ast(&ast));
-        let module = emitter::compile(&ast).unwrap();
-        println!("{}", chunk::disassemble(&module, "idklol"));
+        let mut interner = Interner::new();
+        let module = emitter::compile(&mut interner, &ast).unwrap();
+        println!("{}", chunk::disassemble(&interner, &module, "idklol"));
         let mut heap = Heap::new();
         let mut vm = Machine::new();
         let mut interner = Interner::new();
@@ -336,9 +347,10 @@ mod integration {
             println!("want: {}", ast::print_expression(&equiv));
             assert_eq!(expr, &equiv);
 
-            let module = emitter::compile(&ast).unwrap();
+            let mut interner = Interner::new();
+            let module = emitter::compile(&mut interner, &ast).unwrap();
 
-            println!("{}", chunk::disassemble(&module, "idklol"));
+            println!("{}", chunk::disassemble(&mut interner, &module, "idklol"));
 
             let mut heap = Heap::new();
             let mut vm = Machine::new();
