@@ -50,65 +50,68 @@ pub fn scan_all(source: &str) -> Result<Vec<Token>, PiccoloError> {
     Scanner::new(source).scan_all()
 }
 
-pub(crate) fn escape_string(t: Token) -> Result<String, PiccoloError> {
-    match t.kind {
-        TokenKind::String => {
-            let s = t.lexeme;
-            let mut value = Vec::new();
-            let line_start = t.pos;
-            let mut pos = line_start;
+pub fn escape_string(s: &str) -> Result<String, PiccoloError> {
+    let quoted = &s[1..s.len() - 1];
+    let bytes = quoted.as_bytes();
 
-            let mut i = 1;
-            while i < s.as_bytes().len() - 1 {
-                let byte = s.as_bytes()[i];
-                if byte == b'\n' {
-                    pos.inc_line();
-                }
+    let mut i = 0;
+    let mut value = Vec::with_capacity(bytes.len());
+    while i < bytes.len() {
+        if bytes[i] == b'\\' {
+            i += 1;
 
-                if byte == b'\\' {
-                    i += 1;
-                    let byte = s.as_bytes()[i];
-                    match byte {
-                        c @ (b'\\' | b'"' | b'\'') => {
-                            value.push(c);
-                        }
-                        b'n' => {
-                            value.push(b'\n');
-                        }
-                        b'r' => {
-                            value.push(b'\r');
-                        }
-                        b't' => {
-                            value.push(b'\t');
-                        }
-                        b'\r' | b'\n' => {
-                            while i < s.as_bytes().len() - 1
-                                && scanner::is_whitespace(s.as_bytes()[i])
-                            {
-                                i += 1;
-                            }
-                            i -= 1;
-                        }
-                        c => {
-                            return Err(PiccoloError::new(ErrorKind::UnknownFormatCode {
-                                code: c as char,
-                            })
-                            .pos(pos));
-                        }
+            let code = bytes[i];
+            i += 1;
+            match code {
+                c @ (b'\\' | b'"' | b'\'') => value.push(c),
+
+                b'n' => value.push(b'\n'),
+                b'r' => value.push(b'\r'),
+                b't' => value.push(b'\t'),
+
+                b'\r' | b'\n' => {
+                    while i < bytes.len() && scanner::is_whitespace(bytes[i]) {
+                        i += 1;
                     }
-                } else {
-                    value.push(byte);
                 }
 
-                i += 1;
-            }
+                b'u' => {
+                    if bytes[i] != b'{' {
+                        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+                            .msg("Invalid \\u format, must be \\u{hex code}"));
+                    }
 
-            Ok(String::from_utf8(value)?)
-        }
-        _ => {
-            panic!("Cannot escape string from token {:?}", t);
+                    i += 1;
+                    let start = i;
+
+                    while i < bytes.len() && bytes[i] != b'}' {
+                        i += 1;
+                    }
+
+                    if i == bytes.len() {
+                        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+                            .msg("Invalid \\u format, must be \\u{hex code}"));
+                    }
+
+                    let hex = hex::decode(&quoted[start..i])?;
+                    value.extend_from_slice(&hex);
+
+                    i += 1;
+                }
+
+                b => {
+                    return Err(PiccoloError::new(ErrorKind::UnknownFormatCode {
+                        code: b as char,
+                    }))
+                }
+            }
+        } else {
+            value.push(bytes[i]);
+            i += 1;
         }
     }
+
+    Ok(String::from_utf8(value)?)
 }
 
 /// Kinds of tokens that may exist in Piccolo code.

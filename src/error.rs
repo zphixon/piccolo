@@ -168,6 +168,9 @@ pub enum ErrorKind {
     UnknownFormatCode {
         code: char,
     },
+    HexError {
+        err: hex::FromHexError,
+    },
     InvalidNumberLiteral {
         literal: String,
     },
@@ -250,6 +253,8 @@ impl fmt::Display for ErrorKind {
                 => write!(f, "Unterminated string"),
             ErrorKind::UnknownFormatCode { code }
                 => write!(f, "Unknown format code '\\{code}'"),
+            ErrorKind::HexError { err }
+                => write!(f, "Invalid hex literal: {err}"),
             ErrorKind::InvalidNumberLiteral { literal }
                 => write!(f, "Invalid number literal '{literal}'"),
             ErrorKind::UnexpectedToken { exp, got, .. }
@@ -322,5 +327,11 @@ impl From<PiccoloError> for Vec<PiccoloError> {
 impl From<std::fmt::Error> for PiccoloError {
     fn from(_: std::fmt::Error) -> Self {
         PiccoloError::new(ErrorKind::FormatError)
+    }
+}
+
+impl From<hex::FromHexError> for PiccoloError {
+    fn from(err: hex::FromHexError) -> Self {
+        PiccoloError::new(ErrorKind::HexError { err })
     }
 }

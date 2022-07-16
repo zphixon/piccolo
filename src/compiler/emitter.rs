@@ -596,7 +596,7 @@ fn compile_literal(
         }
         TokenKind::Nil => emitter.add_instruction(Opcode::Nil, literal.pos),
         TokenKind::String => {
-            let string = crate::compiler::escape_string(literal)?;
+            let string = crate::compiler::escape_string(literal.lexeme)?;
             let ptr = interner.allocate_string(string.clone());
             emitter.add_constant(Constant::StringPtr(ptr), literal.pos);
         }
