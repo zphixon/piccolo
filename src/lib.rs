@@ -65,7 +65,14 @@ macro_rules! make_error {
     }};
 }
 
-use {error::PiccoloError, std::path::Path};
+use crate::{
+    compiler::emitter::Emitter,
+    error::PiccoloError,
+    runtime::{
+        interner::Interner, memory::Heap, value::Value, vm::Machine, Context, ContextMut, Object,
+    },
+};
+use std::path::Path;
 
 pub fn interpret(src: &str) -> Result<(Environment, Value), Vec<PiccoloError>> {
     use compiler::parser;
@@ -94,11 +101,6 @@ pub fn do_file(file: &Path) -> Result<(Environment, Value), Vec<PiccoloError>> {
             .collect()
     })
 }
-
-use compiler::emitter::Emitter;
-use runtime::{interner::Interner, memory::Heap, value::Value, vm::Machine, Context, ContextMut};
-
-use crate::runtime::Object;
 
 pub struct Environment {
     pub emitter: Emitter,
@@ -186,10 +188,6 @@ impl Environment {
         println!("{:#?}", self.vm);
         println!("{:#?}", self.heap);
         println!("{:#?}", self.interner);
-        //pub emitter: Emitter,
-        //pub heap: Heap,
-        //pub vm: Machine,
-        //pub interner: Interner,
     }
 
     pub fn context(&self) -> Context {
