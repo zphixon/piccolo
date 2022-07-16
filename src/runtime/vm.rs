@@ -296,7 +296,7 @@ impl Machine {
             }
             Opcode::Constant(index) => {
                 let c = module.get_constant(index);
-                self.push(Value::from_constant(c, ctx));
+                self.push(Value::from_constant(c));
             }
             Opcode::Nil => self.push(Value::Nil),
             Opcode::Bool(b) => self.push(Value::Bool(b)),
@@ -603,33 +603,30 @@ impl Machine {
             }
             Opcode::GetGlobal(index) => {
                 let constant = module.get_constant(index);
-                let name = constant.ref_string();
-                let ptr = ctx.interner.get_string_ptr(name).unwrap();
+                let ptr = constant.string_ptr();
 
                 if self.globals.contains_key(&ptr) {
                     self.push(self.globals[&ptr]);
                 } else {
                     return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
-                        name: name.to_owned(),
+                        name: ctx.interner.get_string(ptr).to_string(),
                     }));
                 }
             }
             Opcode::SetGlobal(index) => {
                 let constant = module.get_constant(index);
-                let name = constant.ref_string();
-                let ptr = ctx.interner.get_string_ptr(name).unwrap();
+                let ptr = constant.string_ptr();
 
                 let value = self.pop();
                 if self.globals.insert(ptr, value).is_none() {
                     return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
-                        name: name.to_string(),
+                        name: ctx.interner.get_string(ptr).to_string(),
                     }));
                 }
             }
             Opcode::DeclareGlobal(index) => {
                 let constant = module.get_constant(index);
-                let name = constant.ref_string();
-                let ptr = ctx.interner.get_string_ptr(name).unwrap();
+                let ptr = constant.string_ptr();
 
                 let value = self.pop();
                 self.globals.insert(ptr, value);
@@ -828,7 +825,8 @@ impl Machine {
                 let v = self.pop();
                 let assertion = module.get_constant(index);
                 if !v.is_truthy() {
-                    let assertion = assertion.ref_string().to_owned();
+                    let ptr = assertion.string_ptr();
+                    let assertion = ctx.interner.get_string(ptr).to_owned();
                     return Err(PiccoloError::new(ErrorKind::AssertFailed { assertion }));
                 }
             }

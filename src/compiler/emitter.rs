@@ -11,7 +11,7 @@ use crate::{
         chunk::{Chunk, Module},
         interner::Interner,
         op::Opcode,
-        value::{Constant, ConstantFunction},
+        value::{Constant, Function},
         Arity,
     },
     trace,
@@ -212,8 +212,8 @@ fn compile_assignment(
     } else if let Expr::Get { object, name } = lval {
         compile_expr(emitter, interner, depth + 1, rval)?;
         compile_expr(emitter, interner, depth + 1, object)?;
-        interner.allocate_str(name.lexeme);
-        emitter.add_constant(Constant::String(name.lexeme.to_string()), name.pos);
+        let ptr = interner.allocate_str(name.lexeme);
+        emitter.add_constant(Constant::StringPtr(ptr), name.pos);
         emitter.add_instruction(Opcode::Set, op.pos);
     } else if let Expr::Index { object, index, .. } = lval {
         compile_expr(emitter, interner, depth + 1, rval)?;
@@ -413,8 +413,8 @@ fn compile_for_each(
 
     emitter.add_get_variable(interner, index)?;
     compile_variable(emitter, interner, depth, iter)?;
-    interner.allocate_str("len");
-    emitter.add_constant(Constant::String(String::from("len")), for_.pos);
+    let ptr = interner.allocate_str("len");
+    emitter.add_constant(Constant::StringPtr(ptr), for_.pos);
     emitter.add_instruction(Opcode::Get, for_.pos);
     emitter.add_instruction(Opcode::Less, for_.pos);
 
@@ -489,9 +489,9 @@ fn compile_fn(
     let _locals = emitter.end_scope(end.pos);
     let chunk_index = emitter.end_context();
 
-    let function = ConstantFunction {
+    let function = Function {
         arity: Arity::Exact(arity),
-        name: name.lexeme.to_string(),
+        name: interner.allocate_str(name.lexeme),
         chunk: chunk_index,
     };
 
@@ -559,7 +559,9 @@ fn compile_assert(
 
     compile_expr(emitter, interner, depth + 1, value)?;
 
-    let c = emitter.make_constant(Constant::String(super::ast::print_expression(value)));
+    let expr = super::ast::print_expression(value);
+    let ptr = interner.allocate_string(expr);
+    let c = emitter.make_constant(Constant::StringPtr(ptr));
     emitter.add_instruction(Opcode::Assert(c), assert.pos);
 
     Ok(())
@@ -596,10 +598,10 @@ fn compile_literal(
         TokenKind::Nil => emitter.add_instruction(Opcode::Nil, literal.pos),
         TokenKind::String => {
             let string = crate::compiler::escape_string(literal)?;
-            interner.allocate_string(string.clone());
-            emitter.add_constant(Constant::String(string), literal.pos);
+            let ptr = interner.allocate_string(string.clone());
+            emitter.add_constant(Constant::StringPtr(ptr), literal.pos);
         }
-        _ => emitter.add_constant(Constant::try_from(literal)?, literal.pos),
+        _ => emitter.add_constant(Constant::try_from(interner, literal)?, literal.pos),
     }
 
     Ok(())
@@ -775,7 +777,10 @@ fn compile_get(
 
     compile_expr(emitter, interner, depth + 1, object)?;
     interner.allocate_str(name.lexeme);
-    emitter.add_constant(Constant::String(name.lexeme.to_string()), name.pos);
+    emitter.add_constant(
+        Constant::StringPtr(interner.allocate_str(name.lexeme)),
+        name.pos,
+    );
     emitter.add_instruction(Opcode::Get, name.pos);
     Ok(())
 }
@@ -831,9 +836,9 @@ fn compile_lambda(
 
     let chunk_index = emitter.end_context();
 
-    let function = ConstantFunction {
+    let function = Function {
         arity: Arity::Exact(arity),
-        name: String::from("<anon>"),
+        name: interner.allocate_str("<anon>"),
         chunk: chunk_index,
     };
 
@@ -1120,7 +1125,7 @@ impl Emitter {
             }
         } else {
             interner.allocate_str(name.lexeme);
-            let index = self.make_constant(Constant::String(name.lexeme.to_owned()));
+            let index = self.make_constant(Constant::StringPtr(interner.allocate_str(name.lexeme)));
             self.global_identifiers.insert(
                 name.lexeme.to_owned(),
                 Variable::Global {

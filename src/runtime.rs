@@ -47,7 +47,7 @@ impl<'a, 'b> ContextMut<'a, 'b> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum This {
     None,
     Ptr(Ptr),

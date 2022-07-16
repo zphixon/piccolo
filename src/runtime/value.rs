@@ -6,12 +6,12 @@ use crate::{
     runtime::{
         builtin,
         builtin::BuiltinFunction,
-        interner::StringPtr,
+        interner::{Interner, StringPtr},
         memory::{Heap, Ptr},
         Arity, Context, ContextMut, Object, This,
     },
 };
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Function {
@@ -45,66 +45,19 @@ impl Value {
         }
     }
 
-    pub fn from_constant(c: &Constant, ctx: &mut ContextMut) -> Value {
+    pub(crate) fn from_constant(c: &Constant) -> Value {
         match c {
             Constant::Bool(b) => Value::Bool(*b),
             Constant::Integer(i) => Value::Integer(*i),
             Constant::Double(d) => Value::Double(*d),
-            Constant::String(s) => Value::String(ctx.interner.allocate_str(s)),
+            Constant::StringPtr(s) => Value::String(*s),
             Constant::Function(f) => Value::Function(Function {
                 arity: f.arity,
                 chunk: f.chunk,
-                name: ctx.interner.allocate_str(&f.name),
+                name: f.name,
             }),
             //Constant::BuiltinFunction(f) => Value::BuiltinFunction(f),
-            Constant::Object(v) => Value::Object(ctx.heap.allocate_boxed(v.clone_object())),
-            Constant::Array(v) => {
-                let values = v
-                    .into_iter()
-                    .map(|constant| Value::from_constant(constant, ctx))
-                    .collect();
-                Value::Object(ctx.heap.allocate(Array { values }))
-            }
             Constant::Nil => Value::Nil,
-        }
-    }
-
-    pub fn into_constant(self, ctx: Context) -> Constant {
-        match self {
-            Value::Bool(b) => Constant::Bool(b),
-            Value::Integer(i) => Constant::Integer(i),
-            Value::Double(d) => Constant::Double(d),
-            Value::String(ptr) => Constant::String(ctx.interner.get_string(ptr).to_string()),
-            Value::Nil => Constant::Nil,
-            Value::Function(f) => Constant::Function(ConstantFunction {
-                arity: f.arity,
-                name: ctx.interner.get_string(f.name).to_string(),
-                chunk: f.chunk,
-            }),
-            Value::BuiltinFunction(f) => Constant::Function(ConstantFunction {
-                arity: f.arity,
-                name: ctx.interner.get_string(f.name).to_string(),
-                // TODO this may be a problem if we:
-                // 1. move a Value::BuiltinFunction out of the vm, making it a Constant::Function
-                // 2. make that Constant::Function into a Value::Function
-                // 3. attempt to execute that function on the vm
-                // we should probably have a Constant::BuiltinFunction but meehhhhh
-                chunk: 0,
-            }),
-            Value::Object(ptr) => {
-                let object = ctx.heap.get(ptr).clone_object();
-                if let Ok(array) = object.downcast::<Array>() {
-                    Constant::Array(
-                        array
-                            .values
-                            .into_iter()
-                            .map(|value| value.into_constant(ctx))
-                            .collect(),
-                    )
-                } else {
-                    panic!("cannot convert object {} to constant", ctx.debug(ptr));
-                }
-            }
         }
     }
 
@@ -383,40 +336,38 @@ fn string_trim(ctx: &mut ContextMut, args: &[Value]) -> Result<Value, PiccoloErr
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
-pub struct ConstantFunction {
-    pub arity: Arity,
-    pub name: String,
-    pub chunk: usize,
-}
-
 /// Compile-time constant Piccolo values.
 ///
 /// Similar to [`Value`]. `Constant` is also used to return from Piccolo execution.
 ///
 /// [`Value`]: ../value/enum.Value.html
-pub enum Constant {
-    String(String),
+pub(crate) enum Constant {
+    StringPtr(StringPtr),
     Bool(bool),
     Integer(i64),
     Double(f64),
-    Function(ConstantFunction),
-    Array(Vec<Constant>),
-    Object(Box<dyn Object>),
+    Function(Function),
     Nil,
 }
 
 impl Constant {
-    pub(crate) fn ref_string(&self) -> &str {
-        match self {
-            Constant::String(v) => v,
-            _ => panic!("ref string on non-string"),
+    pub(crate) fn string_ptr(&self) -> StringPtr {
+        if let Constant::StringPtr(ptr) = self {
+            *ptr
+        } else {
+            panic!("string_ptr on non-string")
         }
     }
 
-    pub(crate) fn try_from(token: Token) -> Result<Constant, PiccoloError> {
+    pub(crate) fn try_from(
+        interner: &mut Interner,
+        token: Token,
+    ) -> Result<Constant, PiccoloError> {
         Ok(match token.kind {
-            TokenKind::String => Constant::String(crate::compiler::escape_string(token)?),
+            TokenKind::String => {
+                let string = crate::compiler::escape_string(token)?;
+                Constant::StringPtr(interner.allocate_string(string))
+            }
             TokenKind::Integer(v) => Constant::Integer(v),
             TokenKind::True => Constant::Bool(true),
             TokenKind::False => Constant::Bool(false),
@@ -430,49 +381,12 @@ impl Constant {
 impl Debug for Constant {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Constant::String(v) => write!(f, "String({})", v),
+            Constant::StringPtr(_) => write!(f, "String(?)"),
             Constant::Bool(v) => write!(f, "Bool({})", v),
             Constant::Integer(v) => write!(f, "Integer({})", v),
             Constant::Double(v) => write!(f, "Double({})", v),
-            Constant::Function(v) => write!(f, "Function({})", v.name),
-            Constant::Array(v) => {
-                let mut s = String::from("Array([");
-                for (i, value) in v.iter().enumerate() {
-                    s.push_str(&value.to_string());
-                    if i + 1 != v.len() {
-                        s.push_str(", ");
-                    }
-                }
-                s.push_str("])");
-                write!(f, "{s}")
-            }
-            Constant::Object(object) => write!(f, "Object({:p})", object.as_ref()),
+            Constant::Function(_) => write!(f, "Function(?)"),
             Constant::Nil => write!(f, "Nil"),
-        }
-    }
-}
-
-impl Display for Constant {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        match self {
-            Constant::String(v) => write!(f, "{}", v),
-            Constant::Bool(v) => write!(f, "{}", v),
-            Constant::Integer(v) => write!(f, "{}", v),
-            Constant::Double(v) => write!(f, "{}", v),
-            Constant::Function(v) => write!(f, "{}", v.name),
-            Constant::Array(v) => {
-                let mut s = String::from("[");
-                for (i, value) in v.iter().enumerate() {
-                    s.push_str(&value.to_string());
-                    if i + 1 != v.len() {
-                        s.push_str(", ");
-                    }
-                }
-                s.push(']');
-                write!(f, "{s}")
-            }
-            Constant::Object(_) => write!(f, "object"),
-            Constant::Nil => write!(f, "nil"),
         }
     }
 }
@@ -480,13 +394,11 @@ impl Display for Constant {
 impl Clone for Constant {
     fn clone(&self) -> Self {
         match self {
-            Constant::String(v) => Constant::String(v.clone()),
+            Constant::StringPtr(v) => Constant::StringPtr(v.clone()),
             Constant::Bool(v) => Constant::Bool(*v),
             Constant::Integer(v) => Constant::Integer(*v),
             Constant::Double(v) => Constant::Double(*v),
             Constant::Function(v) => Constant::Function(v.clone()),
-            Constant::Array(v) => Constant::Array(v.clone()),
-            Constant::Object(v) => Constant::Object(v.clone_object()),
             Constant::Nil => Constant::Nil,
         }
     }
@@ -496,13 +408,11 @@ impl PartialEq for Constant {
     fn eq(&self, other: &Self) -> bool {
         use Constant::*;
         match (self, other) {
-            (String(l), String(r)) => l == r,
+            (StringPtr(l), StringPtr(r)) => l == r,
             (Bool(l), Bool(r)) => l == r,
             (Integer(l), Integer(r)) => l == r,
             (Double(l), Double(r)) => l == r,
             (Function(l), Function(r)) => l == r,
-            (Array(l), Array(r)) => l == r,
-            (Object(l), Object(r)) => std::ptr::eq(l, r),
             (Nil, Nil) => true,
             _ => false,
         }

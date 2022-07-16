@@ -48,9 +48,9 @@ macro_rules! error {
     };
 }
 
-use {error::PiccoloError, runtime::value::Constant, std::path::Path};
+use {error::PiccoloError, std::path::Path};
 
-pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
+pub fn interpret(src: &str) -> Result<(Environment, Value), Vec<PiccoloError>> {
     use compiler::parser;
 
     let mut env = Environment::new();
@@ -64,11 +64,12 @@ pub fn interpret(src: &str) -> Result<Constant, Vec<PiccoloError>> {
     debug!("{}", runtime::chunk::disassemble(env.emitter.module(), ""));
 
     debug!("interpret");
-    Ok(env.interpret_compiled()?.into_constant(env.context()))
+    let value = env.interpret_compiled()?;
+    Ok((env, value))
 }
 
 /// Reads a file and interprets its contents.
-pub fn do_file(file: &Path) -> Result<Constant, Vec<PiccoloError>> {
+pub fn do_file(file: &Path) -> Result<(Environment, Value), Vec<PiccoloError>> {
     let contents = std::fs::read_to_string(file).map_err(|e| vec![PiccoloError::from(e)])?;
     interpret(&contents).map_err(|v| {
         v.into_iter()
@@ -346,12 +347,11 @@ mod integration {
                 heap: &mut heap,
                 interner: &mut interner,
             };
-            assert_eq!(
-                vm.interpret(&mut ctx, &module)
-                    .unwrap()
-                    .into_constant(ctx.as_ref()),
-                Constant::Integer(11)
-            );
+            assert!(vm
+                .interpret(&mut ctx, &module)
+                .unwrap()
+                .eq(ctx.as_ref(), Value::Integer(11))
+                .unwrap());
         } else {
             panic!("ast not initialized")
         }

@@ -5,7 +5,7 @@ fn main() {
     if args.len() > 1 {
         let src = std::fs::read_to_string(&args[1]).unwrap();
         match piccolo::interpret(&src) {
-            Ok(constant) => println!("{constant}"),
+            Ok((env, value)) => println!("{}", env.format(value)),
             Err(errors) => {
                 for error in errors {
                     println!("Error: {error}");
@@ -21,7 +21,7 @@ fn main() {
 
     while let Ok(line) = rl.readline(PROMPT) {
         match piccolo::interpret(&line) {
-            Ok(constant) => println!("{constant}"),
+            Ok((env, value)) => println!("{}", env.format(value)),
             Err(errors) => {
                 for error in errors {
                     println!("Error: {error}");
