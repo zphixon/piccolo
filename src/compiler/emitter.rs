@@ -598,7 +598,7 @@ fn compile_literal(
         TokenKind::Nil => emitter.add_instruction(Opcode::Nil, literal.pos),
         TokenKind::String => {
             let string = crate::compiler::escape_string(literal.lexeme)?;
-            let ptr = interner.allocate_string(string.clone());
+            let ptr = interner.allocate_string(string);
             emitter.add_constant(Constant::StringPtr(ptr), literal.pos);
         }
         _ => emitter.add_constant(Constant::try_from(interner, literal)?, literal.pos),
@@ -921,9 +921,8 @@ impl EmitterContext {
         trace!("{} get local depth {}", name.pos, name.lexeme);
         for local in self.locals.iter().rev() {
             if local.name() == name.lexeme {
-                match local {
-                    Variable::Local { depth, .. } => return Some(*depth),
-                    _ => {}
+                if let Variable::Local { depth, .. } = local {
+                    return Some(*depth);
                 }
             }
         }

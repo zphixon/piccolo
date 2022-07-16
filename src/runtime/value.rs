@@ -385,20 +385,7 @@ impl Constant {
             Constant::Integer(v) => format!("Integer({})", v),
             Constant::Double(v) => format!("Double({})", v),
             Constant::Function(v) => format!("Function({})", interner.get_string(v.name)),
-            Constant::Nil => format!("Nil"),
-        }
-    }
-}
-
-impl Clone for Constant {
-    fn clone(&self) -> Self {
-        match self {
-            Constant::StringPtr(v) => Constant::StringPtr(v.clone()),
-            Constant::Bool(v) => Constant::Bool(*v),
-            Constant::Integer(v) => Constant::Integer(*v),
-            Constant::Double(v) => Constant::Double(*v),
-            Constant::Function(v) => Constant::Function(v.clone()),
-            Constant::Nil => Constant::Nil,
+            Constant::Nil => String::from("Nil"),
         }
     }
 }

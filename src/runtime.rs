@@ -39,8 +39,8 @@ pub struct ContextMut<'a, 'b> {
     pub interner: &'b mut Interner,
 }
 
-impl<'a, 'b> ContextMut<'a, 'b> {
-    pub fn as_ref<'this>(&'this self) -> Context<'this, 'this> {
+impl ContextMut<'_, '_> {
+    pub fn as_ref(&self) -> Context<'_, '_> {
         Context {
             interner: self.interner,
             heap: self.heap,
