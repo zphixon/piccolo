@@ -9,7 +9,8 @@ pub mod typeck;
 
 use crate::{
     compiler::scanner::Scanner,
-    error::{ErrorKind, PiccoloError},
+    error::PiccoloError,
+    make_error,
     runtime::{chunk, op::Opcode},
 };
 use std::{
@@ -77,7 +78,7 @@ pub fn escape_string(s: &str) -> Result<String, PiccoloError> {
 
                 b'u' => {
                     if bytes[i] != b'{' {
-                        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+                        return Err(make_error!(SyntaxError)
                             .msg("Invalid \\u format, must be \\u{hex code}"));
                     }
 
@@ -89,7 +90,7 @@ pub fn escape_string(s: &str) -> Result<String, PiccoloError> {
                     }
 
                     if i == bytes.len() {
-                        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+                        return Err(make_error!(SyntaxError)
                             .msg("Invalid \\u format, must be \\u{hex code}"));
                     }
 
@@ -99,11 +100,7 @@ pub fn escape_string(s: &str) -> Result<String, PiccoloError> {
                     i += 1;
                 }
 
-                b => {
-                    return Err(PiccoloError::new(ErrorKind::UnknownFormatCode {
-                        code: b as char,
-                    }))
-                }
+                b => return Err(make_error!(UnknownFormatCode { code: b as char })),
             }
         } else {
             value.push(bytes[i]);

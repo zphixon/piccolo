@@ -9,7 +9,8 @@ pub mod value;
 pub mod vm;
 
 use crate::{
-    error::{ErrorKind, PiccoloError},
+    error::PiccoloError,
+    make_error,
     runtime::{
         interner::{Interner, StringPtr},
         memory::{Heap, Ptr},
@@ -121,14 +122,14 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
 
     fn call(&self, ctx: Context, values: &[Value]) -> Result<Value, PiccoloError> {
         let _ = values;
-        Err(PiccoloError::new(ErrorKind::CannotCall {
+        Err(make_error!(CannotCall {
             callee: self.format(ctx),
         }))
     }
 
     fn get(&self, ctx: Context, this: This, index_value: Value) -> Result<Value, PiccoloError> {
         let _ = this;
-        Err(PiccoloError::new(ErrorKind::CannotGet {
+        Err(make_error!(CannotGet {
             object: self.type_name(ctx).to_string(),
             index: index_value.format(ctx),
         }))
@@ -136,7 +137,7 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
 
     fn set(&mut self, ctx: Context, index_value: Value, value: Value) -> Result<(), PiccoloError> {
         let _ = value;
-        Err(PiccoloError::new(ErrorKind::CannotGet {
+        Err(make_error!(CannotGet {
             object: self.type_name(ctx).to_string(),
             index: index_value.format(ctx),
         }))
@@ -144,7 +145,7 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
 
     fn eq(&self, ctx: Context, other: Value) -> Result<bool, PiccoloError> {
         let _ = other;
-        Err(PiccoloError::new(ErrorKind::CannotCompare {
+        Err(make_error!(CannotCompare {
             got: other.type_name(ctx).to_string(),
             exp: self.type_name(ctx).to_string(),
         }))
@@ -152,7 +153,7 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
 
     fn lt(&self, ctx: Context, other: Value) -> Result<bool, PiccoloError> {
         let _ = other;
-        Err(PiccoloError::new(ErrorKind::CannotCompare {
+        Err(make_error!(CannotCompare {
             got: other.type_name(ctx).to_string(),
             exp: self.type_name(ctx).to_string(),
         }))
@@ -160,7 +161,7 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
 
     fn gt(&self, ctx: Context, other: Value) -> Result<bool, PiccoloError> {
         let _ = other;
-        Err(PiccoloError::new(ErrorKind::CannotCompare {
+        Err(make_error!(CannotCompare {
             got: other.type_name(ctx).to_string(),
             exp: self.type_name(ctx).to_string(),
         }))

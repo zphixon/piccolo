@@ -2,7 +2,8 @@
 
 use crate::{
     compiler::{Pos, Token, TokenKind},
-    error::{ErrorKind, PiccoloError},
+    error::PiccoloError,
+    make_error,
 };
 use std::collections::VecDeque;
 
@@ -303,7 +304,7 @@ impl<'a> Scanner<'a> {
         }
 
         if self.is_at_end() {
-            Err(PiccoloError::new(ErrorKind::UnterminatedString).pos(self.start_pos))
+            Err(make_error!(UnterminatedString).pos(self.start_pos))
         } else {
             self.advance_char();
             Ok(TokenKind::String)
@@ -331,7 +332,7 @@ impl<'a> Scanner<'a> {
         if let Ok(i) = value.parse::<i64>() {
             Ok(TokenKind::Integer(i))
         } else {
-            Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
+            Err(make_error!(InvalidNumberLiteral {
                 literal: value.to_owned(),
             })
             .pos(self.current_pos))
@@ -353,7 +354,7 @@ impl<'a> Scanner<'a> {
         if let Ok(f) = value.parse::<f64>() {
             Ok(TokenKind::Double(f))
         } else {
-            Err(PiccoloError::new(ErrorKind::InvalidNumberLiteral {
+            Err(make_error!(InvalidNumberLiteral {
                 literal: value.to_owned(),
             })
             .pos(self.current_pos))

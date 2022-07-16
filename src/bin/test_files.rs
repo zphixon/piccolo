@@ -1,6 +1,6 @@
 extern crate piccolo;
 
-use piccolo::error::{ErrorKind, PiccoloError};
+use piccolo::{error::PiccoloError, make_error};
 use std::{fs, io, path};
 
 fn main() -> Result<(), PiccoloError> {
@@ -31,13 +31,11 @@ fn main() -> Result<(), PiccoloError> {
         } else if name.ends_with("_fail.pc") {
             println!(" xx '{name}'");
             match piccolo::do_file(item) {
-                Ok((env, v)) => {
-                    test_errors.push(vec![PiccoloError::new(ErrorKind::AssertFailed {
-                        assertion: String::from("test file would fail"),
-                    })
-                    .file(name)
-                    .msg_string(format!("resulted in {}", env.format(v)))])
-                }
+                Ok((env, v)) => test_errors.push(vec![make_error!(AssertFailed {
+                    assertion: String::from("test file would fail"),
+                })
+                .file(name)
+                .msg_string(format!("resulted in {}", env.format(v)))]),
                 Err(_) => ok_results += 1,
             }
         }

@@ -5,14 +5,14 @@ use crate::{
         ast::{Expr, Stmt},
         Scanner, Token, TokenKind, MAX_DEPTH,
     },
-    error::{ErrorKind, PiccoloError},
-    trace,
+    error::PiccoloError,
+    make_error, trace,
 };
 
 macro_rules! check_depth {
     ($scanner:expr, $depth:expr) => {
         if $depth > MAX_DEPTH {
-            return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            return Err(make_error!(SyntaxError)
                 .msg("Maximum recursion depth reached")
                 .pos($scanner.peek_token(0)?.pos));
         }
@@ -229,7 +229,7 @@ fn parse_for<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pi
 
     let inc_op = scanner.next_token()?;
     if !inc_op.is_assign() {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+        return Err(make_error!(SyntaxError)
             .msg("Final clause of a `for` statement must be an assignment")
             .pos(inc_op.pos));
     }
@@ -367,7 +367,7 @@ fn consume<'a>(scanner: &mut Scanner<'a>, kind: TokenKind) -> Result<Token<'a>, 
     if tok.kind == kind {
         Ok(tok)
     } else {
-        Err(PiccoloError::new(ErrorKind::UnexpectedToken {
+        Err(make_error!(UnexpectedToken {
             was_eof: tok.kind == TokenKind::Eof,
             exp: format!("{kind:?}"),
             got: format!("{:?}", tok.kind),
@@ -676,7 +676,7 @@ fn parse_primary<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Expr<'a>
         Ok(Expr::Variable { variable: me })
     } else {
         let t = scanner.next_token()?;
-        Err(PiccoloError::new(ErrorKind::ExpectedExpression {
+        Err(make_error!(ExpectedExpression {
             was_eof: t.kind == TokenKind::Eof,
             got: t.lexeme.to_string(),
         })

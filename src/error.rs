@@ -1,6 +1,6 @@
 //! Types for dealing with errors in scanning, parsing, compiling, or executing Piccolo.
 
-use crate::compiler::Pos;
+use crate::{compiler::Pos, make_error};
 use std::{
     error::Error, fmt, fmt::Write, io::Error as IoError, str::Utf8Error, string::FromUtf8Error,
 };
@@ -151,8 +151,8 @@ impl fmt::Display for PiccoloError {
 impl Error for PiccoloError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match &self.kind {
-            ErrorKind::InvalidUTF8(err) => Some(err),
-            ErrorKind::IOError(err) => Some(err),
+            ErrorKind::InvalidUTF8 { err } => Some(err),
+            ErrorKind::IOError { err } => Some(err),
             ErrorKind::Unknown { err } => Some(err.as_ref()),
             _ => None,
         }
@@ -162,8 +162,12 @@ impl Error for PiccoloError {
 /// Types of errors possible in Piccolo.
 #[derive(Debug)]
 pub enum ErrorKind {
-    InvalidUTF8(Utf8Error),
-    IOError(IoError),
+    InvalidUTF8 {
+        err: Utf8Error,
+    },
+    IOError {
+        err: IoError,
+    },
     UnterminatedString,
     UnknownFormatCode {
         code: char,
@@ -245,10 +249,10 @@ pub struct ParseError {}
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ErrorKind::InvalidUTF8(_)
+            ErrorKind::InvalidUTF8 { .. }
                 => write!(f, "Invalid UTF-8 sequence"),
-            ErrorKind::IOError(e)
-                => write!(f, "IO error: {e}"),
+            ErrorKind::IOError { err }
+                => write!(f, "IO error: {err}"),
             ErrorKind::UnterminatedString
                 => write!(f, "Unterminated string"),
             ErrorKind::UnknownFormatCode { code }
@@ -300,38 +304,37 @@ impl fmt::Display for ErrorKind {
 }
 
 impl From<Utf8Error> for PiccoloError {
-    fn from(e: Utf8Error) -> PiccoloError {
-        PiccoloError::new(ErrorKind::InvalidUTF8(e))
-            .msg_string(format!("valid up to {}", e.valid_up_to()))
+    fn from(err: Utf8Error) -> PiccoloError {
+        make_error!(InvalidUTF8 { err }).msg_string(format!("valid up to {}", err.valid_up_to()))
     }
 }
 
 impl From<FromUtf8Error> for PiccoloError {
-    fn from(e: FromUtf8Error) -> PiccoloError {
-        PiccoloError::from(e.utf8_error())
+    fn from(err: FromUtf8Error) -> PiccoloError {
+        PiccoloError::from(err.utf8_error())
     }
 }
 
 impl From<IoError> for PiccoloError {
-    fn from(e: IoError) -> PiccoloError {
-        PiccoloError::new(ErrorKind::IOError(e))
+    fn from(err: IoError) -> PiccoloError {
+        make_error!(IOError { err })
     }
 }
 
 impl From<PiccoloError> for Vec<PiccoloError> {
-    fn from(e: PiccoloError) -> Vec<PiccoloError> {
-        vec![e]
+    fn from(err: PiccoloError) -> Vec<PiccoloError> {
+        vec![err]
     }
 }
 
 impl From<std::fmt::Error> for PiccoloError {
     fn from(_: std::fmt::Error) -> Self {
-        PiccoloError::new(ErrorKind::FormatError)
+        make_error!(FormatError)
     }
 }
 
 impl From<hex::FromHexError> for PiccoloError {
     fn from(err: hex::FromHexError) -> Self {
-        PiccoloError::new(ErrorKind::HexError { err })
+        make_error!(HexError { err })
     }
 }

@@ -6,7 +6,8 @@ use crate::{
         ast::{Ast, Expr, Stmt},
         Pos, Token, TokenKind, Variable, MAX_DEPTH,
     },
-    error::{ErrorKind, PiccoloError},
+    error::PiccoloError,
+    make_error,
     runtime::{
         chunk::{Chunk, Module},
         interner::Interner,
@@ -21,7 +22,7 @@ use fnv::FnvHashMap;
 macro_rules! check_depth {
     ($depth:tt, $pos_haver:expr) => {
         if $depth > MAX_DEPTH {
-            return Err(PiccoloError::new(ErrorKind::SyntaxError)
+            return Err(make_error!(SyntaxError)
                 .msg("Maximum recursion depth reached")
                 .pos($pos_haver.pos));
         }
@@ -220,7 +221,7 @@ fn compile_assignment(
         compile_expr(emitter, interner, depth + 1, index)?;
         emitter.add_instruction(Opcode::Set, op.pos);
     } else {
-        return Err(PiccoloError::new(ErrorKind::SyntaxError)
+        return Err(make_error!(SyntaxError)
             .msg_string(format!(
                 "Cannot use {} expression as left-hand of assignment",
                 lval.token().lexeme
@@ -1050,7 +1051,7 @@ impl Emitter {
             }
 
             None => {
-                return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                return Err(make_error!(UndefinedVariable {
                     name: variable.lexeme.to_string(),
                 })
                 .pos(variable.pos))
@@ -1079,7 +1080,7 @@ impl Emitter {
             }
 
             None => {
-                return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                return Err(make_error!(UndefinedVariable {
                     name: variable.lexeme.to_string(),
                 })
                 .pos(variable.pos))
@@ -1139,7 +1140,7 @@ impl Emitter {
         trace!("{} get global {}", name.pos, name.lexeme);
 
         match self.global_identifiers.get(name.lexeme).ok_or_else(|| {
-            PiccoloError::new(ErrorKind::UndefinedVariable {
+            make_error!(UndefinedVariable {
                 name: name.lexeme.to_owned(),
             })
             .pos(name.pos)
@@ -1165,12 +1166,10 @@ impl Emitter {
                     self.current_context_mut().add_local(name);
                 } else {
                     // error if we're in the same scope
-                    return Err(PiccoloError::new(ErrorKind::SyntaxError)
-                        .pos(name.pos)
-                        .msg_string(format!(
-                            "variable with name '{}' already exists",
-                            name.lexeme,
-                        )));
+                    return Err(make_error!(SyntaxError).pos(name.pos).msg_string(format!(
+                        "variable with name '{}' already exists",
+                        name.lexeme,
+                    )));
                 }
             } else {
                 trace!("{} new local {}", name.pos, name.lexeme);
@@ -1241,7 +1240,7 @@ impl Emitter {
         self.break_offsets
             .last_mut()
             .ok_or_else(|| {
-                PiccoloError::new(ErrorKind::SyntaxError)
+                make_error!(SyntaxError)
                     .msg("cannot break outside of a loop")
                     .pos(break_.pos)
             })?
@@ -1254,7 +1253,7 @@ impl Emitter {
         self.continue_offsets
             .last_mut()
             .ok_or_else(|| {
-                PiccoloError::new(ErrorKind::SyntaxError)
+                make_error!(SyntaxError)
                     .msg("cannot continue outside of a loop")
                     .pos(continue_.pos)
             })?

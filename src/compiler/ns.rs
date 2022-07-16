@@ -4,8 +4,8 @@ use crate::{
         Token,
     },
     debug,
-    error::{ErrorKind, PiccoloError},
-    trace,
+    error::PiccoloError,
+    make_error, trace,
 };
 use fnv::FnvHashMap;
 use slotmap::{DefaultKey, SlotMap};
@@ -176,7 +176,7 @@ impl<'src> NamespaceRepository<'src> {
             return Ok(location);
         }
 
-        Err(PiccoloError::new(ErrorKind::SyntaxError)
+        Err(make_error!(SyntaxError)
             .msg_string(format!("local already defined: '{}'", name.lexeme))
             .pos(name.pos))
     }
@@ -242,7 +242,7 @@ pub fn analyze_ns<'src>(ast: &'src Ast<'src>) -> Result<NamespaceRepository<'src
 }
 
 fn err(variable: Token) -> Result<(), PiccoloError> {
-    return Err(PiccoloError::new(ErrorKind::SyntaxError)
+    return Err(make_error!(SyntaxError)
         .msg_string(format!("unknown variable '{}'", variable.lexeme))
         .pos(variable.pos));
 }
@@ -427,7 +427,7 @@ fn analyze_ns_expr<'src>(
         Expr::Variable { variable } => {
             trace!("analyze expr::variable");
             if repo.find(ns, *variable).is_none() {
-                return Err(PiccoloError::new(ErrorKind::SyntaxError)
+                return Err(make_error!(SyntaxError)
                     .msg_string(format!("unknown variable '{}'", variable.lexeme))
                     .pos(variable.pos));
             }

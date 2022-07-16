@@ -1,7 +1,8 @@
 use crate::{
     compiler::Pos,
     debug,
-    error::{ErrorKind, PiccoloError},
+    error::PiccoloError,
+    make_error,
     runtime::{
         chunk::{Chunk, Module},
         interner::StringPtr,
@@ -262,7 +263,7 @@ impl Machine {
                     let lhs = lhs.into::<i64>();
                     self.push(Value::Integer(lhs $op rhs));
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                    return Err(make_error!(IncorrectType {
                         exp: "integer".into(),
                         got: format!(
                             "{} {} {}",
@@ -323,7 +324,7 @@ impl Machine {
                     let v = v.into::<i64>();
                     self.push(Value::Integer(-v));
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                    return Err(make_error!(IncorrectType {
                         exp: "integer or double".into(),
                         got: v.type_name(ctx.as_ref()).to_owned(),
                     }));
@@ -352,7 +353,7 @@ impl Machine {
                         let rhs = rhs.into::<i64>();
                         self.push(Value::Double(lhs + rhs as f64));
                     } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        return Err(make_error!(IncorrectType {
                             exp: "integer or double".into(),
                             got: format!("double + {}", rhs.type_name(ctx.as_ref())),
                         }));
@@ -366,7 +367,7 @@ impl Machine {
                         let rhs = rhs.into::<f64>();
                         self.push(Value::Double(lhs as f64 + rhs));
                     } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        return Err(make_error!(IncorrectType {
                             exp: "integer or double".into(),
                             got: format!("integer + {}", rhs.type_name(ctx.as_ref())),
                         }));
@@ -375,7 +376,7 @@ impl Machine {
                     let value = format!("{}{}", lhs.format(ctx.as_ref()), rhs.format(ctx.as_ref()));
                     self.push(Value::String(ctx.interner.allocate_string(value)));
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                    return Err(make_error!(IncorrectType {
                         exp: "integer or double".into(),
                         got: format!(
                             "{} + {}",
@@ -398,7 +399,7 @@ impl Machine {
                         let rhs = rhs.into::<i64>();
                         self.push(Value::Double(lhs - rhs as f64));
                     } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        return Err(make_error!(IncorrectType {
                             exp: "integer or double".into(),
                             got: format!("double - {}", rhs.type_name(ctx.as_ref())),
                         }));
@@ -412,13 +413,13 @@ impl Machine {
                         let rhs = rhs.into::<f64>();
                         self.push(Value::Double(lhs as f64 - rhs));
                     } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        return Err(make_error!(IncorrectType {
                             exp: "integer or double".into(),
                             got: format!("integer - {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                    return Err(make_error!(IncorrectType {
                         exp: "integer or double".into(),
                         got: format!(
                             "{} - {}",
@@ -441,7 +442,7 @@ impl Machine {
                         let rhs = rhs.into::<i64>();
                         self.push(Value::Double(lhs * rhs as f64));
                     } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        return Err(make_error!(IncorrectType {
                             exp: "integer or double".into(),
                             got: format!("double * {}", rhs.type_name(ctx.as_ref())),
                         }));
@@ -455,13 +456,13 @@ impl Machine {
                         let rhs = rhs.into::<f64>();
                         self.push(Value::Double(lhs as f64 * rhs));
                     } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        return Err(make_error!(IncorrectType {
                             exp: "integer or double".into(),
                             got: format!("integer * {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                    return Err(make_error!(IncorrectType {
                         exp: "integer or double".into(),
                         got: format!(
                             "{} * {}",
@@ -484,7 +485,7 @@ impl Machine {
                         let rhs = rhs.into::<i64>();
                         self.push(Value::Double(lhs / rhs as f64));
                     } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        return Err(make_error!(IncorrectType {
                             exp: "integer or double".into(),
                             got: format!("double / {}", rhs.type_name(ctx.as_ref())),
                         }));
@@ -494,20 +495,20 @@ impl Machine {
                     if rhs.is_integer() {
                         let rhs = rhs.into::<i64>();
                         if rhs == 0 {
-                            return Err(PiccoloError::new(ErrorKind::DivideByZero));
+                            return Err(make_error!(DivideByZero));
                         }
                         self.push(Value::Integer(lhs / rhs));
                     } else if rhs.is_double() {
                         let rhs = rhs.into::<f64>();
                         self.push(Value::Double(lhs as f64 / rhs));
                     } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        return Err(make_error!(IncorrectType {
                             exp: "integer or double".into(),
                             got: format!("integer / {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                    return Err(make_error!(IncorrectType {
                         exp: "integer or double".into(),
                         got: format!(
                             "{} / {}",
@@ -530,7 +531,7 @@ impl Machine {
                         let rhs = rhs.into::<i64>();
                         self.push(Value::Double(lhs % rhs as f64));
                     } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        return Err(make_error!(IncorrectType {
                             exp: "integer or double".into(),
                             got: format!("double % {}", rhs.type_name(ctx.as_ref())),
                         }));
@@ -540,20 +541,20 @@ impl Machine {
                     if rhs.is_integer() {
                         let rhs = rhs.into::<i64>();
                         if rhs == 0 {
-                            return Err(PiccoloError::new(ErrorKind::DivideByZero));
+                            return Err(make_error!(DivideByZero));
                         }
                         self.push(Value::Integer(lhs % rhs));
                     } else if rhs.is_double() {
                         let rhs = rhs.into::<f64>();
                         self.push(Value::Double(lhs as f64 % rhs));
                     } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                        return Err(make_error!(IncorrectType {
                             exp: "integer or double".into(),
                             got: format!("integer % {}", rhs.type_name(ctx.as_ref())),
                         }));
                     }
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                    return Err(make_error!(IncorrectType {
                         exp: "integer or double".into(),
                         got: format!(
                             "{} % {}",
@@ -609,7 +610,7 @@ impl Machine {
                 if self.globals.contains_key(&ptr) {
                     self.push(self.globals[&ptr]);
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                    return Err(make_error!(UndefinedVariable {
                         name: ctx.interner.get_string(ptr).to_string(),
                     }));
                 }
@@ -620,7 +621,7 @@ impl Machine {
 
                 let value = self.pop();
                 if self.globals.insert(ptr, value).is_none() {
-                    return Err(PiccoloError::new(ErrorKind::UndefinedVariable {
+                    return Err(make_error!(UndefinedVariable {
                         name: ctx.interner.get_string(ptr).to_string(),
                     }));
                 }
@@ -646,7 +647,7 @@ impl Machine {
                     let value = self.pop();
                     unsafe { ctx.heap.get_mut(ptr).set(ctx.as_ref(), index, value)? };
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::CannotGet {
+                    return Err(make_error!(CannotGet {
                         object: self.peek().type_name(ctx.as_ref()).to_string(),
                         index: index.format(ctx.as_ref()),
                     }));
@@ -718,16 +719,14 @@ impl Machine {
                     let rhs = match rhs_i64.try_into() {
                         Ok(rhs) => rhs,
                         Err(_) => {
-                            return Err(PiccoloError::new(ErrorKind::InvalidShift {
-                                value: rhs_i64,
-                            }));
+                            return Err(make_error!(InvalidShift { value: rhs_i64 }));
                         }
                     };
 
                     let lhs = lhs.into::<i64>();
                     self.push(Value::Integer(lhs.wrapping_shl(rhs)));
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                    return Err(make_error!(IncorrectType {
                         exp: "integer".into(),
                         got: format!(
                             "{} << {}",
@@ -746,16 +745,14 @@ impl Machine {
                     let rhs = match rhs_i64.try_into() {
                         Ok(rhs) => rhs,
                         Err(_) => {
-                            return Err(PiccoloError::new(ErrorKind::InvalidShift {
-                                value: rhs_i64,
-                            }));
+                            return Err(make_error!(InvalidShift { value: rhs_i64 }));
                         }
                     };
 
                     let lhs = lhs.into::<i64>();
                     self.push(Value::Integer(lhs.wrapping_shr(rhs)));
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                    return Err(make_error!(IncorrectType {
                         exp: "integer".into(),
                         got: format!(
                             "{} << {}",
@@ -772,7 +769,7 @@ impl Machine {
                     let f = self.peek_back(arity).as_function();
 
                     if !f.arity.is_compatible(arity) {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectArity {
+                        return Err(make_error!(IncorrectArity {
                             name: ctx.interner.get_string(f.name).to_string(),
                             exp: f.arity,
                             got: arity,
@@ -808,14 +805,14 @@ impl Machine {
                     if f.arity.is_compatible(args.len()) {
                         self.push((f.ptr)(ctx, &args)?);
                     } else {
-                        return Err(PiccoloError::new(ErrorKind::IncorrectArity {
+                        return Err(make_error!(IncorrectArity {
                             name: ctx.interner.get_string(f.name()).to_string(),
                             exp: f.arity,
                             got: arity,
                         }));
                     }
                 } else {
-                    return Err(PiccoloError::new(ErrorKind::IncorrectType {
+                    return Err(make_error!(IncorrectType {
                         exp: "fn".to_owned(),
                         got: self.peek_back(arity).type_name(ctx.as_ref()).to_owned(),
                     }));
@@ -828,7 +825,7 @@ impl Machine {
                 if !v.is_truthy() {
                     let ptr = assertion.string_ptr();
                     let assertion = ctx.interner.get_string(ptr).to_owned();
-                    return Err(PiccoloError::new(ErrorKind::AssertFailed { assertion }));
+                    return Err(make_error!(AssertFailed { assertion }));
                 }
             }
         }

@@ -48,6 +48,23 @@ macro_rules! error {
     };
 }
 
+#[macro_export]
+macro_rules! make_error {
+    ($Variant:ident) => {
+        $crate::make_error!($Variant {})
+    };
+
+    ($Variant:ident {
+        $($field:ident $(: $value:expr)? ),* $(,)?
+    }) => {{
+        let err = $crate::error::PiccoloError::new($crate::error::ErrorKind::$Variant {
+            $($field $(: $value)?),*
+        });
+        $crate::error!("{}", err);
+        err
+    }};
+}
+
 use {error::PiccoloError, std::path::Path};
 
 pub fn interpret(src: &str) -> Result<(Environment, Value), Vec<PiccoloError>> {

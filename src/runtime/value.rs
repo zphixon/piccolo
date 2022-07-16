@@ -2,7 +2,8 @@
 
 use crate::{
     compiler::{Token, TokenKind},
-    error::{ErrorKind, PiccoloError},
+    error::PiccoloError,
+    make_error,
     runtime::{
         builtin,
         builtin::BuiltinFunction,
@@ -243,7 +244,7 @@ impl Object for Value {
             }
         }
 
-        Err(PiccoloError::new(ErrorKind::CannotCompare {
+        Err(make_error!(CannotCompare {
             got: other.type_name(ctx).to_string(),
             exp: self.type_name(ctx).to_string(),
         }))
@@ -265,7 +266,7 @@ impl Object for Value {
             _ => {}
         }
 
-        Err(PiccoloError::new(ErrorKind::CannotCompare {
+        Err(make_error!(CannotCompare {
             got: other.type_name(ctx).to_string(),
             exp: self.type_name(ctx).to_string(),
         }))
@@ -287,7 +288,7 @@ impl Object for Value {
             _ => {}
         }
 
-        Err(PiccoloError::new(ErrorKind::CannotCompare {
+        Err(make_error!(CannotCompare {
             got: other.type_name(ctx).to_string(),
             exp: self.type_name(ctx).to_string(),
         }))
@@ -314,7 +315,7 @@ impl Object for Value {
 
             (Value::Object(ptr), index) => ctx.heap.get(*ptr).get(ctx, This::Ptr(*ptr), index),
 
-            _ => Err(PiccoloError::new(ErrorKind::CannotGet {
+            _ => Err(make_error!(CannotGet {
                 object: self.type_name(ctx).to_string(),
                 index: index_value.format(ctx),
             })),
@@ -329,7 +330,7 @@ fn string_trim(ctx: &mut ContextMut, args: &[Value]) -> Result<Value, PiccoloErr
         let string = ctx.interner.get_string(string).trim().to_string();
         Ok(Value::String(ctx.interner.allocate_string(string)))
     } else {
-        Err(PiccoloError::new(ErrorKind::InvalidArgument {
+        Err(make_error!(InvalidArgument {
             exp: "string".to_string(),
             got: this.type_name(ctx.as_ref()).to_string(),
         }))
@@ -484,7 +485,7 @@ impl Object for Array {
     fn get(&self, ctx: Context, this: This, index_value: Value) -> Result<Value, PiccoloError> {
         if let Value::Integer(index) = index_value {
             let index: usize = index.try_into().map_err(|_| {
-                PiccoloError::new(ErrorKind::CannotGet {
+                make_error!(CannotGet {
                     object: String::from("array"),
                     index: index_value.format(ctx),
                 })
@@ -492,7 +493,7 @@ impl Object for Array {
             })?;
 
             if index >= self.values.len() {
-                return Err(PiccoloError::new(ErrorKind::CannotGet {
+                return Err(make_error!(CannotGet {
                     object: String::from("array"),
                     index: format!("{index}"),
                 })
@@ -511,14 +512,14 @@ impl Object for Array {
                     this,
                 }));
             } else {
-                return Err(PiccoloError::new(ErrorKind::CannotGet {
+                return Err(make_error!(CannotGet {
                     object: String::from("array"),
                     index: index_value.format(ctx),
                 }));
             }
         }
 
-        Err(PiccoloError::new(ErrorKind::CannotGet {
+        Err(make_error!(CannotGet {
             object: String::from("array"),
             index: index_value.format(ctx),
         })
@@ -531,7 +532,7 @@ impl Object for Array {
     fn set(&mut self, ctx: Context, index_value: Value, value: Value) -> Result<(), PiccoloError> {
         if let Value::Integer(index) = index_value {
             let index: usize = index.try_into().map_err(|_| {
-                PiccoloError::new(ErrorKind::CannotGet {
+                make_error!(CannotGet {
                     object: String::from("array"),
                     index: value.format(ctx),
                 })
@@ -539,7 +540,7 @@ impl Object for Array {
             })?;
 
             if index >= self.values.len() {
-                return Err(PiccoloError::new(ErrorKind::CannotGet {
+                return Err(make_error!(CannotGet {
                     object: String::from("array"),
                     index: format!("{index}"),
                 })
@@ -550,7 +551,7 @@ impl Object for Array {
             return Ok(());
         }
 
-        Err(PiccoloError::new(ErrorKind::CannotSet {
+        Err(make_error!(CannotSet {
             object: String::from("array"),
             property: index_value.format(ctx),
             value: value.format(ctx),
@@ -575,7 +576,7 @@ impl Object for Array {
             }
         }
 
-        Err(PiccoloError::new(ErrorKind::CannotCompare {
+        Err(make_error!(CannotCompare {
             got: other.type_name(ctx).to_string(),
             exp: self.type_name(ctx).to_string(),
         }))
