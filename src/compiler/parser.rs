@@ -165,12 +165,17 @@ fn parse_if<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pic
     let if_ = scanner.next_token()?;
     let cond = parse_expression(scanner, depth + 1)?;
     let do_ = consume(scanner, TokenKind::Do)?;
-    let then_block = block_until_else_or_end(scanner, depth + 1)?;
+    let then_block = block_until_else_elseif_or_end(scanner, depth + 1)?;
 
     let (else_, else_block) = if scanner.peek_token(0)?.kind == TokenKind::Else {
         (
             Some(consume(scanner, TokenKind::Else)?),
             Some(parse_block(scanner, depth + 1)?),
+        )
+    } else if scanner.peek_token(0)?.kind == TokenKind::ElseIf {
+        (
+            Some(*scanner.peek_token(0)?),
+            Some(parse_else_ifs(scanner, depth + 1)?),
         )
     } else {
         (None, None)
@@ -187,6 +192,43 @@ fn parse_if<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, Pic
         else_block,
         end,
     })
+}
+
+fn parse_else_ifs<'a>(
+    scanner: &mut Scanner<'a>,
+    depth: usize,
+) -> Result<Vec<Stmt<'a>>, PiccoloError> {
+    check_depth!(scanner, depth);
+    trace!("elseif {:?}", scanner.peek_token(0)?);
+
+    let elseif = consume(scanner, TokenKind::ElseIf)?;
+    let cond = parse_expression(scanner, depth + 1)?;
+    let do_ = consume(scanner, TokenKind::Do)?;
+    let then_block = block_until_else_elseif_or_end(scanner, depth + 1)?;
+
+    let (else_, else_block) = if scanner.peek_token(0)?.kind == TokenKind::Else {
+        (
+            Some(consume(scanner, TokenKind::Else)?),
+            Some(parse_block(scanner, depth + 1)?),
+        )
+    } else if scanner.peek_token(0)?.kind == TokenKind::ElseIf {
+        (
+            Some(*scanner.peek_token(0)?),
+            Some(parse_else_ifs(scanner, depth + 1)?),
+        )
+    } else {
+        (None, None)
+    };
+
+    Ok(vec![Stmt::If {
+        if_: elseif,
+        cond,
+        do_,
+        then_block,
+        else_,
+        else_block,
+        end: *scanner.peek_token(0)?,
+    }])
 }
 
 fn parse_while<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, PiccoloError> {
@@ -330,7 +372,7 @@ fn parse_data<'a>(scanner: &mut Scanner<'a>, depth: usize) -> Result<Stmt<'a>, P
     })
 }
 
-fn block_until_else_or_end<'a>(
+fn block_until_else_elseif_or_end<'a>(
     scanner: &mut Scanner<'a>,
     depth: usize,
 ) -> Result<Vec<Stmt<'a>>, PiccoloError> {
@@ -339,6 +381,7 @@ fn block_until_else_or_end<'a>(
     let mut stmts = Vec::new();
     while scanner.peek_token(0)?.kind != TokenKind::End
         && scanner.peek_token(0)?.kind != TokenKind::Else
+        && scanner.peek_token(0)?.kind != TokenKind::ElseIf
     {
         trace!(
             "declaration in block until else {:?}",

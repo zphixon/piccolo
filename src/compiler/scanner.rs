@@ -423,6 +423,7 @@ fn into_keyword(s: &str) -> Option<TokenKind> {
         "fn" => Some(TokenKind::Fn),
         "if" => Some(TokenKind::If),
         "else" => Some(TokenKind::Else),
+        "elseif" => Some(TokenKind::ElseIf),
         "while" => Some(TokenKind::While),
         "for" => Some(TokenKind::For),
         "in" => Some(TokenKind::In),

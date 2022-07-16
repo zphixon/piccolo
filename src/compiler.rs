@@ -123,6 +123,7 @@ pub enum TokenKind {
     Fn,       // fn
     If,       // if
     Else,     // else
+    ElseIf,   // elseif
     While,    // while
     For,      // for
     In,       // in

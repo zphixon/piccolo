@@ -18,7 +18,9 @@ return -> 'return' [expression]
 assert -> 'assert' expression
 
 block -> 'do' {statement} 'end'
-if -> 'if' expression 'do' {statement} ['else' {statement}] 'end'
+if -> 'if' expression 'do' {statement}
+      {'elseif' expression 'do' {statement}}
+      ['else' {statement}] 'end'
 while -> 'while' expression block
 for -> 'for' declare ',' expression ',' assign block
 fn -> 'fn' ident '(' parameters ')' block

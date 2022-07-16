@@ -1,0 +1,53 @@
+# https://rosettacode.org/wiki/Mandelbrot_set#ASCII_2
+# this one doesn't really work lol
+charmap =: [' ', '.', ':', '-', '=', '+', '*', '#', '%', '@']
+for y =: -1.3, y <= 1.3, y += 0.1 do
+  for x =: -2.1, x <= 1.1, x += 0.04 do
+    zi =: 0.0
+    zr =: 0.0
+    i =: 0
+    while i < 100 do
+      if (zi*zi) + (zr*zr) >= 4 do break end
+      zr = (zr*zr) - (zi*zi) + x
+      zi = (2*zr*zi) + y
+      i += 1
+    end
+    write(charmap[i % 10])
+  end
+  print()
+end
+
+# https://rosettacode.org/wiki/Mandelbrot_set#C.2B.2B
+fn f(X, Y, x, y, n) do
+  if x*x + y*y < 4 && n < 100 do
+    return 1 + f(X, Y, x*x - y*y + X, 2*x*y + Y, n + 1)
+  else
+    return 0
+  end
+end
+
+for j =: 1, j >= -1, j -= 0.035 do
+  x =: 0.0
+  for i =: -2, i <= 0.5, i += 0.035 do
+    if x < 10 do
+      write(' ')
+    elseif x < 20 do
+      write('.')
+    elseif x < 50 do
+      write(':')
+    elseif x < 80 do
+      write('*')
+    else
+      write('#')
+    end
+
+    if i > -2 do
+      write(' ')
+    else
+      print()
+    end
+
+    x = f(i, j, 0.0, 0.0, 0.0)
+  end
+end
+print()
