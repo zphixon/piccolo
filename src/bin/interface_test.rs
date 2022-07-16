@@ -60,7 +60,8 @@ mod not_log {
         std::fs::write(file.with_extension("out"), output.stdout).unwrap();
     }
 
-    fn write_all(dir: &str) {
+    fn write_all() {
+        let dir = "examples/test_files";
         let mut test_files = Vec::new();
         collect_files_recursively(dir, &mut test_files).unwrap();
 
@@ -73,30 +74,24 @@ mod not_log {
         }
     }
 
-    fn clean(dir: &str) {
+    fn check_all() {
         let mut test_files = Vec::new();
-        collect_files_recursively(dir, &mut test_files).unwrap();
+        collect_files_recursively("examples/test_files", &mut test_files).unwrap();
 
-        for file in test_files {
-            let name = file.display().to_string();
-
-            if name.ends_with(".out") {
-                println!("remove {name}");
-                std::fs::remove_file(file).unwrap();
-            }
-        }
-    }
-
-    fn check_all(dir: &str) {
-        let mut test_files = Vec::new();
-        collect_files_recursively(dir, &mut test_files).unwrap();
         let mut skipped = Vec::new();
         let mut failed = Vec::new();
 
         for file in test_files {
             let name = file.display().to_string();
 
-            if !name.ends_with("ignore") && !file.with_extension("out").exists() {
+            let mut output_path = PathBuf::from("examples/output");
+            output_path.push(
+                file.with_extension("out")
+                    .strip_prefix("examples/test_files")
+                    .unwrap(),
+            );
+
+            if !name.ends_with("ignore") && !output_path.exists() {
                 skipped.push(name);
                 continue;
             }
@@ -108,7 +103,7 @@ mod not_log {
                     .output()
                     .unwrap();
                 let result = std::str::from_utf8(&output.stdout).unwrap();
-                let result_should_be = std::fs::read_to_string(file.with_extension("out")).unwrap();
+                let result_should_be = std::fs::read_to_string(output_path).unwrap();
                 if result != result_should_be {
                     failed.push((name, result.to_string(), result_should_be))
                 }
@@ -134,7 +129,6 @@ mod not_log {
 
     pub fn main() {
         check_rebuild();
-        let dir = "examples/test_files";
 
         let args = std::env::args().collect::<Vec<_>>();
         let first = args.get(1).map(|s| s.as_str());
@@ -144,14 +138,12 @@ mod not_log {
             println!("[filename]\trewrite single filename");
             println!("no args\t\tcheck all output");
         } else if first == Some("--write-all") {
-            write_all(dir);
-        } else if first == Some("--clean") {
-            clean(dir);
+            write_all();
         } else if let Some(filename) = args.get(1) {
             let path = PathBuf::from(filename);
             do_one(filename, &path);
         } else {
-            check_all(dir);
+            check_all();
         }
     }
 }
