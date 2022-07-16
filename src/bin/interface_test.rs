@@ -60,20 +60,6 @@ mod not_log {
         std::fs::write(file.with_extension("out"), output.stdout).unwrap();
     }
 
-    fn write_all() {
-        let dir = "examples/test_files";
-        let mut test_files = Vec::new();
-        collect_files_recursively(dir, &mut test_files).unwrap();
-
-        for file in test_files {
-            let name = file.display().to_string();
-
-            if name.ends_with(".pc") {
-                do_one(&name, &file);
-            }
-        }
-    }
-
     fn check_all() {
         let mut test_files = Vec::new();
         collect_files_recursively("examples/test_files", &mut test_files).unwrap();
@@ -133,12 +119,8 @@ mod not_log {
         let args = std::env::args().collect::<Vec<_>>();
         let first = args.get(1).map(|s| s.as_str());
         if matches!(first, Some("-h" | "--help")) {
-            println!("--write-all\trewrite every test file output");
-            println!("--clean\t\tremove every test file output");
             println!("[filename]\trewrite single filename");
             println!("no args\t\tcheck all output");
-        } else if first == Some("--write-all") {
-            write_all();
         } else if let Some(filename) = args.get(1) {
             let path = PathBuf::from(filename);
             do_one(filename, &path);
