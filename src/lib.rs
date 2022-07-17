@@ -8,6 +8,9 @@ pub mod compiler;
 pub mod error;
 pub mod runtime;
 
+#[cfg(feature = "cli")]
+pub mod pretty;
+
 #[macro_export]
 macro_rules! trace {
     ($($log:expr),*) => {
@@ -81,10 +84,14 @@ pub fn interpret(src: &str) -> Result<(Environment, Value), Vec<PiccoloError>> {
 
     debug!("parse");
     let ast = parser::parse(src)?;
-    debug!("ast\n{}", compiler::ast::print_ast(&ast));
+
+    #[cfg(feature = "cli")]
+    debug!("ast\n{}", pretty::print_ast(&ast));
 
     debug!("compile");
     env.compile(&ast)?;
+
+    #[cfg(feature = "cli")]
     debug!("{}", env.disassemble(""));
 
     debug!("interpret");
@@ -183,6 +190,7 @@ impl Environment {
         env
     }
 
+    #[cfg(feature = "cli")]
     pub fn dump(&self) {
         println!("{}", self.disassemble(""));
         println!("{:#?}", self.vm);
@@ -216,9 +224,10 @@ impl Environment {
         compiler::emitter::compile_with(&mut self.emitter, &mut self.interner, ast)
     }
 
+    #[cfg(feature = "cli")]
     #[must_use]
     pub fn disassemble(&self, name_of_module: &str) -> String {
-        runtime::chunk::disassemble(&self.interner, self.emitter.module(), name_of_module)
+        pretty::disassemble(&self.interner, self.emitter.module(), name_of_module)
     }
 
     pub fn interpret(&mut self, src: &str) -> Result<Value, Vec<PiccoloError>> {
@@ -304,13 +313,21 @@ mod test_lib {
         let ast4 = parse("z(x)").unwrap();
 
         let mut env = Environment::new();
+
         env.compile(&ast1).unwrap();
+        #[cfg(feature = "cli")]
         println!("{}", env.disassemble(""));
+
         env.compile(&ast2).unwrap();
+        #[cfg(feature = "cli")]
         println!("{}", env.disassemble(""));
+
         env.compile(&ast3).unwrap();
+        #[cfg(feature = "cli")]
         println!("{}", env.disassemble(""));
+
         env.compile(&ast4).unwrap();
+        #[cfg(feature = "cli")]
         println!("{}", env.disassemble(""));
     }
 }

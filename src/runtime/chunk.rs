@@ -2,10 +2,9 @@
 
 use crate::{
     compiler::Pos,
-    runtime::{interner::Interner, op::Opcode, value::Constant},
+    runtime::{op::Opcode, value::Constant},
     trace,
 };
-use std::fmt::Write;
 
 pub struct Module {
     chunks: Vec<Chunk>,
@@ -41,6 +40,11 @@ impl Module {
         self.constants
             .get(index as usize)
             .unwrap_or_else(|| panic!("{} out of constant bounds", index))
+    }
+
+    #[cfg(feature = "cli")]
+    pub(crate) fn chunks(&self) -> &[Chunk] {
+        &self.chunks
     }
 
     pub(crate) fn chunk(&self, i: usize) -> &Chunk {
@@ -140,68 +144,6 @@ impl Chunk {
         }
         self.lines[pos.line() - 1].push(pos);
     }
-}
-
-pub fn disassemble(interner: &Interner, module: &Module, name: &str) -> String {
-    trace!("disassemble");
-
-    let mut s = format!(" -- {name} --\n");
-    s.push_str(" ++ constants\n");
-    for (index, constant) in module.constants.iter().enumerate() {
-        writeln!(s, "{index:04x} {}", constant.debug(interner)).unwrap();
-    }
-
-    for (i, chunk) in module.chunks.iter().enumerate() {
-        writeln!(s, " ++ chunk {i}").unwrap();
-        let mut offset = 0;
-        while offset < chunk.ops.len() {
-            s.push_str(&disassemble_instruction(interner, module, chunk, offset));
-            s.push('\n');
-            offset += 1;
-        }
-    }
-
-    s
-}
-
-pub fn disassemble_instruction(
-    interner: &Interner,
-    module: &Module,
-    chunk: &Chunk,
-    offset: usize,
-) -> String {
-    let op = chunk.ops[offset];
-
-    let arg = match op {
-        Opcode::Constant(index) => {
-            format!(
-                "@{index:04x} ({})",
-                module.constants[index as usize].debug(interner)
-            )
-        }
-        Opcode::GetLocal(index) | Opcode::SetLocal(index) => {
-            format!("${index}")
-        }
-        Opcode::GetGlobal(index) | Opcode::SetGlobal(index) | Opcode::DeclareGlobal(index) => {
-            format!(
-                "g{index:04x} ({})",
-                module.constants[index as usize].debug(interner)
-            )
-        }
-        Opcode::JumpForward(jump) | Opcode::JumpFalse(jump) | Opcode::JumpTrue(jump) => {
-            format!("+{jump:04x} -> {:04x}", offset + jump as usize)
-        }
-        Opcode::JumpBack(jump) => {
-            format!("-{jump:04x} -> {:04x}", offset - jump as usize)
-        }
-        _ => String::new(),
-    };
-
-    format!(
-        "{:<6} {offset:04x} {:20} {arg}",
-        format_args!("{}", chunk.get_pos_from_index(offset)),
-        format_args!("{op:?}")
-    )
 }
 
 #[cfg(test)]

@@ -1,9 +1,12 @@
-#[cfg(feature = "log")]
 fn main() {
-    panic!("must be run without log feature enabled");
+    #[cfg(not(all(feature = "cli", not(feature = "log"))))]
+    panic!("Must be run with features cli and not log");
+
+    #[cfg(all(feature = "cli", not(feature = "log")))]
+    not_log::main();
 }
 
-#[cfg(not(feature = "log"))]
+#[cfg(all(feature = "cli", not(feature = "log")))]
 mod not_log {
     use std::{
         fs, io,
@@ -128,9 +131,4 @@ mod not_log {
             check_all();
         }
     }
-}
-
-#[cfg(not(feature = "log"))]
-fn main() {
-    not_log::main();
 }

@@ -310,6 +310,7 @@ dependencies = [
  "log",
  "my_log",
  "once_cell",
+ "owo-colors",
  "paste",
  "rand",
  "rustyline",

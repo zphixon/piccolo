@@ -4,7 +4,7 @@ mod main {
     use piccolo::{
         compiler::{self, parser, scanner::Scanner},
         error::PiccoloError,
-        Environment,
+        pretty, Environment,
     };
     use rustyline::{
         error::ReadlineError, Cmd, ConditionalEventHandler, Editor, Event, EventContext,
@@ -163,7 +163,7 @@ mod main {
         let ast = parser::parse(source)?;
 
         if print_ast {
-            println!("=== ast ===\n{}", compiler::ast::print_ast(&ast));
+            println!("=== ast ===\n{}", pretty::print_ast(&ast));
         }
 
         let mut env = Environment::new();
@@ -340,7 +340,7 @@ mod main {
                     match parse {
                         Ok(ast) => {
                             if print_ast {
-                                println!("=== ast ===\n{}", compiler::ast::print_ast(&ast));
+                                println!("=== ast ===\n{}", pretty::print_ast(&ast));
                             }
 
                             let _: Result<(), ()> = env

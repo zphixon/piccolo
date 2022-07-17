@@ -30,6 +30,11 @@ impl Frame<'_> {
         self.ip += 1;
         op
     }
+
+    #[allow(dead_code)]
+    fn current_op(&self) -> Opcode {
+        self.chunk.ops[self.ip]
+    }
 }
 
 pub struct FrameStack<'chunk> {
@@ -245,12 +250,20 @@ impl Machine {
             } else {
                 ""
             },
-            crate::runtime::chunk::disassemble_instruction(
-                ctx.interner,
-                module,
-                frames.current_chunk(),
-                frames.current_ip()
-            )
+            {
+                #[cfg(feature = "cli")]
+                let value = crate::pretty::disassemble_instruction(
+                    ctx.interner,
+                    module,
+                    frames.current_chunk(),
+                    frames.current_ip(),
+                );
+
+                #[cfg(not(feature = "cli"))]
+                let value = format!("{:?}", frames.current_frame().current_op());
+
+                value
+            }
         );
         // }}}
 

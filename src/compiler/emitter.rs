@@ -559,7 +559,12 @@ fn compile_assert(
 
     compile_expr(emitter, interner, depth + 1, value)?;
 
-    let expr = super::ast::print_expression(value);
+    #[cfg(feature = "cli")]
+    let expr = crate::pretty::print_expression(value);
+
+    #[cfg(not(feature = "cli"))]
+    let expr = format!("{value:?}");
+
     let ptr = interner.allocate_string(expr);
     let c = emitter.make_constant(Constant::StringPtr(ptr));
     emitter.add_instruction(Opcode::Assert(c), assert.pos);
