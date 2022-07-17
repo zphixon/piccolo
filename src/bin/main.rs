@@ -355,7 +355,12 @@ mod main {
                                     print_errors(errs);
                                     env.clear_errors();
                                 })
-                                .map(|value| println!("{}", env.debug(value)));
+                                .map(|value| {
+                                    #[cfg(feature = "color")]
+                                    println!("{}", env.color_format(value));
+                                    #[cfg(not(feature = "color"))]
+                                    println!("{}", env.format(value));
+                                });
 
                             prompt = "-- ";
                             input = String::new();

@@ -207,6 +207,30 @@ impl Object for Value {
         }
     }
 
+    #[cfg(feature = "color")]
+    fn color_format(&self, ctx: Context) -> tcolor::ColorString {
+        use tcolor::{Color, ColorString};
+        match self {
+            Value::Bool(b) => ColorString::new_fg(b, Color::Magenta),
+            Value::Integer(i) => ColorString::new_fg(i, Color::Magenta),
+            Value::Double(d) => ColorString::new_fg(d, Color::Magenta),
+            Value::String(p) => ColorString::new_fg(
+                format!("{:?}", ctx.interner.get_string(*p)),
+                Color::BrightGreen,
+            ),
+            Value::Function(f) => ColorString::new_fg(
+                format!("Function({})", ctx.interner.get_string(f.name)),
+                Color::Blue,
+            ),
+            Value::BuiltinFunction(f) => ColorString::new_fg(
+                format!("BuiltinFunction({})", ctx.interner.get_string(f.name())),
+                Color::Blue,
+            ),
+            Value::Object(p) => ctx.color_format(*p),
+            Value::Nil => ColorString::new_fg("nil", Color::Magenta),
+        }
+    }
+
     fn eq(&self, ctx: Context, other: Value) -> Result<bool, PiccoloError> {
         if let Value::Bool(l) = *self {
             if let Value::Bool(r) = other {
@@ -389,6 +413,24 @@ impl Constant {
             Constant::Nil => String::from("Nil"),
         }
     }
+
+    #[cfg(feature = "color")]
+    pub(crate) fn color_format(&self, interner: &Interner) -> tcolor::ColorString {
+        use tcolor::{Color, ColorString};
+        match self {
+            Constant::Bool(b) => ColorString::new_fg(b, Color::Magenta),
+            Constant::Integer(i) => ColorString::new_fg(i, Color::Magenta),
+            Constant::Double(d) => ColorString::new_fg(d, Color::Magenta),
+            Constant::StringPtr(p) => {
+                ColorString::new_fg(format!("{:?}", interner.get_string(*p)), Color::BrightGreen)
+            }
+            Constant::Function(f) => ColorString::new_fg(
+                format!("Function({})", interner.get_string(f.name)),
+                Color::Blue,
+            ),
+            Constant::Nil => ColorString::new_fg("nil", Color::Magenta),
+        }
+    }
 }
 
 impl PartialEq for Constant {
@@ -455,6 +497,20 @@ impl Object for Array {
             }
         }
         s.push(']');
+        s
+    }
+
+    #[cfg(feature = "color")]
+    fn color_format(&self, ctx: Context) -> tcolor::ColorString {
+        use tcolor::Color;
+        let mut s = tcolor::ColorString::new_fg("[", Color::Red);
+        for (i, value) in self.values.iter().enumerate() {
+            s.push(value.color_format(ctx));
+            if i + 1 != self.values.len() {
+                s.push_string(", ", Color::Red);
+            }
+        }
+        s.push_string("]", Color::Red);
         s
     }
 

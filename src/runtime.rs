@@ -32,6 +32,11 @@ impl Context<'_, '_> {
     fn format(&self, ptr: Ptr) -> String {
         self.heap.get(ptr).format(*self)
     }
+
+    #[cfg(feature = "color")]
+    fn color_format(&self, ptr: Ptr) -> tcolor::ColorString {
+        self.heap.get(ptr).color_format(*self)
+    }
 }
 
 pub struct ContextMut<'a, 'b> {
@@ -114,6 +119,11 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
 
     fn format(&self, ctx: Context) -> String {
         self.type_name(ctx).to_string()
+    }
+
+    #[cfg(feature = "color")]
+    fn color_format(&self, ctx: Context) -> tcolor::ColorString {
+        tcolor::ColorString::new_fg(self.format(ctx), tcolor::Color::Red)
     }
 
     fn debug_format(&self, ctx: Context) -> String {

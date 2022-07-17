@@ -290,6 +290,11 @@ impl Environment {
         value.debug_format(self.context())
     }
 
+    #[cfg(feature = "color")]
+    pub fn color_format(&self, value: Value) -> tcolor::ColorString {
+        value.color_format(self.context())
+    }
+
     pub fn format_object(&self, object: &dyn Object) -> String {
         object.format(self.context())
     }

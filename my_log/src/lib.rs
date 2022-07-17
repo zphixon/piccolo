@@ -12,6 +12,7 @@ use std::{
 struct LogConfig {
     all: Option<Level>,
     specific: FnvHashMap<String, Level>,
+    color: bool,
 }
 
 impl Default for LogConfig {
@@ -19,6 +20,10 @@ impl Default for LogConfig {
         LogConfig {
             all: None,
             specific: FnvHashMap::with_capacity_and_hasher(0, Default::default()),
+            color: std::env::var("NO_COLOR")
+                .ok()
+                .unwrap_or(String::from(""))
+                .is_empty(),
         }
     }
 }
@@ -90,7 +95,7 @@ impl Log for SimpleLogger {
                 .map(|module| format!("[{module}]"))
                 .unwrap_or("(unknown)".to_string());
 
-            if atty::is(atty::Stream::Stdout) {
+            if atty::is(atty::Stream::Stdout) && self.inner.read().unwrap().color {
                 level = color_with_level(&level, record.level());
                 module = color_with_level(&module, record.level());
             }
@@ -118,7 +123,7 @@ fn make_config(env: &str) -> LogConfig {
     if make_single_regex().is_match(env) {
         LogConfig {
             all: Some(Level::from_str(env).expect(&format!("invalid log level {env}"))),
-            specific: Default::default(),
+            ..Default::default()
         }
     } else {
         let mut specific = FnvHashMap::default();
@@ -136,8 +141,8 @@ fn make_config(env: &str) -> LogConfig {
         });
 
         LogConfig {
-            all: None,
             specific,
+            ..Default::default()
         }
     }
 }

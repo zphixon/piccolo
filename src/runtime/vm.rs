@@ -232,15 +232,31 @@ impl Machine {
             module.index_of(frames.current_chunk()),
             frames.current_ip(),
             {
-                let mut s = String::from("[");
-                for (i, value) in self.stack.iter().enumerate() {
-                    s.push_str(&value.debug_format(ctx.as_ref()));
-                    if i + 1 != self.stack.len() {
-                        s.push_str(", ");
+                #[cfg(feature = "color")]
+                {
+                    use tcolor::{Color, ColorString};
+                    let mut s = ColorString::new_fg("[", Color::BrightBlue);
+                    for (i, value) in self.stack.iter().enumerate() {
+                        s.push(value.color_format(ctx.as_ref()));
+                        if i + 1 != self.stack.len() {
+                            s.push_string(", ", Color::BrightBlue);
+                        }
                     }
+                    s.push_string("]", Color::BrightBlue);
+                    s
                 }
-                s.push(']');
-                s
+                #[cfg(not(feature = "color"))]
+                {
+                    let mut s = String::from("[");
+                    for (i, value) in self.stack.iter().enumerate() {
+                        s.push_str(&value.debug_format(ctx.as_ref()));
+                        if i + 1 != self.stack.len() {
+                            s.push_str(", ");
+                        }
+                    }
+                    s.push(']');
+                    s
+                }
             }
         );
         debug!(

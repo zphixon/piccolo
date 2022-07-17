@@ -44,19 +44,31 @@ pub fn disassemble_instruction(
 
     let arg = match op {
         Opcode::Constant(index) => {
-            format!(
-                "@{index:04x} ({})",
-                module.get_constant(index).debug(interner)
-            )
+            format!("@{index:04x} ({})", {
+                #[cfg(feature = "color")]
+                {
+                    module.get_constant(index).color_format(interner)
+                }
+                #[cfg(not(feature = "color"))]
+                {
+                    module.get_constant(index).debug(interner)
+                }
+            })
         }
         Opcode::GetLocal(index) | Opcode::SetLocal(index) => {
             format!("${index}")
         }
         Opcode::GetGlobal(index) | Opcode::SetGlobal(index) | Opcode::DeclareGlobal(index) => {
-            format!(
-                "g{index:04x} ({})",
-                module.get_constant(index).debug(interner)
-            )
+            format!("g{index:04x} ({})", {
+                #[cfg(feature = "color")]
+                {
+                    module.get_constant(index).color_format(interner)
+                }
+                #[cfg(not(feature = "color"))]
+                {
+                    module.get_constant(index).debug(interner)
+                }
+            })
         }
         Opcode::JumpForward(jump) | Opcode::JumpFalse(jump) | Opcode::JumpTrue(jump) => {
             format!("+{jump:04x} -> {:04x}", offset + jump as usize)
@@ -70,7 +82,16 @@ pub fn disassemble_instruction(
     format!(
         "{:<6} {offset:04x} {:20} {arg}",
         format_args!("{}", chunk.get_pos_from_index(offset)),
-        format_args!("{op:?}")
+        {
+            #[cfg(feature = "color")]
+            {
+                tcolor::ColorString::new_fg(format!("{op:?}"), tcolor::Color::BrightRed)
+            }
+            #[cfg(not(feature = "color"))]
+            {
+                format_args!("{op:?}")
+            }
+        }
     )
 }
 

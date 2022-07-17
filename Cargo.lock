@@ -310,11 +310,11 @@ dependencies = [
  "log",
  "my_log",
  "once_cell",
- "owo-colors",
  "paste",
  "rand",
  "rustyline",
  "slotmap",
+ "tcolor",
  "unicode-segmentation",
 ]
 
@@ -493,6 +493,10 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
+
+[[package]]
+name = "tcolor"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-ident"
