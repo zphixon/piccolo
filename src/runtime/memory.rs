@@ -129,7 +129,7 @@ impl Heap {
 }
 
 #[cfg(test)]
-mod test {
+mod test_memory {
     use super::*;
     use crate::runtime::{interner::Interner, Context, ContextMut, Value};
 

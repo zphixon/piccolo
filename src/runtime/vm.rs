@@ -833,32 +833,3 @@ impl Machine {
         Ok(VmState::Continue)
     }
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn how_could_this_happen_to_me() {
-        use crate::{
-            compiler::{emitter, parser},
-            runtime::{chunk, interner::Interner, memory::Heap, vm::Machine},
-        };
-
-        let src = r#"""+(11*3)+"heehee""#;
-        let ast = parser::parse(src).expect("parse");
-        let mut interner = Interner::new();
-        let module = emitter::compile(&mut interner, &ast).expect("emit");
-
-        println!("{}", chunk::disassemble(&interner, &module, ""));
-
-        let mut heap = Heap::new();
-        let mut interner = Interner::new();
-        let mut vm = Machine::new();
-        let mut ctx = ContextMut {
-            heap: &mut heap,
-            interner: &mut interner,
-        };
-        vm.interpret(&mut ctx, &module).unwrap();
-    }
-}

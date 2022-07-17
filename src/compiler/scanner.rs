@@ -489,7 +489,7 @@ fn is_non_identifier(c: u8) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod test_scanner {
     use super::*;
 
     #[test]
@@ -556,7 +556,7 @@ mod test {
     }
 
     #[test]
-    fn scanner() {
+    fn peek_and_next() {
         let src = "a = 3\nio.prln(a)\n";
         let mut scanner = Scanner::new(src);
         assert_eq!(scanner.peek_token(0).unwrap(), &Token::identifier("a"));
@@ -587,7 +587,7 @@ mod test {
     }
 
     #[test]
-    fn scanner2() {
+    fn peek_and_next2() {
         //               0 1 2  3 45   678
         let src = "a = 3\nio.prln(a)\n";
         let mut scanner = Scanner::new(src);

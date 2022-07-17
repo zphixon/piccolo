@@ -205,7 +205,7 @@ pub fn disassemble_instruction(
 }
 
 #[cfg(test)]
-mod test {
+mod test_chunk {
     use super::*;
 
     #[test]

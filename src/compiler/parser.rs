@@ -790,11 +790,11 @@ fn parse_arguments<'a>(
 }
 
 #[cfg(test)]
-mod test {
+mod test_parser {
     use super::*;
 
     #[test]
-    fn assign() {
+    fn parse_op_assign() {
         let src = "a += 3";
         let ast = parse(src).unwrap();
         assert_eq!(
@@ -813,7 +813,7 @@ mod test {
 
     #[test]
     #[ignore]
-    fn path() {
+    fn parse_path() {
         // TODO think about modules more
         let src = "a:b:c:d";
         let ast = parse(src).unwrap();
@@ -843,8 +843,8 @@ mod test {
     }
 
     #[test]
-    fn pexp2() {
-        let src = &[
+    fn parse_many_expressions() {
+        let src = [
             "(a)",
             "fn(a, b, c) do end",
             "a.b().c()(d)",
@@ -864,10 +864,7 @@ mod test {
 
         for src in src {
             let mut scanner = Scanner::new(src);
-            println!(
-                "{src} -> {}",
-                crate::compiler::ast::print_expression(&parse_expression(&mut scanner, 0).unwrap())
-            );
+            let _ast = parse_expression(&mut scanner, 0).unwrap();
         }
     }
 }

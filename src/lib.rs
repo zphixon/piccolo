@@ -291,96 +291,26 @@ impl Environment {
 }
 
 #[cfg(test)]
-mod integration {
-    use crate::runtime::ContextMut;
-
+mod test_lib {
     use super::*;
 
-    use {
-        compiler::{ast, emitter, parser},
-        runtime::{chunk, memory::Heap, vm::Machine},
-    };
-
     #[test]
-    #[ignore]
-    fn very_long() {
-        let path = std::path::Path::new("examples/long.pc");
-        crate::do_file(path).unwrap();
-    }
+    fn reentrant() {
+        use crate::compiler::parser::parse;
 
-    #[test]
-    fn idk() {
-        let src = "a=:1+2";
-        let ast = parser::parse(src).unwrap();
-        println!("{}", ast::print_ast(&ast));
-        let mut interner = Interner::new();
-        let module = emitter::compile(&mut interner, &ast).unwrap();
-        println!("{}", chunk::disassemble(&interner, &module, "idklol"));
-        let mut heap = Heap::new();
-        let mut vm = Machine::new();
-        let mut interner = Interner::new();
-        let mut ctx = ContextMut {
-            heap: &mut heap,
-            interner: &mut interner,
-        };
-        println!("{:?}", vm.interpret(&mut ctx, &module).unwrap());
-    }
+        let ast1 = parse("x=:3").unwrap();
+        let ast2 = parse("assert x == 3").unwrap();
+        let ast3 = parse("fn z(a) do\n  print(\"a is\", a)\n  end\n").unwrap();
+        let ast4 = parse("z(x)").unwrap();
 
-    #[test]
-    fn visitor_emitter() {
-        use {
-            ast::{Expr, Stmt},
-            compiler::{Token, TokenKind},
-        };
-
-        let src = "1+2*3+4";
-        let ast = parser::parse(src).unwrap();
-        if let Stmt::Expr { expr, .. } = &ast[0] {
-            let equiv = Expr::Binary {
-                lhs: Box::new(Expr::Binary {
-                    lhs: Box::new(Expr::Literal {
-                        literal: Token::test(TokenKind::Integer(1)),
-                    }),
-                    op: Token::test(TokenKind::Plus),
-                    rhs: Box::new(Expr::Binary {
-                        lhs: Box::new(Expr::Literal {
-                            literal: Token::test(TokenKind::Integer(2)),
-                        }),
-                        op: Token::test(TokenKind::Multiply),
-                        rhs: Box::new(Expr::Literal {
-                            literal: Token::test(TokenKind::Integer(3)),
-                        }),
-                    }),
-                }),
-                op: Token::test(TokenKind::Plus),
-                rhs: Box::new(Expr::Literal {
-                    literal: Token::test(TokenKind::Integer(4)),
-                }),
-            };
-
-            println!("got:  {}", ast::print_expression(expr));
-            println!("want: {}", ast::print_expression(&equiv));
-            assert_eq!(expr, &equiv);
-
-            let mut interner = Interner::new();
-            let module = emitter::compile(&mut interner, &ast).unwrap();
-
-            println!("{}", chunk::disassemble(&mut interner, &module, "idklol"));
-
-            let mut heap = Heap::new();
-            let mut vm = Machine::new();
-            let mut interner = Interner::new();
-            let mut ctx = ContextMut {
-                heap: &mut heap,
-                interner: &mut interner,
-            };
-            assert!(vm
-                .interpret(&mut ctx, &module)
-                .unwrap()
-                .eq(ctx.as_ref(), Value::Integer(11))
-                .unwrap());
-        } else {
-            panic!("ast not initialized")
-        }
+        let mut env = Environment::new();
+        env.compile(&ast1).unwrap();
+        println!("{}", env.disassemble(""));
+        env.compile(&ast2).unwrap();
+        println!("{}", env.disassemble(""));
+        env.compile(&ast3).unwrap();
+        println!("{}", env.disassemble(""));
+        env.compile(&ast4).unwrap();
+        println!("{}", env.disassemble(""));
     }
 }

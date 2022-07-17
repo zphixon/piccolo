@@ -78,18 +78,18 @@ impl Interner {
 }
 
 #[cfg(test)]
-mod test {
+mod test_interner {
     use super::*;
 
     #[test]
-    fn intern() {
+    fn allocate_single_string() {
         let mut interner = Interner::default();
         let wow = interner.allocate_string(String::from("wow!"));
         assert_eq!("wow!", interner.get_string(wow));
     }
 
     #[test]
-    fn intern2() {
+    fn strings_are_actually_deduplicated() {
         use rand::Rng;
         const NUM_RUNS: usize = 1250;
         const NUM_STRINGS: usize = 32;

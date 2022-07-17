@@ -6,6 +6,8 @@ for embedding in Rust projects.
 
 ## Notes
 
+### GC
+
 Users should be able to implement `Object` for their own types, so they can be
 traced and garbage-collected. We could do this a number of ways:
 
@@ -30,7 +32,9 @@ to the object.
    to uphold the safety invariants of `SlotMap` and potentially guarantee
    implementors of `Object` would also do so.
 
-Closures. Fun stuff that we probably want to have, but they present a few
+### Closures
+
+Fun stuff that we probably want to have, but they present a few
 interesting implementation challenges. A closure needs to:
 
 1. Understand that local variables it refers to actually exist. The compiler
@@ -38,6 +42,13 @@ interesting implementation challenges. A closure needs to:
    captures, and also make sure it's not picking up the dummy variable so that
    functions can be recursive.
 2. Put captured variables in the correct place on the stack.
+
+### Tests
+
+We have the test suite which is not great, but it works fine for now. The
+actual lib tests were megagarbage and honestly should only target the
+high-level APIs in the top-level module and the module-specific things, as well
+as the experimental stuff.
 
 ## Todo
 

@@ -488,7 +488,7 @@ fn analyze_ns_expr<'src>(
 }
 
 #[cfg(test)]
-mod test {
+mod test_ns {
     use super::*;
 
     #[test]
@@ -511,7 +511,7 @@ mod test {
     }
 
     #[test]
-    fn namespace() {
+    fn nesting() {
         let mut repo = NamespaceRepository::new();
         repo.new_global(Token::identifier("wow"));
 

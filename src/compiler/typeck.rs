@@ -301,7 +301,7 @@ fn check_binary<'src>(
 }
 
 #[cfg(test)]
-mod test {
+mod test_typeck {
     use crate::compiler::{parser::parse, Pos};
 
     use super::*;
