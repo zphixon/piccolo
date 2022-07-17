@@ -6,9 +6,9 @@ edition = '2021'
 default-run = 'main'
 
 [features]
-default = ['log/max_level_trace', 'cli']
+default = ['cli']
 cli = ['gumdrop', 'rustyline']
-log = ['my_log']
+log = ['my_log', 'log/max_level_trace']
 
 [dependencies]
 slotmap = '1.0.6'
