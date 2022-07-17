@@ -2,7 +2,7 @@ use piccolo::{compiler::parser::parse, Environment};
 
 #[allow(unused_assignments)]
 fn main() {
-    #[cfg(feature = "log")]
+    #[cfg(feature = "logging")]
     my_log::init();
 
     let ast1 = parse("x=:3").unwrap();

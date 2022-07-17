@@ -494,7 +494,7 @@ mod test_ns {
 
     #[test]
     fn files() {
-        #[cfg(feature = "log")]
+        #[cfg(feature = "logging")]
         my_log::init();
 
         for file in [

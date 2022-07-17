@@ -414,7 +414,7 @@ impl Constant {
         }
     }
 
-    #[cfg(feature = "color")]
+    #[cfg(all(feature = "color", feature = "cli"))]
     pub(crate) fn color_format(&self, interner: &Interner) -> tcolor::ColorString {
         use tcolor::{Color, ColorString};
         match self {

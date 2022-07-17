@@ -1,12 +1,12 @@
 fn main() {
-    #[cfg(not(all(feature = "cli", not(feature = "log"))))]
-    panic!("Must be run with features cli and not log");
+    #[cfg(not(all(feature = "cli", not(feature = "logging"))))]
+    panic!("Must be run with features cli and not logging");
 
-    #[cfg(all(feature = "cli", not(feature = "log")))]
+    #[cfg(all(feature = "cli", not(feature = "logging")))]
     not_log::main();
 }
 
-#[cfg(all(feature = "cli", not(feature = "log")))]
+#[cfg(all(feature = "cli", not(feature = "logging")))]
 mod not_log {
     use std::{
         fs, io,
@@ -46,7 +46,7 @@ mod not_log {
             let source_modified = std::fs::metadata(&file).unwrap().modified().unwrap();
             if source_modified > binary_modified {
                 let name = file.display().to_string();
-                panic!("{name} was modified: release rebuild required (with no log feature)");
+                panic!("{name} was modified: release rebuild required (with no logging feature)");
             }
         }
     }

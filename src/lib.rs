@@ -14,7 +14,7 @@ pub mod pretty;
 #[macro_export]
 macro_rules! trace {
     ($($log:expr),*) => {
-        #[cfg(feature = "log")]
+        #[cfg(feature = "logging")]
         log::trace!($($log),*);
     };
 }
@@ -22,7 +22,7 @@ macro_rules! trace {
 #[macro_export]
 macro_rules! debug {
     ($($log:expr),*) => {
-        #[cfg(feature = "log")]
+        #[cfg(feature = "logging")]
         log::debug!($($log),*);
     };
 }
@@ -30,7 +30,7 @@ macro_rules! debug {
 #[macro_export]
 macro_rules! info {
     ($($log:expr),*) => {
-        #[cfg(feature = "log")]
+        #[cfg(feature = "logging")]
         log::info!($($log),*);
     };
 }
@@ -38,7 +38,7 @@ macro_rules! info {
 #[macro_export]
 macro_rules! warn {
     ($($log:expr),*) => {
-        #[cfg(feature = "log")]
+        #[cfg(feature = "logging")]
         log::warn!($($log),*);
     };
 }
@@ -46,7 +46,7 @@ macro_rules! warn {
 #[macro_export]
 macro_rules! error {
     ($($log:expr),*) => {
-        #[cfg(feature = "log")]
+        #[cfg(feature = "logging")]
         log::error!($($log),*);
     };
 }

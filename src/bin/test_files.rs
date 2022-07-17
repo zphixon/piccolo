@@ -4,7 +4,7 @@ use piccolo::{error::PiccoloError, make_error};
 use std::{fs, io, path};
 
 fn main() -> Result<(), PiccoloError> {
-    #[cfg(feature = "log")]
+    #[cfg(feature = "logging")]
     my_log::init();
 
     let mut path = path::PathBuf::new();

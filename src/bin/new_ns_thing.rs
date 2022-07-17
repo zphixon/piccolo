@@ -17,7 +17,7 @@ fn collect_files_recursively<'a, P: AsRef<path::Path> + ?Sized>(
 }
 
 fn main() {
-    #[cfg(feature = "log")]
+    #[cfg(feature = "logging")]
     my_log::init();
 
     let mut test_files = Vec::new();

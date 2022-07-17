@@ -60,7 +60,7 @@ impl Module {
         self.chunks.len() - 1
     }
 
-    #[cfg(feature = "log")]
+    #[cfg(feature = "logging")]
     pub(crate) fn index_of(&self, chunk: &Chunk) -> usize {
         self.chunks.iter().position(|c| c.ops == chunk.ops).unwrap()
     }

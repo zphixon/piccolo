@@ -6,10 +6,10 @@ edition = '2021'
 default-run = 'main'
 
 [features]
-default = ['cli', 'color']
+default = ['cli', 'logging', 'color']
 cli = ['gumdrop', 'rustyline']
 color = ['tcolor']
-log = ['my_log', 'log/max_level_trace']
+logging = ['my_log', 'log/max_level_trace']
 
 [dependencies]
 slotmap = '1.0.6'
