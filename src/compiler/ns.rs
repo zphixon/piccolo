@@ -90,6 +90,7 @@ impl<'src> NamespaceRepository<'src> {
         self.get_rec(ns, name, true).map(|(_, loc)| loc)
     }
 
+    #[allow(dead_code)]
     fn get(
         &mut self,
         ns: DefaultKey,
