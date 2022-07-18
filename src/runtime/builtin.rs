@@ -11,7 +11,9 @@ use std::{
 };
 
 pub fn to_string(ctx: &mut ContextMut, values: &[Value]) -> Result<Value, PiccoloError> {
-    if let [Value::String(s)] = values {
+    if values.is_empty() {
+        Ok(Value::String(ctx.interner.allocate_str("")))
+    } else if let [Value::String(s)] = values {
         Ok(Value::String(*s))
     } else {
         let mut s = String::new();
