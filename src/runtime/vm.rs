@@ -251,7 +251,7 @@ impl Machine {
             } else {
                 ""
             },
-            crate::pretty::color_disassemble_instruction(
+            crate::pretty::disassemble_instruction(
                 ctx.interner,
                 module,
                 frames.current_chunk(),

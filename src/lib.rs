@@ -86,7 +86,7 @@ pub fn interpret(src: &str) -> Result<(Environment, Value), Vec<PiccoloError>> {
 
     debug!("compile");
     env.compile(&ast)?;
-    debug!("{}", env.disassemble(""));
+    debug!("{:#}", env.disassemble(""));
 
     debug!("interpret");
     let value = env.interpret_compiled()?;
@@ -187,7 +187,7 @@ impl Environment {
     }
 
     pub fn dump(&self) {
-        println!("{}", self.color_disassemble(""));
+        println!("{}", self.disassemble(""));
         println!("{:#?}", self.vm);
         println!("{:#?}", self.heap);
         println!("{:#?}", self.interner);
@@ -220,13 +220,8 @@ impl Environment {
     }
 
     #[must_use]
-    pub fn disassemble(&self, name_of_module: &str) -> String {
+    pub fn disassemble(&self, name_of_module: &str) -> tcolor::ColorString {
         pretty::disassemble(&self.interner, self.emitter.module(), name_of_module)
-    }
-
-    #[must_use]
-    pub fn color_disassemble(&self, name_of_module: &str) -> tcolor::ColorString {
-        pretty::color_disassemble(&self.interner, self.emitter.module(), name_of_module)
     }
 
     pub fn interpret(&mut self, src: &str) -> Result<Value, Vec<PiccoloError>> {
@@ -318,15 +313,15 @@ mod test_lib {
         let mut env = Environment::new();
 
         env.compile(&ast1).unwrap();
-        println!("{}", env.disassemble(""));
+        println!("{:#}", env.disassemble(""));
 
         env.compile(&ast2).unwrap();
-        println!("{}", env.disassemble(""));
+        println!("{:#}", env.disassemble(""));
 
         env.compile(&ast3).unwrap();
-        println!("{}", env.disassemble(""));
+        println!("{:#}", env.disassemble(""));
 
         env.compile(&ast4).unwrap();
-        println!("{}", env.disassemble(""));
+        println!("{:#}", env.disassemble(""));
     }
 }

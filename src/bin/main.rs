@@ -168,7 +168,7 @@ fn maybe_exec_then_repl(
     env.compile(&ast)?;
 
     if print_compiled {
-        println!("=== module ===\n{}", env.color_disassemble(name_for_module));
+        println!("=== module ===\n{}", env.disassemble(name_for_module));
     }
 
     if !verify_syntax {
@@ -298,7 +298,7 @@ fn repl(
                                 Some(&"strings") => dump_strings(),
                                 Some(&"objects") => dump_objects(),
                                 Some(&"env") => env.dump(),
-                                Some(&"module") => println!("{}", env.color_disassemble("repl")),
+                                Some(&"module") => println!("{}", env.disassemble("repl")),
                                 None => {
                                     dump_strings();
                                     dump_objects();
@@ -343,7 +343,7 @@ fn repl(
                             .compile(&ast)
                             .and_then(|_| {
                                 if print_compiled {
-                                    println!("=== module ===\n{}", env.color_disassemble("repl"));
+                                    println!("=== module ===\n{}", env.disassemble("repl"));
                                 }
                                 env.interpret_continue().map_err(|e| vec![e])
                             })

@@ -13,29 +13,7 @@ use crate::{
 use std::fmt::Write;
 use tcolor::{Color, ColorString};
 
-pub fn disassemble(interner: &Interner, module: &Module, name: &str) -> String {
-    trace!("disassemble");
-
-    let mut s = format!(" -- {name} --\n");
-    s.push_str(" ++ constants\n");
-    for (index, constant) in module.constants().iter().enumerate() {
-        writeln!(s, "{index:04x} {}", constant.debug(interner)).unwrap();
-    }
-
-    for (i, chunk) in module.chunks().iter().enumerate() {
-        writeln!(s, " ++ chunk {i}").unwrap();
-        let mut offset = 0;
-        while offset < chunk.ops.len() {
-            s.push_str(&disassemble_instruction(interner, module, chunk, offset));
-            s.push('\n');
-            offset += 1;
-        }
-    }
-
-    s
-}
-
-pub fn color_disassemble(interner: &Interner, module: &Module, name: &str) -> ColorString {
+pub fn disassemble(interner: &Interner, module: &Module, name: &str) -> ColorString {
     trace!("disassemble");
 
     let mut s = ColorString::new_fg(format!(" -- {name} --\n"), Color::BrightWhite);
@@ -50,9 +28,7 @@ pub fn color_disassemble(interner: &Interner, module: &Module, name: &str) -> Co
         s.push_string(format!(" ++ chunk {i}\n"), Color::Green);
         let mut offset = 0;
         while offset < chunk.ops.len() {
-            s.push(color_disassemble_instruction(
-                interner, module, chunk, offset,
-            ));
+            s.push(disassemble_instruction(interner, module, chunk, offset));
             s.push_string("\n", Color::None);
             offset += 1;
         }
@@ -62,44 +38,6 @@ pub fn color_disassemble(interner: &Interner, module: &Module, name: &str) -> Co
 }
 
 pub fn disassemble_instruction(
-    interner: &Interner,
-    module: &Module,
-    chunk: &Chunk,
-    offset: usize,
-) -> String {
-    let op = chunk.ops[offset];
-
-    let arg = match op {
-        Opcode::Constant(index) => {
-            format!("@{index:04x} ({})", {
-                module.get_constant(index).debug(interner)
-            })
-        }
-        Opcode::GetLocal(index) | Opcode::SetLocal(index) => {
-            format!("${index}")
-        }
-        Opcode::GetGlobal(index) | Opcode::SetGlobal(index) | Opcode::DeclareGlobal(index) => {
-            format!("g{index:04x} ({})", {
-                module.get_constant(index).debug(interner)
-            })
-        }
-        Opcode::JumpForward(jump) | Opcode::JumpFalse(jump) | Opcode::JumpTrue(jump) => {
-            format!("+{jump:04x} -> {:04x}", offset + jump as usize)
-        }
-        Opcode::JumpBack(jump) => {
-            format!("-{jump:04x} -> {:04x}", offset - jump as usize)
-        }
-        _ => String::new(),
-    };
-
-    format!(
-        "{:<6} {offset:04x} {:20} {arg}",
-        format!("{}", chunk.get_pos_from_index(offset)),
-        format!("{op:?}")
-    )
-}
-
-pub fn color_disassemble_instruction(
     interner: &Interner,
     module: &Module,
     chunk: &Chunk,

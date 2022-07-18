@@ -36,3 +36,9 @@ incremental = true
 
 [target.'cfg(fuzzing)'.dependencies]
 arbitrary = { version = '*', features = ['derive'] }
+
+[workspace]
+members = [
+    'my_log',
+    'tcolor',
+]

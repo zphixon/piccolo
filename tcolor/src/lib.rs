@@ -171,16 +171,16 @@ impl ColorString {
 
 impl Display for ColorString {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        if self.color {
-            for (string, color) in self.sequence.iter() {
-                write!(f, "{color}{string}")?;
-            }
-            write!(f, "{}", TermColor::reset())
-        } else {
+        if !self.color || f.alternate() {
             for (string, _) in self.sequence.iter() {
                 write!(f, "{string}")?;
             }
             Ok(())
+        } else {
+            for (string, color) in self.sequence.iter() {
+                write!(f, "{color}{string}")?;
+            }
+            write!(f, "{}", TermColor::reset())
         }
     }
 }

@@ -400,6 +400,7 @@ impl Constant {
         })
     }
 
+    #[allow(dead_code)]
     pub(crate) fn debug(&self, interner: &Interner) -> String {
         match self {
             Constant::StringPtr(v) => format!("String({:?})", interner.get_string(*v)),
