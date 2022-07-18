@@ -233,6 +233,12 @@ impl Environment {
         pretty::disassemble(&self.interner, self.emitter.module(), name_of_module)
     }
 
+    #[cfg(all(feature = "cli", feature = "color"))]
+    #[must_use]
+    pub fn color_disassemble(&self, name_of_module: &str) -> tcolor::ColorString {
+        pretty::color_disassemble(&self.interner, self.emitter.module(), name_of_module)
+    }
+
     pub fn interpret(&mut self, src: &str) -> Result<Value, Vec<PiccoloError>> {
         let ast = compiler::parser::parse(src)?;
         self.compile(&ast)?;

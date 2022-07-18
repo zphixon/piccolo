@@ -170,6 +170,9 @@ mod main {
         env.compile(&ast)?;
 
         if print_compiled {
+            #[cfg(feature = "color")]
+            println!("=== module ===\n{}", env.color_disassemble(name_for_module));
+            #[cfg(not(feature = "color"))]
             println!("=== module ===\n{}", env.disassemble(name_for_module));
         }
 

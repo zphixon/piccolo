@@ -12,6 +12,9 @@ use crate::{
 };
 use std::fmt::Write;
 
+#[cfg(feature = "color")]
+use tcolor::{Color, ColorString};
+
 pub fn disassemble(interner: &Interner, module: &Module, name: &str) -> String {
     trace!("disassemble");
 
@@ -34,6 +37,33 @@ pub fn disassemble(interner: &Interner, module: &Module, name: &str) -> String {
     s
 }
 
+#[cfg(feature = "color")]
+pub fn color_disassemble(interner: &Interner, module: &Module, name: &str) -> ColorString {
+    trace!("disassemble");
+
+    let mut s = ColorString::new_fg(format!(" -- {name} --\n"), Color::BrightWhite);
+    s.push_string(" ++ constants\n", Color::Green);
+    for (index, constant) in module.constants().iter().enumerate() {
+        s.push_string(format!("{index:04x} "), Color::BrightMagenta);
+        s.push(constant.color_format(interner));
+        s.push_string("\n", Color::BrightWhite);
+    }
+
+    for (i, chunk) in module.chunks().iter().enumerate() {
+        s.push_string(format!(" ++ chunk {i}\n"), Color::Green);
+        let mut offset = 0;
+        while offset < chunk.ops.len() {
+            s.push(color_disassemble_instruction(
+                interner, module, chunk, offset,
+            ));
+            s.push_string("\n", Color::None);
+            offset += 1;
+        }
+    }
+
+    s
+}
+
 pub fn disassemble_instruction(
     interner: &Interner,
     module: &Module,
@@ -45,14 +75,7 @@ pub fn disassemble_instruction(
     let arg = match op {
         Opcode::Constant(index) => {
             format!("@{index:04x} ({})", {
-                #[cfg(feature = "color")]
-                {
-                    module.get_constant(index).color_format(interner)
-                }
-                #[cfg(not(feature = "color"))]
-                {
-                    module.get_constant(index).debug(interner)
-                }
+                module.get_constant(index).debug(interner)
             })
         }
         Opcode::GetLocal(index) | Opcode::SetLocal(index) => {
@@ -60,14 +83,7 @@ pub fn disassemble_instruction(
         }
         Opcode::GetGlobal(index) | Opcode::SetGlobal(index) | Opcode::DeclareGlobal(index) => {
             format!("g{index:04x} ({})", {
-                #[cfg(feature = "color")]
-                {
-                    module.get_constant(index).color_format(interner)
-                }
-                #[cfg(not(feature = "color"))]
-                {
-                    module.get_constant(index).debug(interner)
-                }
+                module.get_constant(index).debug(interner)
             })
         }
         Opcode::JumpForward(jump) | Opcode::JumpFalse(jump) | Opcode::JumpTrue(jump) => {
@@ -81,18 +97,59 @@ pub fn disassemble_instruction(
 
     format!(
         "{:<6} {offset:04x} {:20} {arg}",
-        format_args!("{}", chunk.get_pos_from_index(offset)),
-        {
-            #[cfg(feature = "color")]
-            {
-                tcolor::ColorString::new_fg(format!("{op:?}"), tcolor::Color::BrightRed)
-            }
-            #[cfg(not(feature = "color"))]
-            {
-                format_args!("{op:?}")
-            }
-        }
+        format!("{}", chunk.get_pos_from_index(offset)),
+        format!("{op:?}")
     )
+}
+
+#[cfg(feature = "color")]
+pub fn color_disassemble_instruction(
+    interner: &Interner,
+    module: &Module,
+    chunk: &Chunk,
+    offset: usize,
+) -> ColorString {
+    let op = chunk.ops[offset];
+    let mut arg = ColorString::new();
+
+    match op {
+        Opcode::Constant(index) => {
+            arg.push_string(format!("@{index:04x} "), Color::BrightMagenta);
+            arg.push(module.get_constant(index).color_format(interner));
+        }
+        Opcode::GetLocal(index) | Opcode::SetLocal(index) => {
+            arg.push_string(format!("${index}"), Color::BrightBlue);
+        }
+        Opcode::GetGlobal(index) | Opcode::SetGlobal(index) | Opcode::DeclareGlobal(index) => {
+            arg.push_string(format!("g{index:04x} ("), Color::BrightBlue);
+            arg.push(module.get_constant(index).color_format(interner));
+            arg.push_string(")", Color::BrightBlue);
+        }
+        Opcode::JumpForward(jump) | Opcode::JumpFalse(jump) | Opcode::JumpTrue(jump) => {
+            arg.push_string(format!("+{jump:04x} -> "), Color::Red);
+            arg.push_string(
+                format!("{:04x}", offset + jump as usize),
+                Color::BrightWhite,
+            );
+        }
+        Opcode::JumpBack(jump) => {
+            arg.push_string(format!("-{jump:04x} -> "), Color::Red);
+            arg.push_string(
+                format!("{:04x}", offset - jump as usize),
+                Color::BrightWhite,
+            );
+        }
+        _ => {}
+    };
+
+    let mut s = ColorString::new_fg(
+        format!("{:<6} ", format!("{}", chunk.get_pos_from_index(offset))),
+        Color::BrightGreen,
+    );
+    s.push_string(format!("{offset:04x} "), Color::BrightWhite);
+    s.push_string(format!("{:20} ", format!("{op:?}")), Color::Red);
+    s.push(arg);
+    s
 }
 
 /// Print an abstract syntax tree.

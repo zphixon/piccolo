@@ -267,8 +267,16 @@ impl Machine {
                 ""
             },
             {
-                #[cfg(feature = "cli")]
+                #[cfg(all(feature = "cli", not(feature = "color")))]
                 let value = crate::pretty::disassemble_instruction(
+                    ctx.interner,
+                    module,
+                    frames.current_chunk(),
+                    frames.current_ip(),
+                );
+
+                #[cfg(all(feature = "cli", feature = "color"))]
+                let value = crate::pretty::color_disassemble_instruction(
                     ctx.interner,
                     module,
                     frames.current_chunk(),
