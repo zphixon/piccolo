@@ -602,9 +602,10 @@ fn compile_literal(
         }
         TokenKind::Nil => emitter.add_instruction(Opcode::Nil, literal.pos),
         TokenKind::String => {
-            let string = crate::compiler::escape_string(literal.lexeme)?;
-            let ptr = interner.allocate_string(string);
-            emitter.add_constant(Constant::StringPtr(ptr), literal.pos);
+            emitter.add_constant(
+                Constant::StringPtr(super::maybe_escape_string(interner, literal)?),
+                literal.pos,
+            );
         }
         _ => emitter.add_constant(Constant::try_from(interner, literal)?, literal.pos),
     }

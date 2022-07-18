@@ -390,8 +390,7 @@ impl Constant {
     ) -> Result<Constant, PiccoloError> {
         Ok(match token.kind {
             TokenKind::String => {
-                let string = crate::compiler::escape_string(token.lexeme)?;
-                Constant::StringPtr(interner.allocate_string(string))
+                Constant::StringPtr(crate::compiler::maybe_escape_string(interner, token)?)
             }
             TokenKind::Integer(v) => Constant::Integer(v),
             TokenKind::True => Constant::Bool(true),

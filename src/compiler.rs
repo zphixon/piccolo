@@ -51,14 +51,29 @@ pub fn scan_all(source: &str) -> Result<Vec<Token>, PiccoloError> {
     Scanner::new(source).scan_all()
 }
 
-pub fn escape_string(s: &str) -> Result<String, PiccoloError> {
+pub fn maybe_escape_string(
+    interner: &mut crate::runtime::interner::Interner,
+    token: Token,
+) -> Result<crate::runtime::interner::StringPtr, PiccoloError> {
+    match escape_string(token.lexeme)? {
+        Ok(str) => Ok(interner.allocate_str(str)),
+        Err(string) => Ok(interner.allocate_string(string)),
+    }
+}
+
+pub fn escape_string(s: &str) -> Result<Result<&str, String>, PiccoloError> {
     let quoted = &s[1..s.len() - 1];
     let bytes = quoted.as_bytes();
 
     let mut i = 0;
-    let mut value = Vec::with_capacity(bytes.len());
+    let mut value = None;
     while i < bytes.len() {
         if bytes[i] == b'\\' {
+            if value.is_none() {
+                value = Some(Vec::with_capacity(bytes.len()));
+                value.as_mut().unwrap().extend_from_slice(&bytes[..i]);
+            }
+            let value = value.as_mut().unwrap();
             i += 1;
 
             let code = bytes[i];
@@ -103,12 +118,18 @@ pub fn escape_string(s: &str) -> Result<String, PiccoloError> {
                 b => return Err(make_error!(UnknownFormatCode { code: b as char })),
             }
         } else {
-            value.push(bytes[i]);
+            if value.is_some() && i < bytes.len() {
+                value.as_mut().unwrap().push(bytes[i]);
+            }
             i += 1;
         }
     }
 
-    Ok(String::from_utf8(value)?)
+    if value.is_some() {
+        Ok(Err(String::from_utf8(value.unwrap())?))
+    } else {
+        Ok(Ok(quoted))
+    }
 }
 
 /// Kinds of tokens that may exist in Piccolo code.
