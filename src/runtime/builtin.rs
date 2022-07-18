@@ -11,19 +11,23 @@ use std::{
 };
 
 pub fn to_string(ctx: &mut ContextMut, values: &[Value]) -> Result<Value, PiccoloError> {
-    let mut s = String::new();
+    if let [Value::String(s)] = values {
+        Ok(Value::String(*s))
+    } else {
+        let mut s = String::new();
 
-    for (i, value) in values.iter().enumerate() {
-        write!(s, "{}", value.format(ctx.as_ref()))?;
+        for (i, value) in values.iter().enumerate() {
+            write!(s, "{}", value.format(ctx.as_ref()))?;
 
-        if i + 1 != values.len() {
-            s.push('\t');
+            if i + 1 != values.len() {
+                s.push('\t');
+            }
         }
+
+        let ptr = ctx.interner.allocate_string(s);
+
+        Ok(Value::String(ptr))
     }
-
-    let ptr = ctx.interner.allocate_string(s);
-
-    Ok(Value::String(ptr))
 }
 
 pub fn write(ctx: &mut ContextMut, values: &[Value]) -> Result<Value, PiccoloError> {
