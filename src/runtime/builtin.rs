@@ -10,6 +10,33 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[cfg(feature = "color")]
+pub fn color_print(ctx: &mut ContextMut, values: &[Value]) -> Result<Value, PiccoloError> {
+    let mut s = String::new();
+    for (i, value) in values.iter().enumerate() {
+        write!(s, "{}", value.color_format(ctx.as_ref()))?;
+
+        if i + 1 != values.len() {
+            s.push('\t');
+        }
+    }
+    println!("{s}");
+    Ok(Value::Nil)
+}
+
+pub fn debug_print(ctx: &mut ContextMut, values: &[Value]) -> Result<Value, PiccoloError> {
+    let mut s = String::new();
+    for (i, value) in values.iter().enumerate() {
+        write!(s, "{}", value.debug_format(ctx.as_ref()))?;
+
+        if i + 1 != values.len() {
+            s.push('\t');
+        }
+    }
+    println!("{s}");
+    Ok(Value::Nil)
+}
+
 pub fn to_string(ctx: &mut ContextMut, values: &[Value]) -> Result<Value, PiccoloError> {
     if values.is_empty() {
         Ok(Value::String(ctx.interner.allocate_str("")))

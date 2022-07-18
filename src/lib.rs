@@ -166,6 +166,9 @@ impl Environment {
             };
         }
 
+        add_builtin_function!(debugPrint, debug_print, Arity::Any);
+        #[cfg(feature = "color")]
+        add_builtin_function!(colorPrint, color_print, Arity::Any);
         add_builtin_function!(write, Arity::Any);
         add_builtin_function!(print, Arity::Any);
         add_builtin_function!(rand, Arity::Exact(0));
