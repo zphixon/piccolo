@@ -624,12 +624,12 @@ impl Machine {
 
             Opcode::GetLocal(slot) => {
                 let slot = slot as usize + frames.current_frame().base;
-                debug!("get local slot {}", slot);
+                trace!("get local slot {}", slot);
                 self.push(self.stack[slot]);
             }
             Opcode::SetLocal(slot) => {
                 let slot = slot as usize + frames.current_frame().base;
-                debug!("set local slot {}", slot);
+                trace!("set local slot {}", slot);
                 self.stack[slot] = self.pop();
             }
             Opcode::GetGlobal(index) => {
@@ -686,7 +686,7 @@ impl Machine {
             Opcode::JumpForward(offset) => {
                 let offset = offset as usize - 1;
 
-                debug!(
+                trace!(
                     "jump ip {:x} -> {:x}",
                     frames.current_ip(),
                     frames.current_ip() + offset
@@ -697,7 +697,7 @@ impl Machine {
                 let offset = offset as usize - 1;
 
                 if !self.peek().is_truthy() {
-                    debug!(
+                    trace!(
                         "jump false ip {:x} -> {:x}",
                         frames.current_ip(),
                         frames.current_frame_mut().ip + offset
@@ -710,7 +710,7 @@ impl Machine {
                 let offset = offset as usize - 1;
 
                 if self.peek().is_truthy() {
-                    debug!(
+                    trace!(
                         "jump true ip {:x} -> {:x}",
                         frames.current_ip(),
                         frames.current_frame_mut().ip + offset
@@ -722,7 +722,7 @@ impl Machine {
             Opcode::JumpBack(offset) => {
                 let offset = offset as usize + 1;
 
-                debug!(
+                trace!(
                     "loop ip {:x} -> {:x}",
                     frames.current_ip(),
                     frames.current_ip() - offset
@@ -805,7 +805,7 @@ impl Machine {
                         }));
                     }
 
-                    debug!(
+                    trace!(
                         "go to chunk {} base {}",
                         f.chunk,
                         self.stack.len() - 1 - arity

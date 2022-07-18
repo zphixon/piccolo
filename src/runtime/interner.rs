@@ -1,4 +1,4 @@
-use crate::{debug, trace};
+use crate::{debug, trace, warn};
 use fnv::FnvHashMap;
 use slotmap::{DefaultKey, SlotMap};
 
@@ -22,7 +22,7 @@ impl Interner {
     pub fn allocate_string(&mut self, string: String) -> StringPtr {
         debug!("intern string {string}");
         if let Some(ptr) = self.get_string_ptr(&string) {
-            trace!("already had {string}");
+            warn!("already had {string:?} (potentially useless alloc)");
             return ptr;
         }
 
