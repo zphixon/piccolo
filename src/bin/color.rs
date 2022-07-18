@@ -1,4 +1,3 @@
-#[cfg(feature = "color")]
 fn main() {
     use tcolor::*;
     let s = ColorString::new_fg("\"ejiofw\"", (Color::BrightGreen, Color::BrightBlue));
@@ -8,9 +7,4 @@ fn main() {
     let manual = "\u{1b}[92m\"ejiofw\"\u{1b}[m";
     println!("manual escaped: {manual:?}");
     println!("manual:         {manual}");
-}
-
-#[cfg(not(feature = "color"))]
-fn main() {
-    panic!("Must be run with --feature color");
 }

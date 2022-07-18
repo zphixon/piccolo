@@ -6,10 +6,8 @@
 pub extern crate fnv;
 pub mod compiler;
 pub mod error;
-pub mod runtime;
-
-#[cfg(feature = "cli")]
 pub mod pretty;
+pub mod runtime;
 
 #[macro_export]
 macro_rules! trace {
@@ -84,14 +82,10 @@ pub fn interpret(src: &str) -> Result<(Environment, Value), Vec<PiccoloError>> {
 
     debug!("parse");
     let ast = parser::parse(src)?;
-
-    #[cfg(feature = "cli")]
     debug!("ast\n{}", pretty::print_ast(&ast));
 
     debug!("compile");
     env.compile(&ast)?;
-
-    #[cfg(feature = "cli")]
     debug!("{}", env.disassemble(""));
 
     debug!("interpret");
@@ -167,7 +161,6 @@ impl Environment {
         }
 
         add_builtin_function!(debugPrint, debug_print, Arity::Any);
-        #[cfg(feature = "color")]
         add_builtin_function!(colorPrint, color_print, Arity::Any);
         add_builtin_function!(write, Arity::Any);
         add_builtin_function!(print, Arity::Any);
@@ -193,9 +186,8 @@ impl Environment {
         env
     }
 
-    #[cfg(feature = "cli")]
     pub fn dump(&self) {
-        println!("{}", self.disassemble(""));
+        println!("{}", self.color_disassemble(""));
         println!("{:#?}", self.vm);
         println!("{:#?}", self.heap);
         println!("{:#?}", self.interner);
@@ -227,13 +219,11 @@ impl Environment {
         compiler::emitter::compile_with(&mut self.emitter, &mut self.interner, ast)
     }
 
-    #[cfg(feature = "cli")]
     #[must_use]
     pub fn disassemble(&self, name_of_module: &str) -> String {
         pretty::disassemble(&self.interner, self.emitter.module(), name_of_module)
     }
 
-    #[cfg(all(feature = "cli", feature = "color"))]
     #[must_use]
     pub fn color_disassemble(&self, name_of_module: &str) -> tcolor::ColorString {
         pretty::color_disassemble(&self.interner, self.emitter.module(), name_of_module)
@@ -299,7 +289,6 @@ impl Environment {
         value.debug_format(self.context())
     }
 
-    #[cfg(feature = "color")]
     pub fn color_format(&self, value: Value) -> tcolor::ColorString {
         value.color_format(self.context())
     }
@@ -329,19 +318,15 @@ mod test_lib {
         let mut env = Environment::new();
 
         env.compile(&ast1).unwrap();
-        #[cfg(feature = "cli")]
         println!("{}", env.disassemble(""));
 
         env.compile(&ast2).unwrap();
-        #[cfg(feature = "cli")]
         println!("{}", env.disassemble(""));
 
         env.compile(&ast3).unwrap();
-        #[cfg(feature = "cli")]
         println!("{}", env.disassemble(""));
 
         env.compile(&ast4).unwrap();
-        #[cfg(feature = "cli")]
         println!("{}", env.disassemble(""));
     }
 }

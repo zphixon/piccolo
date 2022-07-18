@@ -10,7 +10,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[cfg(feature = "color")]
 pub fn color_print(ctx: &mut ContextMut, values: &[Value]) -> Result<Value, PiccoloError> {
     let mut s = String::new();
     for (i, value) in values.iter().enumerate() {

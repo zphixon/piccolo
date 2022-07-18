@@ -1,15 +1,15 @@
 [alias]
-c = ['check', '--all-targets']
+c = ['check', '--all-targets', '--features', 'logging']
 cc = ['hack', 'check', '--all-targets', '--feature-powerset', '--depth', '5']
 
 b = ['build', '--all-targets']
-br = ['build', '--release', '--no-default-features', '--features', 'cli']
+bti = ['build', '--release']
 
-r = ['run', '--no-default-features', '--features', 'cli,color']
-rl = ['run']
-rr = ['run', '--release', '--no-default-features', '--features', 'cli,color']
+r = ['use run or rr (or rl to get logging)']
+rl = ['run', '--features', 'logging']
+rr = ['run', '--release']
 
 t = ['test', '--lib']
-tt = ['run', '--release', '--bin', 'test_files', '--no-default-features']
-ti = ['run', '--release', '--bin', 'interface_test', '--no-default-features', '--features', 'cli']
+tt = ['run', '--release', '--bin', 'test_files']
+ti = ['run', '--release', '--bin', 'interface_test']
 ttt = ['hack', 'test', '--lib', '--feature-powerset', '--depth', '5']

@@ -33,7 +33,6 @@ impl Context<'_, '_> {
         self.heap.get(ptr).format(*self)
     }
 
-    #[cfg(feature = "color")]
     fn color_format(&self, ptr: Ptr) -> tcolor::ColorString {
         self.heap.get(ptr).color_format(*self)
     }
@@ -121,7 +120,6 @@ pub trait Object: downcast_rs::Downcast + ObjectClone {
         self.type_name(ctx).to_string()
     }
 
-    #[cfg(feature = "color")]
     fn color_format(&self, ctx: Context) -> tcolor::ColorString {
         tcolor::ColorString::new_fg(self.format(ctx), tcolor::Color::Red)
     }

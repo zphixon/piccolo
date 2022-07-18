@@ -11,8 +11,6 @@ use crate::{
     trace,
 };
 use std::fmt::Write;
-
-#[cfg(feature = "color")]
 use tcolor::{Color, ColorString};
 
 pub fn disassemble(interner: &Interner, module: &Module, name: &str) -> String {
@@ -37,7 +35,6 @@ pub fn disassemble(interner: &Interner, module: &Module, name: &str) -> String {
     s
 }
 
-#[cfg(feature = "color")]
 pub fn color_disassemble(interner: &Interner, module: &Module, name: &str) -> ColorString {
     trace!("disassemble");
 
@@ -102,7 +99,6 @@ pub fn disassemble_instruction(
     )
 }
 
-#[cfg(feature = "color")]
 pub fn color_disassemble_instruction(
     interner: &Interner,
     module: &Module,

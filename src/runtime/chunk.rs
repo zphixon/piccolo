@@ -42,7 +42,6 @@ impl Module {
             .unwrap_or_else(|| panic!("{} out of constant bounds", index))
     }
 
-    #[cfg(feature = "cli")]
     pub(crate) fn chunks(&self) -> &[Chunk] {
         &self.chunks
     }

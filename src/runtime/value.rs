@@ -207,7 +207,6 @@ impl Object for Value {
         }
     }
 
-    #[cfg(feature = "color")]
     fn color_format(&self, ctx: Context) -> tcolor::ColorString {
         use tcolor::{Color, ColorString};
         match self {
@@ -401,7 +400,6 @@ impl Constant {
         })
     }
 
-    #[cfg(feature = "cli")]
     pub(crate) fn debug(&self, interner: &Interner) -> String {
         match self {
             Constant::StringPtr(v) => format!("String({:?})", interner.get_string(*v)),
@@ -413,7 +411,6 @@ impl Constant {
         }
     }
 
-    #[cfg(all(feature = "color", feature = "cli"))]
     pub(crate) fn color_format(&self, interner: &Interner) -> tcolor::ColorString {
         use tcolor::{Color, ColorString};
         match self {
@@ -499,7 +496,6 @@ impl Object for Array {
         s
     }
 
-    #[cfg(feature = "color")]
     fn color_format(&self, ctx: Context) -> tcolor::ColorString {
         use tcolor::Color;
         let mut s = tcolor::ColorString::new_fg("[", Color::Red);
