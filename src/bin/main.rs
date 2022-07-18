@@ -3,7 +3,7 @@ mod main {
     use gumdrop::Options;
     use piccolo::{
         compiler::{self, parser, scanner::Scanner},
-        error::PiccoloError,
+        error::{ErrorKind, PiccoloError},
         pretty, Environment,
     };
     use rustyline::{
@@ -367,13 +367,17 @@ mod main {
                         }
 
                         Err(errors) => {
-                            if errors.iter().any(|error| !error.was_eof()) {
+                            if errors.iter().all(|error| error.was_eof()) {
+                                prompt = "---- ";
+                            } else if errors
+                                .iter()
+                                .all(|error| matches!(error.kind(), &ErrorKind::UnterminatedString))
+                            {
+                                prompt = "";
+                            } else {
                                 prompt = "-- ";
                                 input = String::new();
                                 print_errors(errors);
-                            } else {
-                                prompt = "---- ";
-                                // continue
                             }
                         }
                     }

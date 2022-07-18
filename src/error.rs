@@ -94,6 +94,10 @@ impl PiccoloError {
             _ => false,
         }
     }
+
+    pub fn kind(&self) -> &ErrorKind {
+        &self.kind
+    }
 }
 
 impl fmt::Display for PiccoloError {
