@@ -2,7 +2,7 @@ use gumdrop::Options;
 use piccolo::{
     compiler::{self, parser, scanner::Scanner},
     error::{ErrorKind, PiccoloError},
-    pretty, Environment,
+    pretty, warn, Environment,
 };
 use rustyline::{
     error::ReadlineError, Cmd, ConditionalEventHandler, Editor, Event, EventContext, EventHandler,
@@ -212,6 +212,23 @@ impl ConditionalEventHandler for MyCtrlDHandler {
     }
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum ReplState {
+    Normal,
+    UnterminatedString,
+    UnterminatedExpression,
+}
+
+impl std::fmt::Display for ReplState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReplState::Normal => write!(f, "-- "),
+            ReplState::UnterminatedString => Ok(()),
+            ReplState::UnterminatedExpression => write!(f, "---- "),
+        }
+    }
+}
+
 fn repl(
     mut env: Environment,
     print_tokens: bool,
@@ -235,90 +252,96 @@ fn repl(
     );
 
     let mut input = String::new();
-    let mut prompt = "-- ";
+    let mut state = ReplState::Normal;
 
     loop {
-        match rl.readline(prompt) {
+        match rl.readline(&state.to_string()) {
             Ok(line) => {
                 rl.add_history_entry(&line);
                 rl.save_history(".piccolo_history")
                     .expect("cannot open .piccolo_history");
 
-                if let Some(line) = line.strip_prefix(')') {
-                    let builtin = line.split_whitespace().collect::<Vec<_>>();
+                // repl builtin {{{
+                if state == ReplState::Normal {
+                    if let Some(line) = line.strip_prefix(')') {
+                        let builtin = line.split_whitespace().collect::<Vec<_>>();
 
-                    match builtin.get(0) {
-                        Some(&"help") | Some(&"h") => {
-                            println!("Call exit() or use the keyboard shortcut Ctrl+D to exit");
-                            println!("Ctrl+C will clear the line, and exit if the line is empty");
-                            println!("Builtin commands:");
-                            println!(")help, )h: Print this message");
-                            println!(
-                                ")dump, )d: Print some debugging information about the session or a subject"
-                            );
-                            println!(
-                                "\t)dump strings - Print a list of strings that have been interned"
-                            );
-                            println!("\t)dump objects - Print a list of objects that have been allocated");
-                            println!("\t)dump env - Debug print the Environment");
-                            println!("\t)dump module - Disassemble the module");
-                            println!("\t)dump - Print the strings and objects");
-                            println!(")collect: Manually run the garbage collector");
-                        }
-
-                        Some(&"dump") | Some(&"d") => {
-                            use std::io::stdout;
-                            let dump_strings = || {
-                                println!("=== strings ===");
-                                for (i, string) in env.strings().enumerate() {
-                                    print!("{string}");
-                                    stdout().flush().unwrap();
-                                    if i + 1 < env.interner().num_strings() {
-                                        print!(", ");
-                                        stdout().flush().unwrap();
-                                    }
-                                }
-                                println!();
-                            };
-
-                            let dump_objects = || {
-                                println!("=== objects ===");
-                                for (i, object) in env.objects().enumerate() {
-                                    print!("{}", env.debug_object(object));
-                                    stdout().flush().unwrap();
-                                    if i + 1 < env.heap.num_objects() {
-                                        print!(", ");
-                                        stdout().flush().unwrap();
-                                    }
-                                }
-                                println!();
-                            };
-
-                            match builtin.get(1) {
-                                Some(&"strings") => dump_strings(),
-                                Some(&"objects") => dump_objects(),
-                                Some(&"env") => env.dump(),
-                                Some(&"module") => println!("{}", env.disassemble("repl")),
-                                None => {
-                                    dump_strings();
-                                    dump_objects();
-                                }
-
-                                Some(subject) => println!("Unknown dump subject '{subject}'"),
+                        match builtin.get(0) {
+                            Some(&"help") | Some(&"h") => {
+                                println!("Call exit() or use the keyboard shortcut Ctrl+D to exit");
+                                println!(
+                                    "Ctrl+C will clear the line, and exit if the line is empty"
+                                );
+                                println!("Builtin commands:");
+                                println!(")help, )h: Print this message");
+                                println!(
+                                    ")dump, )d: Print some debugging information about the session or a subject"
+                                );
+                                println!(
+                                    "\t)dump strings - Print a list of strings that have been interned"
+                                );
+                                println!("\t)dump objects - Print a list of objects that have been allocated");
+                                println!("\t)dump env - Debug print the Environment");
+                                println!("\t)dump module - Disassemble the module");
+                                println!("\t)dump - Print the strings and objects");
+                                println!(")collect: Manually run the garbage collector");
                             }
+
+                            Some(&"dump") | Some(&"d") => {
+                                use std::io::stdout;
+                                let dump_strings = || {
+                                    println!("=== strings ===");
+                                    for (i, string) in env.strings().enumerate() {
+                                        print!("{string}");
+                                        stdout().flush().unwrap();
+                                        if i + 1 < env.interner().num_strings() {
+                                            print!(", ");
+                                            stdout().flush().unwrap();
+                                        }
+                                    }
+                                    println!();
+                                };
+
+                                let dump_objects = || {
+                                    println!("=== objects ===");
+                                    for (i, object) in env.objects().enumerate() {
+                                        print!("{}", env.debug_object(object));
+                                        stdout().flush().unwrap();
+                                        if i + 1 < env.heap.num_objects() {
+                                            print!(", ");
+                                            stdout().flush().unwrap();
+                                        }
+                                    }
+                                    println!();
+                                };
+
+                                match builtin.get(1) {
+                                    Some(&"strings") => dump_strings(),
+                                    Some(&"objects") => dump_objects(),
+                                    Some(&"env") => env.dump(),
+                                    Some(&"module") => println!("{}", env.disassemble("repl")),
+                                    None => {
+                                        dump_strings();
+                                        dump_objects();
+                                    }
+
+                                    Some(subject) => println!("Unknown dump subject '{subject}'"),
+                                }
+                            }
+
+                            Some(&"collect") => env.collect(),
+
+                            Some(cmd) => {
+                                println!("Unknown builtin command '{cmd}'");
+                            }
+
+                            None => {}
                         }
 
-                        Some(&"collect") => env.collect(),
-
-                        Some(cmd) => {
-                            println!("Unknown builtin command '{cmd}'");
-                        }
-
-                        None => {}
+                        continue;
                     }
-
-                    continue;
                 }
+                // }}}
 
                 input.push_str(&line);
                 input.push('\n');
@@ -355,20 +378,27 @@ fn repl(
                                 println!("{}", env.color_format(value));
                             });
 
-                        prompt = "-- ";
+                        state = ReplState::Normal;
                         input = String::new();
                     }
 
                     Err(errors) => {
-                        if errors.iter().all(|error| error.was_eof()) {
-                            prompt = "---- ";
-                        } else if errors
+                        if errors
                             .iter()
-                            .all(|error| matches!(error.kind(), &ErrorKind::UnterminatedString))
+                            .all(|error| error.unterminated_expr_or_string())
                         {
-                            prompt = "";
+                            if let Some(ErrorKind::UnterminatedString) =
+                                errors.last().map(|error| error.kind())
+                            {
+                                warn!("unterminated str");
+                                state = ReplState::UnterminatedString;
+                            } else {
+                                warn!("unterminated block");
+                                state = ReplState::UnterminatedExpression;
+                            }
                         } else {
-                            prompt = "-- ";
+                            warn!("err");
+                            state = ReplState::Normal;
                             input = String::new();
                             print_errors(errors);
                         }

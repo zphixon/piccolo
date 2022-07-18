@@ -87,10 +87,11 @@ impl PiccoloError {
         }
     }
 
-    pub fn was_eof(&self) -> bool {
+    pub fn unterminated_expr_or_string(&self) -> bool {
         match self.kind {
             ErrorKind::ExpectedExpression { was_eof, .. } => was_eof,
             ErrorKind::UnexpectedToken { was_eof, .. } => was_eof,
+            ErrorKind::UnterminatedString => true,
             _ => false,
         }
     }
