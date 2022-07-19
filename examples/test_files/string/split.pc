@@ -1,8 +1,6 @@
 if os() == 'linux' || os() == 'macos' || os() == 'unix' do
   ls =: exec('ls', '-a', 'my_log')[0].trim()
   files =: ls.split('\n')
-  print(files)
-
   assert files == [
     '.',
     '..',
