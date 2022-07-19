@@ -12,6 +12,15 @@ if os() == 'linux' || os() == 'macos' || os() == 'unix' do
     'target'
   ]
 elseif os() == 'windows' do
-  assert false && 'lol idk, like dir /a or something'
+  dir =: exec('cmd', '/c', 'dir', '/b', 'my_log')[0].trim()
+  files =: dir.split('\r\n')
+  assert files == [
+    'Cargo.lock',
+    'Cargo.toml',
+    'src',
+    'target'
+  ]
+else
+  print('who tf is ' + os())
+  assert false
 end
-
