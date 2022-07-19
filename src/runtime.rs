@@ -108,7 +108,7 @@ where
     }
 }
 
-pub trait Object: downcast_rs::Downcast + ObjectClone {
+pub trait Object: downcast_rs::Downcast + ObjectClone + Send {
     fn trace(&self, heap: &Heap);
 
     fn type_name(&self, ctx: Context) -> &'static str {

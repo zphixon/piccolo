@@ -86,6 +86,14 @@ impl Value {
         matches!(self, Value::Integer(_))
     }
 
+    pub fn as_integer(&self) -> i64 {
+        assert!(self.is_integer());
+        match self {
+            Value::Integer(v) => *v,
+            _ => unreachable!(),
+        }
+    }
+
     pub fn is_double(&self) -> bool {
         matches!(self, Value::Double(_))
     }
