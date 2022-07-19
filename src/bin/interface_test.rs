@@ -60,7 +60,14 @@ mod not_log {
         let contents = std::str::from_utf8(&output.stdout).unwrap();
         println!("writing {name}\n{}", contents);
 
-        std::fs::write(file.with_extension("out"), output.stdout).unwrap();
+        let mut output_path = PathBuf::from("examples/output");
+        output_path.push(
+            file.with_extension("out")
+                .strip_prefix("examples/test_files")
+                .unwrap(),
+        );
+
+        std::fs::write(output_path, output.stdout).unwrap();
     }
 
     fn check_all() {
