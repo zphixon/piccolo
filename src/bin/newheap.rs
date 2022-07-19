@@ -100,7 +100,6 @@ mod inner {
         rooted: bool,
         marked: bool,
     }
-    unsafe impl Send for ObjectHeader {}
 
     pub type Mutate = fn(Queue, &mut dyn NewObject, Value, Value);
     pub type Get = fn(Queue, &dyn NewObject, Value) -> Value;
@@ -139,7 +138,6 @@ mod inner {
         Debug,
         Done,
     }
-    unsafe impl Send for Message {}
 
     static COUNT: AtomicUsize = AtomicUsize::new(0);
 
