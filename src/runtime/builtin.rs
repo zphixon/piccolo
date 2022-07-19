@@ -10,6 +10,65 @@ use std::{
     time::{Duration, Instant},
 };
 
+pub fn os(ctx: &mut ContextMut, _: &[Value]) -> Result<Value, PiccoloError> {
+    #[cfg(target_os = "windows")]
+    {
+        Ok(Value::String(ctx.interner.allocate_str("windows")))
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Ok(Value::String(ctx.interner.allocate_str("linux")))
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Ok(Value::String(ctx.interner.allocate_str("macos")))
+    }
+
+    #[cfg(all(
+        target_family = "unix",
+        not(target_os = "linux"),
+        not(target_os = "macos")
+    ))]
+    {
+        Ok(Value::String(ctx.interner.allocate_str("unix")))
+    }
+}
+
+pub fn exec(ctx: &mut ContextMut, values: &[Value]) -> Result<Value, PiccoloError> {
+    if let [Value::String(name), args @ ..] = values {
+        let mut command = std::process::Command::new(ctx.interner.get_string(*name));
+
+        for arg in args {
+            if let Value::String(arg) = arg {
+                command.arg(ctx.interner.get_string(*arg));
+            } else {
+                return Err(make_error!(InvalidArgument {
+                    exp: "at least one string".to_string(),
+                    got: values[0].type_name(ctx.as_ref()).to_string(),
+                }));
+            }
+        }
+
+        let output = command.output()?;
+
+        Ok(Value::Object(ctx.heap.allocate(
+            super::value::Array::new_with(vec![
+                Value::String(ctx.interner
+                    .allocate_string(String::from_utf8(output.stdout)?)),
+                Value::String(ctx.interner
+                    .allocate_string(String::from_utf8(output.stderr)?)),
+            ]),
+        )))
+    } else {
+        Err(make_error!(InvalidArgument {
+            exp: "at least one string".to_string(),
+            got: values[0].type_name(ctx.as_ref()).to_string(),
+        }))
+    }
+}
+
 pub fn color_print(ctx: &mut ContextMut, values: &[Value]) -> Result<Value, PiccoloError> {
     let mut s = String::new();
     for (i, value) in values.iter().enumerate() {

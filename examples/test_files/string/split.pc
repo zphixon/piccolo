@@ -1,0 +1,17 @@
+if os() == 'linux' || os() == 'macos' || os() == 'unix' do
+  ls =: exec('ls', '-a', 'my_log')[0].trim()
+  files =: ls.split('\n')
+  print(files)
+
+  assert files == [
+    '.',
+    '..',
+    'Cargo.lock',
+    'Cargo.toml',
+    'src',
+    'target'
+  ]
+elseif os() == 'windows' do
+  assert false && 'lol idk, like dir /a or something'
+end
+
