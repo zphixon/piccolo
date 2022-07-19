@@ -336,6 +336,17 @@ impl Object for Value {
                 }))
             }
 
+            (Value::String(this), Value::String(property))
+                if ctx.interner.get_string(property) == "split" =>
+            {
+                Ok(Value::BuiltinFunction(BuiltinFunction {
+                    arity: Arity::Exact(2),
+                    name: ctx.interner.get_string_ptr("split").unwrap(),
+                    ptr: string_split,
+                    this: This::String(*this),
+                }))
+            }
+
             (Value::Object(ptr), index) => ctx.heap.get(*ptr).get(ctx, This::Ptr(*ptr), index),
 
             _ => Err(make_error!(CannotGet {
@@ -352,6 +363,24 @@ fn string_trim(ctx: &mut ContextMut, args: &[Value]) -> Result<Value, PiccoloErr
         // TODO investigate adding a byte length field to StringPtr
         let string = ctx.interner.get_string(string).trim().to_string();
         Ok(Value::String(ctx.interner.allocate_string(string)))
+    } else {
+        Err(make_error!(InvalidArgument {
+            exp: "string".to_string(),
+            got: this.type_name(ctx.as_ref()).to_string(),
+        }))
+    }
+}
+
+fn string_split(ctx: &mut ContextMut, args: &[Value]) -> Result<Value, PiccoloError> {
+    let this = args[0];
+    if let (Value::String(this), Value::String(sep)) = (this, args[1]) {
+        let this_str = ctx.interner.get_string(this).to_string();
+        let sep_str = ctx.interner.get_string(sep).to_string();
+        let splits = this_str
+            .split(&sep_str)
+            .map(|sub| Value::String(ctx.interner.allocate_str(sub)))
+            .collect::<Vec<_>>();
+        Ok(Value::Object(ctx.heap.allocate(Array::new_with(splits))))
     } else {
         Err(make_error!(InvalidArgument {
             exp: "string".to_string(),
