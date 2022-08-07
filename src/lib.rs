@@ -9,6 +9,8 @@ pub mod error;
 pub mod pretty;
 pub mod runtime;
 
+pub mod v2;
+
 #[macro_export]
 macro_rules! trace {
     ($($log:expr),*) => {

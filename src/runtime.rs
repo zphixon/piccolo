@@ -116,6 +116,25 @@ pub trait Object: downcast_rs::Downcast + ObjectClone + Send {
         "object"
     }
 
+    fn type_name2(&self) -> &'static str {
+        "object"
+    }
+    fn format2(&self) -> String {
+        self.type_name2().to_string()
+    }
+    fn eq2(&self, other: Value) -> Result<bool, PiccoloError> {
+        // TODO
+        Ok(false)
+    }
+    fn gt2(&self, other: Value) -> Result<bool, PiccoloError> {
+        // TODO
+        Ok(false)
+    }
+    fn lt2(&self, other: Value) -> Result<bool, PiccoloError> {
+        // TODO
+        Ok(false)
+    }
+
     fn format(&self, ctx: Context) -> String {
         self.type_name(ctx).to_string()
     }
