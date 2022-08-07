@@ -184,6 +184,7 @@ impl Environment {
         add_builtin_function!(exit, Arity::Any);
         add_builtin_function!(exec, Arity::AtLeast(1));
         add_builtin_function!(os, Arity::Exact(0));
+        add_builtin_function!(callback, Arity::Exact(1));
 
         env
     }
