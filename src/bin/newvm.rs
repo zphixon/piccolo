@@ -8,7 +8,7 @@ use piccolo::{
     },
     error::PiccoloError,
     make_error,
-    runtime::{interner::Interner, memory::Heap, value::Value},
+    runtime::{interner::Interner, memory::Heap, op::Opcode, value::Value},
 };
 
 #[derive(Default, Debug)]
@@ -26,7 +26,7 @@ impl State {
 }
 
 pub trait Func: std::fmt::Debug {
-    fn call(&mut self, state: State) -> Result<State, PiccoloError>;
+    fn call(&mut self, state: &mut State) -> Result<(), PiccoloError>;
 }
 
 mod ops {
@@ -35,7 +35,7 @@ mod ops {
     #[derive(Debug)]
     pub struct Add {}
     impl Func for Add {
-        fn call(&mut self, mut state: State) -> Result<State, PiccoloError> {
+        fn call(&mut self, state: &mut State) -> Result<(), PiccoloError> {
             let rhs = state.pop();
             let lhs = state.pop();
             if lhs.is_double() {
@@ -68,16 +68,16 @@ mod ops {
             } else {
                 return Err(make_error!(Todo { why: "lol".into() }));
             }
-            Ok(state)
+            Ok(())
         }
     }
 
     #[derive(Debug)]
     pub struct Pop {}
     impl Func for Pop {
-        fn call(&mut self, mut state: State) -> Result<State, PiccoloError> {
+        fn call(&mut self, state: &mut State) -> Result<(), PiccoloError> {
             state.pop();
-            Ok(state)
+            Ok(())
         }
     }
 
@@ -87,32 +87,46 @@ mod ops {
     }
 
     impl Func for Lit {
-        fn call(&mut self, mut state: State) -> Result<State, PiccoloError> {
+        fn call(&mut self, state: &mut State) -> Result<(), PiccoloError> {
             state.stack.push(self.literal);
-            Ok(state)
+            Ok(())
         }
     }
 }
 
+#[derive(Debug)]
+pub enum Fragment {
+    Op(Opcode),
+    Func(Box<dyn Func>),
+}
+
 #[derive(Default, Debug)]
 pub struct Program {
-    pub funcs: Vec<Box<dyn Func>>,
+    pub fragments: Vec<Fragment>,
 }
 
 impl Program {
     pub fn run(&mut self) -> Result<State, PiccoloError> {
         let mut state = State::default();
 
-        for next in self.funcs.iter_mut() {
+        let mut i = 0;
+        while i < self.fragments.len() {
             println!("{state:#?}");
-            state = next.call(state)?;
+
+            let next = &mut self.fragments[i];
+            match next {
+                Fragment::Op(_op) => todo!(),
+                Fragment::Func(f) => f.call(&mut state)?,
+            }
+
+            i += 1;
         }
 
         Ok(state)
     }
 
     pub fn push<Op: Func + 'static>(&mut self, op: Op) {
-        self.funcs.push(Box::new(op));
+        self.fragments.push(Fragment::Func(Box::new(op)));
     }
 }
 
@@ -186,10 +200,10 @@ fn compile_declaration(
     }
 
     impl Func for DeclareGlobal {
-        fn call(&mut self, mut state: State) -> Result<State, PiccoloError> {
+        fn call(&mut self, state: &mut State) -> Result<(), PiccoloError> {
             let value = state.pop();
             state.globals.insert(self.name.clone(), value);
-            Ok(state)
+            Ok(())
         }
     }
 
@@ -258,10 +272,10 @@ fn compile_variable(
     }
 
     impl Func for GetGlobal {
-        fn call(&mut self, mut state: State) -> Result<State, PiccoloError> {
+        fn call(&mut self, state: &mut State) -> Result<(), PiccoloError> {
             let value = state.globals[&self.name];
             state.stack.push(value);
-            Ok(state)
+            Ok(())
         }
     }
 
