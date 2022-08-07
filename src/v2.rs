@@ -1,4 +1,5 @@
 use crate::{
+    debug,
     error::PiccoloError,
     make_error,
     runtime::{
@@ -43,6 +44,38 @@ pub struct Program {
 }
 
 impl Program {
+    pub fn push_func<Op: Func + 'static>(&mut self, op: Op) {
+        debug!("push func");
+        self.fragments.push(Fragment::Func(Box::new(op)));
+    }
+
+    pub(crate) fn push_op(&mut self, op: Opcode) {
+        debug!("push op {:?}", op);
+        self.fragments.push(Fragment::Op(op));
+    }
+
+    pub(crate) fn add_constant(&mut self, value: Constant) -> u16 {
+        debug!("add constant");
+        let index = self.constants.len().try_into().unwrap();
+        self.constants.push(value);
+        index
+    }
+
+    pub(crate) fn push_constant_op(&mut self, value: Constant) {
+        debug!("push constant");
+        let index = self.add_constant(value);
+        self.push_op(Opcode::Constant(index));
+    }
+
+    pub(crate) fn get_constant(&self, index: u16) -> &Constant {
+        debug!("get constant {index}");
+        self.constants.get(index as usize).unwrap()
+    }
+
+    pub(crate) fn num_constants(&self) -> usize {
+        self.constants.len()
+    }
+
     pub fn run_with(&mut self, state: &mut State) -> Result<(), PiccoloError> {
         let mut i = 0;
         while i < self.fragments.len() {
@@ -58,6 +91,8 @@ impl Program {
     }
 
     fn do_op(&mut self, state: &mut State, op: Opcode) -> Result<(), PiccoloError> {
+        crate::trace!("{op:?}");
+
         macro_rules! bit_op {
             ($opcode:path, $op:tt) => {
                 let rhs = state.pop();
@@ -465,23 +500,5 @@ impl Program {
         }
 
         Ok(())
-    }
-
-    pub fn push_func<Op: Func + 'static>(&mut self, op: Op) {
-        self.fragments.push(Fragment::Func(Box::new(op)));
-    }
-
-    pub(crate) fn push_op(&mut self, op: Opcode) {
-        self.fragments.push(Fragment::Op(op));
-    }
-
-    pub(crate) fn push_constant(&mut self, value: Constant) {
-        self.constants.push(value);
-        let index = self.constants.len().try_into().unwrap();
-        self.push_op(Opcode::Constant(index));
-    }
-
-    pub(crate) fn get_constant(&self, index: u16) -> &Constant {
-        self.constants.get(index as usize).unwrap()
     }
 }

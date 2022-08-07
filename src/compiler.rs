@@ -328,6 +328,10 @@ impl<'a> Token<'a> {
         Token { kind, lexeme, pos }
     }
 
+    pub fn format(&self) -> String {
+        format!("{}:{}", self.lexeme, self.pos)
+    }
+
     /// Whether or not the token is a value literal.
     pub fn is_value(&self) -> bool {
         matches!(

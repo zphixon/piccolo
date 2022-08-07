@@ -38,17 +38,17 @@ pub struct NamespaceRepository<'src> {
 }
 
 impl<'src> NamespaceRepository<'src> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let mut namespaces = SlotMap::default();
         let global = namespaces.insert(Default::default());
 
         let mut repo = NamespaceRepository { namespaces, global };
-        repo.new_global(Token::identifier("print"));
+        repo.new_global(Token::identifier("print"), 0);
 
         repo
     }
 
-    fn global_key(&self) -> DefaultKey {
+    pub fn global_key(&self) -> DefaultKey {
         self.global
     }
 
@@ -90,8 +90,7 @@ impl<'src> NamespaceRepository<'src> {
         self.get_rec(ns, name, true).map(|(_, loc)| loc)
     }
 
-    #[allow(dead_code)]
-    fn get(
+    pub fn get(
         &mut self,
         ns: DefaultKey,
         name: Token<'src>,
@@ -150,14 +149,14 @@ impl<'src> NamespaceRepository<'src> {
             .map(|(token, loc)| (*token, *loc));
     }
 
-    fn new_global(&mut self, name: Token<'src>) -> VariableLocation {
+    fn new_global(&mut self, name: Token<'src>, index: usize) -> VariableLocation {
         trace!("new global {}", name.lexeme);
 
         if let Some(location) = self.global_ns().names.get(&name) {
             return *location;
         }
 
-        let location = VariableLocation::Global(self.global_ns().names.len());
+        let location = VariableLocation::Global(index);
         self.global_ns_mut().names.insert(name, location);
         location
     }
@@ -166,12 +165,12 @@ impl<'src> NamespaceRepository<'src> {
         &mut self,
         ns: DefaultKey,
         name: Token<'src>,
+        index: usize,
     ) -> Result<VariableLocation, PiccoloError> {
         trace!("new local {}", name.lexeme);
 
         if !self.ns(ns).names.contains_key(&name) {
-            // TODO - the variable location should be a reverse index into the stack
-            let location = VariableLocation::Local(ns, 0);
+            let location = VariableLocation::Local(ns, index);
             trace!("insert {} {:?}", name.lexeme, location);
             self.ns_mut(ns).names.insert(name, location);
             return Ok(location);
@@ -182,16 +181,17 @@ impl<'src> NamespaceRepository<'src> {
             .pos(name.pos))
     }
 
-    fn new_variable(
+    pub fn new_variable(
         &mut self,
         ns: DefaultKey,
         name: Token<'src>,
+        index: usize,
     ) -> Result<VariableLocation, PiccoloError> {
         debug!("new var {}", name.lexeme);
         if ns == self.global_key() {
-            Ok(self.new_global(name))
+            Ok(self.new_global(name, index))
         } else {
-            self.new_local(ns, name)
+            self.new_local(ns, name, index)
         }
     }
 
@@ -270,7 +270,7 @@ fn analyze_ns_stmt<'src>(
         Stmt::Declaration { name, value, .. } => {
             trace!("analyze stmt::declaration");
             analyze_ns_expr(repo, ns, value)?;
-            repo.new_variable(ns, *name)?;
+            repo.new_variable(ns, *name, 0)?;
         }
 
         Stmt::Assignment { lval, rval, .. } => {
@@ -359,7 +359,7 @@ fn analyze_ns_stmt<'src>(
             }
 
             let child = repo.with_parent(ns, *for_);
-            repo.new_variable(child, *item)?;
+            repo.new_variable(child, *item, 0)?;
             for stmt in body {
                 analyze_ns_stmt(repo, child, stmt)?;
             }
@@ -368,10 +368,10 @@ fn analyze_ns_stmt<'src>(
         Stmt::Fn {
             name, args, body, ..
         } => {
-            repo.new_variable(ns, *name)?;
+            repo.new_variable(ns, *name, 0)?;
             let body_ns = repo.with_parent_captures(ns, *name);
             for arg in args {
-                repo.new_variable(body_ns, *arg)?;
+                repo.new_variable(body_ns, *arg, 0)?;
             }
             for stmt in body {
                 analyze_ns_stmt(repo, body_ns, stmt)?;
@@ -397,7 +397,7 @@ fn analyze_ns_stmt<'src>(
             methods,
             fields,
         } => {
-            repo.new_variable(ns, *name)?;
+            repo.new_variable(ns, *name, 0)?;
             let data_ns = repo.with_parent(ns, *name);
             for field in fields {
                 analyze_ns_stmt(repo, data_ns, field)?;
@@ -475,7 +475,7 @@ fn analyze_ns_expr<'src>(
             trace!("analyze expr::fn");
             let child = repo.with_parent_captures(ns, *fn_);
             for arg in args {
-                repo.new_variable(child, *arg)?;
+                repo.new_variable(child, *arg, 0)?;
             }
             for stmt in body {
                 analyze_ns_stmt(repo, child, stmt)?;
@@ -514,17 +514,19 @@ mod test_ns {
     #[test]
     fn nesting() {
         let mut repo = NamespaceRepository::new();
-        repo.new_global(Token::identifier("wow"));
+        repo.new_global(Token::identifier("wow"), 0);
 
         {
             let child = repo.with_parent(repo.global_key(), Token::identifier("top"));
             assert!(repo.find(child, Token::identifier("wow")).is_some());
-            let local = repo.new_local(child, Token::identifier("bean")).unwrap();
+            let local = repo.new_local(child, Token::identifier("bean"), 0).unwrap();
 
             {
                 let child2 = repo.with_parent(child, Token::identifier("top"));
                 assert_eq!(repo.find(child2, Token::identifier("bean")).unwrap(), local);
-                let local_shadow = repo.new_local(child2, Token::identifier("bean")).unwrap();
+                let local_shadow = repo
+                    .new_local(child2, Token::identifier("bean"), 0)
+                    .unwrap();
                 assert_eq!(
                     repo.find(child2, Token::identifier("bean")).unwrap(),
                     local_shadow
