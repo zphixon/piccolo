@@ -12,6 +12,7 @@ use crate::{
 };
 use fnv::FnvHashMap;
 
+pub mod builtin;
 pub mod compiler;
 
 #[derive(Default)]

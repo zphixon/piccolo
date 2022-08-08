@@ -37,15 +37,17 @@ pub struct NamespaceRepository<'src> {
     global: DefaultKey,
 }
 
+impl Default for NamespaceRepository<'_> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'src> NamespaceRepository<'src> {
     pub fn new() -> Self {
         let mut namespaces = SlotMap::default();
         let global = namespaces.insert(Default::default());
-
-        let mut repo = NamespaceRepository { namespaces, global };
-        repo.new_global(Token::identifier("print"), 0);
-
-        repo
+        NamespaceRepository { namespaces, global }
     }
 
     pub fn global_key(&self) -> DefaultKey {
@@ -149,7 +151,7 @@ impl<'src> NamespaceRepository<'src> {
             .map(|(token, loc)| (*token, *loc));
     }
 
-    fn new_global(&mut self, name: Token<'src>, index: usize) -> VariableLocation {
+    pub fn new_global(&mut self, name: Token<'src>, index: usize) -> VariableLocation {
         trace!("new global {}", name.lexeme);
 
         if let Some(location) = self.global_ns().names.get(&name) {

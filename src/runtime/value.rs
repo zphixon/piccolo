@@ -402,7 +402,7 @@ fn string_split(ctx: &mut ContextMut, args: &[Value]) -> Result<Value, PiccoloEr
 /// Similar to [`Value`]. `Constant` is also used to return from Piccolo execution.
 ///
 /// [`Value`]: ../value/enum.Value.html
-pub(crate) enum Constant {
+pub enum Constant {
     StringPtr(StringPtr),
     Bool(bool),
     Integer(i64),

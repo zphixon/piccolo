@@ -1,3 +1,4 @@
+use fnv::FnvHashMap;
 use slotmap::DefaultKey;
 
 use crate::{
@@ -7,28 +8,46 @@ use crate::{
         Token, TokenKind,
     },
     error::PiccoloError,
-    runtime::{interner::Interner, op::Opcode, value::Constant},
+    runtime::{
+        interner::{Interner, StringPtr},
+        op::Opcode,
+        value::{Constant, Value},
+    },
     trace,
     v2::Program,
 };
 
+use super::State;
+
+#[derive(Default)]
 pub struct Emitter<'src> {
     pub program: Program,
     pub repo: NamespaceRepository<'src>,
+    pub globals: FnvHashMap<StringPtr, Constant>,
 }
 
 impl<'src> Emitter<'src> {
     fn push_op(&mut self, op: Opcode) {
         self.program.push_op(op);
     }
+
+    pub fn to_state(&self) -> State {
+        let mut globals: FnvHashMap<StringPtr, Value> = Default::default();
+
+        for (k, v) in self.globals.iter() {
+            globals.insert(*k, Value::from_constant(v));
+        }
+
+        State {
+            globals,
+            ..Default::default()
+        }
+    }
 }
 
 pub fn compile<'src>(ast: &[Stmt<'src>]) -> (Emitter<'src>, Interner) {
     let mut interner = Interner::default();
-    let mut emitter = Emitter {
-        program: Program::default(),
-        repo: NamespaceRepository::new(),
-    };
+    let mut emitter = Emitter::default();
 
     let global = emitter.repo.global_key();
     for stmt in ast {
