@@ -355,6 +355,20 @@ pub fn exit(ctx: &mut ContextMut, args: &[Value]) -> Result<Value, PiccoloError>
     }
 }
 
+pub fn callback(ctx: &mut ContextMut, args: &[Value]) -> Result<Value, PiccoloError> {
+    if let Value::BuiltinFunction(callback) = args[0] {
+        (callback.ptr)(ctx, &[])
+    } else if let Value::Function(_callback) = args[0] {
+        // oops
+        unimplemented!()
+    } else {
+        Err(make_error!(IncorrectType {
+            exp: "function".to_string(),
+            got: args[0].type_name(ctx.as_ref()).to_string()
+        }))
+    }
+}
+
 pub type PiccoloFunction = fn(&mut ContextMut, &[Value]) -> Result<Value, PiccoloError>;
 
 #[derive(Clone, Copy)]

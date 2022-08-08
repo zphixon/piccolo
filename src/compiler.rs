@@ -281,9 +281,9 @@ impl fmt::Display for Pos {
 /// Maintains a reference to the original source.
 #[derive(Debug, Clone, Copy)]
 pub struct Token<'a> {
-    pub(crate) kind: TokenKind,
-    pub(crate) lexeme: &'a str,
-    pub(crate) pos: Pos,
+    pub kind: TokenKind,
+    pub lexeme: &'a str,
+    pub pos: Pos,
 }
 
 impl Default for Token<'_> {
@@ -326,6 +326,10 @@ impl<'a> Token<'a> {
 
     pub fn new(kind: TokenKind, lexeme: &'a str, pos: Pos) -> Self {
         Token { kind, lexeme, pos }
+    }
+
+    pub fn format(&self) -> String {
+        format!("{}:{}", self.lexeme, self.pos)
     }
 
     /// Whether or not the token is a value literal.

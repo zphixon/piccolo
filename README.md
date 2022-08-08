@@ -50,6 +50,15 @@ actual lib tests were megagarbage and honestly should only target the
 high-level APIs in the top-level module and the module-specific things, as well
 as the experimental stuff.
 
+### Architecture
+
+The current architecture has a few critical flaws:
+
+- `a =: [] a.push(a) print(a)` overflows the stack and it's unlikely to be an easy fix
+- You can call Rust from Piccolo (e.g. builtin functions) but you can't call
+  Piccolo to Rust and back to Piccolo, for example passing a callback function
+  written in piccolo to a builtin timer function is not possible.
+
 ## Todo
 
 - Type system? Would be fun

@@ -9,6 +9,8 @@ pub mod error;
 pub mod pretty;
 pub mod runtime;
 
+pub mod v2;
+
 #[macro_export]
 macro_rules! trace {
     ($($log:expr),*) => {
@@ -184,6 +186,7 @@ impl Environment {
         add_builtin_function!(exit, Arity::Any);
         add_builtin_function!(exec, Arity::AtLeast(1));
         add_builtin_function!(os, Arity::Exact(0));
+        add_builtin_function!(callback, Arity::Exact(1));
 
         env
     }
