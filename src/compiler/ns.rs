@@ -212,7 +212,7 @@ impl<'src> NamespaceRepository<'src> {
         }
     }
 
-    pub fn hmm(&self) {
+    pub fn debug(&self) {
         self.hmm_rec(0, self.global_key())
     }
 
@@ -524,7 +524,7 @@ mod test_ns {
             let src = std::fs::read_to_string(file).unwrap();
             let ast = crate::compiler::parser::parse(&src).unwrap();
             let repo = analyze_ns(&ast).unwrap();
-            repo.hmm();
+            repo.debug();
         }
     }
 

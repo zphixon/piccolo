@@ -39,7 +39,7 @@ fn main() {
                 println!(" xx {name}");
                 if let Ok(repo) = piccolo::compiler::ns::analyze_ns(&ast) {
                     println!("    did not fail!");
-                    repo.hmm();
+                    repo.debug();
                 }
             } else {
                 println!(" .. (parse failed) {name}");
