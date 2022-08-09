@@ -63,8 +63,8 @@ fn compile_stmt<'src>(
         //    => compile_continue(program, *continue_),
         //Stmt::Return { return_, value }
         //    => compile_return(state, emitter, ns, *return_, value.as_ref()),
-        //Stmt::Assert { assert, value }
-        //    => compile_assert(state, emitter, ns, *assert, value),
+        Stmt::Assert { assert, value }
+            => compile_assert(state, emitter, ns, *assert, value),
         //Stmt::Data { name, methods, fields }
         //    => compile_data(state, emitter, ns, *name, methods, fields),
         _ => todo!("{:?}", stmt),
@@ -125,6 +125,24 @@ fn compile_declaration<'src>(
         VariableLocation::Capture { .. } => todo!(),
         VariableLocation::Builtin => todo!("redefining a builtin always an error"),
     }
+
+    Ok(())
+}
+
+fn compile_assert<'src>(
+    state: &mut State,
+    emitter: &mut Emitter<'src>,
+    ns: DefaultKey,
+    _assert: Token<'src>,
+    value: &Expr<'src>,
+) -> Result<(), PiccoloError> {
+    compile_expr(state, emitter, ns, value)?;
+
+    // TODO actual span in file
+    let ast = format!("{:?}", value);
+    let ptr = state.interner.allocate_string(ast);
+    let index = emitter.program.add_constant(Constant::StringPtr(ptr));
+    emitter.program.push_op(Opcode::Assert(index));
 
     Ok(())
 }
