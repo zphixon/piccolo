@@ -159,8 +159,8 @@ fn compile_expr<'src>(
             => compile_literal(state, emitter, ns, *literal),
         //Expr::ArrayLiteral { right_bracket, values }
         //    => compile_array_literal(state, emitter, ns, *right_bracket, values),
-        //Expr::Paren { right_paren, expr }
-        //    => compile_paren(state, emitter, ns, *right_paren, expr),
+        Expr::Paren { right_paren, expr }
+            => compile_paren(state, emitter, ns, *right_paren, expr),
         Expr::Variable { variable }
             => compile_variable(state, emitter, ns, *variable),
         //Expr::Unary { op, rhs }
@@ -208,6 +208,17 @@ fn compile_literal<'src>(
             .push_constant_op(Constant::try_from(&mut state.interner, literal)?),
     }
 
+    Ok(())
+}
+
+fn compile_paren<'src>(
+    state: &mut State,
+    emitter: &mut Emitter<'src>,
+    ns: DefaultKey,
+    _right_paren: Token<'src>,
+    expr: &Expr<'src>,
+) -> Result<(), PiccoloError> {
+    compile_expr(state, emitter, ns, expr)?;
     Ok(())
 }
 
