@@ -143,6 +143,11 @@ impl Program {
         }
 
         match op {
+            Opcode::GetLocal(index) => {
+                let value = state.stack[index as usize].clone();
+                state.stack.push(value);
+            }
+
             Opcode::Pop => {
                 state.pop();
             }

@@ -14,8 +14,16 @@ use slotmap::{DefaultKey, SlotMap};
 pub enum VariableLocation {
     Builtin,
     Global,
-    Local { ns: DefaultKey, depth: usize },
-    Capture { from: DefaultKey, depth: usize },
+    Local {
+        ns: DefaultKey,
+        depth: usize,
+        slot: usize,
+    },
+    Capture {
+        from: DefaultKey,
+        depth: usize,
+        slot: usize,
+    },
 }
 
 #[derive(Default)]
@@ -73,7 +81,19 @@ impl<'src> NamespaceRepository<'src> {
         &mut self.namespaces[ns]
     }
 
-    fn with_parent(&mut self, ns: DefaultKey, name: Token<'src>) -> DefaultKey {
+    // TODO: do we even need this?
+    fn depth(&self, mut ns: DefaultKey) -> usize {
+        let mut depth = 0;
+
+        while let Some(parent) = self.ns(ns).parent {
+            ns = parent;
+            depth += 1;
+        }
+
+        depth
+    }
+
+    pub fn with_parent(&mut self, ns: DefaultKey, name: Token<'src>) -> DefaultKey {
         let key = self.namespaces.insert(Namespace {
             parent: Some(ns),
             name,
@@ -83,13 +103,13 @@ impl<'src> NamespaceRepository<'src> {
         key
     }
 
-    fn with_parent_captures(&mut self, ns: DefaultKey, name: Token<'src>) -> DefaultKey {
+    pub fn with_parent_captures(&mut self, ns: DefaultKey, name: Token<'src>) -> DefaultKey {
         let key = self.with_parent(ns, name);
         self.ns_mut(key).captures = true;
         key
     }
 
-    fn find(&mut self, ns: DefaultKey, name: Token<'src>) -> Option<VariableLocation> {
+    pub fn find(&mut self, ns: DefaultKey, name: Token<'src>) -> Option<VariableLocation> {
         debug!("find {}", name.lexeme);
         self.get_rec(ns, name, true).map(|(_, loc)| loc)
     }
@@ -133,12 +153,20 @@ impl<'src> NamespaceRepository<'src> {
 
             // if the parent contains the name and it's a local variable, add it is a capture to
             // the current namespace
-            if let Some((def, VariableLocation::Local { ns: from, .. })) = def {
+            if let Some((
+                def,
+                VariableLocation::Local {
+                    ns: from,
+                    depth,
+                    slot,
+                },
+            )) = def
+            {
                 if top && self.ns(ns).captures {
                     debug!("capturing {}", def.lexeme);
                     self.ns_mut(ns)
                         .names
-                        .insert(def, VariableLocation::Capture { from, depth: 0 });
+                        .insert(def, VariableLocation::Capture { from, depth, slot });
                 }
             }
 
@@ -181,13 +209,16 @@ impl<'src> NamespaceRepository<'src> {
         &mut self,
         ns: DefaultKey,
         name: Token<'src>,
-        index: usize,
     ) -> Result<VariableLocation, PiccoloError> {
         trace!("new local {}", name.lexeme);
 
         if !self.ns(ns).names.contains_key(&name) {
             // TODO
-            let location = VariableLocation::Local { ns, depth: index };
+            let location = VariableLocation::Local {
+                ns,
+                depth: self.depth(ns),
+                slot: self.ns(ns).names.len(),
+            };
             trace!("insert {} {:?}", name.lexeme, location);
             self.ns_mut(ns).names.insert(name, location);
             return Ok(location);
@@ -202,13 +233,12 @@ impl<'src> NamespaceRepository<'src> {
         &mut self,
         ns: DefaultKey,
         name: Token<'src>,
-        index: usize,
     ) -> Result<VariableLocation, PiccoloError> {
         debug!("new var {}", name.lexeme);
         if ns == self.global_key() {
             Ok(self.new_global(name))
         } else {
-            self.new_local(ns, name, index)
+            self.new_local(ns, name)
         }
     }
 
@@ -287,7 +317,7 @@ fn analyze_ns_stmt<'src>(
         Stmt::Declaration { name, value, .. } => {
             trace!("analyze stmt::declaration");
             analyze_ns_expr(repo, ns, value)?;
-            repo.new_variable(ns, *name, 0)?;
+            repo.new_variable(ns, *name)?;
         }
 
         Stmt::Assignment { lval, rval, .. } => {
@@ -376,7 +406,7 @@ fn analyze_ns_stmt<'src>(
             }
 
             let child = repo.with_parent(ns, *for_);
-            repo.new_variable(child, *item, 0)?;
+            repo.new_variable(child, *item)?;
             for stmt in body {
                 analyze_ns_stmt(repo, child, stmt)?;
             }
@@ -385,10 +415,10 @@ fn analyze_ns_stmt<'src>(
         Stmt::Fn {
             name, args, body, ..
         } => {
-            repo.new_variable(ns, *name, 0)?;
+            repo.new_variable(ns, *name)?;
             let body_ns = repo.with_parent_captures(ns, *name);
             for arg in args {
-                repo.new_variable(body_ns, *arg, 0)?;
+                repo.new_variable(body_ns, *arg)?;
             }
             for stmt in body {
                 analyze_ns_stmt(repo, body_ns, stmt)?;
@@ -414,7 +444,7 @@ fn analyze_ns_stmt<'src>(
             methods,
             fields,
         } => {
-            repo.new_variable(ns, *name, 0)?;
+            repo.new_variable(ns, *name)?;
             let data_ns = repo.with_parent(ns, *name);
             for field in fields {
                 analyze_ns_stmt(repo, data_ns, field)?;
@@ -492,7 +522,7 @@ fn analyze_ns_expr<'src>(
             trace!("analyze expr::fn");
             let child = repo.with_parent_captures(ns, *fn_);
             for arg in args {
-                repo.new_variable(child, *arg, 0)?;
+                repo.new_variable(child, *arg)?;
             }
             for stmt in body {
                 analyze_ns_stmt(repo, child, stmt)?;
@@ -536,14 +566,12 @@ mod test_ns {
         {
             let child = repo.with_parent(repo.global_key(), Token::identifier("top"));
             assert!(repo.find(child, Token::identifier("wow")).is_some());
-            let local = repo.new_local(child, Token::identifier("bean"), 0).unwrap();
+            let local = repo.new_local(child, Token::identifier("bean")).unwrap();
 
             {
                 let child2 = repo.with_parent(child, Token::identifier("top"));
                 assert_eq!(repo.find(child2, Token::identifier("bean")).unwrap(), local);
-                let local_shadow = repo
-                    .new_local(child2, Token::identifier("bean"), 0)
-                    .unwrap();
+                let local_shadow = repo.new_local(child2, Token::identifier("bean")).unwrap();
                 assert_eq!(
                     repo.find(child2, Token::identifier("bean")).unwrap(),
                     local_shadow

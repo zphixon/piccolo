@@ -31,6 +31,7 @@ pub fn compile(ast: &[Stmt]) -> Result<(State, Program), PiccoloError> {
     Ok((state, emitter.program))
 }
 
+#[rustfmt::skip]
 fn compile_stmt<'src>(
     state: &mut State,
     emitter: &mut Emitter<'src>,
@@ -38,12 +39,12 @@ fn compile_stmt<'src>(
     stmt: &Stmt<'src>,
 ) -> Result<(), PiccoloError> {
     match stmt {
-        Stmt::Expr { token, expr } => compile_expr_stmt(state, emitter, ns, *token, expr),
-        //Stmt::Block { do_, body, end }
-        //    => compile_block(state, emitter, ns, *do_, body, *end),
-        Stmt::Declaration { name, value, .. } => {
-            compile_declaration(state, emitter, ns, *name, value)
-        }
+        Stmt::Expr { token, expr }
+            => compile_expr_stmt(state, emitter, ns, *token, expr),
+        Stmt::Block { do_, body, end }
+            => compile_block(state, emitter, ns, *do_, body, *end),
+        Stmt::Declaration { name, value, .. }
+            => compile_declaration(state, emitter, ns, *name, value),
         //Stmt::Assignment { lval, op, rval }
         //    => compile_assignment(state, emitter, ns, lval, *op, rval),
         //Stmt::If { if_, cond, do_, then_block, else_, else_block, end }
@@ -82,6 +83,21 @@ fn compile_expr_stmt<'src>(
     Ok(())
 }
 
+fn compile_block<'src>(
+    state: &mut State,
+    emitter: &mut Emitter<'src>,
+    ns: DefaultKey,
+    do_: Token<'src>,
+    body: &[Stmt<'src>],
+    _end: Token<'src>,
+) -> Result<(), PiccoloError> {
+    let inner = emitter.repo.with_parent(ns, do_);
+    for stmt in body {
+        compile_stmt(state, emitter, inner, stmt)?;
+    }
+    Ok(())
+}
+
 fn compile_declaration<'src>(
     state: &mut State,
     emitter: &mut Emitter<'src>,
@@ -97,11 +113,15 @@ fn compile_declaration<'src>(
     let index = emitter.program.num_constants();
     emitter.program.add_constant(Constant::StringPtr(ptr));
 
-    match emitter.repo.new_variable(ns, name, 0)? {
+    match emitter.repo.new_variable(ns, name)? {
         VariableLocation::Global => {
             emitter.program.push_op(Opcode::DeclareGlobal(index as u16));
         }
-        VariableLocation::Local { .. } => todo!(),
+
+        VariableLocation::Local { .. } => {
+            // :)
+        }
+
         VariableLocation::Capture { .. } => todo!(),
         VariableLocation::Builtin => todo!("redefining a builtin always an error"),
     }
@@ -109,6 +129,7 @@ fn compile_declaration<'src>(
     Ok(())
 }
 
+#[rustfmt::skip]
 fn compile_expr<'src>(
     state: &mut State,
     emitter: &mut Emitter<'src>,
@@ -116,15 +137,18 @@ fn compile_expr<'src>(
     expr: &Expr<'src>,
 ) -> Result<(), PiccoloError> {
     match expr {
-        Expr::Literal { literal } => compile_literal(state, emitter, ns, *literal),
+        Expr::Literal { literal }
+            => compile_literal(state, emitter, ns, *literal),
         //Expr::ArrayLiteral { right_bracket, values }
         //    => compile_array_literal(state, emitter, ns, *right_bracket, values),
         //Expr::Paren { right_paren, expr }
         //    => compile_paren(state, emitter, ns, *right_paren, expr),
-        Expr::Variable { variable } => compile_variable(state, emitter, ns, *variable),
+        Expr::Variable { variable }
+            => compile_variable(state, emitter, ns, *variable),
         //Expr::Unary { op, rhs }
         //    => compile_unary(state, emitter, ns, *op, rhs),
-        Expr::Binary { lhs, op, rhs } => compile_binary(state, emitter, ns, lhs, *op, rhs),
+        Expr::Binary { lhs, op, rhs }
+            => compile_binary(state, emitter, ns, lhs, *op, rhs),
         //Expr::Logical { lhs, op, rhs }
         //    => compile_logical(state, emitter, ns, lhs, *op, rhs),
         //Expr::Call { callee, paren, arity, args }
@@ -177,20 +201,23 @@ fn compile_variable<'src>(
 ) -> Result<(), PiccoloError> {
     trace!("variable {}", variable.format());
 
-    match emitter.repo.get(ns, variable) {
-        Some((_, VariableLocation::Builtin)) => {
+    match emitter.repo.find(ns, variable) {
+        Some(VariableLocation::Builtin) => {
             let func = emitter.builtins[variable.lexeme].clone_func();
             emitter.program.push_func(func);
         }
 
-        Some((_, VariableLocation::Global)) => {
+        Some(VariableLocation::Global) => {
             let ptr = state.interner.get_string_ptr(variable.lexeme).unwrap();
             let index = emitter.program.add_constant(Constant::StringPtr(ptr));
             emitter.program.push_op(Opcode::GetGlobal(index as u16));
         }
 
-        Some((_, VariableLocation::Local { .. })) => todo!(),
-        Some((_, VariableLocation::Capture { .. })) => todo!(),
+        Some(VariableLocation::Local { slot, .. }) => {
+            emitter.program.push_op(Opcode::GetLocal(slot as u16));
+        }
+
+        Some(VariableLocation::Capture { .. }) => todo!(),
         None => todo!(),
     }
 
