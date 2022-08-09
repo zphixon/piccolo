@@ -12,14 +12,16 @@ use slotmap::{DefaultKey, SlotMap};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VariableLocation {
-    Global(usize),
-    Local(DefaultKey, usize),
-    Capture(DefaultKey, usize),
+    Builtin,
+    Global,
+    Local { ns: DefaultKey, depth: usize },
+    Capture { from: DefaultKey, depth: usize },
 }
 
 #[derive(Default)]
 struct Namespace<'src> {
     parent: Option<DefaultKey>,
+    // TODO use StringPtr
     names: FnvHashMap<Token<'src>, VariableLocation>,
     children: Vec<DefaultKey>,
     name: Token<'src>,
@@ -131,12 +133,12 @@ impl<'src> NamespaceRepository<'src> {
 
             // if the parent contains the name and it's a local variable, add it is a capture to
             // the current namespace
-            if let Some((def, VariableLocation::Local(from, _))) = def {
+            if let Some((def, VariableLocation::Local { ns: from, .. })) = def {
                 if top && self.ns(ns).captures {
                     debug!("capturing {}", def.lexeme);
                     self.ns_mut(ns)
                         .names
-                        .insert(def, VariableLocation::Capture(from, 0));
+                        .insert(def, VariableLocation::Capture { from, depth: 0 });
                 }
             }
 
@@ -151,14 +153,26 @@ impl<'src> NamespaceRepository<'src> {
             .map(|(token, loc)| (*token, *loc));
     }
 
-    pub fn new_global(&mut self, name: Token<'src>, index: usize) -> VariableLocation {
+    pub fn new_builtin(&mut self, name: Token<'src>) {
+        trace!("new builtin {}", name.lexeme);
+
+        if let Some(_) = self.global_ns().names.get(&name) {
+            return;
+        }
+
+        self.global_ns_mut()
+            .names
+            .insert(name, VariableLocation::Builtin);
+    }
+
+    pub fn new_global(&mut self, name: Token<'src>) -> VariableLocation {
         trace!("new global {}", name.lexeme);
 
         if let Some(location) = self.global_ns().names.get(&name) {
             return *location;
         }
 
-        let location = VariableLocation::Global(index);
+        let location = VariableLocation::Global;
         self.global_ns_mut().names.insert(name, location);
         location
     }
@@ -172,7 +186,8 @@ impl<'src> NamespaceRepository<'src> {
         trace!("new local {}", name.lexeme);
 
         if !self.ns(ns).names.contains_key(&name) {
-            let location = VariableLocation::Local(ns, index);
+            // TODO
+            let location = VariableLocation::Local { ns, depth: index };
             trace!("insert {} {:?}", name.lexeme, location);
             self.ns_mut(ns).names.insert(name, location);
             return Ok(location);
@@ -191,7 +206,7 @@ impl<'src> NamespaceRepository<'src> {
     ) -> Result<VariableLocation, PiccoloError> {
         debug!("new var {}", name.lexeme);
         if ns == self.global_key() {
-            Ok(self.new_global(name, index))
+            Ok(self.new_global(name))
         } else {
             self.new_local(ns, name, index)
         }
@@ -209,7 +224,7 @@ impl<'src> NamespaceRepository<'src> {
         print!("{:>indent$}[", "");
         for (i, (name, loc)) in self.ns(ns).names.iter().enumerate() {
             print!("{}", name.lexeme);
-            if let VariableLocation::Capture(from, _) = loc {
+            if let VariableLocation::Capture { from, .. } = loc {
                 print!(" (from {} in {})", name.pos, self.ns(*from).name.lexeme);
             }
             if i + 1 != self.ns(ns).names.len() {
@@ -516,7 +531,7 @@ mod test_ns {
     #[test]
     fn nesting() {
         let mut repo = NamespaceRepository::new();
-        repo.new_global(Token::identifier("wow"), 0);
+        repo.new_global(Token::identifier("wow"));
 
         {
             let child = repo.with_parent(repo.global_key(), Token::identifier("top"));

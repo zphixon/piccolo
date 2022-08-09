@@ -9,13 +9,14 @@ use crate::{
         value::{Array, Constant, Value},
         Object,
     },
+    trace,
 };
 use fnv::FnvHashMap;
 
 pub mod builtin;
 pub mod compiler;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct State {
     pub heap: Heap,
     pub interner: Interner,
@@ -29,13 +30,32 @@ impl State {
     }
 }
 
-pub trait Func {
+pub trait Func: FuncClone {
     fn call(&mut self, state: &mut State) -> Result<(), PiccoloError>;
+}
+
+pub trait FuncClone {
+    fn clone_func(&self) -> Box<dyn Func>;
+}
+
+impl<T: Func + Clone + 'static> FuncClone for T {
+    fn clone_func(&self) -> Box<dyn Func> {
+        Box::new(self.clone())
+    }
 }
 
 pub enum Fragment {
     Op(Opcode),
     Func(Box<dyn Func>),
+}
+
+impl std::fmt::Debug for Fragment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Fragment::Op(op) => write!(f, "{:?}", op),
+            Fragment::Func(_) => write!(f, "Func(..)"),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -45,9 +65,9 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn push_func<Op: Func + 'static>(&mut self, op: Op) {
+    pub fn push_func(&mut self, func: Box<dyn Func>) {
         debug!("push func");
-        self.fragments.push(Fragment::Func(Box::new(op)));
+        self.fragments.push(Fragment::Func(func));
     }
 
     pub(crate) fn push_op(&mut self, op: Opcode) {
@@ -80,6 +100,12 @@ impl Program {
     pub fn run_with(&mut self, state: &mut State) -> Result<(), PiccoloError> {
         let mut i = 0;
         while i < self.fragments.len() {
+            trace!(
+                "{:?} {:?} {:?}",
+                self.fragments[i],
+                state.stack,
+                state.globals
+            );
             match self.fragments[i] {
                 Fragment::Op(op) => self.do_op(state, op)?,
                 Fragment::Func(ref mut f) => f.call(state)?,
@@ -92,7 +118,7 @@ impl Program {
     }
 
     fn do_op(&mut self, state: &mut State, op: Opcode) -> Result<(), PiccoloError> {
-        crate::trace!("{op:?}");
+        trace!("{op:?}");
 
         macro_rules! bit_op {
             ($opcode:path, $op:tt) => {

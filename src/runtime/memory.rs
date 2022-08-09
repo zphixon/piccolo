@@ -22,7 +22,7 @@ impl Ptr {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug, Default)]
 pub struct Heap {
     objects: SlotMap<DefaultKey, ObjectHeader>,
 }
