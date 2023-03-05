@@ -35,7 +35,7 @@
 //! | `SetGlobal`       | index into constant table |
 //! | `DeclareGlobal`   | index into constant table |
 //! | <b>Jumps</b>      |                           |
-//! | `Jump`            | forward offset            |
+//! | `JumpForward`     | forward offset            |
 //! | `JumpFalse`       | forward offset            |
 //! | `JumpTrue`        | forward offset            |
 //! | `JumpBack`        | backward offset           |

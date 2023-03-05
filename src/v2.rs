@@ -58,7 +58,12 @@ impl std::fmt::Debug for Fragment {
     }
 }
 
-#[derive(Default)]
+enum ControlFlow {
+    Continue,
+    Exit,
+}
+
+#[derive(Default, Debug)]
 pub struct Program {
     constants: Vec<Constant>,
     fragments: Vec<Fragment>,
@@ -106,8 +111,12 @@ impl Program {
                 state.stack,
                 state.globals
             );
+
             match self.fragments[i] {
-                Fragment::Op(op) => self.do_op(state, op)?,
+                Fragment::Op(op) => match self.do_op(state, op)? {
+                    ControlFlow::Exit => break,
+                    ControlFlow::Continue => {}
+                },
                 Fragment::Func(ref mut f) => f.call(state)?,
             }
 
@@ -117,7 +126,7 @@ impl Program {
         Ok(())
     }
 
-    fn do_op(&mut self, state: &mut State, op: Opcode) -> Result<(), PiccoloError> {
+    fn do_op(&mut self, state: &mut State, op: Opcode) -> Result<ControlFlow, PiccoloError> {
         trace!("{op:?}");
 
         macro_rules! bit_op {
@@ -151,6 +160,13 @@ impl Program {
             Opcode::Pop => {
                 state.pop();
             }
+
+            Opcode::Return => {
+                // TODO
+                // let _ret_val = state.pop();
+                return Ok(ControlFlow::Exit);
+            }
+
             Opcode::Constant(index) => {
                 state
                     .stack
@@ -524,13 +540,14 @@ impl Program {
                 if !v.is_truthy() {
                     let ptr = assertion.string_ptr();
                     let assertion = state.interner.get_string(ptr).to_owned();
-                    return Err(make_error!(AssertFailed { assertion }));
+                    let _e = make_error!(AssertFailed { assertion });
+                    // ;)
                 }
             }
 
             _ => todo!("{op:?}"),
         }
 
-        Ok(())
+        Ok(ControlFlow::Continue)
     }
 }

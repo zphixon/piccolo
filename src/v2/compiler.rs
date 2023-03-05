@@ -14,9 +14,23 @@ use slotmap::DefaultKey;
 
 #[derive(Default)]
 pub struct Emitter<'src> {
-    pub program: Program,
+    pub programs: Vec<Program>,
+    current_program: usize,
     pub repo: NamespaceRepository<'src>,
     pub builtins: FnvHashMap<&'src str, Box<dyn Func>>,
+}
+
+impl Emitter<'_> {
+    fn program(&mut self) -> &mut Program {
+        &mut self.programs[self.current_program]
+    }
+
+    fn begin_program(&mut self) -> usize {
+        let old = self.current_program;
+        self.programs.push(Program::default());
+        // bleeehhhhhh
+        old
+    }
 }
 
 pub fn compile(ast: &[Stmt]) -> Result<(State, Program), PiccoloError> {
@@ -28,7 +42,8 @@ pub fn compile(ast: &[Stmt]) -> Result<(State, Program), PiccoloError> {
         compile_stmt(&mut state, &mut emitter, global, stmt)?;
     }
 
-    Ok((state, emitter.program))
+    emitter.program().push_op(Opcode::Return);
+    Ok((state, emitter.programs.pop().unwrap()))
 }
 
 #[rustfmt::skip]
@@ -55,8 +70,8 @@ fn compile_stmt<'src>(
         //    => compile_for(state, emitter, ns, *for_, init.as_ref(), cond, *name, *inc_op, inc_expr, *do_, body, *end),
         //Stmt::ForEach { for_, item, iter, do_, body, end }
         //    => compile_for_each(state, emitter, ns, *for_, *item, *iter, *do_, body, *end),
-        //Stmt::Fn { name, args, arity, body, method, end }
-        //    => compile_fn(state, emitter, ns, *name, args, *arity, body, *method, *end),
+        Stmt::Fn { name, args, arity, body, method, end }
+            => compile_fn(state, emitter, ns, *name, args, *arity, body, *method, *end),
         //Stmt::Break { break_ }
         //    => compile_break(program, *break_),
         //Stmt::Continue { continue_ }
@@ -79,7 +94,7 @@ fn compile_expr_stmt<'src>(
     expr: &Expr<'src>,
 ) -> Result<(), PiccoloError> {
     compile_expr(state, emitter, ns, expr)?;
-    emitter.program.push_op(Opcode::Pop);
+    emitter.program().push_op(Opcode::Pop);
     Ok(())
 }
 
@@ -110,12 +125,12 @@ fn compile_declaration<'src>(
     compile_expr(state, emitter, ns, value)?;
 
     let ptr = state.interner.allocate_str(name.lexeme);
-    let index = emitter.program.num_constants();
-    emitter.program.add_constant(Constant::StringPtr(ptr));
+    let index = emitter.program().num_constants();
+    emitter.program().add_constant(Constant::StringPtr(ptr));
 
     match emitter.repo.new_variable(ns, name)? {
         VariableLocation::Global => {
-            emitter.program.push_op(Opcode::DeclareGlobal(index as u16));
+            emitter.program().push_op(Opcode::DeclareGlobal(index as u16));
         }
 
         VariableLocation::Local { .. } => {
@@ -126,6 +141,29 @@ fn compile_declaration<'src>(
         VariableLocation::Builtin => todo!("redefining a builtin always an error"),
     }
 
+    Ok(())
+}
+
+fn compile_fn<'src>(
+    state: &mut State,
+    emitter: &mut Emitter<'src>,
+    ns: DefaultKey,
+    name: Token<'src>,
+    args: &[Token<'src>],
+    _arity: usize,
+    body: &[Stmt<'src>],
+    _method: bool,
+    end: Token<'src>,
+) -> Result<(), PiccoloError> {
+    let ns_body = emitter.repo.with_parent_captures(ns, name);
+    emitter.repo.new_variable(ns_body, name)?;
+    for arg in args {
+        emitter.repo.new_variable(ns_body, *arg)?;
+    }
+
+    compile_block(state, emitter, ns_body, name, body, end)?;
+
+    emitter.program().push_op(Opcode::Return);
     Ok(())
 }
 
@@ -141,8 +179,8 @@ fn compile_assert<'src>(
     // TODO actual span in file
     let ast = format!("{:?}", value);
     let ptr = state.interner.allocate_string(ast);
-    let index = emitter.program.add_constant(Constant::StringPtr(ptr));
-    emitter.program.push_op(Opcode::Assert(index));
+    let index = emitter.program().add_constant(Constant::StringPtr(ptr));
+    emitter.program().push_op(Opcode::Assert(index));
 
     Ok(())
 }
@@ -192,19 +230,19 @@ fn compile_literal<'src>(
     trace!("literal {}", literal.format());
 
     match literal.kind {
-        TokenKind::True => emitter.program.push_op(Opcode::Bool(true)),
-        TokenKind::False => emitter.program.push_op(Opcode::Bool(false)),
+        TokenKind::True => emitter.program().push_op(Opcode::Bool(true)),
+        TokenKind::False => emitter.program().push_op(Opcode::Bool(false)),
         // TODO make Integer use i64 instead
         TokenKind::Integer(v) if u16::try_from(v).is_ok() => emitter
-            .program
+            .program()
             .push_op(Opcode::Integer(v.try_into().unwrap())),
-        TokenKind::Nil => emitter.program.push_op(Opcode::Nil),
+        TokenKind::Nil => emitter.program().push_op(Opcode::Nil),
         TokenKind::String => {
             let ptr = crate::compiler::maybe_escape_string(&mut state.interner, literal)?;
-            emitter.program.push_constant_op(Constant::StringPtr(ptr));
+            emitter.program().push_constant_op(Constant::StringPtr(ptr));
         }
         _ => emitter
-            .program
+            .program()
             .push_constant_op(Constant::try_from(&mut state.interner, literal)?),
     }
 
@@ -233,17 +271,17 @@ fn compile_variable<'src>(
     match emitter.repo.find(ns, variable) {
         Some(VariableLocation::Builtin) => {
             let func = emitter.builtins[variable.lexeme].clone_func();
-            emitter.program.push_func(func);
+            emitter.program().push_func(func);
         }
 
         Some(VariableLocation::Global) => {
             let ptr = state.interner.get_string_ptr(variable.lexeme).unwrap();
-            let index = emitter.program.add_constant(Constant::StringPtr(ptr));
-            emitter.program.push_op(Opcode::GetGlobal(index as u16));
+            let index = emitter.program().add_constant(Constant::StringPtr(ptr));
+            emitter.program().push_op(Opcode::GetGlobal(index as u16));
         }
 
         Some(VariableLocation::Local { slot, .. }) => {
-            emitter.program.push_op(Opcode::GetLocal(slot as u16));
+            emitter.program().push_op(Opcode::GetLocal(slot as u16));
         }
 
         Some(VariableLocation::Capture { .. }) => todo!(),
@@ -267,26 +305,26 @@ fn compile_binary<'src>(
     compile_expr(state, emitter, ns, rhs)?;
 
     match op.kind {
-        TokenKind::Plus => emitter.program.push_op(Opcode::Add),
-        TokenKind::Minus => emitter.program.push_op(Opcode::Subtract),
-        TokenKind::Divide => emitter.program.push_op(Opcode::Divide),
-        TokenKind::Multiply => emitter.program.push_op(Opcode::Multiply),
-        TokenKind::Equal => emitter.program.push_op(Opcode::Equal),
+        TokenKind::Plus => emitter.program().push_op(Opcode::Add),
+        TokenKind::Minus => emitter.program().push_op(Opcode::Subtract),
+        TokenKind::Divide => emitter.program().push_op(Opcode::Divide),
+        TokenKind::Multiply => emitter.program().push_op(Opcode::Multiply),
+        TokenKind::Equal => emitter.program().push_op(Opcode::Equal),
         TokenKind::NotEqual => {
-            emitter.program.push_op(Opcode::Equal);
-            emitter.program.push_op(Opcode::Not);
+            emitter.program().push_op(Opcode::Equal);
+            emitter.program().push_op(Opcode::Not);
         }
-        TokenKind::Greater => emitter.program.push_op(Opcode::Greater),
-        TokenKind::GreaterEqual => emitter.program.push_op(Opcode::GreaterEqual),
-        TokenKind::Less => emitter.program.push_op(Opcode::Less),
-        TokenKind::LessEqual => emitter.program.push_op(Opcode::LessEqual),
-        TokenKind::Modulo => emitter.program.push_op(Opcode::Modulo),
+        TokenKind::Greater => emitter.program().push_op(Opcode::Greater),
+        TokenKind::GreaterEqual => emitter.program().push_op(Opcode::GreaterEqual),
+        TokenKind::Less => emitter.program().push_op(Opcode::Less),
+        TokenKind::LessEqual => emitter.program().push_op(Opcode::LessEqual),
+        TokenKind::Modulo => emitter.program().push_op(Opcode::Modulo),
 
-        TokenKind::ShiftLeft => emitter.program.push_op(Opcode::ShiftLeft),
-        TokenKind::ShiftRight => emitter.program.push_op(Opcode::ShiftRight),
-        TokenKind::BitwiseAnd => emitter.program.push_op(Opcode::BitAnd),
-        TokenKind::BitwiseOr => emitter.program.push_op(Opcode::BitOr),
-        TokenKind::BitwiseXor => emitter.program.push_op(Opcode::BitXor),
+        TokenKind::ShiftLeft => emitter.program().push_op(Opcode::ShiftLeft),
+        TokenKind::ShiftRight => emitter.program().push_op(Opcode::ShiftRight),
+        TokenKind::BitwiseAnd => emitter.program().push_op(Opcode::BitAnd),
+        TokenKind::BitwiseOr => emitter.program().push_op(Opcode::BitOr),
+        TokenKind::BitwiseXor => emitter.program().push_op(Opcode::BitXor),
 
         _ => unreachable!("binary {:?}", op),
     }
