@@ -1,54 +1,53 @@
-# simple grammar. ignores string escapes
+(* simple grammar. ignores string escapes *)
 
-# if we wanted explicit argument names (I'm not sure about yet) just do
-# arguments -> '(' [argument {',' argument}] ')'
-# argument -> expression | declare
+(* if we wanted explicit argument names (I'm not sure about yet) just do *)
+(* arguments -> '(' [argument {',' argument}] ')' *)
+(* argument -> expression | declare *)
 
-program -> {statement}
+program = {statement};
 
-statement -> assign | declare | break | continue | return | assert | block | if
-           | while | for | fn | expression | data
+statement = assign | declare | break | continue | return | assert | block | if
+           | while | for | fn | expression | data;
 
-assign -> [call '.'] ident assign_op expression
-declare -> ident '=:' expression
+assign = [ call, '.' ], ident, assign_op, expression;
+declare = ident, '=:', expression;
 
-break -> 'break'
-continue -> 'continue'
-return -> 'return' [expression]
-assert -> 'assert' expression
+break = 'break';
+continue = 'continue';
+return = 'return', [expression];
+assert = 'assert', expression;
 
-block -> 'do' {statement} 'end'
-if -> 'if' expression 'do' {statement}
-      {'elseif' expression 'do' {statement}}
-      ['else' {statement}] 'end'
-while -> 'while' expression block
-for -> 'for' declare ',' expression ',' assign block
-fn -> 'fn' ident '(' parameters ')' block
-data -> 'data' ident 'do' {declare} {fn} 'end'
+block = 'do', {statement}, 'end';
+if = 'if', expression, 'do', {statement},
+      {'elseif', expression, 'do', {statement}},
+      ['else', {statement}], 'end';
+while = 'while', expression, block;
+for = 'for', declare, ',', expression, ',', assign, block;
+fn = 'fn', ident, '(', parameters, ')', block;
+data = 'data', ident, 'do', {declare}, {fn}, 'end';
 
-expression -> logic_or
+expression = logic_or;
 
-logic_or -> logic_and {'||' logic_and}
-logic_and -> bit_or {'&&' bit_or}
-bit_or -> bit_xor {'|' bit_xor}
-bit_xor -> bit_and {'^' bit_and}
-bit_and -> equality {'&' equality}
-equality -> comparison {('!=' | '==') comparison}
-comparison -> bit_shift {('>' | '>=' | '<' | '<=') bit_shift}
-bit_shift -> term {('>>' | '<<') term}
-term -> factor {('+' | '-') factor}
-factor -> unary {('*' | '/') unary}
-unary -> ('!' | '-') unary | call
+logic_or = logic_and, {'||', logic_and};
+logic_and = bit_or, {'&&', bit_or};
+bit_or = bit_xor, {'|', bit_xor};
+bit_xor = bit_and, {'^', bit_and};
+bit_and = equality, {'&', equality};
+equality = comparison, {('!=' | '=='), comparison};
+comparison = bit_shift, {('>' | '>=' | '<' | '<='), bit_shift};
+bit_shift = term, {('>>' | '<<'), term};
+term = factor, {('+' | '-'), factor};
+factor = unary, {('*' | '/'), unary};
+unary = ('!' | '-'), unary | call;
 
-call -> primary {arguments | ('.' ident)}
-primary -> '(' expression ')' | 'true' | 'false' | 'nil' | 'me' | number | string | ident
+call = primary, {arguments | ('.', ident)};
+primary = ('(', expression, ')') | 'true' | 'false' | 'nil' | 'me' | number | string | ident;
 
-arguments -> '(' [expression {',' expression}] ')'
-parameters -> '(' [ident {',' ident}] ')'
+arguments = '(', [expression, {',', expression}], ')';
+parameters = '(', [ident, {',', ident}], ')';
 
-anon_fn -> 'fn' parameters block
-assign_op -> '=' | '+=' | '-=' | '/=' | '*=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>='
-ident -> /NON_WHITESPACE+/
-number -> /INTEGER(.INTEGER)?/
-string -> /".*"/
-
+anon_fn = 'fn', parameters, block;
+assign_op = '=' | '+=' | '-=' | '/=' | '*=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=';
+ident = /NON_WHITESPACE+/;
+number = /INTEGER(.INTEGER)?/;
+string = /".*"/;

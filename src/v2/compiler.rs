@@ -12,12 +12,22 @@ use crate::{
 use fnv::FnvHashMap;
 use slotmap::DefaultKey;
 
-#[derive(Default)]
 pub struct Emitter<'src> {
     pub programs: Vec<Program>,
     current_program: usize,
     pub repo: NamespaceRepository<'src>,
     pub builtins: FnvHashMap<&'src str, Box<dyn Func>>,
+}
+
+impl Default for Emitter<'_> {
+    fn default() -> Self {
+        Emitter {
+            programs: vec![Default::default()],
+            current_program: Default::default(),
+            repo: Default::default(),
+            builtins: Default::default(),
+        }
+    }
 }
 
 impl Emitter<'_> {
@@ -130,7 +140,9 @@ fn compile_declaration<'src>(
 
     match emitter.repo.new_variable(ns, name)? {
         VariableLocation::Global => {
-            emitter.program().push_op(Opcode::DeclareGlobal(index as u16));
+            emitter
+                .program()
+                .push_op(Opcode::DeclareGlobal(index as u16));
         }
 
         VariableLocation::Local { .. } => {
