@@ -1,4 +1,6 @@
 
+*Not to be confused with [kyren/piccolo](https://github.com/kyren/piccolo) [❤](https://github.com/zphixon/piccolo/issues/5)*
+
 # Piccolo
 
 Piccolo is a small, lightweight, high-pitched scripting language (eventually) intended
